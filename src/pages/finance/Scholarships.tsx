@@ -23,6 +23,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import jsPDF from "jspdf";
 import { getSchoolName } from "@/lib/transportSettings";
+import { createDefaultFeeCalculator } from "@/services/fee/FeeCalculator";
+import { Student, Staff } from "@/types";
 
 interface Scholarship {
   id: string;
@@ -631,13 +633,51 @@ export default function Scholarships() {
                     variant="outline"
                     className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
                     disabled={!scholarships.some((s) => s.status === "Active")}
-                    onClick={() => {
+                    onClick={async () => {
                       const sample = scholarships.find((s) => s.status === "Active");
                       if (!sample) {
                         toast.info("No active scholarships yet — create one to test auto-deduction.");
                         return;
                       }
-                      toast.success(`Auto-deduction simulated — ${settings.currency} ${sample.annual.toLocaleString()} discount applied to next invoice for ${sample.name}`);
+                      // Real preview using FeeCalculator (Strategy pattern) against actual
+                      // Student/Staff/FeeDiscount/FeeStructure data — replaces the previous
+                      // hardcoded simulated toast, which never touched real data at all.
+                      try {
+                        const [students, staff, discountDefs, feeStructures] = await Promise.all([
+                          smartDb.getAll("Student") as Promise<Student[]>,
+                          smartDb.getAll("Staff") as Promise<Staff[]>,
+                          smartDb.getAll("FeeDiscount"),
+                          smartDb.getAll("FeeStructure"),
+                        ]);
+                        const matchedStudent = (students as Student[]).find(
+                          (s) => s.name === sample.name && s.grade === sample.grade,
+                        );
+                        if (!matchedStudent) {
+                          toast.info(`No enrolled student record matches "${sample.name}" (${sample.grade}) — cannot compute a real preview. Scholarship records are matched by name+grade; verify the student is enrolled with a matching name/grade.`);
+                          return;
+                        }
+                        const structure = (feeStructures as { className: string; totalAmount: number; status: string }[])
+                          .find((f) => f.className === sample.grade && f.status === "Active");
+                        if (!structure) {
+                          toast.info(`No active fee structure found for ${sample.grade} — cannot compute a base fee to discount.`);
+                          return;
+                        }
+                        const calculator = createDefaultFeeCalculator();
+                        const result = calculator.computeInvoice(structure.totalAmount, {
+                          student: matchedStudent,
+                          allStudents: students as Student[],
+                          staff: staff as Staff[],
+                          scholarships: scholarships as unknown as { id: string; name: string; grade: string; discount: number; annual: number; status: string }[],
+                          discountDefinitions: discountDefs as { id: string; name: string; type: "Percentage" | "Fixed"; value: number; category: "Scholarship" | "Sibling" | "Early Bird" | "Staff Child" | "Other"; status: "Active" | "Inactive" }[],
+                        });
+                        const ruleLabels = result.appliedRules.map((r) => r.label).join(", ");
+                        toast.success(
+                          `${sample.name}: ${settings.currency} ${structure.totalAmount.toLocaleString()} base fee → ${settings.currency} ${result.totalDiscount.toLocaleString()} discount (${ruleLabels}) → ${settings.currency} ${result.finalAmount.toLocaleString()} final${result.wasCapped ? " (capped at max combined discount)" : ""}`,
+                        );
+                      } catch (error) {
+                        console.error("Fee calculation preview failed:", error);
+                        toast.error("Could not compute a real preview — see console for details.");
+                      }
                     }}
                   >
                     Test Auto-Deduction
