@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getLineItems, type PurchaseOrder } from "@/pages/inventory/PurchaseOrders";
 import { type Purchase } from "@/pages/inventory/Purchases";
+import { notifyFinanceRoles, notifyBookRequester } from "@/lib/procurementNotify";
 
 interface FinancialCategory { id: string; name: string; budget: number; type: string; }
 interface Expense { category: string; amount: number; status: string; }
@@ -110,41 +111,9 @@ const PurchaseApprovals = () => {
   );
   const requestByPurchase = (p: Purchase) => libraryRequests.find(r => (r as any).purchaseId === p.id);
 
-  const notifyRoles = async (roles: string[], opts: { type: string; title: string; message: string }) => {
-    const stamp = Date.now();
-    await Promise.allSettled(
-      roles.map((audienceRole, i) =>
-        smartDb.create("Notification", {
-          id: `po_notif_${stamp}_${i}`,
-          audienceRole,
-          category: "finance",
-          entity: "PurchaseOrder",
-          type: opts.type,
-          title: opts.title,
-          message: opts.message,
-          createdAt: new Date().toISOString(),
-          time: new Date().toISOString(),
-          read: false,
-        }, `po_notif_${stamp}_${i}`)
-      )
-    );
-  };
-  const notifyRequester = async (recipientName: string, id: string, stage: string, title: string, message: string) => {
-    const notifId = `bookreq-${id}-${stage}`;
-    try {
-      await smartDb.create("Notification", {
-        id: notifId,
-        recipientName,
-        category: "staff",
-        entity: "BookRequest",
-        type: `book_request_${stage}`,
-        title, message,
-        createdAt: new Date().toISOString(),
-        time: new Date().toISOString(),
-        read: false,
-      }, notifId);
-    } catch { /* non-fatal */ }
-  };
+  // notifyFinanceRoles/notifyBookRequester now live in
+  // src/lib/procurementNotify.ts, shared with PurchaseOrders.tsx (previously
+  // both files had byte-identical copy-pasted implementations of these).
 
   // Approximate departmental budget check, shared by both the generic PO
   // approval and the Library funding approval below — a school configures
@@ -175,7 +144,7 @@ const PurchaseApprovals = () => {
     try {
       await smartDb.update("PurchaseOrder", order.id, { status: "Approved" });
       toast.success(`${order.poNumber} approved — ready to send to ${order.vendorName}`);
-      void notifyRoles(["admin", "super_admin", "school_owner"], {
+      void notifyFinanceRoles(["admin", "super_admin", "school_owner"], {
         type: "po_approved",
         title: "Purchase Order approved",
         message: `${order.poNumber} (${order.department}) was approved by Finance and is ready to send to ${order.vendorName}.`,
@@ -202,7 +171,7 @@ const PurchaseApprovals = () => {
         declinedAt: new Date().toISOString(),
       });
       toast.success(`${order.poNumber} sent back to Procurement`);
-      void notifyRoles(["admin", "super_admin", "school_owner"], {
+      void notifyFinanceRoles(["admin", "super_admin", "school_owner"], {
         type: "po_declined",
         title: "Purchase Order sent back",
         message: `${order.poNumber} (${order.department}) was sent back to Draft by Finance. Reason: ${reason.trim()}`,
@@ -224,7 +193,7 @@ const PurchaseApprovals = () => {
       await smartDb.update("Quotation", q.id, { status: "Accepted" });
       if (req) {
         await smartDb.update("library_requests", req.id, { status: "finance_approved", financeDecidedAt: new Date().toISOString() });
-        void notifyRequester(req.requestedBy, req.id, "finance_approved", `Purchase approved — ${req.title}`,
+        void notifyBookRequester(req, "finance_approved", `Purchase approved — ${req.title}`,
           `Finance approved the purchase of "${req.title}" (${q.amount.toLocaleString()}) from ${q.entity}. Procurement will now create the Purchase Order.`);
       }
       toast.success(`${q.quotationId} approved — Procurement can now create the Purchase Order`);
@@ -249,7 +218,7 @@ const PurchaseApprovals = () => {
         await smartDb.update("library_requests", req.id, {
           status: "rejected", rejectedStage: "finance", rejectionReason: reason.trim(), decidedAt: new Date().toISOString(),
         });
-        void notifyRequester(req.requestedBy, req.id, "rejected", `Book request declined — ${req.title}`,
+        void notifyBookRequester(req, "rejected", `Book request declined — ${req.title}`,
           `Your request for "${req.title}" was declined by Finance. Reason: ${reason.trim()}`);
       }
       toast.info(`${q.quotationId} declined`);
@@ -273,7 +242,7 @@ const PurchaseApprovals = () => {
       const req = requestByPurchase(p);
       if (req) {
         await smartDb.update("library_requests", req.id, { status: "paid", paidAt: new Date().toISOString() });
-        void notifyRequester(req.requestedBy, req.id, "paid", `Payment released — ${req.title}`,
+        void notifyBookRequester(req, "paid", `Payment released — ${req.title}`,
           `Invoice ${invoiceNumber} matched against ${p.poNumber} and payment of ${p.amount.toLocaleString()} was released to ${p.vendorName}.`);
       }
       toast.success(`Payment released to ${p.vendorName} for ${p.poNumber}`);

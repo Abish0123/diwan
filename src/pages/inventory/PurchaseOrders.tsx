@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
+import { notifyFinanceRoles, notifyBookRequester } from "@/lib/procurementNotify";
 import {
   Dialog,
   DialogContent,
@@ -264,25 +265,9 @@ const PurchaseOrders = () => {
   const addLine = () => setLineItems(prev => [...prev, { ...emptyLine }]);
   const removeLine = (i: number) => setLineItems(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev);
 
-  // Same deterministic-id notification pattern used throughout the app
-  // (e.g. Library's own reservation/due-date notices) so re-runs upsert
-  // instead of duplicating.
-  const notifyRequester = async (req: LibraryRequest, stage: string, title: string, message: string) => {
-    const id = `bookreq-${req.id}-${stage}`;
-    try {
-      await smartDb.create("Notification", {
-        id,
-        recipientName: req.requestedBy,
-        category: "staff",
-        entity: "BookRequest",
-        type: `book_request_${stage}`,
-        title, message,
-        createdAt: new Date().toISOString(),
-        time: new Date().toISOString(),
-        read: false,
-      }, id);
-    } catch { /* non-fatal */ }
-  };
+  // notifyRequester/notifyRoles now live in src/lib/procurementNotify.ts as
+  // notifyBookRequester/notifyFinanceRoles, shared with PurchaseApprovals.tsx
+  // (previously both files had byte-identical copy-pasted implementations).
 
   // ── Stage 1: get a real vendor quotation for a pending request ──
   const openQuoteForm = (req: LibraryRequest) => {
@@ -294,7 +279,7 @@ const PurchaseOrders = () => {
       await smartDb.update("library_requests", req.id, {
         status: "rejected", rejectedStage: "procurement", rejectionReason: reason || undefined, decidedAt: new Date().toISOString(),
       });
-      void notifyRequester(req, "rejected", `Book request declined — ${req.title}`,
+      void notifyBookRequester(req, "rejected", `Book request declined — ${req.title}`,
         `Your request for "${req.title}" was declined by Procurement.${reason ? ` Reason: ${reason}` : ""}`);
       toast.info(`"${req.title}" declined`);
       fetchData();
@@ -395,7 +380,7 @@ const PurchaseOrders = () => {
           status: "po_sent", poId: id, poNumber: newOrder.poNumber, poSentAt: new Date().toISOString(),
         });
         if (req) {
-          void notifyRequester(req, "po_sent", `Purchase order sent to vendor — ${req.title}`,
+          void notifyBookRequester(req, "po_sent", `Purchase order sent to vendor — ${req.title}`,
             `${newOrder.poNumber} was sent to ${newOrder.vendorName} for "${req.title}" — Library will confirm once it arrives.`);
         }
       }
@@ -412,33 +397,6 @@ const PurchaseOrders = () => {
     }
   };
 
-  // Roles that can act on a PO at each stage — matches the "Finance/Admin
-  // approval" step in the printed workflow. One Notification row per target
-  // role (audienceRole matching is per-record, see useNotifications.ts).
-  const notifyRoles = async (roles: string[], opts: { type: string; title: string; message: string }) => {
-    const stamp = Date.now();
-    await Promise.allSettled(
-      roles.map((audienceRole, i) =>
-        smartDb.create(
-          "Notification",
-          {
-            id: `po_notif_${stamp}_${i}`,
-            audienceRole,
-            category: "finance",
-            entity: "PurchaseOrder",
-            type: opts.type,
-            title: opts.title,
-            message: opts.message,
-            createdAt: new Date().toISOString(),
-            time: new Date().toISOString(),
-            read: false,
-          },
-          `po_notif_${stamp}_${i}`,
-        )
-      )
-    );
-  };
-
   // Procurement's own page only ever advances Draft → Pending Approval and
   // Approved → Sent to Vendor — approving the "Pending Approval" step (with
   // its budget check) now lives entirely in Finance's Purchase Approvals
@@ -451,7 +409,7 @@ const PurchaseOrders = () => {
       toast.success(`${order.poNumber} → ${next}`);
 
       if (next === "Pending Approval") {
-        await notifyRoles(["accountant", "admin", "super_admin", "school_owner"], {
+        await notifyFinanceRoles(["accountant", "admin", "super_admin", "school_owner"], {
           type: "po_pending_approval",
           title: "Purchase Order awaiting approval",
           message: `${order.poNumber} (${getLineItems(order).length} item(s), ${order.amount.toLocaleString()}) from ${order.vendorName} needs your approval.`,
