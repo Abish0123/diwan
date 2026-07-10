@@ -1,4 +1,4 @@
-import { IntegrationAdapter } from "./IntegrationAdapter";
+import { IntegrationAdapter } from "./IntegrationAdapter.js";
 
 export interface S3PresignedUrlInput {
   accessKeyId: string;

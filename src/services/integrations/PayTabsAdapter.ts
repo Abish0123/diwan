@@ -1,4 +1,4 @@
-import { IntegrationAdapter, IntegrationError } from "./IntegrationAdapter";
+import { IntegrationAdapter, IntegrationError } from "./IntegrationAdapter.js";
 
 const PAYTABS_REGION_HOSTS: Record<string, string> = {
   GLOBAL: "secure-global.paytabs.com",

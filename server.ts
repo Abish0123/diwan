@@ -9,6 +9,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import { EventEmitter } from "events";
 import { DEFAULT_ADMIN_EMAILS } from "./src/lib/admin-emails.js";
 import { getRole } from "./src/lib/roles.js";
 import { logger } from "./logger.js";
@@ -693,7 +694,11 @@ async function initDB() {
         keepAliveInitialDelay: 10000,
         charset: "utf8mb4",
       });
-      pool.on("error", (err) => {
+      // mysql2/promise's Pool.on() typings only enumerate its own named
+      // events ("acquire"/"connection"/"enqueue"/"release") and omit
+      // "error", even though the underlying pool does emit it at runtime —
+      // cast through EventEmitter's own signature to listen for it.
+      (pool as unknown as EventEmitter).on("error", (err: unknown) => {
         logger.error("MySQL pool error", err);
       });
       await pool.execute("SELECT 1");
@@ -795,7 +800,11 @@ async function initDB() {
   const builtData = new Map<string, any[]>();
 
   for (const { table, data } of seedData) {
-    let finalData = [...data];
+    // Widened to any[] — each table branch below pushes a shape specific to
+    // that table (students, staff, leads, ...), so inferring finalData's
+    // element type from `data`'s own (narrower) seed literal rejects every
+    // other table's push() as an unknown-property error.
+    let finalData: any[] = [...data];
 
     if (table === "students") {
       const firstNames = ["Arjun", "Aditi", "Rohan", "Sanya", "Kabir", "Ishani", "Aarav", "Ananya", "Vihaan", "Zoya", "Ishaan", "Meera", "Advait", "Sia", "Vivaan", "Kyra", "Reyansh", "Myra", "Aaryan", "Sara", "Atharv", "Anvi", "Krishna", "Aradhya", "Shaurya", "Aavya", "Ayaan", "Ziva", "Laksh", "Vanya", "Rahul", "Priya", "Amit", "Neha", "Vikram", "Kavya", "Deepak", "Riya", "Karan", "Tanvi", "Siddharth", "Ishita", "Varun", "Anjali", "Manish", "Shweta", "Suresh", "Sunita", "Rajesh", "Meenakshi"];
@@ -1207,7 +1216,10 @@ async function startServer() {
 
   // Generic Data API — MySQL2 with Caching
   app.get("/api/data/:entity", requireAuth, async (req, res) => {
-    const { entity } = req.params;
+    // req.params values type as string | string[] under some TS resolutions
+    // even though a single :entity segment is always a plain string at
+    // runtime — String() narrows without changing behavior.
+    const entity = String(req.params.entity);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
     if (!authorizeEntityAccess(entity, auth)) return res.status(403).json({ error: "Not authorized for this resource" });
     // Callers that pass ?uid= expect rows scoped to that uid (mirrors the Firestore
@@ -1335,7 +1347,8 @@ async function startServer() {
   });
 
   app.get("/api/data/:entity/:id", requireAuth, async (req, res) => {
-    const { entity, id } = req.params;
+    const entity = String(req.params.entity);
+    const id = String(req.params.id);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
     if (!authorizeEntityAccess(entity, auth, id, "read")) return res.status(403).json({ error: "Not authorized for this resource" });
     if (!VALID_TABLE_NAME.test(entity)) return res.status(400).json({ error: "Invalid entity" });
@@ -1467,7 +1480,7 @@ async function startServer() {
   };
 
   app.post("/api/data/:entity", requireAuth, writeRateLimit, async (req, res) => {
-    const { entity } = req.params;
+    const entity = String(req.params.entity);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
     if (!authorizeEntityAccess(entity, auth)) return res.status(403).json({ error: "Not authorized for this resource" });
     if (!VALID_TABLE_NAME.test(entity)) return res.status(400).json({ error: "Invalid entity" });
@@ -1547,7 +1560,8 @@ async function startServer() {
   });
 
   app.put("/api/data/:entity/:id", requireAuth, writeRateLimit, async (req, res) => {
-    const { entity, id: routeId } = req.params;
+    const entity = String(req.params.entity);
+    const routeId = String(req.params.id);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
     if (!authorizeEntityAccess(entity, auth)) return res.status(403).json({ error: "Not authorized for this resource" });
     if (!VALID_TABLE_NAME.test(entity)) return res.status(400).json({ error: "Invalid entity" });
@@ -1638,7 +1652,8 @@ async function startServer() {
   }
 
   app.delete("/api/data/:entity/:id", requireAuth, writeRateLimit, async (req, res) => {
-    const { entity, id } = req.params;
+    const entity = String(req.params.entity);
+    const id = String(req.params.id);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
     if (!authorizeEntityAccess(entity, auth)) return res.status(403).json({ error: "Not authorized for this resource" });
     if (!VALID_TABLE_NAME.test(entity)) return res.status(400).json({ error: "Invalid entity" });
@@ -1846,7 +1861,10 @@ async function startServer() {
           `,
           text: `Reset your Student Diwan password: ${resetUrl} (expires in 30 minutes; ignore this email if you didn't request it)`,
         });
-        if (!result.ok) {
+        // `=== false` rather than `!result.ok` — TS doesn't narrow a
+        // true/false boolean-literal discriminated union correctly through a
+        // negation, only through an explicit equality check.
+        if (result.ok === false) {
           // SMTP not configured / send failed — honest error instead of a
           // false "email sent" claim, since this is a real, observable
           // deployment gap (not user-enumeration-sensitive; SMTP status is
@@ -1926,7 +1944,7 @@ async function startServer() {
   app.post("/api/send-email", async (req, res) => {
     const { to, subject, html, text, replyTo } = req.body as SendEmailInput;
     const result = await sendEmailInternal({ to, subject, html, text, replyTo });
-    if (!result.ok) return res.status(result.status).json({ error: result.error });
+    if (result.ok === false) return res.status(result.status).json({ error: result.error });
     return res.json({ success: true, messageId: result.messageId });
   });
 
@@ -2081,7 +2099,9 @@ async function startServer() {
         });
         if (r.ok) {
           openrouterVerified = true;
-          const body = await r.json().catch(() => null);
+          // node-fetch types r.json() as Promise<unknown> — narrow to the
+          // one shape we actually read from OpenRouter's key-auth response.
+          const body = await r.json().catch(() => null) as { data?: { label?: string } } | null;
           openrouterLabel = body?.data?.label ?? null;
         }
       } catch {

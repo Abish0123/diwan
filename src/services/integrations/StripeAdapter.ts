@@ -1,4 +1,4 @@
-import { IntegrationAdapter, IntegrationError } from "./IntegrationAdapter";
+import { IntegrationAdapter, IntegrationError } from "./IntegrationAdapter.js";
 
 export interface StripeCheckoutInput {
   secretKey: string;
