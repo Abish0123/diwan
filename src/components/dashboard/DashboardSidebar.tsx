@@ -77,12 +77,13 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
         <SidebarMenuButton asChild className="h-10 w-10 p-0 flex items-center justify-center relative" tooltip={item.title}>
           <NavLink
             to={item.url || (hasSubItems ? item.subItems![0].url : "#")}
+            aria-label={item.title}
             className={cn("flex items-center justify-center rounded-lg transition-all", baseLink)}
             activeClassName={dark ? "bg-white/10 text-white rounded-lg border-l-2 border-[#d12386]" : "bg-[#9810fa]/10 text-[#9810fa] rounded-lg border-l-2 border-[#9810fa]"}
           >
-            <item.icon className="h-5 w-5" />
+            <item.icon className="h-5 w-5" aria-hidden="true" />
             {badgeCount !== undefined && badgeCount > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary animate-pulse" aria-hidden="true" />
             )}
           </NavLink>
         </SidebarMenuButton>
@@ -95,11 +96,12 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
       <SidebarMenuItem>
         <SidebarMenuButton
           onClick={() => setOpen(!open)}
+          aria-expanded={open}
           className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150 w-full", baseLink)}
         >
-          <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
+          <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
           <span><HighlightText text={item.title} query={searchQuery} /></span>
-          <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform duration-200", open && "rotate-180")} aria-hidden="true" />
         </SidebarMenuButton>
         {open && (
           <div className={cn("ml-4 mt-1 border-l pl-2 flex flex-col gap-1", dark ? "border-white/10" : "border-violet-100")}>
@@ -167,13 +169,16 @@ function CollapsibleNavGroup({ group, collapsed, unreadCount, pendingPaymentCoun
   return (
     <div className="mb-1">
       <button
+        type="button"
         onClick={() => !isSearching && setOpen(!open)}
+        aria-expanded={isOpen}
+        disabled={isSearching}
         className={cn("flex items-center justify-between w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] transition-colors",
-          dark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600",
+          dark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-600",
           isSearching && "cursor-default")}
       >
         <span>{group.label}</span>
-        {!isSearching && <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isOpen && "rotate-180")} />}
+        {!isSearching && <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isOpen && "rotate-180")} aria-hidden="true" />}
       </button>
       {isOpen && (
         <SidebarMenu className="mt-0.5">
@@ -374,12 +379,13 @@ export function DashboardSidebar() {
 
   const SearchInput = !collapsed ? (
     <div className="relative mx-1 mb-3">
-      <Search className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", dark ? "text-slate-600" : "text-slate-400")} />
+      <Search aria-hidden="true" className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", dark ? "text-slate-600" : "text-slate-400")} />
       <input
         type="text"
         value={searchQuery}
         onChange={e => setSearchQuery(e.target.value)}
         placeholder="Search menu..."
+        aria-label="Search sidebar menu"
         className={cn(
           "w-full pl-8 pr-7 py-1.5 text-[12px] rounded-lg border outline-none transition-colors",
           dark
@@ -389,10 +395,12 @@ export function DashboardSidebar() {
       />
       {searchQuery && (
         <button
+          type="button"
           onClick={() => setSearchQuery('')}
+          aria-label="Clear search"
           className={cn("absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 transition-colors", dark ? "text-slate-500 hover:text-slate-300" : "text-slate-400 hover:text-slate-600")}
         >
-          <X className="h-3 w-3" />
+          <X className="h-3 w-3" aria-hidden="true" />
         </button>
       )}
     </div>
@@ -429,20 +437,23 @@ export function DashboardSidebar() {
       <div className={cn("px-2 pt-3 shrink-0", collapsed && "flex justify-center")}>
         {collapsed ? (
           <button
+            type="button"
             onClick={() => setCmdOpen(true)}
             title="Search (Ctrl/Cmd+K)"
+            aria-label="Search (Ctrl/Cmd+K)"
             className={cn("h-9 w-9 rounded-lg flex items-center justify-center transition-colors",
               dark ? "text-slate-500 hover:text-slate-300 hover:bg-white/5" : "text-slate-400 hover:text-[#9810fa] hover:bg-slate-50")}
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : (
           <button
+            type="button"
             onClick={() => setCmdOpen(true)}
             className={cn("w-full flex items-center gap-2 rounded-xl px-3 py-2 border transition-all group text-left",
               dark ? "bg-white/5 border-white/10 hover:border-[#9b5de5]/40" : "bg-slate-50 border-slate-200 hover:border-[#9810fa]/30 hover:bg-white")}
           >
-            <Search className={cn("h-3.5 w-3.5 shrink-0 transition-colors", dark ? "text-slate-500 group-hover:text-[#b388ff]" : "text-slate-400 group-hover:text-[#9810fa]")} />
+            <Search aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0 transition-colors", dark ? "text-slate-500 group-hover:text-[#b388ff]" : "text-slate-400 group-hover:text-[#9810fa]")} />
             <span className={cn("text-[12px] font-medium flex-1", dark ? "text-slate-500" : "text-slate-400")}>Search pages, students…</span>
             <div className="flex items-center gap-1">
               <kbd className={cn("text-[9px] font-bold rounded px-1.5 py-0.5 border", dark ? "text-slate-500 bg-white/5 border-white/10" : "text-slate-400 bg-white border-slate-200")}>⌘</kbd>
@@ -610,7 +621,10 @@ export function DashboardSidebar() {
       <SidebarFooter className={cn("border-t p-3 space-y-3 transition-colors", dark ? "border-white/10 bg-[#0F1424]" : "border-slate-200 bg-white")}>
         {/* Dark mode toggle */}
         <button
+          type="button"
           onClick={toggleTheme}
+          aria-pressed={dark}
+          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
           className={cn(
             "w-full flex items-center rounded-xl border transition-all group",
             collapsed ? "justify-center h-10 w-10 mx-auto p-0" : "gap-2.5 px-3 py-2",
@@ -618,7 +632,7 @@ export function DashboardSidebar() {
           )}
           title={dark ? "Switch to light mode" : "Switch to dark mode"}
         >
-          <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110",
+          <div aria-hidden="true" className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110",
             dark ? "bg-[#9b5de5]/20" : "bg-[#9810fa]/10")}>
             {dark ? <Sun className="h-3.5 w-3.5 text-amber-400" /> : <Moon className="h-3.5 w-3.5 text-[#9810fa]" />}
           </div>
@@ -629,7 +643,7 @@ export function DashboardSidebar() {
             </div>
           )}
           {!collapsed && (
-            <span className={cn("relative inline-flex h-4 w-7 items-center rounded-full transition-colors", dark ? "bg-[#9b5de5]" : "bg-slate-300")}>
+            <span aria-hidden="true" className={cn("relative inline-flex h-4 w-7 items-center rounded-full transition-colors", dark ? "bg-[#9b5de5]" : "bg-slate-300")}>
               <span className={cn("inline-block h-3 w-3 transform rounded-full bg-white transition-transform", dark ? "translate-x-3.5" : "translate-x-0.5")} />
             </span>
           )}
@@ -694,10 +708,12 @@ export function DashboardSidebar() {
                 <p className={cn("text-[10px] capitalize", dark ? "text-slate-400" : "text-slate-500")}>{role || 'Super Admin'}</p>
               </div>
               <button
+                type="button"
                 onClick={logout}
-                className={cn("transition-colors", dark ? "text-slate-400 hover:text-white" : "text-slate-400 hover:text-slate-600")}
+                aria-label="Log out"
+                className={cn("transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400", dark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-700")}
               >
-                <LogOut className="h-3.5 w-3.5" />
+                <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </>
           )}
