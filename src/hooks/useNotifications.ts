@@ -6,6 +6,7 @@ import { getRole } from "@/lib/roles";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
+import { notificationReadRepository } from "@/repositories/NotificationReadRepository";
 
 // Browsers create a new AudioContext in "suspended" state until a user
 // gesture unlocks audio on the page — a fresh context per call (the old
@@ -288,7 +289,7 @@ export function useNotifications() {
     let active = true;
     (async () => {
       try {
-        const rows: any[] = await fetch(`/api/data/notification_reads?uid=${encodeURIComponent(myUid)}`).then(r => r.json());
+        const rows = await notificationReadRepository.findByUid(myUid);
         if (!active || !Array.isArray(rows)) return;
         const sentinelId = `nr_bootstrap_${myUid}`;
         const sentinel = rows.find(r => r.id === sentinelId);
@@ -300,7 +301,7 @@ export function useNotifications() {
         } else {
           const cutoffTime = new Date().toISOString();
           bootstrapCutoff.current = new Date(cutoffTime).getTime();
-          smartDb.create("NotificationRead", { id: sentinelId, uid: myUid, cutoffTime }, sentinelId).catch(() => {});
+          notificationReadRepository.create({ id: sentinelId, uid: myUid, cutoffTime }).catch(() => {});
         }
         bootstrapLoaded.current = true;
         flush(); // re-derive read state for anything ingested before this resolved
@@ -492,7 +493,7 @@ export function useNotifications() {
     // in-memory update above, so a slow/failed write here shouldn't block anything.
     Promise.all(idsToPersist.map(id => {
       const rowId = `${id}_${myUid}`;
-      return smartDb.create("NotificationRead", { id: rowId, uid: myUid, notificationId: id, readAt: new Date().toISOString() }, rowId).catch(() => {});
+      return notificationReadRepository.create({ id: rowId, uid: myUid, notificationId: id, readAt: new Date().toISOString() }).catch(() => {});
     })).catch(() => {});
   }, [flush, isReadByMe, myUid]);
 
@@ -502,12 +503,12 @@ export function useNotifications() {
     if (!myUid) return;
     const rowId = `${id}_${myUid}`;
     if (read) {
-      smartDb.create("NotificationRead", { id: rowId, uid: myUid, notificationId: id, readAt: new Date().toISOString() }, rowId).catch(() => {});
+      notificationReadRepository.create({ id: rowId, uid: myUid, notificationId: id, readAt: new Date().toISOString() }).catch(() => {});
     } else {
       // Marking a notification unread that predates this account's bootstrap
       // cutoff has no explicit row to delete (it was implicitly read) — it'll
       // stay read. Known, acceptable limitation for very old historical items.
-      smartDb.delete("NotificationRead", rowId).catch(() => {});
+      notificationReadRepository.delete(rowId).catch(() => {});
     }
   }, [flush, myUid]);
 
