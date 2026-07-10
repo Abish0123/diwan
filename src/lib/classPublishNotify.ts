@@ -6,7 +6,13 @@
 // single generic broadcast that only ever reached students filtered by
 // grade/section — never parents, never the section's own class teacher,
 // never school leadership.
+//
+// Individual row writes now go through notificationBus.ts's emitNotification
+// (Phase 5) — same behavior/ids as before, just via the one shared
+// primitive instead of calling smartDb.create directly at each of the four
+// per-recipient-type write sites below.
 import { smartDb } from "@/lib/localDb";
+import { emitNotification } from "@/lib/notificationBus";
 
 function slugify(s: string) {
   return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -66,20 +72,20 @@ export async function notifyClassPublish(opts: ClassPublishOptions): Promise<voi
 
       if (email) {
         const id = `${base}-student`;
-        jobs.push(smartDb.create("Notification", {
+        jobs.push(emitNotification({
           id, recipientUid: email, category: "student", entity: opts.entity, type: opts.type,
           title: opts.title, message: opts.message, grade: opts.grade, section: opts.section,
-          studentId: sid, time: stamp, read: false, redirectUrl: opts.redirectUrlStudent,
-        }, id).catch(() => {}));
+          studentId: sid, time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrlStudent,
+        }));
       }
 
       const parentId = `${base}-parent`;
-      jobs.push(smartDb.create("Notification", {
+      jobs.push(emitNotification({
         id: parentId, audienceRole: "parent", category: "student", entity: opts.entity, type: opts.type,
         title: opts.title, message: `${opts.message} (${s.name || "your child"})`,
         grade: opts.grade, section: opts.section, studentId: sid,
-        time: stamp, read: false, redirectUrl: opts.redirectUrlParent,
-      }, parentId).catch(() => {}));
+        time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrlParent,
+      }));
     }
 
     const classTeachers = (Array.isArray(users) ? users : []).filter((u: any) => {
@@ -91,20 +97,20 @@ export async function notifyClassPublish(opts: ClassPublishOptions): Promise<voi
       const email = String(t.email ?? "");
       if (!email) continue;
       const id = `${slugify(opts.entity)}-${opts.sourceId}-classteacher-${slugify(email)}`;
-      jobs.push(smartDb.create("Notification", {
+      jobs.push(emitNotification({
         id, recipientUid: email, category: "staff", entity: opts.entity, type: opts.type,
         title: opts.title, message: opts.message, grade: opts.grade, section: opts.section,
-        time: stamp, read: false, redirectUrl: opts.redirectUrlTeacher,
-      }, id).catch(() => {}));
+        time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrlTeacher,
+      }));
     }
 
     for (const role of LEADERSHIP_ROLES) {
       const id = `${slugify(opts.entity)}-${opts.sourceId}-${role}`;
-      jobs.push(smartDb.create("Notification", {
+      jobs.push(emitNotification({
         id, audienceRole: role, category: "staff", entity: opts.entity, type: opts.type,
         title: opts.title, message: opts.message, grade: opts.grade, section: opts.section,
-        time: stamp, read: false, redirectUrl: opts.redirectUrlTeacher,
-      }, id).catch(() => {}));
+        time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrlTeacher,
+      }));
     }
 
     await Promise.all(jobs);
@@ -133,11 +139,11 @@ export async function notifyClassTeacherEvent(opts: {
       const email = String(t.email ?? "");
       if (!email || email === opts.excludeEmail) return Promise.resolve();
       const id = `${slugify(opts.entity)}-${opts.sourceId}-classteacher-${slugify(email)}`;
-      return smartDb.create("Notification", {
+      return emitNotification({
         id, recipientUid: email, category: "staff", entity: opts.entity, type: opts.type,
         title: opts.title, message: opts.message, grade: opts.grade, section: opts.section,
-        time: stamp, read: false, redirectUrl: opts.redirectUrl,
-      }, id).catch(() => {});
+        time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrl,
+      });
     }));
   } catch { /* non-fatal */ }
 }
@@ -155,11 +161,11 @@ export async function notifyParentsOfStudents(
     const stamp = new Date().toISOString();
     await Promise.all(studentEntries.map(s => {
       const id = `${slugify(opts.entity)}-${opts.sourceId}-${slugify(s.id)}-parent`;
-      return smartDb.create("Notification", {
+      return emitNotification({
         id, audienceRole: "parent", category: "student", entity: opts.entity, type: opts.type,
         title: opts.title, message: s.message, grade: opts.grade, section: opts.section,
-        studentId: s.id, time: stamp, read: false, redirectUrl: opts.redirectUrl,
-      }, id).catch(() => {});
+        studentId: s.id, time: stamp, createdAt: stamp, redirectUrl: opts.redirectUrl,
+      });
     }));
   } catch { /* non-fatal */ }
 }

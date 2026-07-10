@@ -1,4 +1,4 @@
-import { smartDb } from "./localDb";
+import { emitNotification, notifyRoles } from "./notificationBus";
 
 // Extracted from identical copy-pasted implementations in
 // src/pages/finance/PurchaseApprovals.tsx and
@@ -6,8 +6,13 @@ import { smartDb } from "./localDb";
 // workflows are single-decision-point (one approver, approve or decline —
 // no "forward to the next approver" concept), so this is a Chain-of-
 // Responsibility-shaped problem only in name; there is no chain to advance.
-// What was genuinely duplicated is this notification dispatch, which is
-// what's actually consolidated here.
+// What was genuinely duplicated is this notification dispatch.
+//
+// Now built on src/lib/notificationBus.ts's generic notifyRoles/
+// emitNotification (Phase 5) rather than calling smartDb.create directly —
+// same behavior, same ids, just routed through the one shared primitive
+// instead of reimplementing it a third time (classPublishNotify.ts being
+// the second).
 
 export interface NotifyRolesInput {
   type: string;
@@ -15,32 +20,11 @@ export interface NotifyRolesInput {
   message: string;
 }
 
-// One Notification row per target role (audienceRole matching is per-record
-// — see useNotifications.ts). Same deterministic id scheme as both original
-// call sites (po_notif_<timestamp>_<index>), so re-running the same action
+// One Notification row per target role. Same deterministic id scheme as
+// before (po_notif_<timestamp>_<index>), so re-running the same action
 // upserts instead of duplicating.
 export async function notifyFinanceRoles(roles: string[], opts: NotifyRolesInput): Promise<void> {
-  const stamp = Date.now();
-  await Promise.allSettled(
-    roles.map((audienceRole, i) =>
-      smartDb.create(
-        "Notification",
-        {
-          id: `po_notif_${stamp}_${i}`,
-          audienceRole,
-          category: "finance",
-          entity: "PurchaseOrder",
-          type: opts.type,
-          title: opts.title,
-          message: opts.message,
-          createdAt: new Date().toISOString(),
-          time: new Date().toISOString(),
-          read: false,
-        },
-        `po_notif_${stamp}_${i}`,
-      ),
-    ),
-  );
+  await notifyRoles(roles, { idPrefix: "po_notif", entity: "PurchaseOrder", category: "finance", ...opts });
 }
 
 // Same deterministic-id notification pattern used throughout the app (e.g.
@@ -53,19 +37,13 @@ export async function notifyBookRequester(
   title: string,
   message: string,
 ): Promise<void> {
-  const id = `bookreq-${request.id}-${stage}`;
-  try {
-    await smartDb.create("Notification", {
-      id,
-      recipientName: request.requestedBy,
-      category: "staff",
-      entity: "BookRequest",
-      type: `book_request_${stage}`,
-      title,
-      message,
-      createdAt: new Date().toISOString(),
-      time: new Date().toISOString(),
-      read: false,
-    }, id);
-  } catch { /* non-fatal — the underlying status change already persisted */ }
+  await emitNotification({
+    id: `bookreq-${request.id}-${stage}`,
+    recipientName: request.requestedBy,
+    category: "staff",
+    entity: "BookRequest",
+    type: `book_request_${stage}`,
+    title,
+    message,
+  });
 }
