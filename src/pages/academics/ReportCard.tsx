@@ -17,6 +17,7 @@ import { useCurriculum } from "@/hooks/useCurriculum";
 import { useGradeCoordinator } from "@/hooks/useGradeCoordinator";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { getBandForGrade } from "@/lib/curriculumConfig";
+import { templateIdFromCurriculum } from "@/lib/curriculumTypeMap";
 import {
   loadGradebookSources, computeStudentGradebook,
   type GradebookSources,
@@ -716,10 +717,13 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
   }
 
   // ── Header variants — each template gets a distinct masthead ──
+  // Was an if/else-if chain on th.header; converted to a Strategy-style
+  // lookup (Record<HeaderStyle, () => JSX>) so adding a new header style
+  // means adding one entry, not extending a growing else-if chain. Every
+  // branch's JSX is unchanged — this is a pure control-flow restructure.
   const grad = `linear-gradient(135deg,${th.primary},${th.accent})`;
-  let header: React.ReactNode;
-  if (th.header === "bar") {
-    header = (
+  const headerRenderers: Record<HeaderStyle, () => React.ReactNode> = {
+    bar: () => (
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10,
         borderBottom: `2px solid ${th.primary}`, marginBottom: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: grad,
@@ -731,9 +735,8 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
         <div style={{ background: th.primary + "15", color: th.primary, fontSize: 11, fontWeight: 800,
           borderRadius: 6, padding: "2px 8px", flexShrink: 0 }}>{th.scale(pct)}</div>
       </div>
-    );
-  } else if (th.header === "centered") {
-    header = (
+    ),
+    centered: () => (
       <div style={{ textAlign: "center", paddingBottom: 10, marginBottom: 10, borderBottom: `1px dashed ${th.accent}` }}>
         <div style={{ width: 40, height: 40, borderRadius: "50%", background: grad, margin: "0 auto 6px",
           display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800 }}>SD</div>
@@ -741,9 +744,8 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
         <p style={{ fontSize: 9, color: th.primary, fontWeight: 700, letterSpacing: ".04em" }}>★ {th.board} ★</p>
         <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B", marginTop: 2 }}>{year} | {term}</p>
       </div>
-    );
-  } else if (th.header === "seal") {
-    header = (
+    ),
+    seal: () => (
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 10, marginBottom: 10,
         background: th.soft, borderRadius: 10, padding: 10 }}>
         <div style={{ width: 38, height: 38, borderRadius: "50%", border: `2px solid ${th.primary}`, flexShrink: 0,
@@ -754,9 +756,8 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
           <p style={{ fontSize: 8, color: "#475569" }}>{th.regLine ? `${th.regLine} · ` : ""}{year} | {term}</p>
         </div>
       </div>
-    );
-  } else if (th.header === "banner") {
-    header = (
+    ),
+    banner: () => (
       <div style={{ marginBottom: 10 }}>
         <div style={{ background: grad, borderRadius: "8px 8px 0 0", padding: "8px 12px", color: "#fff" }}>
           <p style={{ fontSize: 12, fontWeight: 800 }}>Student Diwan Global School</p>
@@ -768,9 +769,8 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
           <span style={{ fontSize: 8, color: "#92400E", fontWeight: 700 }}>Result: PASS</span>
         </div>
       </div>
-    );
-  } else if (th.header === "columns") {
-    header = (
+    ),
+    columns: () => (
       <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8, marginBottom: 10,
         borderBottom: `3px double ${th.primary}` }}>
         <div style={{ width: 34, height: 34, borderRadius: 4, background: grad, flexShrink: 0,
@@ -784,9 +784,8 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
           <p style={{ fontSize: 9, fontWeight: 800, color: th.primary }}>{term}</p>
         </div>
       </div>
-    );
-  } else if (th.header === "scale") {
-    header = (
+    ),
+    scale: () => (
       <div style={{ marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, background: grad, flexShrink: 0,
@@ -804,16 +803,16 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
           <span style={{ fontSize: 7, color: dark ? "#8B8BA8" : "#94A3B8" }}>7</span>
         </div>
       </div>
-    );
-  } else { // minimal
-    header = (
+    ),
+    minimal: () => (
       <div style={{ paddingBottom: 8, marginBottom: 10, borderBottom: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}`,
         display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A" }}>Student Diwan Global School</p>
         <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B" }}>{th.board} · {year} {term}</p>
       </div>
-    );
-  }
+    ),
+  };
+  const header: React.ReactNode = headerRenderers[th.header]();
 
   return (
     <div style={{ background: dark ? "#16162A" : "#fff", border: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 12,
@@ -1935,7 +1934,19 @@ export default function ReportCard() {
   // ── Real-time data from the live app (students + classes) ──
   const { students: allStudents } = useStudents();
   const { classes } = useClasses();
-  const { curriculum } = useCurriculum();
+  const { curriculum, curriculumId, loading: curriculumLoading } = useCurriculum();
+
+  // Auto-select the report template matching the school's actual active
+  // curriculum, instead of always defaulting to "primary" regardless of it.
+  // Fires once, the first time curriculumId resolves from its async load —
+  // guarded so it never overwrites a template the user has since picked
+  // manually via the template selector.
+  const didAutoSelectTemplate = useRef(false);
+  useEffect(() => {
+    if (curriculumLoading || didAutoSelectTemplate.current) return;
+    didAutoSelectTemplate.current = true;
+    setTemplate(templateIdFromCurriculum(curriculumId) as TemplateId);
+  }, [curriculumLoading, curriculumId]);
   const [gbSources, setGbSources] = useState<GradebookSources | null>(null);
   useEffect(() => { loadGradebookSources().then(setGbSources).catch(() => setGbSources(null)); }, []);
 
