@@ -1,0 +1,577 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "leaflet/dist/leaflet.css";
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* Consistent A4 page size + margins for every printed document app-wide
+   (hall tickets, seating plans, reports, etc.) instead of leaving it to
+   whatever default the browser/printer driver picks. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-background: #F8F7FF;
+  --color-foreground: #1A1A1A;
+
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1A1A1A;
+
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #1A1A1A;
+
+  --color-primary: #9810fa;
+  --color-primary-foreground: #FFFFFF;
+
+  --color-secondary: #FDF2F8;
+  --color-secondary-foreground: #9810fa;
+
+  --color-muted: #F1F5F9;
+  --color-muted-foreground: #64748B;
+
+  --color-accent: #d12386;
+  --color-accent-foreground: #FFFFFF;
+
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+
+  --color-border: #E2E8F0;
+  --color-input: #E2E8F0;
+  --color-ring: #7C3AED;
+
+  --color-sidebar-background: #FFFFFF;
+  --color-sidebar-foreground: #475569;
+  --color-sidebar-primary: #9810fa;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: #FDF2F8;
+  --color-sidebar-accent-foreground: #9810fa;
+  --color-sidebar-border: #F1F5F9;
+  --color-sidebar-ring: #9810fa;
+
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-up: fade-up 0.5s ease-out forwards;
+  --animate-scale-in: scale-in 0.3s ease-out forwards;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  .dark {
+    --color-background: #0E0E16;
+    --color-foreground: #F0EFFF;
+    --color-card: #16162A;
+    --color-card-foreground: #F0EFFF;
+    --color-popover: #1A1A30;
+    --color-popover-foreground: #F0EFFF;
+    --color-primary: #9B59E6;
+    --color-primary-foreground: #FFFFFF;
+    --color-secondary: #1F1F38;
+    --color-secondary-foreground: #C4B5FD;
+    --color-muted: #1F1F38;
+    --color-muted-foreground: #8B8BA8;
+    --color-accent: #E8459B;
+    --color-accent-foreground: #FFFFFF;
+    --color-destructive: #F87171;
+    --color-destructive-foreground: #FFFFFF;
+    --color-border: #2A2A45;
+    --color-input: #2A2A45;
+    --color-ring: #9B59E6;
+    --color-sidebar-background: #0A0A14;
+    --color-sidebar-foreground: #9090B0;
+    --color-sidebar-primary: #9B59E6;
+    --color-sidebar-primary-foreground: #FFFFFF;
+    --color-sidebar-accent: #1A1A30;
+    --color-sidebar-accent-foreground: #C4B5FD;
+    --color-sidebar-border: #1E1E35;
+    --color-sidebar-ring: #9B59E6;
+  }
+}
+
+/* ── Dark-mode retrofit ──────────────────────────────────────────────
+   Hundreds of pages hardcode literal light-theme Tailwind utilities
+   (bg-white, text-slate-900, border-slate-200, ...) instead of the
+   theme-aware tokens above (bg-card, text-foreground, border-border).
+   Rewriting every page individually isn't practical, so instead these
+   unlayered rules (unlayered = highest precedence, beats @layer utilities)
+   repaint the most common hardcoded classes whenever .dark is active,
+   so the rest of the app gets a coherent dark theme without per-page edits.
+   New components should still prefer the semantic tokens directly. */
+.dark {
+  .bg-white { background-color: #16162A; }
+  .bg-gray-50, .bg-slate-50, .bg-zinc-50, .bg-neutral-50 { background-color: #1A1A30; }
+  .bg-gray-100, .bg-slate-100, .bg-zinc-100, .bg-neutral-100 { background-color: #1F1F38; }
+  .bg-gray-200, .bg-slate-200, .bg-zinc-200, .bg-neutral-200 { background-color: #262643; }
+
+  .text-gray-900, .text-slate-900, .text-zinc-900, .text-neutral-900,
+  .text-gray-800, .text-slate-800, .text-zinc-800, .text-neutral-800 { color: #F0EFFF; }
+  .text-gray-700, .text-slate-700, .text-zinc-700, .text-neutral-700 { color: #C7C7DC; }
+  .text-gray-600, .text-slate-600, .text-zinc-600, .text-neutral-600 { color: #A8A8C4; }
+  .text-gray-500, .text-slate-500, .text-zinc-500, .text-neutral-500 { color: #8B8BA8; }
+  .text-gray-400, .text-slate-400, .text-zinc-400, .text-neutral-400 { color: #6B6B94; }
+
+  .border-gray-100, .border-slate-100, .border-zinc-100, .border-neutral-100,
+  .border-gray-200, .border-slate-200, .border-zinc-200, .border-neutral-200,
+  .border-gray-300, .border-slate-300, .border-zinc-300, .border-neutral-300 { border-color: #2A2A45; }
+
+  .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #2A2A45; }
+
+  .hover\:bg-slate-50:hover, .hover\:bg-gray-50:hover { background-color: #1F1F38; }
+  .hover\:bg-slate-100:hover, .hover\:bg-gray-100:hover { background-color: #262643; }
+
+  /* Full-bleed page backgrounds some pages set directly instead of via DashboardLayout */
+  .bg-\[\#F8F7FF\], .bg-\[\#F9FAFB\] { background-color: #0E0E16; }
+
+  /* Variant-prefixed utilities (data-[state=active]:bg-white, hover:bg-white, …) —
+     Tailwind keeps the literal `data-[state=active]:bg-white` text as the class
+     name itself, so a plain `.bg-white` selector never matches it. An attribute
+     substring selector matches the raw class text regardless of the brackets/
+     colons inside it, no escaping needed. Used on ~8 pages' pill-style active
+     tab triggers, which otherwise stayed a solid white square on a dark bar. */
+  [class*="data-[state=active]:bg-white"][data-state="active"] { background-color: #16162A; }
+  [class*="hover:bg-white"]:hover { background-color: #1F1F38; }
+
+  /* Gradient stop utilities (from-white, to-slate-50, …) — these set the
+     --tw-gradient-from/via/to custom properties rather than background-color,
+     so the .bg-white rule above doesn't reach them. ~30 call sites use a
+     light-colored gradient stop to fade a card/panel to white, which left a
+     bright wash in an otherwise dark card. */
+  .from-white { --tw-gradient-from: #16162A var(--tw-gradient-from-position); }
+  .via-white { --tw-gradient-via: #16162A var(--tw-gradient-via-position); }
+  .to-white { --tw-gradient-to: #16162A var(--tw-gradient-to-position); }
+  .from-slate-50, .from-gray-50 { --tw-gradient-from: #1A1A30 var(--tw-gradient-from-position); }
+  .to-slate-50, .to-gray-50 { --tw-gradient-to: #1A1A30 var(--tw-gradient-to-position); }
+  .from-slate-100, .from-gray-100 { --tw-gradient-from: #1F1F38 var(--tw-gradient-from-position); }
+
+  /* ── Opacity-modified light utilities (bg-slate-50/50, border-slate-200/50, …) ──
+     Tailwind generates a DISTINCT literal class per opacity fraction, so the
+     plain-class overrides above (.bg-slate-50 etc.) don't match these at all —
+     ~250+ call sites across the app use these for translucent panel/board
+     backgrounds and hairline borders, which stayed washed-out light patches in
+     dark mode. Attribute selectors catch every fraction (/5 … /95) in one rule
+     instead of enumerating each one. High-opacity bg-white/reference-* (50-95)
+     are near-solid overlays and get the same treatment; low-opacity ones
+     (/5-/40) are left alone since they're usually deliberate subtle highlight
+     tints that already read fine on a dark surface. */
+  [class*="bg-slate-50/"], [class*="bg-gray-50/"], [class*="bg-zinc-50/"], [class*="bg-neutral-50/"],
+  [class*="bg-slate-100/"], [class*="bg-gray-100/"], [class*="bg-zinc-100/"], [class*="bg-neutral-100/"] {
+    background-color: rgba(255,255,255,0.05);
+  }
+  [class*="bg-white/5"], [class*="bg-white/6"], [class*="bg-white/7"], [class*="bg-white/8"], [class*="bg-white/9"] {
+    background-color: rgba(255,255,255,0.06);
+  }
+  [class*="border-slate-100/"], [class*="border-gray-100/"],
+  [class*="border-slate-200/"], [class*="border-gray-200/"],
+  [class*="border-slate-300/"], [class*="border-gray-300/"] {
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  /* ── Status/color "soft badge" pills (bg-{color}-100 text-{color}-700 etc.) ──
+     Used app-wide for status chips, category tags, alert banners. On a light
+     page a pastel bg + saturated text reads fine; unchanged on a dark page it's
+     a jarring bright patch with poor contrast. Repaint as a translucent tint of
+     the same hue with a brightened, readable text color — keeps each status's
+     color-coding meaning intact while fitting the dark surface. */
+  .bg-blue-50, .bg-blue-100 { background-color: rgba(59,130,246,0.16); }
+  .text-blue-600, .text-blue-700, .text-blue-800 { color: #60A5FA; }
+  .border-blue-100, .border-blue-200, .border-blue-300 { border-color: rgba(59,130,246,0.35); }
+
+  .bg-indigo-50, .bg-indigo-100 { background-color: rgba(99,102,241,0.16); }
+  .text-indigo-600, .text-indigo-700, .text-indigo-800 { color: #818CF8; }
+  .border-indigo-100, .border-indigo-200 { border-color: rgba(99,102,241,0.35); }
+
+  .bg-violet-50, .bg-violet-100 { background-color: rgba(139,92,246,0.16); }
+  .text-violet-600, .text-violet-700, .text-violet-800 { color: #A78BFA; }
+  .border-violet-100, .border-violet-200 { border-color: rgba(139,92,246,0.35); }
+
+  .bg-purple-50, .bg-purple-100 { background-color: rgba(168,85,247,0.16); }
+  .text-purple-600, .text-purple-700, .text-purple-800 { color: #C084FC; }
+  .border-purple-100, .border-purple-200 { border-color: rgba(168,85,247,0.35); }
+
+  .bg-green-50, .bg-green-100 { background-color: rgba(34,197,94,0.16); }
+  .text-green-600, .text-green-700, .text-green-800 { color: #4ADE80; }
+  .border-green-100, .border-green-200 { border-color: rgba(34,197,94,0.35); }
+
+  .bg-emerald-50, .bg-emerald-100 { background-color: rgba(16,185,129,0.16); }
+  .text-emerald-600, .text-emerald-700, .text-emerald-800 { color: #34D399; }
+  .border-emerald-100, .border-emerald-200 { border-color: rgba(16,185,129,0.35); }
+
+  .bg-red-50, .bg-red-100 { background-color: rgba(239,68,68,0.16); }
+  .text-red-600, .text-red-700, .text-red-800 { color: #F87171; }
+  .border-red-100, .border-red-200 { border-color: rgba(239,68,68,0.35); }
+
+  .bg-rose-50, .bg-rose-100 { background-color: rgba(244,63,94,0.16); }
+  .text-rose-600, .text-rose-700, .text-rose-800 { color: #FB7185; }
+  .border-rose-100, .border-rose-200 { border-color: rgba(244,63,94,0.35); }
+
+  .bg-yellow-50, .bg-yellow-100 { background-color: rgba(234,179,8,0.16); }
+  .text-yellow-600, .text-yellow-700, .text-yellow-800 { color: #FACC15; }
+  .border-yellow-100, .border-yellow-200 { border-color: rgba(234,179,8,0.35); }
+
+  .bg-amber-50, .bg-amber-100 { background-color: rgba(245,158,11,0.16); }
+  .text-amber-600, .text-amber-700, .text-amber-800 { color: #FBBF24; }
+  .border-amber-100, .border-amber-200 { border-color: rgba(245,158,11,0.35); }
+
+  .bg-orange-50, .bg-orange-100 { background-color: rgba(249,115,22,0.16); }
+  .text-orange-600, .text-orange-700, .text-orange-800 { color: #FB923C; }
+  .border-orange-100, .border-orange-200 { border-color: rgba(249,115,22,0.35); }
+
+  .bg-pink-50, .bg-pink-100 { background-color: rgba(236,72,153,0.16); }
+  .text-pink-600, .text-pink-700, .text-pink-800 { color: #F472B6; }
+  .border-pink-100, .border-pink-200 { border-color: rgba(236,72,153,0.35); }
+
+  .bg-fuchsia-50, .bg-fuchsia-100 { background-color: rgba(217,70,239,0.16); }
+  .text-fuchsia-600, .text-fuchsia-700 { color: #E879F9; }
+
+  .bg-cyan-50, .bg-cyan-100 { background-color: rgba(6,182,212,0.16); }
+  .text-cyan-600, .text-cyan-700 { color: #22D3EE; }
+
+  .bg-teal-50, .bg-teal-100 { background-color: rgba(20,184,166,0.16); }
+  .text-teal-600, .text-teal-700 { color: #2DD4BF; }
+
+  .bg-sky-50, .bg-sky-100 { background-color: rgba(14,165,233,0.16); }
+  .text-sky-600, .text-sky-700 { color: #38BDF8; }
+
+  .bg-lime-50, .bg-lime-100 { background-color: rgba(132,204,22,0.16); }
+  .text-lime-600, .text-lime-700 { color: #A3E635; }
+
+  /* Scrollbars: default light-gray browser scrollbar is hard to see and
+     visually clashes with dark surfaces. Targets both the element carrying
+     .dark (usually <html>) and all its descendants. */
+  scrollbar-color: #33334F #16162A;
+  * {
+    scrollbar-color: #33334F #16162A;
+  }
+  &::-webkit-scrollbar-track, *::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb { background-color: #33334F; border-radius: 8px; }
+  &::-webkit-scrollbar-thumb:hover, *::-webkit-scrollbar-thumb:hover { background-color: #45456A; }
+
+  /* Text selection highlight tuned for the dark palette instead of the
+     browser's default (light-blue, low contrast on a dark card). */
+  ::selection { background-color: #9B59E6; color: #FFFFFF; }
+
+  /* ── Recharts (used on ~20 dashboard/analytics pages) ──
+     Axis labels, grid lines, and legend text are set via inline SVG
+     presentation attributes (fill="#666" etc.), not Tailwind classes, so
+     nothing above touches them. A hardcoded mid-gray reads at ~3:1 contrast
+     on the dark background — under WCAG AA — making chart labels genuinely
+     hard to read. A CSS `fill`/`stroke` rule beats an SVG presentation
+     attribute, so this repaints every chart consistently in one place. */
+  .recharts-text, .recharts-cartesian-axis-tick text, .recharts-polar-angle-axis-tick text { fill: #A8A8C4; }
+  .recharts-cartesian-grid line { stroke: #2A2A45; }
+  .recharts-cartesian-axis-line, .recharts-cartesian-axis-tick-line { stroke: #2A2A45; }
+  .recharts-legend-item-text { color: #C7C7DC !important; }
+  .recharts-default-tooltip {
+    background-color: #1A1A30 !important;
+    border-color: #2A2A45 !important;
+    color: #F0EFFF !important;
+  }
+  .recharts-tooltip-label { color: #F0EFFF !important; }
+}
+
+@layer components {
+  .premium-card {
+    @apply bg-card rounded-[24px] border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_8px_30px_rgb(186,41,189,0.08)] overflow-hidden;
+  }
+
+  .shadow-soft {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, #d12386 0%, #9810fa 100%);
+  }
+
+  .gradient-ai {
+    background: linear-gradient(135deg, #9810fa 0%, #d12386 100%);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #d12386 0%, #9810fa 100%);
+  }
+
+  .active-indicator {
+    @apply relative;
+  }
+
+  .active-indicator::after {
+    content: '';
+    @apply absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-primary;
+  }
+
+  /* Flash Card Flip Animation Classes */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  /* Markdown Content Styling */
+  .markdown-body {
+    @apply text-slate-700 leading-relaxed;
+  }
+
+  .markdown-body h1 {
+    @apply text-3xl font-bold text-slate-900 mt-8 mb-4 border-b pb-2 border-slate-100;
+  }
+
+  .markdown-body h2 {
+    @apply text-2xl font-bold text-slate-800 mt-6 mb-3;
+  }
+
+  .markdown-body h3 {
+    @apply text-xl font-bold text-slate-800 mt-5 mb-2;
+  }
+
+  .markdown-body p {
+    @apply mb-4;
+  }
+
+  .markdown-body ul, .markdown-body ol {
+    @apply mb-4 ml-6 space-y-2;
+  }
+
+  .markdown-body ul {
+    @apply list-disc;
+  }
+
+  .markdown-body ol {
+    @apply list-decimal;
+  }
+
+  .markdown-body strong {
+    @apply font-bold text-slate-900;
+  }
+
+  .markdown-body table {
+    @apply w-full border-collapse mb-6 mt-4 rounded-lg overflow-hidden border border-slate-200;
+  }
+
+  .markdown-body th {
+    @apply bg-slate-50 text-slate-900 font-bold p-3 text-left border-b border-slate-200;
+  }
+
+  .markdown-body td {
+    @apply p-3 border-b border-slate-100 text-sm;
+  }
+
+  .markdown-body tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .markdown-body tr:hover td {
+    @apply bg-slate-50/50;
+  }
+
+  .markdown-body blockquote {
+    @apply border-l-4 border-[#d12386]/30 bg-[#d12386]/5 p-4 rounded-r-lg italic mb-4;
+  }
+
+  .markdown-body code {
+    @apply bg-slate-100 px-1.5 py-0.5 rounded text-sm font-mono text-[#9810fa];
+  }
+
+  /* RTL Support */
+  /* Note: Prefer margin-inline-start / margin-inline-end over ml-* / mr-* for logical RTL/LTR switching */
+  [dir="rtl"] .sidebar {
+    right: 0;
+    left: auto;
+  }
+
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="rtl"] .ml-auto {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  [dir="rtl"] .mr-2 {
+    margin-left: 0.5rem;
+    margin-right: 0;
+  }
+
+  /* Print Styles */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    body {
+      background: white !important;
+      color: black !important;
+    }
+    /* The dashboard shell (SidebarProvider > SidebarInset > scroll container)
+       is a chain of flex boxes with a bounded/scrolling height for on-screen
+       use. Flex/scroll containers don't fragment across printed pages — any
+       content taller than one screenful gets clipped to a single page instead
+       of flowing onto page 2, 3, etc. Force the whole shell back to normal
+       block flow with auto height for print so long content (e.g. a full set
+       of hall tickets) paginates correctly. */
+    #root,
+    .group\/sidebar-wrapper,
+    main {
+      display: block !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .markdown-body {
+      font-size: 12pt;
+    }
+    .markdown-body h1 {
+      page-break-before: always;
+    }
+    .markdown-body table {
+      border: 1px solid black !important;
+    }
+    .markdown-body th, .markdown-body td {
+      border: 1px solid black !important;
+    }
+  }
+}
+
+/* ── Native date/time input corner clipping (app-wide) ────────────────────
+   `<input type="date/time/datetime-local/month/week">` renders its
+   calendar-icon button and internal field segments via the browser's own
+   UA chrome, which does not inherit the input's own `border-radius`. That
+   chrome's square edges sit flush against the input's rounded corner,
+   visually "cropping" it — happens on every rounded date/time field
+   app-wide (Timetable's Edit Period being one), not just one component. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  overflow: hidden;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  margin-inline-start: 4px;
+  padding: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover,
+input[type="week"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="month"]::-webkit-calendar-picker-indicator,
+.dark input[type="week"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="month"]::-webkit-calendar-picker-indicator:hover,
+.dark input[type="week"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Sidebar dark mode (scoped, toggled from the sidebar footer) ─────────── */
+[data-sidebar-theme="dark"] {
+  --color-sidebar-background: #0F1424;
+  --color-sidebar-foreground: #CBD5E1;
+  --color-sidebar-accent: rgba(255, 255, 255, 0.06);
+  --color-sidebar-accent-foreground: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+}
+/* `bg-sidebar` is a no-op token in this Tailwind v4 setup, so paint the panel directly */
+[data-sidebar-theme="dark"],
+[data-sidebar-theme="dark"] [data-sidebar="sidebar"] {
+  background-color: #0F1424;
+}

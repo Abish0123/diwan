@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+backups
+uploads
+.git
+.env
+.env.local
+.session-secret
+local_database.db
+*.log
+.vscode
+.idea

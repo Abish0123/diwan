@@ -1,0 +1,493 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:transparent}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.layout{display:flex;gap:0;min-height:620px;border:0.5px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface-2)}
+.sidebar{width:210px;flex-shrink:0;background:var(--surface-1);border-right:0.5px solid var(--border);overflow-y:auto;padding:12px 8px}
+.sidebar-title{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 10px 10px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--text-secondary);transition:background .12s}
+.nav-item:hover{background:var(--surface-2);color:var(--text-primary)}
+.nav-item.active{background:var(--bg-accent);color:var(--text-accent);font-weight:500}
+.nav-item i{font-size:15px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:0}
+.panel{display:none;padding:24px 28px}
+.panel.active{display:block}
+.panel-header{margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid var(--border)}
+.panel-header h2{font-size:16px;font-weight:500;color:var(--text-primary);margin-bottom:4px}
+.panel-header p{font-size:13px;color:var(--text-secondary)}
+.section{margin-bottom:24px}
+.section-label{font-size:12px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.field-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid var(--border)}
+.field-row:last-child{border-bottom:none}
+.field-info{flex:1;min-width:0;padding-right:16px}
+.field-label{font-size:13px;color:var(--text-primary);margin-bottom:2px}
+.field-desc{font-size:12px;color:var(--text-muted)}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider-t{position:absolute;inset:0;background:var(--border-stronger);border-radius:10px;cursor:pointer;transition:.2s}
+.slider-t:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider-t{background:var(--fill-accent)}
+input:checked+.slider-t:before{transform:translateX(16px)}
+.select-field{font-size:13px;padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);min-width:140px;cursor:pointer}
+.input-field{font-size:13px;padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);width:140px}
+.btn-sm{font-size:12px;padding:5px 12px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:transparent;color:var(--text-primary);cursor:pointer}
+.btn-sm:hover{background:var(--surface-1)}
+.btn-primary{background:var(--fill-accent);color:#fff;border-color:var(--fill-accent)}
+.btn-primary:hover{background:var(--fill-accent-hover);border-color:var(--fill-accent-hover)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-success{background:var(--bg-success);color:var(--text-success)}
+.badge-warning{background:var(--bg-warning);color:var(--text-warning)}
+.badge-neutral{background:var(--surface-1);color:var(--text-secondary);border:0.5px solid var(--border)}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.mini-card{background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer}
+.mini-card:hover{border-color:var(--border-accent);background:var(--bg-accent)}
+.mini-card i{font-size:18px;color:var(--text-accent);margin-bottom:6px;display:block}
+.mini-card-label{font-size:12px;font-weight:500;color:var(--text-primary);margin-bottom:2px}
+.mini-card-desc{font-size:11px;color:var(--text-muted)}
+.table-wrap{border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--surface-1);padding:8px 12px;text-align:left;font-size:11px;font-weight:500;color:var(--text-muted);border-bottom:0.5px solid var(--border)}
+td{padding:9px 12px;border-bottom:0.5px solid var(--border);color:var(--text-primary)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface-1)}
+.actions{display:flex;gap:6px}
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;background:var(--surface-1);color:var(--text-secondary);border:0.5px solid var(--border)}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step-item{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:var(--surface-1);border-radius:var(--radius);border:0.5px solid var(--border)}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--bg-accent);color:var(--text-accent);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-content .step-title{font-size:13px;font-weight:500;color:var(--text-primary)}
+.step-content .step-desc{font-size:12px;color:var(--text-muted);margin-top:2px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.sub-section{background:var(--surface-1);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px}
+.sub-section-title{font-size:12px;font-weight:500;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sub-section-title i{font-size:14px;color:var(--text-accent)}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:3px 10px;border-radius:20px;font-size:12px;background:var(--surface-2);border:0.5px solid var(--border);color:var(--text-secondary);cursor:pointer}
+.chip:hover{border-color:var(--border-accent);color:var(--text-accent)}
+.chip.on{background:var(--bg-accent);border-color:var(--border-accent);color:var(--text-accent)}
+.save-bar{position:sticky;bottom:0;background:var(--surface-2);border-top:0.5px solid var(--border);padding:12px 28px;display:flex;justify-content:flex-end;gap:8px;margin:0 -28px -24px}
+</style>
+<h2 class="sr-only">HR & Staff Settings — full configuration panel for Education ERP</h2>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-title">HR Settings</div>
+    <div class="nav-item active" onclick="show('general',this)"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i> General</div>
+    <div class="nav-item" onclick="show('roles',this)"><i class="ti ti-shield-half" aria-hidden="true"></i> Roles & Designations</div>
+    <div class="nav-item" onclick="show('departments',this)"><i class="ti ti-building" aria-hidden="true"></i> Departments</div>
+    <div class="nav-item" onclick="show('attendance',this)"><i class="ti ti-clock" aria-hidden="true"></i> Attendance</div>
+    <div class="nav-item" onclick="show('leave',this)"><i class="ti ti-calendar-off" aria-hidden="true"></i> Leave</div>
+    <div class="nav-item" onclick="show('payroll',this)"><i class="ti ti-coin" aria-hidden="true"></i> Payroll</div>
+    <div class="nav-item" onclick="show('recruitment',this)"><i class="ti ti-user-search" aria-hidden="true"></i> Recruitment</div>
+    <div class="nav-item" onclick="show('performance',this)"><i class="ti ti-chart-line" aria-hidden="true"></i> Performance</div>
+    <div class="nav-item" onclick="show('benefits',this)"><i class="ti ti-gift" aria-hidden="true"></i> Benefits</div>
+    <div class="nav-item" onclick="show('documents',this)"><i class="ti ti-file-description" aria-hidden="true"></i> Documents</div>
+    <div class="nav-item" onclick="show('notifications',this)"><i class="ti ti-bell" aria-hidden="true"></i> Notifications</div>
+    <div class="nav-item" onclick="show('policies',this)"><i class="ti ti-clipboard-text" aria-hidden="true"></i> HR Policies</div>
+  </div>
+
+  <div class="content">
+
+    <!-- GENERAL -->
+    <div id="panel-general" class="panel active">
+      <div class="panel-header">
+        <h2>General settings</h2>
+        <p>Institution identity, fiscal year, working days, and display preferences</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Institution profile</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Institution name</div><div class="field-desc">Displayed on payslips and official HR documents</div></div><input class="input-field" value="St. Xavier's School" style="width:180px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">HR contact email</div><div class="field-desc">Receives all system notifications and alerts</div></div><input class="input-field" value="hr@stxaviers.edu" style="width:180px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Academic/fiscal year start</div><div class="field-desc">Determines leave accrual and salary cycles</div></div><select class="select-field"><option>June 1</option><option>April 1</option><option>January 1</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Time zone</div></div><select class="select-field"><option>IST (UTC+5:30)</option><option>UTC</option></select></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Working week</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Working days</div><div class="field-desc">Default applies to all staff unless overridden by department</div></div>
+          <div class="chip-row"><span class="chip on">Mon</span><span class="chip on">Tue</span><span class="chip on">Wed</span><span class="chip on">Thu</span><span class="chip on">Fri</span><span class="chip">Sat</span><span class="chip">Sun</span></div>
+        </div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Standard work hours/day</div></div><input class="input-field" value="8" style="width:80px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">hours</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Overtime threshold</div><div class="field-desc">Hours beyond this trigger overtime calculations</div></div><input class="input-field" value="8" style="width:80px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">hrs/day</span></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Display & access</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Employee ID prefix</div><div class="field-desc">Auto-generated IDs will use this prefix (e.g. STF-001)</div></div><input class="input-field" value="STF-" style="width:90px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Date format</div></div><select class="select-field"><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Enable staff self-service portal</div><div class="field-desc">Staff can view payslips, apply for leave, update profile</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Two-factor auth for HR admin</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- ROLES & DESIGNATIONS -->
+    <div id="panel-roles" class="panel">
+      <div class="panel-header">
+        <h2>Roles & designations</h2>
+        <p>Define job titles, permission levels, and reporting hierarchies</p>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:12px;color:var(--text-muted)">6 designations · 4 permission roles</div>
+        <div style="display:flex;gap:8px"><button class="btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add designation</button><button class="btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add role</button></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Designation</th><th>Department</th><th>Permission role</th><th>Reports to</th><th>Staff count</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Principal</strong></td><td>Administration</td><td><span class="badge badge-warning">Super Admin</span></td><td>—</td><td>1</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Vice Principal</td><td>Administration</td><td><span class="badge badge-warning">Admin</span></td><td>Principal</td><td>2</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Head of Department</td><td>Academic</td><td><span class="badge badge-neutral">Department Head</span></td><td>Principal</td><td>8</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Teacher (Senior)</td><td>Academic</td><td><span class="badge badge-neutral">Staff</span></td><td>HoD</td><td>34</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Teacher (Junior)</td><td>Academic</td><td><span class="badge badge-neutral">Staff</span></td><td>HoD</td><td>21</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Administrative Staff</td><td>Administration</td><td><span class="badge badge-neutral">Staff</span></td><td>Vice Principal</td><td>12</td><td><div class="actions"><button class="btn-sm">Edit</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section" style="margin-top:20px">
+        <div class="section-label">Permission role capabilities</div>
+        <div class="two-col">
+          <div class="sub-section"><div class="sub-section-title"><i class="ti ti-shield-check" aria-hidden="true"></i> Super Admin</div><div style="font-size:12px;color:var(--text-muted)">Full access: configure all settings, view all records, run payroll, approve leave, manage roles.</div></div>
+          <div class="sub-section"><div class="sub-section-title"><i class="ti ti-shield" aria-hidden="true"></i> Admin</div><div style="font-size:12px;color:var(--text-muted)">Manage staff records, approve leave/attendance, view payroll. Cannot change system settings.</div></div>
+          <div class="sub-section"><div class="sub-section-title"><i class="ti ti-user-cog" aria-hidden="true"></i> Department head</div><div style="font-size:12px;color:var(--text-muted)">Approve leave for own department, view team attendance and performance records only.</div></div>
+          <div class="sub-section"><div class="sub-section-title"><i class="ti ti-user" aria-hidden="true"></i> Staff (self-service)</div><div style="font-size:12px;color:var(--text-muted)">View own payslips, apply leave, update personal info, view own attendance.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPARTMENTS -->
+    <div id="panel-departments" class="panel">
+      <div class="panel-header">
+        <h2>Departments</h2>
+        <p>Organise staff into departments with budgets, heads, and sub-teams</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add department</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Department</th><th>Head</th><th>Staff</th><th>Sub-teams</th><th>Budget (₹)</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><strong>Administration</strong></td><td>K. Sharma</td><td>15</td><td>Finance, Front Office</td><td>12,00,000</td><td><span class="badge badge-success">Active</span></td><td><button class="btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Academic</strong></td><td>Dr. M. Pillai</td><td>63</td><td>Science, Arts, Commerce, PE</td><td>48,00,000</td><td><span class="badge badge-success">Active</span></td><td><button class="btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Support Services</strong></td><td>R. Nair</td><td>20</td><td>Library, Lab, IT</td><td>8,00,000</td><td><span class="badge badge-success">Active</span></td><td><button class="btn-sm">Edit</button></td></tr>
+            <tr><td><strong>Operations</strong></td><td>V. Iyer</td><td>18</td><td>Housekeeping, Security</td><td>6,50,000</td><td><span class="badge badge-success">Active</span></td><td><button class="btn-sm">Edit</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section" style="margin-top:20px">
+        <div class="section-label">Department workflow rules</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Require dept head approval for inter-department transfers</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Auto-notify dept head on new staff addition</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Separate budget tracking per department</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Allow department-specific working hours override</div><div class="field-desc">E.g. operations dept can have different shifts</div></div><label class="toggle"><input type="checkbox"><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div id="panel-attendance" class="panel">
+      <div class="panel-header">
+        <h2>Attendance settings</h2>
+        <p>Configure capture methods, shifts, grace periods, and regularisation rules</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Capture method</div>
+        <div class="card-grid">
+          <div class="mini-card"><i class="ti ti-fingerprint" aria-hidden="true"></i><div class="mini-card-label">Biometric</div><div class="mini-card-desc">Fingerprint / RFID device sync</div></div>
+          <div class="mini-card" style="border-color:var(--border-accent);background:var(--bg-accent)"><i class="ti ti-map-pin" style="color:var(--text-accent)" aria-hidden="true"></i><div class="mini-card-label">Geo-fenced</div><div class="mini-card-desc">Location-based mobile check-in</div></div>
+          <div class="mini-card"><i class="ti ti-qrcode" aria-hidden="true"></i><div class="mini-card-label">QR code</div><div class="mini-card-desc">Scan-on-arrival at gate</div></div>
+          <div class="mini-card"><i class="ti ti-user-check" aria-hidden="true"></i><div class="mini-card-label">Manual</div><div class="mini-card-desc">Admin marks attendance</div></div>
+        </div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Geo-fence radius</div><div class="field-desc">Staff must be within this distance to check in</div></div><input class="input-field" value="200" style="width:80px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">metres</span></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Shift & time rules</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Default shift start</div></div><input class="input-field" type="time" value="08:00" style="width:110px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Default shift end</div></div><input class="input-field" type="time" value="16:00" style="width:110px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Grace period (late arrival)</div></div><input class="input-field" value="10" style="width:70px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">mins</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Half-day threshold</div><div class="field-desc">Working less than this marks a half-day</div></div><input class="input-field" value="4" style="width:70px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">hours</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Auto-absent if no check-in by</div></div><input class="input-field" type="time" value="12:00" style="width:110px"></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Regularisation workflow</div>
+        <div class="steps">
+          <div class="step-item"><div class="step-num">1</div><div class="step-content"><div class="step-title">Staff submits regularisation request</div><div class="step-desc">Via self-service portal with reason and supporting note</div></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-title">Department head reviews</div><div class="step-desc">Approve, reject, or escalate. SLA: 48 hours</div></div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-title">HR admin final approval</div><div class="step-desc">Only required for &gt; 2 regularisations in a month</div></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-title">Attendance record updated</div><div class="step-desc">Auto-synced to payroll for that period</div></div></div>
+        </div>
+        <div class="field-row" style="margin-top:12px"><div class="field-info"><div class="field-label">Max regularisations per month per staff</div></div><input class="input-field" value="2" style="width:60px"></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- LEAVE -->
+    <div id="panel-leave" class="panel">
+      <div class="panel-header">
+        <h2>Leave settings</h2>
+        <p>Leave types, accrual rules, approval workflows, and encashment policies</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Leave types</div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn-sm"><i class="ti ti-plus" style="font-size:12px"></i> Add leave type</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Type</th><th>Days/year</th><th>Carry forward</th><th>Encashable</th><th>Applicable to</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Casual Leave</td><td>12</td><td><span class="tag">No</span></td><td><span class="tag">No</span></td><td>All staff</td><td><button class="btn-sm">Edit</button></td></tr>
+              <tr><td>Sick Leave</td><td>12</td><td><span class="tag">No</span></td><td><span class="tag">No</span></td><td>All staff</td><td><button class="btn-sm">Edit</button></td></tr>
+              <tr><td>Earned Leave</td><td>15</td><td><span class="badge badge-success">Max 30</span></td><td><span class="badge badge-success">Yes</span></td><td>All staff</td><td><button class="btn-sm">Edit</button></td></tr>
+              <tr><td>Maternity Leave</td><td>180</td><td><span class="tag">N/A</span></td><td><span class="tag">No</span></td><td>Female staff</td><td><button class="btn-sm">Edit</button></td></tr>
+              <tr><td>Compensatory Off</td><td>Earned</td><td><span class="badge badge-warning">Max 6 days</span></td><td><span class="tag">No</span></td><td>All staff</td><td><button class="btn-sm">Edit</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Approval workflow</div>
+        <div class="two-col">
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-git-branch" aria-hidden="true"></i> Up to 3 days</div>
+            <div style="font-size:12px;color:var(--text-muted)">Dept head approves → auto-approved in 24 hrs if no action</div>
+          </div>
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-git-branch" aria-hidden="true"></i> 4 days or more</div>
+            <div style="font-size:12px;color:var(--text-muted)">Dept head → HR admin → Principal. All three must approve.</div>
+          </div>
+        </div>
+        <div class="field-row" style="margin-top:12px"><div class="field-info"><div class="field-label">Minimum notice for planned leave</div></div><input class="input-field" value="3" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">days</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Allow leave during exam periods</div></div><label class="toggle"><input type="checkbox"><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Accrual method</div></div><select class="select-field"><option>Monthly (1st of month)</option><option>Annual (year start)</option><option>On probation completion</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Carry forward deadline</div><div class="field-desc">Unused carried-forward leave lapses after this date</div></div><select class="select-field"><option>March 31</option><option>June 30</option><option>December 31</option></select></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- PAYROLL -->
+    <div id="panel-payroll" class="panel">
+      <div class="panel-header">
+        <h2>Payroll settings</h2>
+        <p>Salary structure, tax components, deductions, and payslip configuration</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Payroll cycle</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Pay frequency</div></div><select class="select-field"><option>Monthly</option><option>Bi-monthly</option><option>Weekly</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Payroll processing day</div><div class="field-desc">Day of month payroll is calculated and approved</div></div><input class="input-field" value="25" style="width:60px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Salary credit day</div></div><input class="input-field" value="1" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">(next month)</span></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Salary components</div>
+        <div class="two-col">
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-trending-up" aria-hidden="true"></i> Earnings</div>
+            <div class="chip-row"><span class="chip on">Basic (50%)</span><span class="chip on">HRA (20%)</span><span class="chip on">DA</span><span class="chip on">Travel Allowance</span><span class="chip">Medical Allowance</span><span class="chip">Special Allowance</span></div>
+          </div>
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-trending-down" aria-hidden="true"></i> Deductions</div>
+            <div class="chip-row"><span class="chip on">PF (12%)</span><span class="chip on">ESI (0.75%)</span><span class="chip on">TDS</span><span class="chip on">Professional Tax</span><span class="chip">Loan Recovery</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Statutory & tax</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">PF applicable from</div></div><select class="select-field"><option>Day 1 (all staff)</option><option>After probation</option><option>On confirmation</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">TDS calculation method</div></div><select class="select-field"><option>Old tax regime</option><option>New tax regime</option><option>Staff choice (annual)</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Auto-generate Form 16</div><div class="field-desc">At financial year end for all eligible staff</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Payslip password protection</div><div class="field-desc">Payslip PDF locked with last 4 digits of mobile</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Payslip delivery</div></div><select class="select-field"><option>Email + portal</option><option>Portal only</option><option>Email only</option></select></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- RECRUITMENT -->
+    <div id="panel-recruitment" class="panel">
+      <div class="panel-header">
+        <h2>Recruitment settings</h2>
+        <p>Job pipeline stages, approval chains, offer letters, and onboarding handoff</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Hiring pipeline stages</div>
+        <div class="steps">
+          <div class="step-item"><div class="step-num">1</div><div class="step-content"><div class="step-title">Job requisition raised</div><div class="step-desc">By dept head — approved by Principal and HR admin before publishing</div></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-title">Application screening</div><div class="step-desc">HR shortlists based on configurable criteria (qualifications, experience)</div></div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-title">Interviews</div><div class="step-desc">Up to 3 rounds — Panel, Demo Lesson, Principal. Feedback collected per round.</div></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-title">Background & document verification</div><div class="step-desc">Education certificates, previous employer, police clearance</div></div></div>
+          <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-title">Offer letter issued</div><div class="step-desc">Auto-generated from template; digital acceptance tracked</div></div></div>
+          <div class="step-item"><div class="step-num">6</div><div class="step-content"><div class="step-title">Onboarding handoff</div><div class="step-desc">Auto-creates staff record, triggers onboarding checklist</div></div></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Configuration</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Post jobs on school website</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Collect demo lesson video</div><div class="field-desc">Applicants can submit video demo for remote screening</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Default offer expiry</div></div><input class="input-field" value="7" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">days</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Probation period (default)</div></div><input class="input-field" value="6" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">months</span></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- PERFORMANCE -->
+    <div id="panel-performance" class="panel">
+      <div class="panel-header">
+        <h2>Performance settings</h2>
+        <p>Appraisal cycles, review forms, rating scales, and increment linkage</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Appraisal cycle</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Cycle frequency</div></div><select class="select-field"><option>Annual</option><option>Semi-annual</option><option>Quarterly</option></select></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Review period</div><div class="field-desc">Window during which appraisals must be completed</div></div><input class="input-field" value="March 1 – March 31" style="width:180px"></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Rating scale</div></div><select class="select-field"><option>1–5 (numeric)</option><option>1–10 (numeric)</option><option>Outstanding / Good / Average / Poor</option></select></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Evaluation criteria</div>
+        <div class="two-col">
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-books" aria-hidden="true"></i> Teaching staff</div>
+            <div class="chip-row"><span class="chip on">Subject knowledge</span><span class="chip on">Student results</span><span class="chip on">Punctuality</span><span class="chip on">Classroom management</span><span class="chip on">Extra-curricular</span><span class="chip">PTM participation</span></div>
+          </div>
+          <div class="sub-section">
+            <div class="sub-section-title"><i class="ti ti-briefcase" aria-hidden="true"></i> Non-teaching staff</div>
+            <div class="chip-row"><span class="chip on">Task completion</span><span class="chip on">Punctuality</span><span class="chip on">Team collaboration</span><span class="chip on">Supervisor rating</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Appraisal workflow</div>
+        <div class="steps">
+          <div class="step-item"><div class="step-num">1</div><div class="step-content"><div class="step-title">Staff self-evaluation</div><div class="step-desc">Staff submits self-assessment form within the review window</div></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-title">Dept head review</div><div class="step-desc">Rates staff and adds comments; shared with staff after submission</div></div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-title">HR calibration</div><div class="step-desc">Normalises ratings across departments</div></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-title">Increment & promotion decision</div><div class="step-desc">Linked to payroll; final letter issued and signed digitally</div></div></div>
+        </div>
+        <div class="field-row" style="margin-top:12px"><div class="field-info"><div class="field-label">Link appraisal rating to salary increment</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">360° peer feedback</div><div class="field-desc">Collect anonymous ratings from peers and reportees</div></div><label class="toggle"><input type="checkbox"><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- BENEFITS -->
+    <div id="panel-benefits" class="panel">
+      <div class="panel-header">
+        <h2>Benefits settings</h2>
+        <p>Insurance, gratuity, staff discounts, and welfare schemes</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Active benefits</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Group health insurance</div><div class="field-desc">Coverage: ₹3 lakh/annum per employee + family</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Gratuity</div><div class="field-desc">Applicable after 5 years of continuous service (per Gratuity Act 1972)</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Fee concession for staff children</div><div class="field-desc">Applies to children enrolled in this institution</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Fee concession %</div></div><input class="input-field" value="50" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">%</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Staff canteen subsidy</div></div><label class="toggle"><input type="checkbox"><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Transport reimbursement</div><div class="field-desc">Capped monthly amount for daily commute</div></div><label class="toggle"><input type="checkbox"><span class="slider-t"></span></label></div>
+      </div>
+      <div class="section">
+        <div class="section-label">Gratuity configuration</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Minimum service for eligibility</div></div><input class="input-field" value="5" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">years</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Gratuity rate (days per year)</div></div><input class="input-field" value="15" style="width:60px"> <span style="font-size:13px;color:var(--text-muted);margin-left:6px">days</span></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Auto-provision in payroll</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- DOCUMENTS -->
+    <div id="panel-documents" class="panel">
+      <div class="panel-header">
+        <h2>Document settings</h2>
+        <p>Required documents, expiry tracking, templates, and digital signatures</p>
+      </div>
+      <div class="section">
+        <div class="section-label">Mandatory documents at onboarding</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Document</th><th>Required for</th><th>Expiry tracking</th><th>Auto-remind</th></tr></thead>
+            <tbody>
+              <tr><td>Aadhaar card</td><td>All staff</td><td><span class="tag">No</span></td><td><span class="tag">—</span></td></tr>
+              <tr><td>PAN card</td><td>All staff</td><td><span class="tag">No</span></td><td><span class="tag">—</span></td></tr>
+              <tr><td>Degree certificates</td><td>Teaching staff</td><td><span class="tag">No</span></td><td><span class="tag">—</span></td></tr>
+              <tr><td>B.Ed / D.El.Ed</td><td>Teaching staff</td><td><span class="tag">No</span></td><td><span class="tag">—</span></td></tr>
+              <tr><td>Police verification</td><td>All staff</td><td><span class="badge badge-warning">Yearly</span></td><td><span class="badge badge-success">30 days</span></td></tr>
+              <tr><td>Medical fitness certificate</td><td>All staff</td><td><span class="badge badge-warning">Yearly</span></td><td><span class="badge badge-success">30 days</span></td></tr>
+              <tr><td>Bank account details</td><td>All staff</td><td><span class="tag">No</span></td><td><span class="tag">—</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Templates & signatures</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Offer letter template</div></div><button class="btn-sm"><i class="ti ti-edit" style="font-size:12px"></i> Edit template</button></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Appointment order template</div></div><button class="btn-sm"><i class="ti ti-edit" style="font-size:12px"></i> Edit template</button></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Experience certificate template</div></div><button class="btn-sm"><i class="ti ti-edit" style="font-size:12px"></i> Edit template</button></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Digital signature (Principal)</div><div class="field-desc">Auto-applied to offer letters, payslips, certificates</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Digital signature (HR admin)</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="panel-notifications" class="panel">
+      <div class="panel-header">
+        <h2>Notification settings</h2>
+        <p>Who gets notified, when, and through which channel</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Event</th><th>Notify</th><th>Email</th><th>In-app</th><th>SMS</th></tr></thead>
+          <tbody>
+            <tr><td>Leave request submitted</td><td>Dept head</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>Leave approved/rejected</td><td>Staff</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td></tr>
+            <tr><td>Payslip generated</td><td>Staff</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>Document expiring soon</td><td>HR admin + Staff</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>Late check-in / absent</td><td>Dept head</td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>New staff joined</td><td>HR admin + Dept head</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>Appraisal due</td><td>Staff + Dept head</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+            <tr><td>Payroll processing complete</td><td>Principal + HR</td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox" checked><span class="slider-t"></span></label></td><td><label class="toggle" style="height:20px"><input type="checkbox"><span class="slider-t"></span></label></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section" style="margin-top:16px">
+        <div class="section-label">Digest options</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Daily attendance digest to principal</div><div class="field-desc">Summary of absences and late arrivals every morning at 9:30 AM</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Weekly HR summary report</div><div class="field-desc">Sent to HR admin every Monday with leave, attendance, and open tasks</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+      </div>
+      <div class="save-bar"><button class="btn-sm">Discard</button><button class="btn-sm btn-primary">Save changes</button></div>
+    </div>
+
+    <!-- HR POLICIES -->
+    <div id="panel-policies" class="panel">
+      <div class="panel-header">
+        <h2>HR policies</h2>
+        <p>Upload, version, and enforce institutional HR policy documents</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn-sm btn-primary"><i class="ti ti-upload" style="font-size:12px"></i> Upload policy</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Policy</th><th>Version</th><th>Last updated</th><th>Acknowledgement</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Code of conduct</td><td>v3.1</td><td>Jan 2025</td><td><span class="badge badge-success">Required</span></td><td><span class="badge badge-success">Active</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Leave policy</td><td>v2.0</td><td>Apr 2024</td><td><span class="badge badge-success">Required</span></td><td><span class="badge badge-success">Active</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Anti-harassment policy</td><td>v1.4</td><td>Jun 2024</td><td><span class="badge badge-success">Required</span></td><td><span class="badge badge-success">Active</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>POSH policy</td><td>v2.0</td><td>Mar 2024</td><td><span class="badge badge-success">Required</span></td><td><span class="badge badge-success">Active</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>IT & device usage policy</td><td>v1.0</td><td>Aug 2023</td><td><span class="badge badge-neutral">Optional</span></td><td><span class="badge badge-warning">Needs review</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+            <tr><td>Social media policy</td><td>v1.1</td><td>Sep 2023</td><td><span class="badge badge-neutral">Optional</span></td><td><span class="badge badge-success">Active</span></td><td><div class="actions"><button class="btn-sm">View</button><button class="btn-sm">Edit</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section" style="margin-top:16px">
+        <div class="section-label">Acknowledgement settings</div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Require digital acknowledgement for new policies</div><div class="field-desc">Staff must confirm they've read the policy before accessing the portal</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Re-acknowledgement on policy update</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+        <div class="field-row"><div class="field-info"><div class="field-label">Track acknowledgement completion</div><div class="field-desc">HR admin sees who has and hasn't acknowledged each policy</div></div><label class="toggle"><input type="checkbox" checked><span class="slider-t"></span></label></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function show(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+}
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => c.classList.toggle('on'));
+});
+</script>

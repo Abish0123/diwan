@@ -1,0 +1,59 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Runtime-uploaded files (admission documents, etc.) — user data, not source
+uploads/
+
+# Database backups (scripts/backup-database.mjs) — real student/staff PII, never commit
+backups/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.vercel
+.env*
+
+# Auto-generated dev-only session signing secret (see server.ts) — never commit
+.session-secret
+.session-secret.key
+
+# Local database files
+local_database.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Playwright test artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Temporary migration/script artifacts
+_tmp_*.mjs
+_tmp_*.js
+_tmp_*.ts
+
+# OS-specific
+Thumbs.db
+.AppleDouble
+.LSOverride

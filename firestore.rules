@@ -1,0 +1,624 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model (from firebase-blueprint.json)
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields: name (string), email (string), role (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: students
+    // Document ID: {studentId}
+    // Fields: name (string), classId (string), status (string), email (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: classes
+    // Document ID: {classId}
+    // Fields: name (string), teacher (string), grade (string), section (string), subjects (list), capacity (int), status (string), studentsCount (int), subjectsCount (int), uid (string), createdAt (timestamp)
+    //
+    // Collection: assignments
+    // Document ID: {assignmentId}
+    // Fields: title (string), dueDate (string), status (string), submissionsCount (int), classId (string), uid (string)
+    //
+    // Collection: submissions
+    // Document ID: {submissionId}
+    // Fields: assignmentId (string), studentId (string), studentName (string), status (string), submissionDate (string), uid (string)
+    //
+    // Collection: flashcard_sets
+    // Document ID: {setId}
+    // Fields: name (string), subject (string), classId (string), tags (list), cards (list), createdBy (string), createdAt (timestamp), lastModified (timestamp), progress (int), assignedTo (list), isAiGenerated (bool)
+    //
+    // Collection: attendance
+    // Document ID: {attendanceId}
+    // Fields: entityId (string), entityType (string), date (string), status (string), checkInTime (string), classId (string)
+    //
+    // Collection: notices
+    // Document ID: {noticeId}
+    // Fields: title (string), content (string), category (string), priority (string), status (string), targetAudience (string), targetClass (string), date (string), postedBy (string), views (number), uid (string), createdAt (timestamp), attachments (list)
+    //
+    // Collection: library
+    // Document ID: {itemId}
+    // Fields: title (string), author (string), tags (list), status (string), location (string)
+    //
+    // Collection: student_revenue, entity_revenue, expenses, assets, payroll
+    // Fields: entity/student (string), category/type (string), amount (number), date (string), status (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: fee_structures
+    // Document ID: {structureId}
+    // Fields: name (string), classId (string), className (string), academicYear (string), totalAmount (number), components (list), status (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: invoices, receipts, penalty_rules, automation_tasks, reminder_rules, communication_templates
+    // Fields: Various financial and automation fields, all with uid (string) and createdAt (timestamp)
+    //
+    // Collection: notifications
+    // Document ID: {notificationId}
+    // Fields: title (string), description (string), type (string), category (string), timestamp (string), read (bool), uid (string)
+    //
+    // Collection: hostel_rooms
+    // Document ID: {roomId}
+    // Fields: roomNumber (string), block (string), type (string), capacity (int), occupied (int), cost (number), status (string), floor (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: hostel_allocations
+    // Document ID: {allocationId}
+    // Fields: studentId (string), studentName (string), roomId (string), roomNumber (string), block (string), startDate (string), endDate (string), status (string), type (string), uid (string), createdAt (timestamp)
+    //
+    // Collection: mess_menu
+    // Document ID: {menuId}
+    // Fields: day (string), breakfast (string), lunch (string), dinner (string), calories (string), status (string), uid (string), createdAt (timestamp)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isAdmin() {
+      let adminEmails = [
+        "flexiifashion@gmail.com",
+        "educationleadershipexpo@gmail.com",
+        "digitaleragrowth@gmail.com",
+        "studentdiwan.lms@gmail.com",
+        "abishsuresh01@gmail.com",
+        "huda579579@gmail.com",
+        "bluewoodschool.bh@gmail.com",
+        "noblelessemarketing@gmail.com",
+        "ishantcont@gmail.com"
+      ];
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email in adminEmails));
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['name', 'email', 'role', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'staff'] &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidStudent(data) {
+      return hasRequiredFields(['name', 'classId', 'status', 'email', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.classId is string && data.classId.size() < 50 &&
+             data.status in ['Active', 'Inactive', 'Graduated', 'Suspended', 'Alumni'] &&
+             isValidEmail(data.email);
+    }
+
+    function isValidClass(data) {
+      return hasRequiredFields(['name', 'teacher', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.teacher is string && data.teacher.size() < 100;
+    }
+
+    function isValidFinancialRecord(data) {
+      return hasRequiredFields(['amount', 'date', 'status', 'uid', 'createdAt']) &&
+             data.amount is number && data.amount >= 0 &&
+             isValidDateString(data.date) &&
+             (!('entity' in data) || (data.entity is string && data.entity.size() < 100)) &&
+             (!('student' in data) || (data.student is string && data.student.size() < 100));
+    }
+
+    function isValidFeeStructure(data) {
+      return hasRequiredFields(['name', 'classId', 'className', 'academicYear', 'totalAmount', 'components', 'status', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.classId is string &&
+             data.className is string &&
+             data.academicYear is string &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.components is list &&
+             data.status in ['Active', 'Inactive'];
+    }
+
+    function isValidFeeDiscount(data) {
+      return hasRequiredFields(['name', 'type', 'value', 'category', 'status', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type in ['Percentage', 'Fixed'] &&
+             data.value is number && data.value >= 0 &&
+             data.category in ['Scholarship', 'Sibling', 'Early Bird', 'Staff Child', 'Other'] &&
+             data.status in ['Active', 'Inactive'];
+    }
+
+    function isValidInvoice(data) {
+      return hasRequiredFields(['invoiceNumber', 'studentId', 'studentName', 'classId', 'className', 'category', 'amount', 'paidAmount', 'dueAmount', 'dueDate', 'status', 'penalty', 'uid', 'createdAt']) &&
+             data.invoiceNumber is string &&
+             data.studentId is string &&
+             data.studentName is string &&
+             data.classId is string &&
+             data.className is string &&
+             data.category is string &&
+             data.amount is number &&
+             data.paidAmount is number &&
+             data.dueAmount is number &&
+             isValidDateString(data.dueDate) &&
+             data.status in ['Unpaid', 'Partial', 'Paid', 'Overdue', 'Cancelled'] &&
+             data.penalty is number;
+    }
+
+    function isValidNotice(data) {
+      return hasRequiredFields(['title', 'content', 'category', 'priority', 'status', 'targetAudience', 'postedBy', 'uid']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.category in ['General', 'Academic', 'Finance', 'Event', 'Urgent'] &&
+             data.priority in ['Low', 'Medium', 'High'] &&
+             data.status in ['Published', 'Draft', 'Scheduled'] &&
+             data.targetAudience in ['All', 'Students', 'Staff', 'Parents'] &&
+             (!('targetClass' in data) || (data.targetClass is string && data.targetClass.size() < 100)) &&
+             data.postedBy is string && data.postedBy.size() < 100 &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidFlashcardSet(data) {
+      return hasRequiredFields(['name', 'subject', 'classId', 'createdBy']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.subject is string && data.subject.size() < 100 &&
+             data.classId is string && data.classId.size() < 50;
+    }
+
+    function isValidGraduate(data) {
+      return hasRequiredFields(['name', 'year', 'degree', 'status', 'email', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.year is string && data.year.size() == 4 &&
+             data.status in ['Transcript Issued', 'Pending'] &&
+             isValidEmail(data.email);
+    }
+
+    function isValidAlumnus(data) {
+      return hasRequiredFields(['name', 'class', 'status', 'email', 'uid', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.class is string && data.class.size() > 0 && data.class.size() < 50 &&
+             data.status in ['Active Member', 'Donor', 'Standard'] &&
+             isValidEmail(data.email) &&
+             isValidOptionalString('occupation', 0, 100) &&
+             isValidOptionalString('company', 0, 100) &&
+             isValidOptionalString('location', 0, 100);
+    }
+
+    function isValidBehaviorIncident(data) {
+      return hasRequiredFields(['studentName', 'studentId', 'type', 'category', 'severity', 'date', 'uid', 'createdAt']) &&
+             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() < 100 &&
+             data.type in ['Merit', 'Demerit'] &&
+             data.severity in ['Low', 'Medium', 'High'] &&
+             isValidDateString(data.date);
+    }
+
+    function isValidAchievement(data) {
+      return hasRequiredFields(['studentId', 'studentName', 'type', 'issuedDate', 'status', 'uid']) &&
+             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() < 100 &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 100 &&
+             isValidDateString(data.issuedDate) &&
+             data.status in ['Issued', 'Pending', 'Verified'];
+    }
+
+    function isValidLeaveRequest(data) {
+      return hasRequiredFields(['staffId', 'staffName', 'type', 'startDate', 'endDate', 'reason', 'status', 'days', 'appliedOn', 'uid', 'createdAt']) &&
+             data.staffId is string && data.staffName is string &&
+             data.type in ['Annual Leave', 'Sick Leave', 'Personal Leave', 'Maternity Leave', 'Paternity Leave'] &&
+             isValidDateString(data.startDate) && isValidDateString(data.endDate) &&
+             data.reason is string && data.reason.size() > 0 && data.reason.size() < 1000 &&
+             data.status in ['Pending', 'Approved', 'Rejected'] &&
+             data.days is int && data.days > 0 &&
+             isValidDateString(data.appliedOn);
+    }
+
+    function isValidJobOpening(data) {
+      return hasRequiredFields(['title', 'department', 'type', 'status', 'uid', 'createdAt', 'company', 'workplaceType', 'location', 'description', 'requirements', 'screeningQuestions', 'rejectionSettings', 'manageApplicants', 'hiringFrame']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.department is string && data.department.size() > 0 && data.department.size() < 100 &&
+             data.company is string && data.company.size() > 0 && data.company.size() < 100 &&
+             data.workplaceType in ['On-site', 'Remote', 'Hybrid'] &&
+             data.location is string && data.location.size() > 0 && data.location.size() < 100 &&
+             data.type in ['Full-time', 'Part-time', 'Contract'] &&
+             data.status in ['Open', 'Closed'] &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 10000 &&
+             data.requirements is list && data.requirements.size() > 0 &&
+             data.screeningQuestions is list &&
+             data.rejectionSettings is map &&
+             data.manageApplicants is map &&
+             data.hiringFrame is bool;
+    }
+
+    function isValidJobApplication(data) {
+      return hasRequiredFields(['jobId', 'applicantName', 'email', 'status', 'appliedDate', 'uid', 'phone', 'resumeUrl', 'answers', 'createdAt']) &&
+             data.jobId is string &&
+             data.applicantName is string && data.applicantName.size() > 0 && data.applicantName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.status in ['Pending', 'Reviewing', 'Interview', 'Hired', 'Rejected'] &&
+             data.phone is string &&
+             data.resumeUrl is string &&
+             data.answers is list;
+    }
+
+    function isValidNotification(data) {
+      return hasRequiredFields(['title', 'description', 'type', 'category', 'timestamp', 'read', 'uid']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 1000 &&
+             data.type in ['info', 'warning', 'success', 'urgent'] &&
+             data.category in ['Academic', 'Finance', 'HR', 'System', 'General'] &&
+             isValidDateString(data.timestamp) &&
+             data.read is bool &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidHostelRoom(data) {
+      return hasRequiredFields(['roomNumber', 'block', 'type', 'capacity', 'occupied', 'cost', 'status', 'uid', 'createdAt']) &&
+             data.roomNumber is string && data.roomNumber.size() > 0 && data.roomNumber.size() < 20 &&
+             data.block is string && data.block.size() > 0 && data.block.size() < 50 &&
+             data.type is string &&
+             data.capacity is int && data.capacity > 0 &&
+             data.occupied is int && data.occupied >= 0 &&
+             data.cost is number && data.cost >= 0 &&
+             data.status in ['Available', 'Full', 'Maintenance'] &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidHostelAllocation(data) {
+      return hasRequiredFields(['studentId', 'studentName', 'roomId', 'roomNumber', 'block', 'startDate', 'endDate', 'status', 'uid', 'createdAt']) &&
+             data.studentId is string &&
+             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() < 100 &&
+             data.roomId is string &&
+             data.roomNumber is string &&
+             data.block is string &&
+             isValidDateString(data.startDate) && isValidDateString(data.endDate) &&
+             data.status in ['Active', 'Expiring Soon', 'Completed', 'Cancelled'] &&
+             data.uid == request.auth.uid;
+    }
+
+    function isValidMessMenu(data) {
+      return hasRequiredFields(['day', 'breakfast', 'lunch', 'dinner', 'status', 'uid', 'createdAt']) &&
+             data.day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] &&
+             data.breakfast is string && data.breakfast.size() > 0 &&
+             data.lunch is string && data.lunch.size() > 0 &&
+             data.dinner is string && data.dinner.size() > 0 &&
+             data.status in ['Active', 'Inactive'] &&
+             data.uid == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidNotification(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /hostel_rooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidHostelRoom(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidHostelRoom(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin() || isDocOwner();
+    }
+
+    match /hostel_allocations/{allocationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidHostelAllocation(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidHostelAllocation(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin() || isDocOwner();
+    }
+
+    match /mess_menu/{menuId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMessMenu(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidMessMenu(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin() || isDocOwner();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'staff' || isAdmin());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidStudent(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidStudent(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidClass(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidClass(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged() && request.resource.data.title is string && request.resource.data.title.size() < 200;
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified() && request.resource.data.title is string && request.resource.data.title.size() < 200;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged() && request.resource.data.studentName is string && request.resource.data.studentName.size() < 100;
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified() && request.resource.data.studentName is string && request.resource.data.studentName.size() < 100;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /flashcard_sets/{setId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidFlashcardSet(request.resource.data);
+      allow update: if isAuthenticated() && isValidFlashcardSet(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.entityId is string;
+      allow update: if isAuthenticated() && request.resource.data.entityId is string;
+      allow delete: if isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidNotice(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidNotice(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /library/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.title is string && request.resource.data.title.size() < 200;
+      allow update: if isAuthenticated() && request.resource.data.title is string && request.resource.data.title.size() < 200;
+      allow delete: if isAdmin();
+    }
+
+    match /staff/{staffId} {
+      allow read: if isAuthenticated() && (isDocOwner() || isAdmin());
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /lead_documents/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /lead_communications/{commId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /admissions_automation_rules/{ruleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /curriculums/{curriculumId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /live_classes/{classId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /transport_routes/{routeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /transport_vehicles/{vehicleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /graduates/{graduateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidGraduate(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidGraduate(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /alumni/{alumnusId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidAlumnus(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidAlumnus(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /behavior_incidents/{incidentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidBehaviorIncident(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidBehaviorIncident(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidAchievement(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidAchievement(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    match /leave_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidLeaveRequest(request.resource.data) && uidUnchanged();
+      allow update: if (isDocOwner() || isAdmin()) && isValidLeaveRequest(request.resource.data) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    // Recruitment Collections (Support both camelCase and underscores for safety)
+    match /job_openings/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidJobOpening(request.resource.data) && (uidUnchanged() || isAdmin());
+      allow update: if (isDocOwner() || isAdmin()) && isValidJobOpening(request.resource.data) && (uidNotModified() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /jobOpenings/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidJobOpening(request.resource.data) && (uidUnchanged() || isAdmin());
+      allow update: if (isDocOwner() || isAdmin()) && isValidJobOpening(request.resource.data) && (uidNotModified() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /job_applications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidJobApplication(request.resource.data) && (uidUnchanged() || isAdmin());
+      allow update: if (isDocOwner() || isAdmin()) && isValidJobApplication(request.resource.data) && (uidNotModified() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /jobApplications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidJobApplication(request.resource.data) && (uidUnchanged() || isAdmin());
+      allow update: if (isDocOwner() || isAdmin()) && isValidJobApplication(request.resource.data) && (uidNotModified() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Financial Collections (Transactions)
+    match /{collectionName}/{recordId} {
+      allow read: if isAuthenticated() && 
+        collectionName in ['student_revenue', 'entity_revenue', 'expenses', 'assets', 'payroll'] &&
+        (isDocOwner() || isAdmin());
+      
+      allow create: if isAuthenticated() && 
+        collectionName in ['student_revenue', 'entity_revenue', 'expenses', 'assets', 'payroll'] &&
+        isValidFinancialRecord(request.resource.data) && uidUnchanged();
+        
+      allow update: if (isDocOwner() || isAdmin()) && 
+        collectionName in ['student_revenue', 'entity_revenue', 'expenses', 'assets', 'payroll'] &&
+        isValidFinancialRecord(request.resource.data) && uidNotModified();
+        
+      allow delete: if isAdmin() && 
+        collectionName in ['student_revenue', 'entity_revenue', 'expenses', 'assets', 'payroll'];
+    }
+
+    match /financial_settings/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && uidUnchanged();
+      allow update: if (isOwner(userId) || isAdmin()) && uidNotModified();
+      allow delete: if isAdmin();
+    }
+
+    // Financial Setup & Meta Collections
+    match /{collectionName}/{recordId} {
+      allow read: if isAuthenticated() && 
+        collectionName in ['financial_categories', 'inventory', 'invoices', 'receipts', 'penalty_rules', 'automation_tasks', 'reminder_rules', 'communication_templates', 'quotations', 'fee_structures', 'fee_discounts'] &&
+        (isDocOwner() || isAdmin());
+      
+      allow create: if isAuthenticated() && 
+        collectionName in ['financial_categories', 'inventory', 'invoices', 'receipts', 'penalty_rules', 'automation_tasks', 'reminder_rules', 'communication_templates', 'quotations', 'fee_structures', 'fee_discounts'] &&
+        (
+          (collectionName == 'fee_structures' && isValidFeeStructure(request.resource.data)) ||
+          (collectionName == 'fee_discounts' && isValidFeeDiscount(request.resource.data)) ||
+          (collectionName == 'invoices' && isValidInvoice(request.resource.data)) ||
+          true // Default for others
+        ) &&
+        uidUnchanged();
+        
+      allow update: if (isDocOwner() || isAdmin()) && 
+        collectionName in ['financial_categories', 'inventory', 'invoices', 'receipts', 'penalty_rules', 'automation_tasks', 'reminder_rules', 'communication_templates', 'quotations', 'fee_structures', 'fee_discounts'] &&
+        (
+          (collectionName == 'fee_structures' && isValidFeeStructure(request.resource.data)) ||
+          (collectionName == 'fee_discounts' && isValidFeeDiscount(request.resource.data)) ||
+          (collectionName == 'invoices' && isValidInvoice(request.resource.data)) ||
+          true // Default for others
+        ) &&
+        uidNotModified();
+        
+      allow delete: if isAdmin() && 
+        collectionName in ['financial_categories', 'inventory', 'invoices', 'receipts', 'penalty_rules', 'automation_tasks', 'reminder_rules', 'communication_templates', 'quotations', 'fee_structures', 'fee_discounts'];
+    }
+
+    // Temporary rule for migration
+    match /{path=**} {
+      allow read, write: if true;
+    }
+  }
+}

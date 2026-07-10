@@ -1,0 +1,1222 @@
+{
+  "entities": {
+    "FlashCard": {
+      "title": "Flash Card",
+      "description": "A single flash card with question and answer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "lastPracticed": { "type": "string", "format": "date-time" },
+        "masteryLevel": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "required": ["question", "answer"]
+    },
+    "FlashCardSet": {
+      "title": "Flash Card Set",
+      "description": "A collection of flash cards for a specific subject or class.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "classId": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "cards": { "type": "array", "items": { "$ref": "FlashCard" } },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastModified": { "type": "string", "format": "date-time" },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "assignedTo": { "type": "array", "items": { "type": "string" } },
+        "isAiGenerated": { "type": "boolean" }
+      },
+      "required": ["name", "subject", "classId", "createdBy"]
+    },
+    "FlashCardAnalytics": {
+      "title": "Flash Card Analytics",
+      "description": "Tracking student performance on a flash card set.",
+      "type": "object",
+      "properties": {
+        "setId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "accuracyRate": { "type": "number" },
+        "revisionDue": { "type": "integer" },
+        "weakTopics": { "type": "array", "items": { "type": "string" } },
+        "timeSpent": { "type": "number" },
+        "revisionFrequency": { "type": "number" },
+        "lastPracticed": { "type": "string", "format": "date-time" }
+      },
+      "required": ["setId", "studentId"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Daily attendance record for a student or staff member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "entityId": { "type": "string", "description": "Student or Staff ID" },
+        "entityType": { "type": "string", "enum": ["student", "staff"] },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Present", "Late", "Absent", "On Leave"] },
+        "checkInTime": { "type": "string", "format": "time" },
+        "classId": { "type": "string", "description": "Only for students" }
+      },
+      "required": ["entityId", "entityType", "date", "status"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "A school announcement or notice.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["General", "Academic", "Finance", "Event", "Urgent"] },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "status": { "type": "string", "enum": ["Published", "Draft", "Scheduled"] },
+        "targetAudience": { "type": "string", "enum": ["All", "Students", "Staff", "Parents"] },
+        "targetClass": { "type": "string" },
+        "date": { "type": "string" },
+        "postedBy": { "type": "string" },
+        "views": { "type": "number" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "attachments": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "content", "category", "priority", "status", "targetAudience", "postedBy", "uid"]
+    },
+    "LibraryItem": {
+      "title": "Library Item",
+      "description": "A book or resource in the school library.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["Available", "Reserved", "Borrowed"] },
+        "location": { "type": "string" }
+      },
+      "required": ["title", "status"]
+    },
+    "Assignment": {
+      "title": "Assignment",
+      "description": "A class assignment or homework task.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Pending", "Completed", "Overdue"] },
+        "submissionsCount": { "type": "integer" },
+        "classId": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["title", "dueDate", "status", "classId", "uid"]
+    },
+    "Quotation": {
+      "title": "Quotation Record",
+      "description": "A record of a financial quotation issued to a client.",
+      "type": "object",
+      "properties": {
+        "quotationNumber": { "type": "string", "description": "The unique quotation number." },
+        "entity": { "type": "string", "description": "The name of the student or entity." },
+        "category": { "type": "string", "description": "The category of the quotation." },
+        "amount": { "type": "number", "description": "The total amount of the quotation." },
+        "date": { "type": "string", "format": "date", "description": "The date of the quotation." },
+        "status": { "type": "string", "enum": ["Draft", "Sent", "Accepted", "Rejected", "Expired"], "description": "The status of the quotation." },
+        "uid": { "type": "string", "description": "The UID of the user who created the quotation." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the quotation was created." }
+      },
+      "required": ["quotationNumber", "entity", "category", "amount", "date", "status", "uid", "createdAt"]
+    },
+    "Submission": {
+      "title": "Assignment Submission",
+      "description": "A record of a student's submission for an assignment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "status": { "type": "string", "enum": ["Submitted", "Pending", "Late"] },
+        "submissionDate": { "type": "string", "format": "date" },
+        "uid": { "type": "string" }
+      },
+      "required": ["assignmentId", "studentId", "studentName", "status", "uid"]
+    },
+    "StudentRevenue": {
+      "title": "Student Revenue Record",
+      "description": "A record of revenue received from a student.",
+      "type": "object",
+      "properties": {
+        "student": { "type": "string", "description": "The name of the student." },
+        "grade": { "type": "string", "description": "The grade or class of the student." },
+        "category": { "type": "string", "description": "The type of fee (e.g., Tuition, Library)." },
+        "amount": { "type": "number", "description": "The amount received." },
+        "date": { "type": "string", "format": "date", "description": "The date of the transaction." },
+        "status": { "type": "string", "enum": ["Paid", "Pending", "Overdue"], "description": "The status of the payment." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["student", "category", "amount", "date", "status", "uid", "createdAt"]
+    },
+    "EntityRevenue": {
+      "title": "Entity Revenue Record",
+      "description": "A record of revenue received from an external entity.",
+      "type": "object",
+      "properties": {
+        "entity": { "type": "string", "description": "The name of the external entity." },
+        "type": { "type": "string", "description": "The type of funding (e.g., Grant, Sponsorship)." },
+        "amount": { "type": "number", "description": "The amount received." },
+        "date": { "type": "string", "format": "date", "description": "The date of the transaction." },
+        "status": { "type": "string", "enum": ["Received", "Pending", "Cancelled"], "description": "The status of the funding." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["entity", "type", "amount", "date", "status", "uid", "createdAt"]
+    },
+    "Expense": {
+      "title": "Expense Record",
+      "description": "A record of an operational expense.",
+      "type": "object",
+      "properties": {
+        "entity": { "type": "string", "description": "The name of the vendor or entity." },
+        "category": { "type": "string", "description": "The category of the expense (e.g., Utilities, Maintenance)." },
+        "amount": { "type": "number", "description": "The amount spent." },
+        "date": { "type": "string", "format": "date", "description": "The date of the transaction." },
+        "budget": { "type": "string", "description": "The budget link." },
+        "status": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"], "description": "The status of the payment." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["entity", "category", "amount", "date", "status", "uid", "createdAt"]
+    },
+    "AssetRecord": {
+      "title": "Asset Record",
+      "description": "A record of an asset purchase or valuation.",
+      "type": "object",
+      "properties": {
+        "entity": { "type": "string", "description": "The name of the vendor or entity." },
+        "category": { "type": "string", "description": "The category of the asset (e.g., Computers, Furniture)." },
+        "amount": { "type": "number", "description": "The value or cost of the asset." },
+        "date": { "type": "string", "format": "date", "description": "The date of the transaction." },
+        "status": { "type": "string", "enum": ["Paid", "Pending", "Cancelled"], "description": "The status of the transaction." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["entity", "category", "amount", "date", "status", "uid", "createdAt"]
+    },
+    "Payroll": {
+      "title": "Payroll Record",
+      "description": "A record of a staff salary payment.",
+      "type": "object",
+      "properties": {
+        "staff": { "type": "string", "description": "The name of the staff member." },
+        "role": { "type": "string", "description": "The role of the staff member." },
+        "amount": { "type": "number", "description": "The salary amount." },
+        "period": { "type": "string", "description": "The payroll period (e.g., March 2026)." },
+        "status": { "type": "string", "enum": ["Processed", "Pending", "Cancelled"], "description": "The status of the payment." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the transaction." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["staff", "role", "amount", "period", "status", "uid", "createdAt"]
+    },
+    "FinancialCategory": {
+      "title": "Financial Category",
+      "description": "A financial category for revenue, expenses, or assets.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the category." },
+        "type": { "type": "string", "enum": ["Revenue", "Expense", "Asset"], "description": "The type of the category." },
+        "budget": { "type": "number", "description": "The target budget or revenue goal for this category." },
+        "subcategories": { "type": "number", "description": "The number of sub-categories or items." },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "The status of the category." },
+        "uid": { "type": "string", "description": "The UID of the user who created the category." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the category was created." }
+      },
+      "required": ["name", "type", "subcategories", "status", "uid", "createdAt"]
+    },
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "An item in the school inventory (asset).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "The name of the item." },
+        "category": { "type": "string", "description": "The category of the item." },
+        "assetCategory": { "type": "string", "description": "The linked asset category." },
+        "stock": { "type": "number", "description": "The current stock level." },
+        "unit": { "type": "string", "description": "The unit of measurement." },
+        "minLevel": { "type": "number", "description": "The minimum stock level for alert." },
+        "price": { "type": "number", "description": "The unit price." },
+        "status": { "type": "string", "enum": ["In Stock", "Low Stock", "Out of Stock"], "description": "The stock status." },
+        "uid": { "type": "string", "description": "The UID of the user who created the item." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the item was created." }
+      },
+      "required": ["name", "category", "assetCategory", "stock", "price", "status", "uid", "createdAt"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "A user profile record.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the user." },
+        "email": { "type": "string", "format": "email", "description": "The email of the user." },
+        "role": { "type": "string", "enum": ["admin", "staff"], "description": "The role of the user." },
+        "uid": { "type": "string", "description": "The UID of the user." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the user was created." }
+      },
+      "required": ["name", "email", "role", "uid", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice Record",
+      "description": "A record of an invoice issued to a student or entity.",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string", "description": "The unique invoice number." },
+        "entity": { "type": "string", "description": "The name of the student or entity." },
+        "category": { "type": "string", "description": "The category of the invoice (e.g., Tuition Fees)." },
+        "amount": { "type": "number", "description": "The total amount of the invoice." },
+        "dueDate": { "type": "string", "format": "date", "description": "The due date for payment." },
+        "status": { "type": "string", "enum": ["Unpaid", "Paid", "Overdue", "Cancelled"], "description": "The status of the invoice." },
+        "penalty": { "type": "number", "description": "The penalty amount applied." },
+        "uid": { "type": "string", "description": "The UID of the user who created the invoice." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the invoice was created." }
+      },
+      "required": ["invoiceNumber", "entity", "category", "amount", "dueDate", "status", "uid", "createdAt"]
+    },
+    "Receipt": {
+      "title": "Receipt Record",
+      "description": "A record of a payment receipt.",
+      "type": "object",
+      "properties": {
+        "receiptNumber": { "type": "string", "description": "The unique receipt number." },
+        "invoiceId": { "type": "string", "description": "The ID of the linked invoice." },
+        "entity": { "type": "string", "description": "The name of the student or entity." },
+        "amount": { "type": "number", "description": "The amount paid." },
+        "date": { "type": "string", "format": "date", "description": "The date of payment." },
+        "method": { "type": "string", "enum": ["Cash", "Bank Transfer", "Mobile Money", "Cheque"], "description": "The payment method." },
+        "uid": { "type": "string", "description": "The UID of the user who recorded the receipt." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the receipt was created." }
+      },
+      "required": ["receiptNumber", "invoiceId", "entity", "amount", "date", "method", "uid", "createdAt"]
+    },
+    "PenaltyRule": {
+      "title": "Penalty Rule",
+      "description": "A rule for applying penalties to late payments.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the rule." },
+        "type": { "type": "string", "enum": ["Fixed", "Percentage", "Daily"], "description": "The type of penalty." },
+        "value": { "type": "number", "description": "The value of the penalty (amount or percentage)." },
+        "gracePeriod": { "type": "number", "description": "The grace period in days." },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "The status of the rule." },
+        "uid": { "type": "string", "description": "The UID of the user who created the rule." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the rule was created." }
+      },
+      "required": ["name", "type", "value", "gracePeriod", "status", "uid", "createdAt"]
+    },
+    "AutomationTask": {
+      "title": "Recurring Automation Task",
+      "description": "A recurring financial task automation.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the task." },
+        "category": { "type": "string", "description": "The category (e.g., Tuition, Library)." },
+        "frequency": { "type": "string", "enum": ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"], "description": "The frequency of the task." },
+        "nextRun": { "type": "string", "format": "date", "description": "The next scheduled run date." },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "The status of the task." },
+        "uid": { "type": "string", "description": "The UID of the user who created the task." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the task was created." }
+      },
+      "required": ["name", "category", "frequency", "nextRun", "status", "uid", "createdAt"]
+    },
+    "ReminderRule": {
+      "title": "Automated Reminder Rule",
+      "description": "A rule for automated financial reminders.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the reminder rule." },
+        "trigger": { "type": "string", "description": "The trigger condition (e.g., 3 Days Before Due)." },
+        "channel": { "type": "string", "description": "The communication channel (e.g., Email & SMS)." },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "The status of the rule." },
+        "uid": { "type": "string", "description": "The UID of the user who created the rule." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the rule was created." }
+      },
+      "required": ["name", "trigger", "channel", "status", "uid", "createdAt"]
+    },
+    "CommunicationTemplate": {
+      "title": "Communication Template",
+      "description": "An email or SMS template for financial communications.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the template." },
+        "type": { "type": "string", "enum": ["Email", "SMS"], "description": "The type of template." },
+        "content": { "type": "string", "description": "The message content with placeholders." },
+        "lastModified": { "type": "string", "format": "date-time", "description": "The timestamp of the last modification." },
+        "uid": { "type": "string", "description": "The UID of the user who created/modified the template." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the template was created." }
+      },
+      "required": ["name", "type", "content", "lastModified", "uid", "createdAt"]
+    },
+    "Student": {
+      "title": "Student Profile",
+      "description": "A record of a student in the school.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The full name of the student." },
+        "classId": { "type": "string", "description": "The ID of the class the student belongs to." },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "Graduated"], "description": "The enrollment status." },
+        "email": { "type": "string", "format": "email", "description": "The contact email for the student/parent." },
+        "uid": { "type": "string", "description": "The UID of the user who created the record." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["name", "classId", "status", "email", "uid", "createdAt"]
+    },
+    "Class": {
+      "title": "Academic Class",
+      "description": "A grade level or primary academic unit (e.g., Grade 10).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "The name of the class (e.g., Grade 10)." },
+        "grade": { "type": "string" },
+        "academicYearId": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "sections": { "type": "array", "items": { "type": "string" }, "description": "List of section IDs or names." },
+        "subjects": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "grade", "academicYear", "uid", "createdAt"]
+    },
+    "Section": {
+      "title": "Class Section",
+      "description": "A specific section of a class (e.g., 10-A).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "classId": { "type": "string" },
+        "className": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "capacity": { "type": "integer" },
+        "studentsCount": { "type": "integer" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "classId", "uid", "createdAt"]
+    },
+    "Enrollment": {
+      "title": "Student Enrollment",
+      "description": "A record linking a student to a class and section for an academic year.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "classId": { "type": "string" },
+        "className": { "type": "string" },
+        "sectionId": { "type": "string" },
+        "sectionName": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Promoted", "Withdrawn", "Graduated"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "classId", "sectionId", "academicYear", "uid", "createdAt"]
+    },
+    "AcademicYear": {
+      "title": "Academic Year",
+      "description": "A record of an academic year (e.g., 2025-2026).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Active", "Upcoming", "Completed"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "startDate", "endDate", "status", "uid", "createdAt"]
+    },
+    "TimetableSlot": {
+      "title": "Timetable Slot",
+      "description": "A single slot in a class timetable.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "startTime": { "type": "string", "format": "time" },
+        "endTime": { "type": "string", "format": "time" },
+        "subject": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "classId": { "type": "string" },
+        "sectionId": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["day", "startTime", "endTime", "subject", "classId", "sectionId", "uid", "createdAt"]
+    },
+    "LiveClass": {
+      "title": "Live Class Record",
+      "description": "A record of a live virtual class session.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subject": { "type": "string" },
+        "teacher": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["live", "upcoming", "completed"] },
+        "studentsCount": { "type": "integer" },
+        "description": { "type": "string" },
+        "autoAttendance": { "type": "boolean" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "subject", "teacher", "startTime", "endTime", "date", "status", "uid", "createdAt"]
+    },
+    "Staff": {
+      "title": "Staff Profile",
+      "description": "A record of a staff member in the school.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The full name of the staff member." },
+        "role": { "type": "string", "description": "The role of the staff member (e.g., Teacher, Principal)." },
+        "department": { "type": "string", "description": "The department the staff member belongs to." },
+        "status": { "type": "string", "enum": ["Active", "On Leave", "Inactive"], "description": "The employment status." },
+        "email": { "type": "string", "format": "email", "description": "The contact email for the staff member." },
+        "phone": { "type": "string", "description": "The contact phone number." },
+        "joinDate": { "type": "string", "format": "date", "description": "The date the staff member joined." },
+        "uid": { "type": "string", "description": "The UID of the user who created the record." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the record was created." }
+      },
+      "required": ["name", "role", "department", "status", "email", "uid", "createdAt"]
+    },
+    "Curriculum": {
+      "title": "Curriculum",
+      "description": "A structured academic curriculum.",
+      "type": "object",
+      "properties": {
+        "grade": { "type": "string" },
+        "subject": { "type": "string" },
+        "board": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "durationWeeks": { "type": "integer" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "units": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "name": { "type": "string" },
+                    "difficulty": { "type": "string" },
+                    "learningOutcomes": { "type": "array", "items": { "type": "string" } },
+                    "weeks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "week": { "type": "integer" },
+                          "topic": { "type": "string" },
+                          "content": { "type": "array", "items": { "type": "string" } },
+                          "activities": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    },
+                    "assessments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": { "type": "string" },
+                          "week": { "type": "integer" },
+                          "weight": { "type": "integer" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "aiMetadata": {
+          "type": "object",
+          "properties": {
+            "generated": { "type": "boolean" },
+            "lastOptimized": { "type": "string" },
+            "confidenceScore": { "type": "number" }
+          }
+        },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["grade", "subject", "board", "uid"]
+    },
+    "Lead": {
+      "title": "Admissions Lead",
+      "description": "A lead in the admissions pipeline.",
+      "type": "object",
+      "properties": {
+        "studentName": { "type": "string" },
+        "parentName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "interestedClass": { "type": "string" },
+        "source": { "type": "string", "enum": ["Website", "Walk-in", "Ads", "Referral"] },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["Enquiry", "Interested", "Applied", "Verified", "Admitted", "Enrolled"] },
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "aiInsight": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "onboardingStatus": {
+          "type": "object",
+          "properties": {
+            "classAssigned": { "type": "boolean" },
+            "feesSetup": { "type": "boolean" },
+            "docsUploaded": { "type": "boolean" },
+            "portalActivated": { "type": "boolean" },
+            "parentDetailsAdded": { "type": "boolean" }
+          }
+        },
+        "studentId": { "type": "string" },
+        "assignedClass": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["studentName", "parentName", "phone", "email", "status", "uid", "createdAt"]
+    },
+    "LeadDocument": {
+      "title": "Lead Document",
+      "description": "A document associated with a lead.",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Birth Certificate", "ID Proof", "Previous Records", "Other"] },
+        "status": { "type": "string", "enum": ["Verified", "Pending", "Missing", "Rejected"] },
+        "url": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["leadId", "name", "type", "status", "uid"]
+    },
+    "LeadCommunication": {
+      "title": "Lead Communication",
+      "description": "A communication record for a lead.",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Call", "Message", "Email"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "outcome": { "type": "string" },
+        "uid": { "type": "string" }
+      },
+      "required": ["leadId", "type", "content", "timestamp", "uid"]
+    },
+    "AdmissionsAutomationRule": {
+      "title": "Admissions Automation Rule",
+      "description": "An automation rule for the admissions pipeline.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "trigger": { "type": "string" },
+        "condition": { "type": "string" },
+        "action": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "uid": { "type": "string" }
+      },
+      "required": ["name", "trigger", "action", "isActive", "uid"]
+    },
+    "FinancialSettings": {
+      "title": "Financial Settings",
+      "description": "Global financial settings for the school.",
+      "type": "object",
+      "properties": {
+        "openingBalance": { "type": "number", "description": "The opening cash balance." },
+        "initialCapital": { "type": "number", "description": "The initial capital invested." },
+        "bankLoan": { "type": "number", "description": "The outstanding bank loan amount." },
+        "retainedEarnings": { "type": "number", "description": "The retained earnings from previous periods." },
+        "currency": { "type": "string", "description": "The currency symbol or code used in the application." },
+        "uid": { "type": "string", "description": "The UID of the user." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The timestamp of the last update." }
+      },
+      "required": ["openingBalance", "initialCapital", "bankLoan", "retainedEarnings", "currency", "uid"]
+    },
+    "TransportRoute": {
+      "title": "Transport Route",
+      "description": "A school bus transport route.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "vehicle": { "type": "string" },
+        "driver": { "type": "string" },
+        "stops": { "type": "integer" },
+        "students": { "type": "integer" },
+        "distance": { "type": "string" },
+        "onTime": { "type": "boolean" },
+        "delay": { "type": "integer" },
+        "color": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "status", "vehicle", "driver", "uid", "createdAt"]
+    },
+    "TransportVehicle": {
+      "title": "Transport Vehicle",
+      "description": "A vehicle used for school transport.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "capacity": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Available", "In Use", "Maintenance"] },
+        "driverId": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "capacity", "status", "uid", "createdAt"]
+    },
+    "Graduate": {
+      "title": "Graduate Record",
+      "description": "A record of a student who has graduated.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "year": { "type": "string" },
+        "degree": { "type": "string" },
+        "status": { "type": "string", "enum": ["Transcript Issued", "Pending"] },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "year", "degree", "status", "email", "uid", "createdAt"]
+    },
+    "Alumnus": {
+      "title": "Alumnus Record",
+      "description": "A record of an alumnus in the network.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "class": { "type": "string" },
+        "occupation": { "type": "string" },
+        "company": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active Member", "Donor", "Standard"] },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "linkedin": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "class", "status", "email", "uid", "createdAt"]
+    },
+    "BehaviorIncident": {
+      "title": "Behavior Incident",
+      "description": "A record of a student behavior incident (merit or demerit).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Merit", "Demerit"] },
+        "category": { "type": "string" },
+        "severity": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "points": { "type": "integer" },
+        "reportedBy": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentName", "studentId", "type", "category", "severity", "date", "uid", "createdAt"]
+    },
+    "Achievement": {
+      "title": "Achievement Certificate",
+      "description": "A record of a student achievement or certificate issued.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "type": { "type": "string" },
+        "issuedDate": { "type": "string", "format": "date" },
+        "grade": { "type": "string" },
+        "status": { "type": "string", "enum": ["Issued", "Pending", "Verified"] },
+        "image": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "studentName", "type", "issuedDate", "status", "uid"]
+    },
+    "LeaveRequest": {
+      "title": "Leave Request",
+      "description": "A record of a staff leave request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "type": { "type": "string", "enum": ["Annual Leave", "Sick Leave", "Personal Leave", "Maternity Leave", "Paternity Leave"] },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+        "days": { "type": "integer" },
+        "appliedOn": { "type": "string", "format": "date" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["staffId", "staffName", "type", "startDate", "endDate", "reason", "status", "days", "appliedOn", "uid", "createdAt"]
+    },
+    "FeeStructure": {
+      "title": "Fee Structure",
+      "description": "A record of a school fee structure for a specific class and academic year.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "classId": { "type": "string" },
+        "className": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "amount": { "type": "number" },
+              "isOptional": { "type": "boolean" }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "classId", "className", "academicYear", "totalAmount", "components", "status", "uid", "createdAt"]
+    },
+    "JobOpening": {
+      "title": "Job Opening",
+      "description": "A record of a job opening in the school.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "department": { "type": "string" },
+        "type": { "type": "string", "enum": ["Full-time", "Part-time", "Contract"] },
+        "description": { "type": "string" },
+        "requirements": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "Closed"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "department", "type", "status", "uid", "createdAt"]
+    },
+    "JobApplication": {
+      "title": "Job Application",
+      "description": "A record of a job application for a specific opening.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "jobId": { "type": "string" },
+        "applicantName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Reviewing", "Interview", "Hired", "Rejected"] },
+        "appliedDate": { "type": "string", "format": "date-time" },
+        "uid": { "type": "string" }
+      },
+      "required": ["jobId", "applicantName", "email", "status", "appliedDate", "uid"]
+    },
+    "FeeDiscount": {
+      "title": "Fee Discount",
+      "description": "A record of a fee discount rule.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Percentage", "Fixed"] },
+        "value": { "type": "number" },
+        "category": { "type": "string", "enum": ["Scholarship", "Sibling", "Early Bird", "Staff Child", "Other"] },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "value", "category", "status", "uid", "createdAt"]
+    },
+    "BankTransaction": {
+      "title": "Bank Transaction",
+      "description": "A record of a bank transaction.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["Credit", "Debit"] },
+        "category": { "type": "string" },
+        "reference": { "type": "string" },
+        "status": { "type": "string", "enum": ["Completed", "Pending", "Flagged"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["date", "description", "amount", "type", "status", "uid", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A user-specific notification.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "urgent"] },
+        "category": { "type": "string", "enum": ["Academic", "Finance", "HR", "System", "General"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" },
+        "uid": { "type": "string" }
+      },
+      "required": ["title", "description", "type", "category", "timestamp", "read", "uid"]
+    },
+    "HostelRoom": {
+      "title": "Hostel Room",
+      "description": "A record of a hostel room.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "block": { "type": "string" },
+        "type": { "type": "string" },
+        "capacity": { "type": "integer" },
+        "occupied": { "type": "integer" },
+        "cost": { "type": "number" },
+        "status": { "type": "string", "enum": ["Available", "Full", "Maintenance"] },
+        "floor": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["roomNumber", "block", "type", "capacity", "occupied", "cost", "status", "uid", "createdAt"]
+    },
+    "HostelAllocation": {
+      "title": "Hostel Allocation",
+      "description": "A record of a student room allocation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "roomId": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "block": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Active", "Expiring Soon", "Completed", "Cancelled"] },
+        "type": { "type": "string" },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "studentName", "roomId", "roomNumber", "block", "startDate", "endDate", "status", "uid", "createdAt"]
+    },
+    "MessMenu": {
+      "title": "Mess Menu",
+      "description": "A record of a daily mess menu.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "breakfast": { "type": "string" },
+        "lunch": { "type": "string" },
+        "dinner": { "type": "string" },
+        "calories": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["day", "breakfast", "lunch", "dinner", "status", "uid", "createdAt"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "A supplier or service provider.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "address": { "type": "string" },
+        "rating": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "contactPerson", "phone", "email", "status", "uid", "createdAt"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "A record of an inventory purchase.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "amount": { "type": "number" },
+        "itemsCount": { "type": "integer" },
+        "status": { "type": "string", "enum": ["Pending", "Ordered", "Received", "Cancelled"] },
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["vendorId", "vendorName", "date", "amount", "itemsCount", "status", "uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "/student_revenue/{revenueId}": {
+      "schema": "StudentRevenue",
+      "description": "Collection of student revenue records."
+    },
+    "/entity_revenue/{revenueId}": {
+      "schema": "EntityRevenue",
+      "description": "Collection of entity revenue records."
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Collection of operational expense records."
+    },
+    "/assets/{assetId}": {
+      "schema": "AssetRecord",
+      "description": "Collection of asset records."
+    },
+    "/payroll/{payrollId}": {
+      "schema": "Payroll",
+      "description": "Collection of staff payroll records."
+    },
+    "/financial_categories/{categoryId}": {
+      "schema": "FinancialCategory",
+      "description": "Collection of financial categories."
+    },
+    "/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Collection of school inventory items."
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Collection of invoice records."
+    },
+    "/receipts/{receiptId}": {
+      "schema": "Receipt",
+      "description": "Collection of receipt records."
+    },
+    "/penalty_rules/{ruleId}": {
+      "schema": "PenaltyRule",
+      "description": "Collection of penalty rules."
+    },
+    "/automation_tasks/{taskId}": {
+      "schema": "AutomationTask",
+      "description": "Collection of recurring automation tasks."
+    },
+    "/reminder_rules/{ruleId}": {
+      "schema": "ReminderRule",
+      "description": "Collection of automated reminder rules."
+    },
+    "/communication_templates/{templateId}": {
+      "schema": "CommunicationTemplate",
+      "description": "Collection of communication templates."
+    },
+    "/financial_settings/{userId}": {
+      "schema": "FinancialSettings",
+      "description": "Collection of financial settings per user."
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of student profiles."
+    },
+    "/classes/{classId}": {
+      "schema": "Class",
+      "description": "Collection of class records."
+    },
+    "/live_classes/{classId}": {
+      "schema": "LiveClass",
+      "description": "Collection of live class records."
+    },
+    "/staff/{staffId}": {
+      "schema": "Staff",
+      "description": "Collection of staff profiles."
+    },
+    "/flashcard_sets/{setId}": {
+      "schema": "FlashCardSet",
+      "description": "Collection of flash card sets."
+    },
+    "/flashcard_analytics/{analyticsId}": {
+      "schema": "FlashCardAnalytics",
+      "description": "Collection of flash card analytics records."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "AttendanceRecord",
+      "description": "Collection of daily attendance records."
+    },
+    "/notices/{noticeId}": {
+      "schema": "Notice",
+      "description": "Collection of school notices."
+    },
+    "/library/{itemId}": {
+      "schema": "LibraryItem",
+      "description": "Collection of library items."
+    },
+    "/assignments/{assignmentId}": {
+      "schema": "Assignment",
+      "description": "Collection of class assignments."
+    },
+    "/quotations/{quotationId}": {
+      "schema": "Quotation",
+      "description": "Collection of quotation records."
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Collection of assignment submissions."
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Collection of admissions leads."
+    },
+    "/lead_documents/{docId}": {
+      "schema": "LeadDocument",
+      "description": "Collection of lead documents."
+    },
+    "/lead_communications/{commId}": {
+      "schema": "LeadCommunication",
+      "description": "Collection of lead communications."
+    },
+    "/admissions_automation_rules/{ruleId}": {
+      "schema": "AdmissionsAutomationRule",
+      "description": "Collection of admissions automation rules."
+    },
+    "/curriculums/{curriculumId}": {
+      "schema": "Curriculum",
+      "description": "Collection of academic curriculums."
+    },
+    "/transport_routes/{routeId}": {
+      "schema": "TransportRoute",
+      "description": "Collection of transport routes."
+    },
+    "/transport_vehicles/{vehicleId}": {
+      "schema": "TransportVehicle",
+      "description": "Collection of transport vehicles."
+    },
+    "/graduates/{graduateId}": {
+      "schema": "Graduate",
+      "description": "Collection of graduate records."
+    },
+    "/alumni/{alumnusId}": {
+      "schema": "Alumnus",
+      "description": "Collection of alumni records."
+    },
+    "/behavior_incidents/{incidentId}": {
+      "schema": "BehaviorIncident",
+      "description": "Collection of behavior incidents."
+    },
+    "/achievements/{achievementId}": {
+      "schema": "Achievement",
+      "description": "Collection of student achievement certificates."
+    },
+    "/leave_requests/{requestId}": {
+      "schema": "LeaveRequest",
+      "description": "Collection of staff leave requests."
+    },
+    "/fee_structures/{structureId}": {
+      "schema": "FeeStructure",
+      "description": "Collection of fee structures."
+    },
+    "/fee_discounts/{discountId}": {
+      "schema": "FeeDiscount",
+      "description": "Collection of fee discount rules."
+    },
+    "/job_openings/{jobId}": {
+      "schema": "JobOpening",
+      "description": "Collection of job openings."
+    },
+    "/job_applications/{applicationId}": {
+      "schema": "JobApplication",
+      "description": "Collection of job applications."
+    },
+    "/bank_transactions/{transactionId}": {
+      "schema": "BankTransaction",
+      "description": "Collection of bank transactions."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of user-specific notifications."
+    },
+    "/hostel_rooms/{roomId}": {
+      "schema": "HostelRoom",
+      "description": "Collection of hostel rooms."
+    },
+    "/hostel_allocations/{allocationId}": {
+      "schema": "HostelAllocation",
+      "description": "Collection of hostel room allocations."
+    },
+    "/mess_menu/{menuId}": {
+      "schema": "MessMenu",
+      "description": "Collection of daily mess menus."
+    },
+    "/vendors/{vendorId}": {
+      "schema": "Vendor",
+      "description": "Collection of vendors."
+    },
+    "/purchase_orders/{orderId}": {
+      "schema": "PurchaseOrder",
+      "description": "Collection of purchase orders."
+    },
+    "/sections/{sectionId}": {
+      "schema": "Section",
+      "description": "Collection of class sections."
+    },
+    "/enrollments/{enrollmentId}": {
+      "schema": "Enrollment",
+      "description": "Collection of student enrollments."
+    },
+    "/academic_years/{yearId}": {
+      "schema": "AcademicYear",
+      "description": "Collection of academic years."
+    },
+    "/timetable_slots/{slotId}": {
+      "schema": "TimetableSlot",
+      "description": "Collection of timetable slots."
+    }
+  }
+}

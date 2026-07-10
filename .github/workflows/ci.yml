@@ -1,0 +1,47 @@
+name: CI
+
+# Real CI pipeline — previously there was no automated check at all on push/PR,
+# so a broken build or a type error only surfaced when someone happened to
+# run it locally (or not at all, until it hit production).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit -p .
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true # existing lint debt shouldn't block CI from landing; tighten once clean
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build (frontend + server)
+        run: npm run build
+        env:
+          # Dummy values so the Vite build doesn't fail on missing
+          # import.meta.env.VITE_* references — no real secret is needed to
+          # produce a build artifact, only to run it against real services.
+          VITE_FIREBASE_API_KEY: "build-placeholder"
+          VITE_FIREBASE_AUTH_DOMAIN: "build-placeholder"
+          VITE_FIREBASE_PROJECT_ID: "build-placeholder"
+          VITE_FIREBASE_STORAGE_BUCKET: "build-placeholder"
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "build-placeholder"
+          VITE_FIREBASE_APP_ID: "build-placeholder"

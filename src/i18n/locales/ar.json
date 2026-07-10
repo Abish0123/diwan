@@ -1,0 +1,102 @@
+{
+  "nav": {
+    "dashboard": "لوحة التحكم", "students": "الطلاب", "admissions": "القبول",
+    "attendance": "الحضور", "academics": "الأكاديمية", "classes": "الفصول",
+    "timetable": "الجدول الزمني", "assignments": "الواجبات", "exams": "الامتحانات والنتائج",
+    "library": "المكتبة", "hr": "الموارد البشرية", "staff": "دليل الموظفين",
+    "leave": "إدارة الإجازات", "payroll": "الرواتب", "recruitment": "التوظيف",
+    "finance": "المالية", "fees": "الرسوم", "transactions": "المعاملات",
+    "billing": "الفوترة", "budget": "الميزانية", "assets": "الأصول",
+    "communication": "التواصل", "announcements": "الإعلانات",
+    "messages": "الرسائل", "notifications": "الإشعارات", "calendar": "التقويم",
+    "transport": "النقل", "routes": "المسارات", "vehicles": "المركبات",
+    "tracking": "التتبع", "hostel": "السكن الداخلي", "rooms": "الغرف",
+    "allocation": "التخصيص", "mess": "الكافيتيريا", "security": "الأمن",
+    "visitors": "الزوار", "gatePass": "تصريح المرور", "inventory": "المخزون",
+    "stock": "المخزن", "purchases": "المشتريات", "vendors": "الموردون",
+    "analytics": "التحليلات", "aiCenter": "مركز الذكاء الاصطناعي", "settings": "الإعدادات",
+    "users": "المستخدمون", "permissions": "الصلاحيات", "integrations": "التكاملات",
+    "auditLogs": "سجلات المراجعة", "gradebook": "دفتر الدرجات", "reportCards": "بطاقات التقارير",
+    "health": "السجلات الصحية", "alumni": "الخريجون", "behavior": "السلوك",
+    "graduates": "المتخرجون", "coding": "تقييمات البرمجة", "plagiarism": "كشف الانتحال",
+    "parentPortal": "بوابة ولي الأمر", "studentPortal": "بوابة الطالب"
+  },
+  "common": {
+    "search": "بحث", "filter": "تصفية", "export": "تصدير", "import": "استيراد",
+    "add": "إضافة", "edit": "تعديل", "delete": "حذف", "save": "حفظ", "cancel": "إلغاء",
+    "confirm": "تأكيد", "close": "إغلاق", "submit": "إرسال", "next": "التالي",
+    "back": "رجوع", "loading": "جاري التحميل...", "noData": "لا توجد بيانات",
+    "actions": "الإجراءات", "status": "الحالة", "name": "الاسم", "email": "البريد الإلكتروني",
+    "phone": "الهاتف", "date": "التاريخ", "amount": "المبلغ", "total": "الإجمالي",
+    "active": "نشط", "inactive": "غير نشط", "pending": "قيد الانتظار",
+    "approved": "معتمد", "rejected": "مرفوض", "download": "تنزيل",
+    "print": "طباعة", "view": "عرض", "all": "الكل", "none": "لا شيء",
+    "yes": "نعم", "no": "لا", "ok": "موافق", "error": "خطأ",
+    "success": "نجاح", "warning": "تحذير", "info": "معلومات",
+    "required": "مطلوب", "optional": "اختياري", "select": "اختر",
+    "male": "ذكر", "female": "أنثى", "language": "اللغة",
+    "english": "الإنجليزية", "arabic": "العربية", "darkMode": "الوضع الداكن",
+    "lightMode": "الوضع الفاتح", "profile": "الملف الشخصي", "logout": "تسجيل الخروج",
+    "settings": "الإعدادات", "help": "المساعدة"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم", "welcome": "مرحباً بعودتك", "overview": "نظرة عامة",
+    "totalStudents": "إجمالي الطلاب", "totalStaff": "إجمالي الموظفين",
+    "totalRevenue": "إجمالي الإيرادات", "attendance": "نسبة الحضور",
+    "recentAdmissions": "القبول الأخير", "quickActions": "الإجراءات السريعة",
+    "addStudent": "إضافة طالب", "inviteUser": "دعوة مستخدم", "addTeacher": "إضافة معلم",
+    "recordExpense": "تسجيل مصروف", "addInventory": "إضافة عنصر مخزون",
+    "createEvent": "إنشاء فعالية", "aiInsights": "رؤى الذكاء الاصطناعي", "notifications": "الإشعارات"
+  },
+  "students": {
+    "title": "الطلاب", "allStudents": "جميع الطلاب", "addStudent": "إضافة طالب",
+    "studentId": "رقم الطالب", "grade": "الصف", "section": "الشعبة",
+    "guardian": "ولي الأمر", "enrollmentDate": "تاريخ التسجيل",
+    "filterByStatus": "تصفية حسب الحالة", "searchStudents": "بحث عن الطلاب...",
+    "active": "نشط", "inactive": "غير نشط", "suspended": "موقوف", "alumni": "خريج",
+    "studentProfile": "ملف الطالب", "contactInfo": "معلومات التواصل",
+    "academicRecord": "السجل الأكاديمي", "feeHistory": "سجل الرسوم"
+  },
+  "finance": {
+    "title": "المالية", "feesManagement": "إدارة الرسوم", "totalCollected": "إجمالي المحصل",
+    "pending": "قيد الانتظار", "overdue": "متأخر", "payNow": "ادفع الآن",
+    "generateInvoice": "إنشاء فاتورة", "recordPayment": "تسجيل دفعة",
+    "vatAmount": "مبلغ ضريبة القيمة المضافة", "vatRate": "نسبة ضريبة القيمة المضافة",
+    "subtotal": "المجموع الفرعي", "invoiceNumber": "رقم الفاتورة",
+    "paymentMethod": "طريقة الدفع", "cash": "نقداً", "bankTransfer": "تحويل بنكي",
+    "card": "بطاقة", "onlinePayment": "دفع إلكتروني", "receiptNumber": "رقم الإيصال"
+  },
+  "academics": {
+    "gradebook": "دفتر الدرجات", "subject": "المادة", "grade": "الدرجة",
+    "marks": "العلامات", "maxMarks": "العلامة العظمى", "percentage": "النسبة المئوية",
+    "gpa": "المعدل التراكمي", "rank": "الترتيب", "remarks": "الملاحظات", "term": "الفصل الدراسي",
+    "reportCard": "بطاقة التقرير", "academicYear": "العام الدراسي",
+    "semester": "الفصل", "attendance": "الحضور", "conduct": "السلوك",
+    "principalRemarks": "ملاحظات المدير", "classTeacher": "معلم الفصل"
+  },
+  "hr": {
+    "staffDirectory": "دليل الموظفين", "employeeId": "رقم الموظف",
+    "department": "القسم", "designation": "المسمى الوظيفي", "joinDate": "تاريخ الانضمام",
+    "salary": "الراتب", "leaveBalance": "رصيد الإجازات", "payslip": "قسيمة الراتب",
+    "attendance": "الحضور", "performance": "الأداء"
+  },
+  "parent": {
+    "portal": "بوابة ولي الأمر", "myChildren": "أبنائي", "childProgress": "تقدم الطالب",
+    "feeStatus": "حالة الرسوم", "attendanceSummary": "ملخص الحضور",
+    "upcomingExams": "الامتحانات القادمة", "homework": "الواجبات المنزلية", "notices": "الإشعارات",
+    "busLocation": "موقع الحافلة", "healthRecord": "السجل الصحي",
+    "teacherMessage": "مراسلة المعلم", "downloadReport": "تنزيل بطاقة التقرير"
+  },
+  "setup": {
+    "wizard": "معالج الإعداد", "schoolInfo": "معلومات المدرسة",
+    "academicYear": "إعداد العام الدراسي", "classesSetup": "الفصول والشعب",
+    "staffSetup": "إضافة الموظفين", "studentsSetup": "استيراد الطلاب",
+    "feeStructure": "هيكل الرسوم", "complete": "اكتمل الإعداد",
+    "skip": "تخطي الآن", "getStarted": "ابدأ الآن",
+    "schoolName": "اسم المدرسة", "schoolLogo": "شعار المدرسة",
+    "schoolAddress": "عنوان المدرسة", "schoolPhone": "هاتف المدرسة",
+    "schoolEmail": "بريد المدرسة الإلكتروني", "country": "الدولة", "currency": "العملة",
+    "timezone": "المنطقة الزمنية", "academicStart": "بداية العام الدراسي",
+    "academicEnd": "نهاية العام الدراسي"
+  }
+}

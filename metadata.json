@@ -1,0 +1,8 @@
+{
+  "name": "StudentDiwan: AI-Powered School ERP",
+  "description": "A comprehensive AI-powered School Management System with Admissions Pipeline, AI Timetable Generator, Flash Cards, HR & Payroll, academic tracking, and finance management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

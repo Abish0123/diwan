@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="treeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield Outline with Gold Stroke -->
+  <path d="M50 12 L82 22 C82 55 50 88 50 88 C50 88 18 55 18 22 Z" fill="url(#shieldGrad)" stroke="url(#goldGrad)" stroke-width="4" stroke-linejoin="round"/>
+  
+  <!-- Tree Trunk/Branches -->
+  <path d="M50 35 L68 55 H56 V72 H44 V55 H32 Z" fill="url(#treeGrad)"/>
+  
+  <!-- Gold Stars/Leaves details -->
+  <path d="M50 25 L53 31 H59 L54 35 L56 41 L50 37 L44 41 L46 35 L41 31 H47 Z" fill="url(#goldGrad)"/>
+</svg>

@@ -1,0 +1,102 @@
+{
+  "nav": {
+    "dashboard": "Dashboard", "students": "Students", "admissions": "Admissions",
+    "attendance": "Attendance", "academics": "Academics", "classes": "Classes",
+    "timetable": "Timetable", "assignments": "Assignments", "exams": "Exams & Results",
+    "library": "Library", "hr": "HR & Staff", "staff": "Staff Directory",
+    "leave": "Leave Management", "payroll": "Payroll", "recruitment": "Recruitment",
+    "finance": "Finance", "fees": "Fees", "transactions": "Transactions",
+    "billing": "Billing", "budget": "Budget", "assets": "Assets",
+    "communication": "Communication", "announcements": "Announcements",
+    "messages": "Messages", "notifications": "Notifications", "calendar": "Calendar",
+    "transport": "Transport", "routes": "Routes", "vehicles": "Vehicles",
+    "tracking": "Tracking", "hostel": "Hostel", "rooms": "Rooms",
+    "allocation": "Allocation", "mess": "Mess", "security": "Security",
+    "visitors": "Visitors", "gatePass": "Gate Pass", "inventory": "Inventory",
+    "stock": "Stock", "purchases": "Purchases", "vendors": "Vendors",
+    "analytics": "Analytics", "aiCenter": "AI Center", "settings": "Settings",
+    "users": "Users", "permissions": "Permissions", "integrations": "Integrations",
+    "auditLogs": "Audit Logs", "gradebook": "Gradebook", "reportCards": "Report Cards",
+    "health": "Health Records", "alumni": "Alumni", "behavior": "Behavior",
+    "graduates": "Graduates", "coding": "Coding Assessments", "plagiarism": "Plagiarism Check",
+    "parentPortal": "Parent Portal", "studentPortal": "Student Portal"
+  },
+  "common": {
+    "search": "Search", "filter": "Filter", "export": "Export", "import": "Import",
+    "add": "Add", "edit": "Edit", "delete": "Delete", "save": "Save", "cancel": "Cancel",
+    "confirm": "Confirm", "close": "Close", "submit": "Submit", "next": "Next",
+    "back": "Back", "loading": "Loading...", "noData": "No data found",
+    "actions": "Actions", "status": "Status", "name": "Name", "email": "Email",
+    "phone": "Phone", "date": "Date", "amount": "Amount", "total": "Total",
+    "active": "Active", "inactive": "Inactive", "pending": "Pending",
+    "approved": "Approved", "rejected": "Rejected", "download": "Download",
+    "print": "Print", "view": "View", "all": "All", "none": "None",
+    "yes": "Yes", "no": "No", "ok": "OK", "error": "Error",
+    "success": "Success", "warning": "Warning", "info": "Info",
+    "required": "Required", "optional": "Optional", "select": "Select",
+    "male": "Male", "female": "Female", "language": "Language",
+    "english": "English", "arabic": "Arabic", "darkMode": "Dark Mode",
+    "lightMode": "Light Mode", "profile": "Profile", "logout": "Logout",
+    "settings": "Settings", "help": "Help"
+  },
+  "dashboard": {
+    "title": "Dashboard", "welcome": "Welcome back", "overview": "Overview",
+    "totalStudents": "Total Students", "totalStaff": "Total Staff",
+    "totalRevenue": "Total Revenue", "attendance": "Attendance Rate",
+    "recentAdmissions": "Recent Admissions", "quickActions": "Quick Actions",
+    "addStudent": "Add Student", "inviteUser": "Invite User", "addTeacher": "Add Teacher",
+    "recordExpense": "Record Expense", "addInventory": "Add Inventory Item",
+    "createEvent": "Create Event", "aiInsights": "AI Insights", "notifications": "Notifications"
+  },
+  "students": {
+    "title": "Students", "allStudents": "All Students", "addStudent": "Add Student",
+    "studentId": "Student ID", "grade": "Grade", "section": "Section",
+    "guardian": "Guardian", "enrollmentDate": "Enrollment Date",
+    "filterByStatus": "Filter by Status", "searchStudents": "Search students...",
+    "active": "Active", "inactive": "Inactive", "suspended": "Suspended", "alumni": "Alumni",
+    "studentProfile": "Student Profile", "contactInfo": "Contact Info",
+    "academicRecord": "Academic Record", "feeHistory": "Fee History"
+  },
+  "finance": {
+    "title": "Finance", "feesManagement": "Fees Management", "totalCollected": "Total Collected",
+    "pending": "Pending", "overdue": "Overdue", "payNow": "Pay Now",
+    "generateInvoice": "Generate Invoice", "recordPayment": "Record Payment",
+    "vatAmount": "VAT Amount", "vatRate": "VAT Rate", "subtotal": "Subtotal",
+    "invoiceNumber": "Invoice Number", "paymentMethod": "Payment Method",
+    "cash": "Cash", "bankTransfer": "Bank Transfer", "card": "Card",
+    "onlinePayment": "Online Payment", "receiptNumber": "Receipt Number"
+  },
+  "academics": {
+    "gradebook": "Gradebook", "subject": "Subject", "grade": "Grade",
+    "marks": "Marks", "maxMarks": "Max Marks", "percentage": "Percentage",
+    "gpa": "GPA", "rank": "Rank", "remarks": "Remarks", "term": "Term",
+    "reportCard": "Report Card", "academicYear": "Academic Year",
+    "semester": "Semester", "attendance": "Attendance", "conduct": "Conduct",
+    "principalRemarks": "Principal Remarks", "classTeacher": "Class Teacher"
+  },
+  "hr": {
+    "staffDirectory": "Staff Directory", "employeeId": "Employee ID",
+    "department": "Department", "designation": "Designation", "joinDate": "Join Date",
+    "salary": "Salary", "leaveBalance": "Leave Balance", "payslip": "Payslip",
+    "attendance": "Attendance", "performance": "Performance"
+  },
+  "parent": {
+    "portal": "Parent Portal", "myChildren": "My Children", "childProgress": "Child Progress",
+    "feeStatus": "Fee Status", "attendanceSummary": "Attendance Summary",
+    "upcomingExams": "Upcoming Exams", "homework": "Homework", "notices": "Notices",
+    "busLocation": "Bus Location", "healthRecord": "Health Record",
+    "teacherMessage": "Message Teacher", "downloadReport": "Download Report Card"
+  },
+  "setup": {
+    "wizard": "Setup Wizard", "schoolInfo": "School Information",
+    "academicYear": "Academic Year Setup", "classesSetup": "Classes & Sections",
+    "staffSetup": "Add Staff Members", "studentsSetup": "Import Students",
+    "feeStructure": "Fee Structure", "complete": "Setup Complete",
+    "skip": "Skip for now", "getStarted": "Get Started",
+    "schoolName": "School Name", "schoolLogo": "School Logo",
+    "schoolAddress": "School Address", "schoolPhone": "School Phone",
+    "schoolEmail": "School Email", "country": "Country", "currency": "Currency",
+    "timezone": "Timezone", "academicStart": "Academic Year Start",
+    "academicEnd": "Academic Year End"
+  }
+}
