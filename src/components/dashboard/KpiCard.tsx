@@ -1,8 +1,8 @@
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import { CountUpNumber } from "./CountUpNumber";
-import { Sparkline } from "./Sparkline";
+import { KpiTrendArea } from "./KpiTrendArea";
 
 interface KpiCardProps {
   title: string;
@@ -19,12 +19,16 @@ interface KpiCardProps {
    *  is already a formatted string (some callers pre-format with commas). */
   valuePrefix?: string;
   valueSuffix?: string;
-  /** Real trailing values for the sparkline (e.g. last 7 days). Omit when no
-   *  real trend series exists for this metric — the sparkline then renders a
-   *  flat real-value line rather than fabricating a trend shape. */
+  /** Real trailing values for the trend strip (e.g. last 7 days). Omit when
+   *  no real trend series exists for this metric — it then renders a flat
+   *  real-value line rather than fabricating a trend shape. */
   trendSeries?: number[];
-  sparklineColor?: string;
+  /** Accent color driving the icon tint, trend text, and trend-area chart —
+   *  matches the card's semantic color (e.g. emerald for Attendance). */
+  accentColor?: string;
 }
+
+const TREND_ICON = { up: ArrowUp, down: ArrowDown, neutral: Minus } as const;
 
 export const KpiCard = ({
   title,
@@ -39,9 +43,10 @@ export const KpiCard = ({
   valuePrefix = "",
   valueSuffix = "",
   trendSeries,
-  sparklineColor = "#9810fa",
+  accentColor = "#9810fa",
 }: KpiCardProps) => {
   const isNumeric = typeof value === "number";
+  const TrendIcon = TREND_ICON[trendType];
 
   return (
     <motion.div
@@ -49,40 +54,34 @@ export const KpiCard = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -6 }}
-      className={cn("premium-card p-6 group transition-shadow duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20", className)}
+      className={cn("premium-card group flex flex-col transition-shadow duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20", className)}
     >
-      <div className="flex items-center justify-between mb-5">
-        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-[8deg] shadow-sm", iconClassName || "bg-primary/10")}>
-          <Icon className={cn("h-6 w-6", iconClassName ? "text-current" : "text-primary")} aria-hidden="true" />
+      <div className="p-5 pb-3">
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-[8deg] shadow-sm", iconClassName || "bg-primary/10")}>
+          <Icon className={cn("h-5 w-5", iconClassName ? "text-current" : "text-primary")} aria-hidden="true" />
         </div>
+
+        <p className="text-xs font-semibold text-muted-foreground mt-3">{title}</p>
+        <p className="text-2xl font-extrabold mt-1 tracking-tight text-foreground tabular-nums">
+          {isNumeric ? <CountUpNumber value={value as number} prefix={valuePrefix} suffix={valueSuffix} /> : value}
+        </p>
+
         {trend && (
-          <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <motion.p
+            initial={{ opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.08 + 0.3, duration: 0.25 }}
-            className={cn(
-              "text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm",
-              trendType === "up" ? "bg-emerald-50 text-emerald-600" :
-              trendType === "down" ? "bg-rose-50 text-rose-600" :
-              "bg-slate-50 text-slate-600"
-            )}
+            className="flex items-center gap-1 text-[11px] font-bold mt-1.5"
+            style={{ color: accentColor }}
           >
-            {trend}
-          </motion.span>
+            <TrendIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span>{trend}</span>
+            {description && <span className="text-muted-foreground font-medium">{description}</span>}
+          </motion.p>
         )}
       </div>
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-[0.1em]">{title}</p>
-          <p className="text-3xl font-extrabold mt-1.5 tracking-tight text-foreground tabular-nums">
-            {isNumeric ? <CountUpNumber value={value as number} prefix={valuePrefix} suffix={valueSuffix} /> : value}
-          </p>
-          {description && <p className="text-[11px] text-muted-foreground/80 mt-2 font-medium">{description}</p>}
-        </div>
-        <div className="shrink-0 pb-1">
-          <Sparkline values={trendSeries && trendSeries.length > 0 ? trendSeries : [typeof value === "number" ? value : 0]} color={sparklineColor} />
-        </div>
-      </div>
+
+      <KpiTrendArea values={trendSeries && trendSeries.length > 0 ? trendSeries : [typeof value === "number" ? value : 0]} color={accentColor} />
     </motion.div>
   );
 };

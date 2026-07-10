@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AiInsightsBanner } from "@/components/dashboard/AiInsightsBanner";
-import { CopilotAlerts } from "@/components/dashboard/CopilotAlerts";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
 import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
@@ -114,9 +113,6 @@ const AdminIndex = () => {
         {/* AI Insights Banner */}
         <AiInsightsBanner />
 
-        {/* Copilot Alerts — proactive, read-only, Admin/Principal only */}
-        <CopilotAlerts />
-
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard
@@ -128,7 +124,7 @@ const AdminIndex = () => {
             description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
             index={0}
-            sparklineColor="#4f46e5"
+            accentColor="#4f46e5"
           />
           <KpiCard
             title="Attendance Today"
@@ -140,7 +136,7 @@ const AdminIndex = () => {
             iconClassName="bg-emerald-50 text-emerald-600"
             index={1}
             trendSeries={overview.attendanceTrend}
-            sparklineColor="#10b981"
+            accentColor="#10b981"
           />
           <KpiCard
             title="Total Staff"
@@ -151,7 +147,7 @@ const AdminIndex = () => {
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
             index={2}
-            sparklineColor="#9810fa"
+            accentColor="#9810fa"
           />
           <KpiCard
             title={`Fee Collection (${currencySymbol})`}
@@ -163,7 +159,7 @@ const AdminIndex = () => {
             iconClassName="bg-blue-50 text-blue-600"
             index={3}
             trendSeries={overview.feeTrend}
-            sparklineColor="#3b82f6"
+            accentColor="#3b82f6"
           />
           <KpiCard
             title="Pending Tasks"
@@ -174,7 +170,7 @@ const AdminIndex = () => {
             description="awaiting review"
             iconClassName="bg-rose-50 text-rose-600"
             index={4}
-            sparklineColor="#f43f5e"
+            accentColor="#f43f5e"
           />
         </div>
 
