@@ -1,28 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AiInsightsBanner } from "@/components/dashboard/AiInsightsBanner";
 import { CopilotAlerts } from "@/components/dashboard/CopilotAlerts";
 import { KpiCard } from "@/components/dashboard/KpiCard";
-import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
-import { EarningsChart } from "@/components/dashboard/EarningsChart";
-import { TopStudents } from "@/components/dashboard/TopStudents";
-import { TotalStudentsChart } from "@/components/dashboard/TotalStudentsChart";
-import { NoticeBoard } from "@/components/dashboard/NoticeBoard";
-import { EventsWidget } from "@/components/dashboard/EventsWidget";
-import { LibraryWidget } from "@/components/dashboard/LibraryWidget";
-import { RecentVisitors } from "@/components/dashboard/RecentVisitors";
-import { StaffLeaveStatus } from "@/components/dashboard/StaffLeaveStatus";
-import { RecentAdmissions } from "@/components/dashboard/RecentAdmissions";
-import { SystemAuditLogs } from "@/components/dashboard/SystemAuditLogs";
-import { Search, Plus, Users, GraduationCap, UserCheck, Briefcase, DollarSign, Activity, Sparkles, Banknote } from "lucide-react";
+import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
+import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
+import { RecentNotificationsCard } from "@/components/dashboard/RecentNotificationsCard";
+import { StudentStrengthByGradeChart } from "@/components/dashboard/StudentStrengthByGradeChart";
+import { StudentsByCampusChart } from "@/components/dashboard/StudentsByCampusChart";
+import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
+import { QuickAccessGrid } from "@/components/dashboard/QuickAccessGrid";
+import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
+import { Users, UserCheck, GraduationCap, DollarSign, ClipboardList, Sparkles } from "lucide-react";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useStudents } from "@/contexts/StudentContext";
-import { useClasses } from "@/hooks/useClasses";
 import { useStaff } from "@/contexts/StaffContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useDashboardOverview } from "@/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
 import { useGradeCoordinator } from "@/hooks/useGradeCoordinator";
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
@@ -37,17 +34,13 @@ const Index = () => {
 
 const AdminIndex = () => {
   const { students, totalStudents: totalStudentsRaw } = useStudents();
-  const { classes } = useClasses();
   const { staff } = useStaff();
   const stats = useDashboardStats();
+  const overview = useDashboardOverview();
   const { isGradeCoordinator, assignedGrade: coordAssignedGrade } = useGradeCoordinator();
   // A Grade Coordinator's dashboard counts only their own grade's students —
   // the shared admin dashboard otherwise reports school-wide totals to
-  // everyone who lands on it. Other widgets on this page (revenue, staff,
-  // attendance charts) are school-wide financial/HR data that Grade
-  // Coordinators can't reach in the sidebar anyway (their role has no
-  // Finance/Staff & HR group), so they're left as-is rather than
-  // half-scoped for a role that shouldn't be reasoning about them at all.
+  // everyone who lands on it.
   const totalStudents = isGradeCoordinator
     ? students.filter(s => (s as any).grade === coordAssignedGrade).length
     : totalStudentsRaw;
@@ -82,7 +75,12 @@ const AdminIndex = () => {
     <DashboardLayout>
       <div className="space-y-5 pb-6">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
               👋 Good Morning, Admin
@@ -91,7 +89,7 @@ const AdminIndex = () => {
               Bluewood School <span className="h-1 w-1 rounded-full bg-muted-foreground/30" /> {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
               dbLabel.live
@@ -105,11 +103,11 @@ const AdminIndex = () => {
               className="h-10 rounded-xl gradient-primary border-none font-bold text-[11px] shadow-lg shadow-primary/20"
               onClick={() => navigate("/ai-center?module=ask")}
             >
-              <Sparkles className="mr-2 h-4 w-4" />
+              <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
               AI Command
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* AI Insights Banner */}
         <AiInsightsBanner />
@@ -118,16 +116,26 @@ const AdminIndex = () => {
         <CopilotAlerts />
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard
             title="Total Students"
             value={totalStudents || 0}
             icon={Users}
-            trend="12%"
+            trend="12.5%"
             trendType="up"
-            description="vs last month"
+            description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
             index={0}
+          />
+          <KpiCard
+            title="Attendance Today"
+            value={`${overview.attendanceBreakdown.presentPct}%`}
+            icon={UserCheck}
+            trend={overview.attendanceBreakdown.presentPct >= 90 ? "On track" : "Review"}
+            trendType={overview.attendanceBreakdown.presentPct >= 90 ? "up" : "neutral"}
+            description={overview.attendanceBreakdown.date ? `as of ${overview.attendanceBreakdown.date}` : "no data yet"}
+            iconClassName="bg-emerald-50 text-emerald-600"
+            index={1}
           />
           <KpiCard
             title="Total Staff"
@@ -137,65 +145,48 @@ const AdminIndex = () => {
             trendType="up"
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
-            index={1}
-          />
-          <KpiCard
-            title={`Total Revenue (${currencySymbol})`}
-            value={`${stats.revenueThisMonth || "45,230"}`}
-            icon={Banknote}
-            trend="8%"
-            trendType="up"
-            description="vs last month"
-            iconClassName="bg-emerald-50 text-emerald-600"
             index={2}
           />
           <KpiCard
-            title="Attendance %"
-            value={`${stats.avgAttendance ?? 0}%`}
-            icon={Activity}
-            trend="1.2%"
+            title={`Fee Collection (${currencySymbol})`}
+            value={overview.feeOverview.collected}
+            icon={DollarSign}
+            trend={`${overview.feeOverview.collectedPct}%`}
             trendType="up"
-            description="vs last month"
-            iconClassName="bg-blue-50 text-purple-600"
+            description="this month"
+            iconClassName="bg-blue-50 text-blue-600"
             index={3}
+          />
+          <KpiCard
+            title="Pending Tasks"
+            value={overview.pendingTasksCount}
+            icon={ClipboardList}
+            trend={overview.pendingTasksCount > 0 ? "Action needed" : "All clear"}
+            trendType={overview.pendingTasksCount > 0 ? "down" : "up"}
+            description="awaiting review"
+            iconClassName="bg-rose-50 text-rose-600"
+            index={4}
           />
         </div>
 
-        {/* Charts Row */}
+        {/* Attendance / Fees / Notifications Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
-            <AttendanceChart />
-          </div>
-          <div>
-            <EarningsChart />
-          </div>
+          <AttendanceOverviewCard data={overview.attendanceBreakdown} loading={overview.loading} />
+          <FeeCollectionOverviewCard data={overview.feeOverview} currency={currencySymbol} loading={overview.loading} />
+          <RecentNotificationsCard />
         </div>
 
-        {/* Performance & Demographics Row */}
+        {/* Grade Strength / Campus / Events Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
-            <TopStudents />
-          </div>
-          <div>
-            <TotalStudentsChart />
-          </div>
+          <StudentStrengthByGradeChart data={overview.gradeStrength} loading={overview.loading} />
+          <StudentsByCampusChart data={overview.campusBreakdown} loading={overview.loading} />
+          <UpcomingEventsCard />
         </div>
 
-        {/* Library Row */}
-        <LibraryWidget />
-
-        {/* Activity Row — announcements & scheduling */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <NoticeBoard />
-          <EventsWidget />
-          <RecentAdmissions />
-        </div>
-
-        {/* Activity Row — operations & staff */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <RecentVisitors />
-          <StaffLeaveStatus />
-          <SystemAuditLogs />
+        {/* Quick Access / My Tasks Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <QuickAccessGrid />
+          <MyTasksCard tasks={overview.pendingTasks} loading={overview.loading} />
         </div>
       </div>
     </DashboardLayout>
