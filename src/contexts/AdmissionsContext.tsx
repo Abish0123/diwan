@@ -8,6 +8,7 @@ import { handleFirestoreError, OperationType, isFirestoreWorking } from '../lib/
 import { useAuth } from '@/hooks/useAuth';
 import { smartDb } from '@/lib/localDb';
 import { isDefaultAdminEmail } from '@/lib/admin-emails';
+import { describeLeadTransition } from '@/lib/leadStatusTransitions';
 
 export interface EnrollmentCredentials {
   studentName: string;
@@ -193,6 +194,21 @@ export const AdmissionsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Capture lead data BEFORE updateLead triggers any re-render/state change
     const lead = leadSnapshot || leads.find(l => l.id === id);
     const previousStatus = lead?.status;
+
+    // State pattern: flag (not block) a jump that skips one or more real
+    // pipeline stages — e.g. a stray drag-drop or a "Move to Stage" pick
+    // landing on Enrolled straight from Enquiry. Backward moves (correcting
+    // a mistake) and single-step forward moves are unaffected; only a
+    // genuine multi-stage skip prompts for confirmation, since those are
+    // exactly the moves likely to be accidental rather than intentional.
+    const transition = describeLeadTransition(previousStatus, newStatus);
+    if (transition.direction === "forward" && transition.skippedStages.length > 0) {
+      const proceed = confirm(
+        `This skips ${transition.skippedStages.length} stage${transition.skippedStages.length > 1 ? "s" : ""}: ${transition.skippedStages.join(", ")}.\n\nMove to ${newStatus} anyway?`
+      );
+      if (!proceed) return;
+    }
+
     updateLead(id, { status: newStatus }); // optimistic — not awaited, so the card moves immediately
 
     if (!lead) return;
