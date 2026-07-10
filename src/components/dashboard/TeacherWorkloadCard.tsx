@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from "recharts";
 import { Briefcase, ArrowRight } from "lucide-react";
 import { TeacherWorkloadSummary } from "@/hooks/useDashboardOverview";
+import { CountUpNumber } from "./CountUpNumber";
 
 interface Props {
   data: TeacherWorkloadSummary;
@@ -43,31 +44,52 @@ export function TeacherWorkloadCard({ data, loading }: Props) {
         </div>
       ) : (
         <>
-          <div className="h-[130px] w-full relative">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7, duration: 0.4, ease: "easeOut" }}
+            className="h-[130px] w-full relative"
+          >
             <ResponsiveContainer width="100%" height="100%">
               <RadialBarChart cx="50%" cy="85%" innerRadius="140%" outerRadius="220%" barSize={14} data={chartData} startAngle={180} endAngle={0}>
                 <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-                <RadialBar dataKey="value" cornerRadius={8} background={{ fill: "#f1f5f9" }} animationDuration={800} />
+                <RadialBar
+                  dataKey="value"
+                  cornerRadius={8}
+                  background={{ fill: "#f1f5f9" }}
+                  isAnimationActive
+                  animationBegin={250}
+                  animationDuration={1000}
+                  animationEasing="ease-out"
+                />
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="absolute inset-x-0 bottom-2 flex flex-col items-center pointer-events-none">
-              <span className="text-2xl font-extrabold text-foreground leading-none tabular-nums">{data.avgLoadPct}%</span>
+              <span className="text-2xl font-extrabold text-foreground leading-none tabular-nums">
+                <CountUpNumber value={data.avgLoadPct} suffix="%" />
+              </span>
               <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">Average Load</span>
             </div>
-          </div>
+          </motion.div>
           <div className="flex items-center justify-center gap-4 mt-2 pt-3 border-t border-border">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-violet-600" />
-              <span className="text-[11px] font-bold text-foreground">Full Load <span className="text-muted-foreground font-medium">{data.full} ({total > 0 ? Math.round((data.full / total) * 100) : 0}%)</span></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-400" />
-              <span className="text-[11px] font-bold text-foreground">Medium <span className="text-muted-foreground font-medium">{data.medium} ({total > 0 ? Math.round((data.medium / total) * 100) : 0}%)</span></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-slate-300" />
-              <span className="text-[11px] font-bold text-foreground">Low <span className="text-muted-foreground font-medium">{data.low} ({total > 0 ? Math.round((data.low / total) * 100) : 0}%)</span></span>
-            </div>
+            {[
+              { label: "Full Load", count: data.full, color: "bg-violet-600" },
+              { label: "Medium", count: data.medium, color: "bg-blue-400" },
+              { label: "Low", count: data.low, color: "bg-slate-300" },
+            ].map((chip, i) => (
+              <motion.div
+                key={chip.label}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9 + i * 0.08, duration: 0.25 }}
+                className="flex items-center gap-1.5"
+              >
+                <span className={`h-2 w-2 rounded-full ${chip.color}`} />
+                <span className="text-[11px] font-bold text-foreground">
+                  {chip.label} <span className="text-muted-foreground font-medium">{chip.count} ({total > 0 ? Math.round((chip.count / total) * 100) : 0}%)</span>
+                </span>
+              </motion.div>
+            ))}
           </div>
         </>
       )}

@@ -82,6 +82,29 @@ export interface ApprovalChip {
 
 const CAMPUS_COLORS = ["#9810fa", "#3b82f6", "#10b981", "#f43f5e", "#f59e0b"];
 
+// Real cumulative-count trend for a KPI sparkline, built from each record's
+// own createdAt — e.g. "how many students existed as of each of the last 7
+// days a record was created". Records seeded without a createdAt are
+// excluded rather than guessed at; if fewer than 2 real distinct creation
+// dates exist, the caller's chart falls back to a flat real-total line
+// instead of a fabricated shape.
+export function cumulativeCountTrend(records: { createdAt?: string | Date }[], currentTotal: number): number[] {
+  const dated = records
+    .map((r) => r.createdAt ? String(r.createdAt).slice(0, 10) : "")
+    .filter(Boolean)
+    .sort();
+  if (dated.length === 0) return [currentTotal];
+  const byDate = new Map<string, number>();
+  let running = 0;
+  dated.forEach((d) => {
+    running += 1;
+    byDate.set(d, running);
+  });
+  const uncounted = records.length - dated.length; // seeded rows with no createdAt
+  const points = [...byDate.entries()].map(([, count]) => count + uncounted);
+  return points.slice(-7);
+}
+
 // Real admissions pipeline stages in the order a lead actually progresses
 // through (src/types/admissions.ts LeadStatus) — bucketed into the 5 funnel
 // stages the dashboard shows, as cumulative "reached at least this stage"

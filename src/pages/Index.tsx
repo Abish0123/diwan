@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { AiInsightsBanner } from "@/components/dashboard/AiInsightsBanner";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
 import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useStudents } from "@/contexts/StudentContext";
 import { useStaff } from "@/contexts/StaffContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { useDashboardOverview } from "@/hooks/useDashboardOverview";
+import { useDashboardOverview, cumulativeCountTrend } from "@/hooks/useDashboardOverview";
 import { useAuth } from "@/hooks/useAuth";
 import { useGradeCoordinator } from "@/hooks/useGradeCoordinator";
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
@@ -110,9 +109,6 @@ const AdminIndex = () => {
           </div>
         </motion.div>
 
-        {/* AI Insights Banner */}
-        <AiInsightsBanner />
-
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard
@@ -124,6 +120,7 @@ const AdminIndex = () => {
             description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
             index={0}
+            trendSeries={cumulativeCountTrend(students as any, totalStudents || 0)}
             accentColor="#4f46e5"
           />
           <KpiCard
@@ -147,6 +144,7 @@ const AdminIndex = () => {
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
             index={2}
+            trendSeries={cumulativeCountTrend(staff as any, staff.length || 0)}
             accentColor="#9810fa"
           />
           <KpiCard
