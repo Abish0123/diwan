@@ -494,7 +494,7 @@ function Step2({ data, onChange, grades }: { data: ProfessionalInfo; onChange: (
       {isTeachingDesignation(data.designation) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Assigned Grade <span className="text-rose-500">*</span></label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Assigned Grade <span className="text-slate-400">(Optional)</span></label>
             <select value={data.assignedGrade} onChange={e=>set("assignedGrade",e.target.value)}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
               <option value="">Select grade…</option>
@@ -502,7 +502,7 @@ function Step2({ data, onChange, grades }: { data: ProfessionalInfo; onChange: (
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Assigned Section <span className="text-rose-500">*</span></label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Assigned Section <span className="text-slate-400">(Optional)</span></label>
             <select value={data.assignedSection} onChange={e=>set("assignedSection",e.target.value)}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
               <option value="">Select section…</option>
@@ -1161,11 +1161,9 @@ export default function StaffOnboarding() {
       toast.error("Please select the System Access role for this account");
       return;
     }
-    if (step === 2 && isTeachingDesignation(professional.designation) &&
-        (!professional.assignedGrade || !professional.assignedSection)) {
-      toast.error("Please select the assigned grade and section for teaching staff");
-      return;
-    }
+    // Assigned Grade/Section are optional here — a teacher can be onboarded
+    // and assigned a class later (e.g. from Classes/Subject Allocation), so
+    // this no longer blocks progressing to the next step when left blank.
     // A grade+section can only have one Class Teacher — catch a collision
     // here, before Step 5's submit, rather than silently overwriting whoever
     // was already assigned there (self-reassignment is allowed: an admin

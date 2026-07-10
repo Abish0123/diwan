@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, BookOpen, ShieldCheck, Sparkles, TrendingUp, Bell, Lock, Zap, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, BookOpen, ShieldCheck, Sparkles, TrendingUp, Bell, Lock, Zap, Mail, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -86,6 +87,7 @@ const BRAND_GRADIENT = "from-[#E11D74] via-[#9333EA] to-[#4F46E5]";
 export default function Login() {
   const navigate = useNavigate();
   const { loginWithEmail, login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const [step, setStep] = useState<Step>("portal");
   const [portal, setPortal] = useState<Portal>("staff");
@@ -264,10 +266,23 @@ export default function Login() {
       </AnimatePresence>
 
       {/* ── Right Form Panel ───────────────────────────────────────────── */}
-      <div className="w-full lg:w-[56%] flex items-center justify-center p-6 sm:p-10 bg-[#FAFAFC] relative overflow-y-auto">
+      <div className="w-full lg:w-[56%] flex items-center justify-center p-6 sm:p-10 bg-slate-50 relative overflow-y-auto">
         {/* soft decorative glow, brand-tinted */}
         <div className="hidden lg:block absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-fuchsia-200/40 to-indigo-200/40 blur-3xl pointer-events-none" />
         <div className="hidden lg:block absolute bottom-0 left-0 w-72 h-72 rounded-full bg-gradient-to-tr from-pink-100/50 to-violet-100/50 blur-3xl pointer-events-none" />
+
+        {/* Theme toggle — the rest of the app only exposes this inside the
+            dashboard sidebar, leaving no way to switch themes before signing
+            in at all. */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-pressed={theme === "dark"}
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 h-10 w-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+        </button>
 
         <div className="w-full max-w-[440px] py-6 relative z-10">
           <AnimatePresence mode="wait">
@@ -399,7 +414,7 @@ export default function Login() {
                 {/* Google sign-in */}
                 <div className="relative my-5">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div>
-                  <div className="relative flex justify-center text-xs"><span className="bg-[#FAFAFC] px-3 text-slate-400">or continue with</span></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-slate-50 px-3 text-slate-400">or continue with</span></div>
                 </div>
                 <Button
                   type="button"
