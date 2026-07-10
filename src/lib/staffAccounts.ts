@@ -4,6 +4,7 @@
 // username/password/status/createdAt (and optional assignedGrade/assignedSection,
 // which the teacher portal's useTeacherClass hook reads off the User record).
 import { generateUsername, generatePassword, resolveRoleId } from "@/lib/roles";
+import { userRepository } from "@/repositories/UserRepository";
 
 export interface ProvisionedCredentials {
   username: string;
@@ -20,12 +21,7 @@ export interface ProvisionResult {
 /** Case-insensitive lookup of an existing user account by email. */
 export async function findUserByEmail(email: string): Promise<Record<string, unknown> | null> {
   try {
-    const res = await fetch("/api/data/users");
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Record<string, unknown>[];
-    if (!Array.isArray(rows)) return null;
-    const want = email.trim().toLowerCase();
-    return rows.find(u => String(u.email ?? "").trim().toLowerCase() === want) ?? null;
+    return await userRepository.findByEmail(email);
   } catch {
     return null;
   }
@@ -53,7 +49,7 @@ export async function provisionUserAccount(opts: {
   // Aliases like "teacher"/"staff" resolve to registry ids so the username prefix is right.
   const username = generateUsername(resolveRoleId(opts.role));
   const password = generatePassword();
-  const body = {
+  await userRepository.create({
     id: email,
     uid: `${opts.role}-${Date.now()}`,
     email,
@@ -65,12 +61,6 @@ export async function provisionUserAccount(opts: {
     status: "Active",
     createdAt: new Date().toISOString(),
     ...(opts.extra ?? {}),
-  };
-  const r = await fetch("/api/data/users", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error("Failed to create user account");
   return { credentials: { username, password, email }, alreadyExisted: false };
 }
