@@ -120,6 +120,10 @@ const entityMapping: Record<string, string> = {
   "LibraryFine": "library_fines",
   // Student holds/reservations placed when no copy of a title is available.
   "LibraryReservation": "library_reservations",
+  // Real usage-instrumentation events (login, logout, page view, feature
+  // action) — the raw log that analyticsEngine.ts aggregates into
+  // retention/funnel/feature-usage views. See src/lib/analytics.ts.
+  "AnalyticsEvent": "analytics_events",
 };
 
 function normalizeEntity(entity: string): string {

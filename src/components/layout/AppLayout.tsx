@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Keyboard } from "lucide-react";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -79,6 +80,20 @@ function PageTitleSync() {
     const label = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k) && k !== "/") ?? ""] ?? "Student Diwan";
     document.title = `${label} — Student Diwan ERP`;
   }, [pathname]);
+  return null;
+}
+
+// Fires one real page_view event per route change — the raw feed
+// analyticsEngine.ts's feature-usage breakdown reads back. Skipped while
+// auth is still resolving so a pre-login redirect bounce doesn't get logged
+// under no uid.
+function AnalyticsRouteListener() {
+  const { pathname } = useLocation();
+  const { user, role, loading } = useAuth();
+  useEffect(() => {
+    if (loading || !user?.uid) return;
+    trackEvent({ type: "page_view", uid: user.uid, role: role || undefined, path: pathname });
+  }, [pathname, user?.uid, role, loading]);
   return null;
 }
 
@@ -204,6 +219,7 @@ export const AppLayout = () => {
     <SidebarProvider>
       <PageTitleSync />
       <StaffRouteGuard />
+      <AnalyticsRouteListener />
       <DashboardSidebar />
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#F9FAFB]/50 dark:bg-[#0E0E16] print:h-auto print:overflow-visible">
         <ImpersonationBanner />

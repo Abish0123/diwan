@@ -109,6 +109,7 @@ const HRReports              = lazy(() => import("./pages/analytics/HRReports.ts
 const CustomReportBuilder    = lazy(() => import("./pages/analytics/CustomReportBuilder.tsx"));
 const PredictiveAnalytics    = lazy(() => import("./pages/analytics/PredictiveAnalytics.tsx"));
 const PresentationBuilder    = lazy(() => import("./pages/analytics/PresentationBuilder.tsx"));
+const ProductAnalytics       = lazy(() => import("./pages/analytics/ProductAnalytics.tsx"));
 
 // Settings
 const Permissions            = lazy(() => import("./pages/settings/Permissions.tsx"));
@@ -556,6 +557,7 @@ const App = () => (
                                             <Route path="/analytics/custom" element={<CustomReportBuilder />} />
                                             <Route path="/analytics/predictive" element={<PredictiveAnalytics />} />
                                             <Route path="/analytics/presentation-builder" element={<PresentationBuilder />} />
+                                            <Route path="/analytics/product" element={<ProductAnalytics />} />
 
                                             {/* Coding Assessment */}
                                             <Route path="/coding" element={<CodingEntry />} />

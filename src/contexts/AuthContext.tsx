@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { isDefaultAdminEmail } from '../lib/admin-emails';
 import { smartDb } from '../lib/localDb';
 import { isCentralAdmin } from '../lib/roles';
+import { trackEvent } from '../lib/analytics';
 
 const IMPERSONATE_KEY = 'sd_impersonate';
 
@@ -224,9 +225,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsMockSession(false);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const cred = await signInWithPopup(auth, provider);
       setIsMockSession(false);
       toast.success('Logged in successfully');
+      trackEvent({ type: 'login', uid: cred.user.uid, role: 'google' });
       return true;
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error) {
@@ -300,6 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.token) sessionStorage.setItem('sd_token', data.token);
 
         toast.success(`Logged in as ${data.user.displayName} (Local DB)`);
+        trackEvent({ type: 'login', uid: data.user.uid, role: data.user.role });
       }
     } catch (error) {
       console.error('Email login error:', error);
@@ -310,6 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
+      if (user?.uid) trackEvent({ type: 'logout', uid: user.uid, role: role || undefined });
       // Always sign out Firebase regardless of session type — a stale Firebase auth
       // session left behind after a mock logout is what causes role-flip on next refresh.
       await signOut(auth).catch(() => {});
@@ -336,7 +340,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Logout error:', error);
       toast.error('Failed to logout');
     }
-  }, [stopImpersonating, queryClient]);
+  }, [stopImpersonating, queryClient, user, role]);
 
   // Memoized for the same reason as StudentContext's value: AuthProvider wraps
   // the entire app, so an inline object literal here would hand every

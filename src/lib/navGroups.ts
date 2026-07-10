@@ -214,6 +214,7 @@ export const navGroups: NavGroup[] = [
     icon: Brain,
     items: [
       { title: "Analytics",            url: "/analytics",             icon: BarChart3 },
+      { title: "Product Analytics",    url: "/analytics/product",     icon: BarChart3,   adminOnly: true },
       { title: "Predictive Analytics", url: "/analytics/predictive",  icon: TrendingUp },
       { title: "AI Center",            url: "/ai-center",             icon: LineChart },
       { title: "AI Tutor",             url: "/ai-tutor",              icon: Brain },
