@@ -12,6 +12,7 @@ import crypto from "crypto";
 import { DEFAULT_ADMIN_EMAILS } from "./src/lib/admin-emails.js";
 import { getRole } from "./src/lib/roles.js";
 import { logger } from "./logger.js";
+import { resolveBranchScope, BRANCH_SCOPED_ENTITIES } from "./src/lib/branchAuthorization.js";
 import { IntegrationError } from "./src/services/integrations/IntegrationAdapter.js";
 import { ZoomAdapter } from "./src/services/integrations/ZoomAdapter.js";
 import { StripeAdapter } from "./src/services/integrations/StripeAdapter.js";
@@ -69,7 +70,9 @@ const SESSION_SECRET = process.env.SESSION_SECRET || (() => {
 })();
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 
-interface SessionAuth { uid: string; email: string; role: string }
+// branchId is the account's OWN assigned branch (from their user record),
+// not a "currently viewing" preference — see src/lib/branchAuthorization.ts.
+interface SessionAuth { uid: string; email: string; role: string; branchId?: string }
 
 function signSessionToken(payload: SessionAuth): string {
   const body = { ...payload, iat: Date.now(), exp: Date.now() + SESSION_TTL_MS };
@@ -92,7 +95,7 @@ function verifySessionToken(token: string | undefined | null): SessionAuth | nul
     const body = JSON.parse(Buffer.from(b64, "base64url").toString("utf8"));
     if (typeof body.exp !== "number" || Date.now() > body.exp) return null;
     if (!body.uid || !body.role) return null;
-    return { uid: body.uid, email: body.email || "", role: body.role };
+    return { uid: body.uid, email: body.email || "", role: body.role, branchId: body.branchId || undefined };
   } catch {
     return null;
   }
@@ -1259,8 +1262,14 @@ async function startServer() {
       if (email) data = data.filter((row: any) => typeof row.email === "string" && row.email.toLowerCase() === email);
 
       // Generic query parameter filtering (e.g. ?studentId=STU-001 or ?studentId=STU-001,STU-002)
+      // branchId is deliberately excluded here — it's enforced below via
+      // resolveBranchScope() using the caller's own verified identity, not
+      // taken at face value from the query string like every other field.
+      // Applying it here first (naively, as just another equality filter)
+      // would let it silently zero out results before the real
+      // authorization check ever runs.
       Object.keys(req.query).forEach(key => {
-        if (key === "uid" || key === "email" || key.startsWith("for")) return;
+        if (key === "uid" || key === "email" || key === "branchId" || key.startsWith("for")) return;
         const val = req.query[key];
         if (typeof val === "string") {
           const vals = val.split(",").map(v => v.trim().toLowerCase());
@@ -1271,6 +1280,26 @@ async function startServer() {
           });
         }
       });
+
+      // Real tenant-boundary enforcement — NOT the same as the generic
+      // ?branchId= filter above, which any client could omit (see everything)
+      // or spoof (see another branch). For entities that actually carry a
+      // branchId field, the branch to filter by is resolved server-side from
+      // the caller's own verified identity (their role's full-access flag +
+      // their own assigned branch), ignoring whatever the client requested
+      // unless their role genuinely has cross-branch visibility. See
+      // src/lib/branchAuthorization.ts.
+      if (BRANCH_SCOPED_ENTITIES.has(entity)) {
+        const requestedBranchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
+        const scope = resolveBranchScope({
+          isFullAccess: getRole(auth.role).full === true,
+          assignedBranchId: auth.branchId,
+          requestedBranchId,
+        });
+        if (scope !== null) {
+          data = data.filter((row: any) => !row.branchId || row.branchId === scope);
+        }
+      }
 
       // Notifications carry recipient targeting (recipientUid/audienceRole/grade/
       // section/etc.), not ownership — the generic ?uid= filter above means
@@ -1453,6 +1482,15 @@ async function startServer() {
     const id = data.id || Math.random().toString(36).substring(2, 15);
     const uid = data.uid || "local-user";
     const now = new Date().toISOString();
+    // Same tenant-boundary enforcement as the GET handler, applied to
+    // writes: a non-full-access caller cannot mislabel a new record into
+    // another branch by sending its own branchId, even if their client is
+    // compromised or buggy. Full-access roles keep whatever branchId they
+    // explicitly set (e.g. creating a record while viewing a specific
+    // branch), matching their existing cross-branch UX.
+    if (BRANCH_SCOPED_ENTITIES.has(entity) && getRole(auth.role).full !== true) {
+      data.branchId = auth.branchId || "main";
+    }
     try {
       await dbCreateTable(entity);
       await dbUpsert(entity, id, JSON.stringify({ ...data, id }), uid, now, now);
@@ -1516,6 +1554,12 @@ async function startServer() {
     const data = req.body;
     if (entity === "users" && typeof data.password === "string" && data.password && !isHashedPassword(data.password)) {
       data.password = hashPassword(data.password);
+    }
+    // Same tenant-boundary enforcement as the POST handler: a non-full-access
+    // caller cannot move an existing record into another branch by including
+    // a different branchId in an update payload.
+    if (BRANCH_SCOPED_ENTITIES.has(entity) && getRole(auth.role).full !== true) {
+      data.branchId = auth.branchId || "main";
     }
     const now = new Date().toISOString();
     try {
@@ -1752,7 +1796,7 @@ async function startServer() {
         const role = userData.role || "staff";
         res.json({
           user: { uid: user.id, email: userData.email, displayName: userData.name || userData.displayName, role },
-          token: signSessionToken({ uid: user.id, email: userData.email || email, role })
+          token: signSessionToken({ uid: user.id, email: userData.email || email, role, branchId: userData.branchId || undefined })
         });
       } else if (isDefaultAdmin) {
         const uid = "admin-uid-" + (email === 'admin@eduerp.com' ? 'mock' : 'x' + email.length);
