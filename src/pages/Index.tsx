@@ -7,12 +7,14 @@ import { CopilotAlerts } from "@/components/dashboard/CopilotAlerts";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
 import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
-import { RecentNotificationsCard } from "@/components/dashboard/RecentNotificationsCard";
-import { StudentStrengthByGradeChart } from "@/components/dashboard/StudentStrengthByGradeChart";
-import { StudentsByCampusChart } from "@/components/dashboard/StudentsByCampusChart";
+import { StudentDistributionDonut } from "@/components/dashboard/StudentDistributionDonut";
+import { AdmissionsFunnelCard } from "@/components/dashboard/AdmissionsFunnelCard";
+import { TopClassesCard } from "@/components/dashboard/TopClassesCard";
+import { TeacherWorkloadCard } from "@/components/dashboard/TeacherWorkloadCard";
+import { RecentActivitiesCard } from "@/components/dashboard/RecentActivitiesCard";
 import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
+import { ApprovalsOverviewCard } from "@/components/dashboard/ApprovalsOverviewCard";
 import { QuickAccessGrid } from "@/components/dashboard/QuickAccessGrid";
-import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
 import { Users, UserCheck, GraduationCap, DollarSign, ClipboardList, Sparkles } from "lucide-react";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { Button } from "@/components/ui/button";
@@ -126,6 +128,7 @@ const AdminIndex = () => {
             description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
             index={0}
+            sparklineColor="#4f46e5"
           />
           <KpiCard
             title="Attendance Today"
@@ -136,6 +139,8 @@ const AdminIndex = () => {
             description={overview.attendanceBreakdown.date ? `as of ${overview.attendanceBreakdown.date}` : "no data yet"}
             iconClassName="bg-emerald-50 text-emerald-600"
             index={1}
+            trendSeries={overview.attendanceTrend}
+            sparklineColor="#10b981"
           />
           <KpiCard
             title="Total Staff"
@@ -146,6 +151,7 @@ const AdminIndex = () => {
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
             index={2}
+            sparklineColor="#9810fa"
           />
           <KpiCard
             title={`Fee Collection (${currencySymbol})`}
@@ -156,6 +162,8 @@ const AdminIndex = () => {
             description="this month"
             iconClassName="bg-blue-50 text-blue-600"
             index={3}
+            trendSeries={overview.feeTrend}
+            sparklineColor="#3b82f6"
           />
           <KpiCard
             title="Pending Tasks"
@@ -166,28 +174,33 @@ const AdminIndex = () => {
             description="awaiting review"
             iconClassName="bg-rose-50 text-rose-600"
             index={4}
+            sparklineColor="#f43f5e"
           />
         </div>
 
-        {/* Attendance / Fees / Notifications Row */}
+        {/* Student Distribution / Attendance / Fees Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <StudentDistributionDonut data={overview.gradeStrength} loading={overview.loading} />
           <AttendanceOverviewCard data={overview.attendanceBreakdown} loading={overview.loading} />
           <FeeCollectionOverviewCard data={overview.feeOverview} currency={currencySymbol} loading={overview.loading} />
-          <RecentNotificationsCard />
         </div>
 
-        {/* Grade Strength / Campus / Events Row */}
+        {/* Admissions Pipeline / Top Classes / Teacher Workload Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <StudentStrengthByGradeChart data={overview.gradeStrength} loading={overview.loading} />
-          <StudentsByCampusChart data={overview.campusBreakdown} loading={overview.loading} />
-          <UpcomingEventsCard />
+          <AdmissionsFunnelCard data={overview.admissionsFunnel} loading={overview.loading} />
+          <TopClassesCard data={overview.topClasses} loading={overview.loading} />
+          <TeacherWorkloadCard data={overview.teacherWorkload} loading={overview.loading} />
         </div>
 
-        {/* Quick Access / My Tasks Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <QuickAccessGrid />
-          <MyTasksCard tasks={overview.pendingTasks} loading={overview.loading} />
+        {/* Recent Activities / Upcoming Events / Approvals Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <RecentActivitiesCard data={overview.recentActivities} loading={overview.loading} />
+          <UpcomingEventsCard />
+          <ApprovalsOverviewCard data={overview.approvalChips} loading={overview.loading} />
         </div>
+
+        {/* Quick Access */}
+        <QuickAccessGrid />
       </div>
     </DashboardLayout>
   );
