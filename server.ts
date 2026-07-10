@@ -12,6 +12,13 @@ import crypto from "crypto";
 import { DEFAULT_ADMIN_EMAILS } from "./src/lib/admin-emails.js";
 import { getRole } from "./src/lib/roles.js";
 import { logger } from "./logger.js";
+import { IntegrationError } from "./src/services/integrations/IntegrationAdapter.js";
+import { ZoomAdapter } from "./src/services/integrations/ZoomAdapter.js";
+import { StripeAdapter } from "./src/services/integrations/StripeAdapter.js";
+import { S3Adapter } from "./src/services/integrations/S3Adapter.js";
+import { WhatsAppAdapter } from "./src/services/integrations/WhatsAppAdapter.js";
+import { PayTabsAdapter } from "./src/services/integrations/PayTabsAdapter.js";
+import { SmtpAdapter } from "./src/services/integrations/SmtpAdapter.js";
 
 dotenv.config();
 
@@ -1855,45 +1862,18 @@ async function startServer() {
   // ── SMTP Email API ────────────────────────────────────────────────────────────
   // Shared by /api/send-email and internal server-originated emails (e.g. the
   // password-reset link below) so there's one real implementation instead of
-  // the latter having to loop back through an HTTP self-call.
+  // the latter having to loop back through an HTTP self-call. Logic lives in
+  // SmtpAdapter (src/services/integrations/SmtpAdapter.ts) — see the Adapter
+  // pattern note above the other integration routes below.
   interface SendEmailInput { to: string | string[]; subject: string; html: string; text?: string; replyTo?: string }
+  const smtpAdapter = new SmtpAdapter();
   async function sendEmailInternal(input: SendEmailInput): Promise<{ ok: true; messageId: string } | { ok: false; status: number; error: string }> {
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
-    const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
-    const smtpSecure = process.env.SMTP_SECURE === "true";
-    const fromName = process.env.SMTP_FROM_NAME || "Student Diwan";
-
-    if (!smtpUser || !smtpPass) {
-      return { ok: false, status: 503, error: "SMTP not configured — set SMTP_USER and SMTP_PASS in .env" };
-    }
-    if (!input.to || !input.subject || (!input.html && !input.text)) {
-      return { ok: false, status: 400, error: "Missing required fields: to, subject, html" };
-    }
     try {
-      const nodemailer = await import("nodemailer");
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpSecure,
-        auth: { user: smtpUser, pass: smtpPass },
-        tls: { rejectUnauthorized: false },
-      });
-      const recipients = Array.isArray(input.to) ? input.to.join(", ") : input.to;
-      const info = await transporter.sendMail({
-        from: `"${fromName}" <${smtpUser}>`,
-        to: recipients,
-        replyTo: input.replyTo || smtpUser,
-        subject: input.subject,
-        text: input.text || "",
-        html: input.html,
-      });
-      console.log(`[Email] Sent to ${recipients} — messageId: ${info.messageId}`);
-      return { ok: true, messageId: info.messageId };
-    } catch (err: any) {
-      console.error("[Email] Send failed:", err.message);
-      return { ok: false, status: 500, error: err.message };
+      const result = await smtpAdapter.send(input);
+      return { ok: true, messageId: result.messageId };
+    } catch (err) {
+      const status = err instanceof IntegrationError ? err.status : 500;
+      return { ok: false, status, error: (err as Error).message };
     }
   }
 
@@ -1908,9 +1888,8 @@ async function startServer() {
 
   // GET /api/smtp-status — check if SMTP is configured
   app.get("/api/smtp-status", (_req, res) => {
-    const configured = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
     res.json({
-      configured,
+      configured: smtpAdapter.isConfigured(),
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: process.env.SMTP_PORT || "587",
       user: process.env.SMTP_USER || null,
@@ -1929,6 +1908,16 @@ async function startServer() {
   // this app's Integrations UI actually stores them. Every endpoint below
   // honestly reports the real upstream error instead of ever faking success.
 
+  // Each adapter below wraps exactly the same request/response logic that
+  // used to be inlined directly in these route handlers — see
+  // src/services/integrations/*.ts (Adapter pattern). Instantiated once,
+  // module-level, consistent with the lightweight DI approach used
+  // elsewhere in this refactor (src/services/container.ts).
+  const zoomAdapter = new ZoomAdapter();
+  const stripeAdapter = new StripeAdapter();
+  const s3Adapter = new S3Adapter();
+  const whatsAppAdapter = new WhatsAppAdapter();
+
   // POST /api/integrations/zoom/create-meeting
   // body: { accountId, clientId, clientSecret, topic, startTime (ISO), duration (mins) }
   app.post("/api/integrations/zoom/create-meeting", requireAuth, writeRateLimit, async (req, res) => {
@@ -1940,36 +1929,13 @@ async function startServer() {
       return res.status(400).json({ error: "Zoom Account ID, Client ID and Client Secret are required" });
     }
     try {
-      // Real Server-to-Server OAuth token request (Zoom retired JWT apps in 2023).
-      const tokenRes = await fetch(`https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${encodeURIComponent(accountId)}`, {
-        method: "POST",
-        headers: { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` },
-      });
-      const tokenData: any = await tokenRes.json();
-      if (!tokenRes.ok || !tokenData.access_token) {
-        return res.status(tokenRes.status || 401).json({ error: tokenData.reason || tokenData.message || "Zoom authentication failed — check credentials" });
-      }
-
-      const meetingRes = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${tokenData.access_token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: topic || "Live Class",
-          type: 2, // scheduled
-          start_time: startTime || new Date().toISOString(),
-          duration: duration || 45,
-          settings: { join_before_host: true, waiting_room: false },
-        }),
-      });
-      const meetingData: any = await meetingRes.json();
-      if (!meetingRes.ok) {
-        return res.status(meetingRes.status).json({ error: meetingData.message || "Zoom meeting creation failed" });
-      }
-      logger.info("Zoom meeting created", { meetingId: meetingData.id });
-      res.status(201).json({ joinUrl: meetingData.join_url, startUrl: meetingData.start_url, meetingId: meetingData.id, password: meetingData.password });
+      const result = await zoomAdapter.send({ accountId, clientId, clientSecret, topic, startTime, duration });
+      logger.info("Zoom meeting created", { meetingId: result.meetingId });
+      res.status(201).json(result);
     } catch (error) {
       logger.error("Zoom meeting creation failed", error);
-      res.status(500).json({ error: (error as Error).message });
+      const status = error instanceof IntegrationError ? error.status : 500;
+      res.status(status).json({ error: (error as Error).message });
     }
   });
 
@@ -1982,29 +1948,13 @@ async function startServer() {
     if (!secretKey) return res.status(400).json({ error: "Stripe Secret Key is required" });
     if (!amount || amount <= 0) return res.status(400).json({ error: "A positive amount is required" });
     try {
-      const params = new URLSearchParams();
-      params.set("mode", "payment");
-      params.set("success_url", successUrl || "https://example.com/success");
-      params.set("cancel_url", cancelUrl || "https://example.com/cancel");
-      params.set("line_items[0][price_data][currency]", (currency || "usd").toLowerCase());
-      params.set("line_items[0][price_data][product_data][name]", description || "Fee Payment");
-      params.set("line_items[0][price_data][unit_amount]", String(Math.round(amount)));
-      params.set("line_items[0][quantity]", "1");
-
-      const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
-      });
-      const data: any = await stripeRes.json();
-      if (!stripeRes.ok) {
-        return res.status(stripeRes.status).json({ error: data.error?.message || "Stripe checkout session creation failed" });
-      }
-      logger.info("Stripe checkout session created", { sessionId: data.id });
-      res.status(201).json({ sessionId: data.id, redirectUrl: data.url });
+      const result = await stripeAdapter.send({ secretKey, amount, currency, description, successUrl, cancelUrl });
+      logger.info("Stripe checkout session created", { sessionId: result.sessionId });
+      res.status(201).json(result);
     } catch (error) {
       logger.error("Stripe checkout session creation failed", error);
-      res.status(500).json({ error: (error as Error).message });
+      const status = error instanceof IntegrationError ? error.status : 500;
+      res.status(status).json({ error: (error as Error).message });
     }
   });
 
@@ -2018,16 +1968,12 @@ async function startServer() {
       return res.status(400).json({ error: "accessKeyId, secretAccessKey, region, bucket and key are all required" });
     }
     try {
-      const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
-      const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
-      const client = new S3Client({ region, credentials: { accessKeyId, secretAccessKey } });
-      const command = new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType || "application/octet-stream" });
-      const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 });
-      const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-      res.json({ uploadUrl, publicUrl, expiresIn: 300 });
+      const result = await s3Adapter.send({ accessKeyId, secretAccessKey, region, bucket, key, contentType });
+      res.json(result);
     } catch (error) {
       logger.error("S3 presigned URL generation failed", error);
-      res.status(500).json({ error: (error as Error).message });
+      const status = error instanceof IntegrationError ? error.status : 500;
+      res.status(status).json({ error: (error as Error).message });
     }
   });
 
@@ -2040,31 +1986,13 @@ async function startServer() {
     if (!phoneNumberId || !accessToken) return res.status(400).json({ error: "WhatsApp Phone Number ID and Access Token are required" });
     if (!to || !templateName) return res.status(400).json({ error: "Recipient (to) and templateName are required" });
     try {
-      const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to,
-          type: "template",
-          template: {
-            name: templateName,
-            language: { code: languageCode || "en_US" },
-            components: params?.length
-              ? [{ type: "body", parameters: params.map((p) => ({ type: "text", text: p })) }]
-              : undefined,
-          },
-        }),
-      });
-      const data: any = await waRes.json();
-      if (!waRes.ok) {
-        return res.status(waRes.status).json({ error: data.error?.message || "WhatsApp message send failed" });
-      }
-      logger.info("WhatsApp template message sent", { to, templateName, messageId: data.messages?.[0]?.id });
-      res.status(201).json({ messageId: data.messages?.[0]?.id, waId: data.contacts?.[0]?.wa_id });
+      const result = await whatsAppAdapter.send({ phoneNumberId, accessToken, to, templateName, languageCode, params });
+      logger.info("WhatsApp template message sent", { to, templateName, messageId: result.messageId });
+      res.status(201).json(result);
     } catch (error) {
       logger.error("WhatsApp message send failed", error);
-      res.status(500).json({ error: (error as Error).message });
+      const status = error instanceof IntegrationError ? error.status : 500;
+      res.status(status).json({ error: (error as Error).message });
     }
   });
 
@@ -2075,30 +2003,18 @@ async function startServer() {
   // "not configured" (503) instead of faking a redirect URL or a success.
   // Set PAYTABS_PROFILE_ID + PAYTABS_SERVER_KEY (+ optional PAYTABS_REGION,
   // default "GLOBAL") in .env to go live — no code changes needed after that.
-  const PAYTABS_REGION_HOSTS: Record<string, string> = {
-    GLOBAL: "secure-global.paytabs.com",
-    SAU: "secure.paytabs.sa",
-    ARE: "secure.paytabs.com",
-    EGY: "secure-egypt.paytabs.com",
-    JOR: "secure-jordan.paytabs.com",
-    OMN: "secure-oman.paytabs.com",
-    QAT: "secure-global.paytabs.com",
-  };
-
-  function paytabsConfig() {
-    const profileId = process.env.PAYTABS_PROFILE_ID;
-    const serverKey = process.env.PAYTABS_SERVER_KEY;
-    const region = (process.env.PAYTABS_REGION || "GLOBAL").toUpperCase();
-    const host = PAYTABS_REGION_HOSTS[region] || PAYTABS_REGION_HOSTS.GLOBAL;
-    return { profileId, serverKey, region, host, configured: !!(profileId && serverKey) };
-  }
+  // Logic lives in PayTabsAdapter (src/services/integrations/PayTabsAdapter.ts).
+  const payTabsAdapter = new PayTabsAdapter();
 
   // GET /api/payments/status — lets the frontend know honestly whether real
   // online payment is wired up yet, so it can show "not connected" instead of
   // pretending a charge went through.
   app.get("/api/payments/status", (_req, res) => {
-    const cfg = paytabsConfig();
-    res.json({ configured: cfg.configured, provider: "PayTabs", region: cfg.configured ? cfg.region : null });
+    res.json({
+      configured: payTabsAdapter.isConfigured(),
+      provider: "PayTabs",
+      region: payTabsAdapter.configuredRegion(),
+    });
   });
 
   // ── AI Services (OpenRouter primary, Gemini fallback) ──────────────────────
@@ -2139,8 +2055,7 @@ async function startServer() {
   // Page transaction and returns the redirect_url the browser should navigate
   // to (covers Card, Apple Pay, and mada — whatever's enabled on the profile).
   app.post("/api/payments/create-session", async (req, res) => {
-    const cfg = paytabsConfig();
-    if (!cfg.configured) {
+    if (!payTabsAdapter.isConfigured()) {
       return res.status(503).json({
         error: "Payment gateway not configured — set PAYTABS_PROFILE_ID and PAYTABS_SERVER_KEY in .env",
         configured: false,
@@ -2154,34 +2069,14 @@ async function startServer() {
       return res.status(400).json({ error: "Missing required fields: amount, currency, orderId, returnUrl" });
     }
     try {
-      const response = await fetch(`https://${cfg.host}/payment/request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: cfg.serverKey! },
-        body: JSON.stringify({
-          profile_id: cfg.profileId,
-          tran_type: "sale",
-          tran_class: "ecom",
-          cart_id: orderId,
-          cart_currency: currency,
-          cart_amount: amount,
-          cart_description: description || `Payment ${orderId}`,
-          customer_details: {
-            name: customerName || "Student Diwan User",
-            email: customerEmail || "no-reply@studentdiwan.app",
-          },
-          return: returnUrl,
-          callback: `${req.protocol}://${req.get("host")}/api/payments/webhook`,
-        }),
+      const result = await payTabsAdapter.send({
+        amount, currency, description, customerName, customerEmail, orderId, returnUrl,
+        callbackUrl: `${req.protocol}://${req.get("host")}/api/payments/webhook`,
       });
-      const data = await response.json();
-      if (!response.ok || !data.redirect_url) {
-        console.error("[PayTabs] create-session failed:", data);
-        return res.status(502).json({ error: data.message || "PayTabs request failed", details: data });
-      }
-      res.json({ redirectUrl: data.redirect_url, tranRef: data.tran_ref });
-    } catch (err: any) {
-      console.error("[PayTabs] create-session error:", err.message);
-      res.status(500).json({ error: err.message });
+      res.json(result);
+    } catch (err) {
+      const status = err instanceof IntegrationError ? err.status : 500;
+      res.status(status).json({ error: (err as Error).message });
     }
   });
 
