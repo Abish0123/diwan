@@ -37,6 +37,14 @@ interface Scholarship {
   status: string;
   uid?: string;
   createdAt?: string;
+  // Real foreign key to the actual enrolled Student — added to fix a
+  // pre-existing data-model gap: without this, matching a scholarship to a
+  // student could only ever be done by (name, grade) equality, which
+  // collides on same-name students and silently fails when name/grade
+  // don't match exactly. Optional so existing records (created before this
+  // field existed) keep working via the old name+grade fallback — see
+  // ScholarshipFeeStrategy.
+  studentId?: string;
 }
 
 interface Application {
@@ -93,7 +101,9 @@ function oneYearOut(): string {
 
 export default function Scholarships() {
   const { user } = useAuth();
-  const { settings } = useFinancialSettings();
+  const { settings, updateSettings } = useFinancialSettings();
+  const [capDraft, setCapDraft] = useState<string>("");
+  const [savingCap, setSavingCap] = useState(false);
   const uid = user?.uid;
 
   const [activeTab, setActiveTab] = useState("active");
@@ -115,7 +125,16 @@ export default function Scholarships() {
 
   // New Scholarship dialog state
   const [newOpen, setNewOpen] = useState(false);
-  const [newForm, setNewForm] = useState({ name: "", grade: "", type: "Merit", discount: "", annual: "" });
+  const [newForm, setNewForm] = useState({ studentId: "", name: "", grade: "", type: "Merit", discount: "", annual: "" });
+  // Real enrolled students, for the picker below — this is the fix for the
+  // Scholarship<->Student linkage gap: picking a real student stores a real
+  // studentId instead of only free-text name/grade, which previously could
+  // never reliably match back to an actual Student record (collides on
+  // same-name students, silently fails on any name/grade mismatch).
+  const [allStudentsForPicker, setAllStudentsForPicker] = useState<Student[]>([]);
+  useEffect(() => {
+    smartDb.getAll("Student").then((s) => setAllStudentsForPicker((s as Student[]) || [])).catch(() => {});
+  }, []);
 
   // Edit / View dialog state
   const [editTarget, setEditTarget] = useState<Scholarship | null>(null);
@@ -266,6 +285,7 @@ export default function Scholarships() {
       const id = `SCH-${Date.now()}`;
       const newSch: Scholarship = {
         id,
+        studentId: newForm.studentId || undefined,
         name: newForm.name.trim(),
         grade: newForm.grade.trim() || "—",
         type: newForm.type,
@@ -279,7 +299,7 @@ export default function Scholarships() {
       await smartDb.create("Scholarship", { ...newSch }, id);
       setScholarships((prev) => [...prev, newSch]);
       setNewOpen(false);
-      setNewForm({ name: "", grade: "", type: "Merit", discount: "", annual: "" });
+      setNewForm({ studentId: "", name: "", grade: "", type: "Merit", discount: "", annual: "" });
       toast.success(`Scholarship created for ${newSch.name}`);
     } catch (e) {
       console.error(e);
@@ -649,11 +669,13 @@ export default function Scholarships() {
                           smartDb.getAll("FeeDiscount"),
                           smartDb.getAll("FeeStructure"),
                         ]);
-                        const matchedStudent = (students as Student[]).find(
-                          (s) => s.name === sample.name && s.grade === sample.grade,
+                        // Prefer the real studentId link (new scholarships created via the
+                        // student picker); only fall back to name+grade for legacy records.
+                        const matchedStudent = (students as Student[]).find((s) =>
+                          sample.studentId ? s.id === sample.studentId : (s.name === sample.name && s.grade === sample.grade),
                         );
                         if (!matchedStudent) {
-                          toast.info(`No enrolled student record matches "${sample.name}" (${sample.grade}) — cannot compute a real preview. Scholarship records are matched by name+grade; verify the student is enrolled with a matching name/grade.`);
+                          toast.info(`No enrolled student record matches "${sample.name}" (${sample.grade}) — cannot compute a real preview. ${sample.studentId ? "The linked student record may have been removed." : "This scholarship predates the student picker; edit it to link a real student, or verify the name/grade match an enrolled record."}`);
                           return;
                         }
                         const structure = (feeStructures as { className: string; totalAmount: number; status: string }[])
@@ -662,12 +684,12 @@ export default function Scholarships() {
                           toast.info(`No active fee structure found for ${sample.grade} — cannot compute a base fee to discount.`);
                           return;
                         }
-                        const calculator = createDefaultFeeCalculator();
+                        const calculator = createDefaultFeeCalculator(settings.maxCombinedDiscountPct);
                         const result = calculator.computeInvoice(structure.totalAmount, {
                           student: matchedStudent,
                           allStudents: students as Student[],
                           staff: staff as Staff[],
-                          scholarships: scholarships as unknown as { id: string; name: string; grade: string; discount: number; annual: number; status: string }[],
+                          scholarships: scholarships as unknown as { id: string; studentId?: string; name: string; grade: string; discount: number; annual: number; status: string }[],
                           discountDefinitions: discountDefs as { id: string; name: string; type: "Percentage" | "Fixed"; value: number; category: "Scholarship" | "Sibling" | "Early Bird" | "Staff Child" | "Other"; status: "Active" | "Inactive" }[],
                         });
                         const ruleLabels = result.appliedRules.map((r) => r.label).join(", ");
@@ -682,6 +704,48 @@ export default function Scholarships() {
                   >
                     Test Auto-Deduction
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold">Combined Discount Policy</p>
+                    <p className="text-sm text-muted-foreground mt-0.5 max-w-xl">
+                      If a student qualifies for more than one discount at once (e.g. a scholarship AND a sibling
+                      discount), the total is capped at this percentage of the base fee. Set this to your school's actual
+                      policy — 100% means no cap (discounts stack freely).
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="w-20"
+                      value={capDraft || String(settings.maxCombinedDiscountPct)}
+                      onChange={(e) => setCapDraft(e.target.value)}
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                    <Button
+                      size="sm"
+                      disabled={savingCap || !capDraft || Number(capDraft) === settings.maxCombinedDiscountPct}
+                      onClick={async () => {
+                        const pct = Math.max(0, Math.min(100, Number(capDraft)));
+                        setSavingCap(true);
+                        try {
+                          await updateSettings({ maxCombinedDiscountPct: pct });
+                          setCapDraft("");
+                        } finally {
+                          setSavingCap(false);
+                        }
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1031,12 +1095,40 @@ export default function Scholarships() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="sch-name">Student Name</Label>
-              <Input id="sch-name" value={newForm.name} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} placeholder="Full name" />
+              <Label htmlFor="sch-student">Student</Label>
+              <Select
+                value={newForm.studentId}
+                onValueChange={(value) => {
+                  const student = allStudentsForPicker.find((s) => s.id === value);
+                  setNewForm((prev) => ({
+                    ...prev,
+                    studentId: value,
+                    name: student?.name || prev.name,
+                    grade: student?.grade || prev.grade,
+                  }));
+                }}
+              >
+                <SelectTrigger id="sch-student">
+                  <SelectValue placeholder="Search for an enrolled student…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allStudentsForPicker.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} — {s.grade || "No grade"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Selecting a real student links this scholarship for accurate fee-discount calculation. If the student isn't
+                enrolled yet, enter their name manually below — the link can be added later by editing this record.
+              </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sch-grade">Grade</Label>
-              <Input id="sch-grade" value={newForm.grade} onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })} placeholder="e.g. Grade 9" />
+              <Label htmlFor="sch-name">Student Name {newForm.studentId && "(from selection above)"}</Label>
+              <Input id="sch-name" value={newForm.name} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} placeholder="Full name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sch-grade">Grade {newForm.studentId && "(from selection above)"}</Label>
+              <Input id="sch-grade" value={newForm.grade} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })} placeholder="e.g. Grade 9" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="sch-type">Type</Label>

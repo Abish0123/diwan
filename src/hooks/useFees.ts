@@ -4,8 +4,11 @@ import { handleFirestoreError, OperationType } from "@/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { smartDb } from "@/lib/localDb";
-import { Student } from "@/types";
+import { Student, Staff } from "@/types";
 import { sendInvoiceEmail, sendInvoiceGeneratedEmail } from "@/lib/emailService";
+import { useFinancialSettings } from "@/hooks/useFinancialSettings";
+import { createDefaultFeeCalculator } from "@/services/fee/FeeCalculator";
+import { FeeDiscountDefinition, ScholarshipRecord } from "@/services/fee/FeeRuleStrategy";
 
 export interface FeeStructure {
   id: string;
@@ -463,6 +466,7 @@ export async function advanceLeadOnFeeInvoicePaid(invoice: Invoice, paymentMetho
 
 export function useFees() {
   const { user } = useAuth();
+  const { settings: financialSettings } = useFinancialSettings();
   const queryClient = useQueryClient();
   const queryKey = ["fees-data"];
 
@@ -615,6 +619,27 @@ export function useFees() {
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       }];
 
+      // Real per-student discount calculation (Strategy pattern —
+      // src/services/fee/FeeCalculator.ts) — scholarship/sibling/staff-child
+      // discounts previously existed only as data-entry records, never
+      // actually applied to an invoice amount. Fetched once for the whole
+      // batch rather than per-student.
+      const [staffForDiscounts, scholarshipsForDiscounts] = await Promise.all([
+        smartDb.getAll("Staff") as Promise<Staff[]>,
+        smartDb.getAll("Scholarship") as Promise<ScholarshipRecord[]>,
+      ]);
+      const feeCalculator = createDefaultFeeCalculator(financialSettings.maxCombinedDiscountPct);
+      const discountResultByStudentId = new Map(classStudents.map((student) => [
+        student.id,
+        feeCalculator.computeInvoice(structure.totalAmount, {
+          student,
+          allStudents: students,
+          staff: staffForDiscounts,
+          scholarships: scholarshipsForDiscounts,
+          discountDefinitions: feeDiscounts as unknown as FeeDiscountDefinition[],
+        }),
+      ]));
+
       // Sequential invoice numbering (INV-YYYY-NNNNNN) instead of a random
       // suffix — most jurisdictions require invoices to be numbered in an
       // unbroken sequence for tax filing. Computed from the current max
@@ -630,9 +655,19 @@ export function useFees() {
       }, 0) + 1;
       const nextInvoiceNumber = () => `INV-${year}-${String(nextSeq++).padStart(6, "0")}`;
 
-      const batchPromises = classStudents.flatMap((student: Student) =>
-        rows.map(row => {
+      const batchPromises = classStudents.flatMap((student: Student) => {
+        // Same proportional reduction applied to every term row, so a
+        // termed structure's rows still sum to the student's real
+        // discounted total rather than each row being discounted
+        // independently (which could compound rounding oddities across terms).
+        const discountResult = discountResultByStudentId.get(student.id);
+        const discountRatio = discountResult && structure.totalAmount > 0
+          ? discountResult.finalAmount / structure.totalAmount
+          : 1;
+
+        return rows.map(row => {
           const invoiceNumber = nextInvoiceNumber();
+          const discountedAmount = Math.round(row.amount * discountRatio);
           return smartDb.create("Invoice", {
             invoiceNumber,
             studentId: student.id,
@@ -642,17 +677,24 @@ export function useFees() {
             category: structure.name,
             term: row.term,
             termNumber: row.termNumber,
-            amount: row.amount,
+            baseAmount: row.amount,
+            amount: discountedAmount,
+            // Real applied-discount audit trail — visible on the invoice so a
+            // parent/finance user can see exactly why the amount is lower
+            // than the fee structure's list price, not just a smaller number
+            // with no explanation.
+            discountAmount: row.amount - discountedAmount,
+            appliedDiscounts: discountResult?.appliedRules.map((r) => r.label) ?? [],
             paidAmount: 0,
-            dueAmount: row.amount,
+            dueAmount: discountedAmount,
             dueDate: row.dueDate,
             status: 'Unpaid',
             penalty: 0,
             uid: user.uid,
             createdAt: new Date().toISOString()
           });
-        })
-      );
+        });
+      });
 
       await Promise.all(batchPromises);
       fetchFeesData();

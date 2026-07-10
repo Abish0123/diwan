@@ -14,7 +14,12 @@ export interface FeeDiscountDefinition {
 
 export interface ScholarshipRecord {
   id: string;
-  name: string; // student name — see FeeContext.scholarships note on matching
+  // Real FK to Student, added to fix the original name+grade-only matching
+  // gap (collided on same-name students, silently failed on any mismatch).
+  // Optional because records created before this field existed don't have
+  // it — ScholarshipFeeStrategy falls back to (name, grade) for those.
+  studentId?: string;
+  name: string;
   grade: string;
   discount: number; // percentage
   annual: number; // fixed annual amount

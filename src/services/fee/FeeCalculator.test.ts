@@ -66,6 +66,30 @@ describe("ScholarshipFeeStrategy", () => {
     expect(strategy.appliesTo(ctx)).toBe(false);
   });
 
+  it("matches by real studentId even when name/grade differ (e.g. student was renamed or moved up a grade since the scholarship was recorded)", () => {
+    const scholarship: ScholarshipRecord = { id: "s1", studentId: "STU-1", name: "Old Name", grade: "Grade 4", discount: 30, annual: 0, status: "Active" };
+    const ctx = baseContext({ student: student({ id: "STU-1", name: "Amina Al-Rashdi", grade: "Grade 5" }), scholarships: [scholarship] });
+    expect(strategy.appliesTo(ctx)).toBe(true);
+    expect(strategy.calculate(4000, ctx)).toMatchObject({ amount: 1200 });
+  });
+
+  it("resolves a same-name collision correctly when studentId is present, unlike the legacy name+grade fallback", () => {
+    const decoy = student({ id: "STU-OTHER", name: "Amina Al-Rashdi", grade: "Grade 5" });
+    const scholarship: ScholarshipRecord = { id: "s1", studentId: "STU-OTHER", name: "Amina Al-Rashdi", grade: "Grade 5", discount: 50, annual: 0, status: "Active" };
+    // The context's actual student has the same name+grade as the decoy the
+    // scholarship really belongs to, but a DIFFERENT id — studentId matching
+    // must not conflate them.
+    const ctx = baseContext({ student: student({ id: "STU-1", name: "Amina Al-Rashdi", grade: "Grade 5" }), scholarships: [scholarship] });
+    expect(strategy.appliesTo(ctx)).toBe(false);
+    expect(decoy.id).toBe("STU-OTHER"); // sanity: confirms the decoy is genuinely a different student
+  });
+
+  it("still falls back to name+grade for legacy records with no studentId", () => {
+    const scholarship: ScholarshipRecord = { id: "s1", name: "Amina Al-Rashdi", grade: "Grade 5", discount: 25, annual: 0, status: "Active" };
+    const ctx = baseContext({ scholarships: [scholarship] });
+    expect(strategy.appliesTo(ctx)).toBe(true);
+  });
+
   it("does not apply when the matching scholarship is not Active", () => {
     const scholarship: ScholarshipRecord = { id: "s1", name: "Amina Al-Rashdi", grade: "Grade 5", discount: 25, annual: 0, status: "Expired" };
     const ctx = baseContext({ scholarships: [scholarship] });

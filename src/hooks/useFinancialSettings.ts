@@ -13,6 +13,15 @@ export interface FinancialSettings {
   retainedEarnings: number;
   currency: string;
   targetUtilization: number;
+  // Real business-policy decision this app has no built-in answer for: can a
+  // student receive a scholarship AND a sibling discount AND a staff-child
+  // discount at once, and if so, up to how much combined? See
+  // src/services/fee/FeeCalculator.ts. Defaults to 100 (no cap) rather than
+  // an arbitrary lower number, since silently reducing a discount a family
+  // may have been promised across multiple programs seems like the more
+  // harmful default absent a real policy — the school sets this explicitly
+  // once they know their actual policy, instead of a developer guessing it.
+  maxCombinedDiscountPct: number;
   uid: string;
 }
 
@@ -23,6 +32,7 @@ const DEFAULT_SETTINGS: FinancialSettings = {
   retainedEarnings: 0,
   currency: "BHD",
   targetUtilization: 90,
+  maxCombinedDiscountPct: 100,
   uid: "",
 };
 

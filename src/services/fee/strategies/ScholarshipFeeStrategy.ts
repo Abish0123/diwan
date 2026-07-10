@@ -5,19 +5,20 @@ import { activeDefinition, applyDefinition, FeeContext, FeeRuleResult, FeeRuleSt
 // specific award value), falling back to the generic "Scholarship" category
 // FeeDiscount definition's percentage/fixed value otherwise.
 //
-// Known limitation, flagged rather than hidden: Scholarship records
-// (src/pages/finance/Scholarships.tsx) have no studentId field today — they
-// carry only `name`/`grade`, so matching here is by (name, grade) equality,
-// not a real foreign key. Two students with the same name in the same grade
-// would collide. This is a pre-existing data-model gap (not introduced by
-// this strategy) worth fixing by adding a studentId field to Scholarship
-// going forward; this strategy works with what actually exists today.
+// Matching prefers the real studentId FK (Scholarships.tsx's "New
+// Scholarship" dialog now links to a real Student record via a picker).
+// Falls back to (name, grade) equality only for legacy records created
+// before that field existed — those can still collide on same-name
+// students, which is exactly why the fallback is scoped to studentId-less
+// records only rather than kept as the primary matching strategy.
 export class ScholarshipFeeStrategy implements FeeRuleStrategy {
   category = "Scholarship" as const;
 
   private matchingScholarship(ctx: FeeContext) {
+    const byId = ctx.scholarships.find((s) => s.status === "Active" && s.studentId && s.studentId === ctx.student.id);
+    if (byId) return byId;
     return ctx.scholarships.find(
-      (s) => s.status === "Active" && s.name === ctx.student.name && s.grade === ctx.student.grade,
+      (s) => s.status === "Active" && !s.studentId && s.name === ctx.student.name && s.grade === ctx.student.grade,
     );
   }
 
