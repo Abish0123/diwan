@@ -70,9 +70,10 @@ const ENTITIES = [
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "217.21.85.14",
-  user: process.env.DB_USER || "root",
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USERNAME || "root",
   password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "student_diwan",
+  database: process.env.DB_DATABASE || "student_diwan",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -87,9 +88,10 @@ async function addBranchColumn(conn, table) {
   } catch (err) {
     if (err.code === "ER_DUP_FIELDNAME") {
       console.log(`  (${table} already has branchId, skipping)`);
+    } else if (err.code === "ER_NO_SUCH_TABLE") {
+      console.log(`  (${table} does not exist in this database, skipping)`);
     } else {
       console.error(`✗ Error adding branchId to ${table}:`, err.message);
-      throw err;
     }
   }
 }
@@ -103,7 +105,11 @@ async function backfillBranchId(conn, table) {
       console.log(`  Backfilled ${result.affectedRows} records in ${table}`);
     }
   } catch (err) {
-    console.error(`✗ Error backfilling ${table}:`, err.message);
+    if (err.code === "ER_NO_SUCH_TABLE") {
+      // Table doesn't exist, skip silently
+    } else {
+      console.error(`✗ Error backfilling ${table}:`, err.message);
+    }
   }
 }
 
