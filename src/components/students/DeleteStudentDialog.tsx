@@ -5,6 +5,7 @@ import { useStudents } from "@/contexts/StudentContext";
 import { toast } from "sonner";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { Student } from "@/types";
+import { userRepository } from "@/repositories/UserRepository";
 
 interface DeleteStudentDialogProps {
   student: Student | null;
@@ -25,21 +26,16 @@ export function DeleteStudentDialog({ student, open, onOpenChange }: DeleteStude
 
       // Cascade: remove student and parent user accounts by matching email
       if (student.email) {
-        const usersRes = await fetch("/api/data/users").catch(() => null);
-        if (usersRes?.ok) {
-          const allUsers: any[] = await usersRes.json().catch(() => []);
-          const studentEmail = student.email.toLowerCase();
-          const parentEmail = `parent.${studentEmail}`;
-          const toDelete = allUsers.filter(u => {
-            const ue = (u.email || u.data?.email || "").toLowerCase();
-            return ue === studentEmail || ue === parentEmail;
-          });
-          await Promise.all(
-            toDelete.map(u =>
-              fetch(`/api/data/users/${encodeURIComponent(u.id)}`, { method: "DELETE" }).catch(() => {})
-            )
-          );
-        }
+        const allUsers = await userRepository.getAll().catch(() => []);
+        const studentEmail = student.email.toLowerCase();
+        const parentEmail = `parent.${studentEmail}`;
+        const toDelete = allUsers.filter((u: any) => {
+          const ue = (u.email || u.data?.email || "").toLowerCase();
+          return ue === studentEmail || ue === parentEmail;
+        });
+        await Promise.all(
+          toDelete.map((u: any) => userRepository.delete(u.id).catch(() => {}))
+        );
       }
 
       toast.success(`Student ${student.name} deleted successfully`);

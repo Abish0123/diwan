@@ -7,6 +7,7 @@ import { createFirstTermInvoiceForStudent } from '@/hooks/useFees';
 import { handleFirestoreError, OperationType, isFirestoreWorking } from '../lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { smartDb } from '@/lib/localDb';
+import { userRepository } from '@/repositories/UserRepository';
 import { isDefaultAdminEmail } from '@/lib/admin-emails';
 import { describeLeadTransition } from '@/lib/leadStatusTransitions';
 
@@ -382,36 +383,28 @@ export const AdmissionsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           // typed. Throwing on failure routes into the catch block below,
           // which leaves `credentials` null instead of showing fake-success
           // details for an account that doesn't exist.
-          const studentUserRes = await fetch("/api/data/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: stuUsername,
-              name: lead.studentName,
-              email: stuEmail,
-              role: "student",
-              username: stuUsername,
-              password: stuPassword,
-              status: "Active",
-            }),
-          });
-          if (!studentUserRes.ok) throw new Error(`Failed to create student login (HTTP ${studentUserRes.status})`);
+          await userRepository.create({
+            id: stuUsername,
+            uid: stuUsername,
+            name: lead.studentName,
+            email: stuEmail,
+            role: "student",
+            username: stuUsername,
+            password: stuPassword,
+            status: "Active",
+          }).catch((e) => { throw new Error(`Failed to create student login (${(e as Error).message})`); });
 
           const parentEmail = resolvedParentEmail;
-          const parentUserRes = await fetch("/api/data/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: parentUsername,
-              name: `Parent of ${lead.studentName}`,
-              email: parentEmail,
-              role: "parent",
-              username: parentUsername,
-              password: parentPassword,
-              status: "Active",
-            }),
-          });
-          if (!parentUserRes.ok) throw new Error(`Failed to create parent login (HTTP ${parentUserRes.status})`);
+          await userRepository.create({
+            id: parentUsername,
+            uid: parentUsername,
+            name: `Parent of ${lead.studentName}`,
+            email: parentEmail,
+            role: "parent",
+            username: parentUsername,
+            password: parentPassword,
+            status: "Active",
+          }).catch((e) => { throw new Error(`Failed to create parent login (${(e as Error).message})`); });
 
           const gradeForEmail = overrides?.allocatedGrade || (lead as any).allocatedGrade || lead.interestedClass || '';
           const sectionForEmail = overrides?.allocatedSection || (lead as any).allocatedSection || '';

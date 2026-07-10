@@ -8,6 +8,9 @@ import {
 } from "@/lib/seatingStore";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
+import { staffRepository } from "@/repositories/StaffRepository";
+import { subjectAssignmentRepository } from "@/repositories/SubjectAssignmentRepository";
+import { userRepository } from "@/repositories/UserRepository";
 import { toast } from "sonner";
 import { UserCheck, Save, MapPin, Hash, Users, Search, Plus, X, AlertTriangle } from "lucide-react";
 
@@ -21,9 +24,9 @@ function useInvigilatorPool(): InvigilatorCandidate[] {
   const [pool, setPool] = useState<InvigilatorCandidate[]>([]);
   useEffect(() => {
     Promise.all([
-      fetch("/api/data/staff").then(r => r.json()).catch(() => []),
-      fetch("/api/data/subject_assignments").then(r => r.json()).catch(() => []),
-      fetch("/api/data/users").then(r => r.json()).catch(() => []),
+      staffRepository.getAll().catch(() => []),
+      subjectAssignmentRepository.getAll().catch(() => []),
+      userRepository.getAll().catch(() => []),
     ]).then(([staffRows, assignRows, userRows]) => {
       const byName = new Map<string, string>();
       (Array.isArray(staffRows) ? staffRows : []).forEach((s: any) => {

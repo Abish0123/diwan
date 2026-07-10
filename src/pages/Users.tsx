@@ -18,6 +18,9 @@ import {
 } from "@/lib/roles";
 import { navGroups } from "@/lib/navGroups";
 import { smartDb } from "@/lib/localDb";
+import { userRepository } from "@/repositories/UserRepository";
+import { studentRepository } from "@/repositories/StudentRepository";
+import { staffRepository } from "@/repositories/StaffRepository";
 
 interface UserProfile {
   id: string;
@@ -77,13 +80,11 @@ const Users = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const [usersRes, studentsRes, staffRes] = await Promise.all([
-        fetch("/api/data/users"),
-        fetch("/api/data/students").catch(() => null),
-        fetch("/api/data/staff").catch(() => null),
+      const [rows, sData, sfData] = await Promise.all([
+        userRepository.getAll(),
+        studentRepository.getAll(),
+        staffRepository.getAll(),
       ]);
-      if (!usersRes.ok) throw new Error("Failed to fetch users");
-      const rows = await usersRes.json();
 
       // Deduplicate by email — keep first occurrence
       const seenEmails = new Set<string>();
@@ -103,27 +104,21 @@ const Users = () => {
       setUsers(parsed);
 
       // Student grade/section map (email → {grade, section})
-      if (studentsRes?.ok) {
-        const sData = await studentsRes.json().catch(() => []);
-        const meta: Record<string, { grade: string; section: string }> = {};
-        (sData as any[]).forEach(s => {
-          if (s.email) meta[s.email.toLowerCase()] = { grade: s.grade || "", section: s.section || "" };
-        });
-        setStudentMeta(meta);
-      }
+      const meta: Record<string, { grade: string; section: string }> = {};
+      (sData as any[]).forEach(s => {
+        if (s.email) meta[s.email.toLowerCase()] = { grade: s.grade || "", section: s.section || "" };
+      });
+      setStudentMeta(meta);
 
       // Staff subject map (name → first subject)
-      if (staffRes?.ok) {
-        const sfData = await staffRes.json().catch(() => []);
-        const smap: Record<string, string> = {};
-        (sfData as any[]).forEach(s => {
-          if (s.name) {
-            const subj = Array.isArray(s.subjects) ? s.subjects[0] : (s.subject || s.specialization || "");
-            smap[s.name] = subj;
-          }
-        });
-        setStaffMeta(smap);
-      }
+      const smap: Record<string, string> = {};
+      (sfData as any[]).forEach(s => {
+        if (s.name) {
+          const subj = Array.isArray(s.subjects) ? s.subjects[0] : (s.subject || s.specialization || "");
+          smap[s.name] = subj;
+        }
+      });
+      setStaffMeta(smap);
     } catch (err) {
       console.error("Users fetch error:", err);
       toast.error("Failed to load users");
@@ -158,10 +153,7 @@ const Users = () => {
 
   const changeRole = async (u: UserProfile, newRole: string) => {
     try {
-      await fetch(`/api/data/users/${encodeURIComponent(u.id)}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      });
+      await userRepository.update(u.id, { role: newRole });
       toast.success(`${u.name} is now ${roleLabel(newRole)}`);
       fetchUsers();
     } catch { toast.error("Failed to update role"); }
@@ -170,10 +162,7 @@ const Users = () => {
   const resetPassword = async (u: UserProfile) => {
     const pw = generatePassword();
     try {
-      await fetch(`/api/data/users/${encodeURIComponent(u.id)}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw }),
-      });
+      await userRepository.update(u.id, { password: pw });
       toast.success(`New password for ${u.name}: ${pw}`, { duration: 8000 });
       fetchUsers();
     } catch { toast.error("Failed to reset password"); }
@@ -365,8 +354,7 @@ function CreateUserDialog({ onClose, onCreated, copy, copiedKey, existingEmails,
       createdAt: new Date().toISOString(),
     };
     try {
-      const r = await fetch("/api/data/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!r.ok) throw new Error();
+      await userRepository.create(body);
       setCreated({ username, password, email });
       toast.success("User created & credentials generated");
       onCreated();

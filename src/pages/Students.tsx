@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { userRepository } from "@/repositories/UserRepository";
 
 const MotionTableRow = motion.create(TableRow);
 const MotionCard = motion.create(Card);
@@ -213,8 +214,7 @@ const Students = () => {
     if (confirm(`Are you sure you want to delete ${selectedStudents.length} students? Their login credentials will also be removed.`)) {
       try {
         // Fetch all users once, then cascade-delete credentials for each removed student
-        const usersRes = await fetch("/api/data/users").catch(() => null);
-        const allUsers: any[] = usersRes?.ok ? await usersRes.json().catch(() => []) : [];
+        const allUsers: any[] = await userRepository.getAll().catch(() => []);
 
         await Promise.all(selectedStudents.map(async id => {
           const stu = students.find(s => s.id === id);
@@ -227,9 +227,7 @@ const Students = () => {
               return ue === studentEmail || ue === parentEmail;
             });
             await Promise.all(
-              toDelete.map(u =>
-                fetch(`/api/data/users/${encodeURIComponent(u.id)}`, { method: "DELETE" }).catch(() => {})
-              )
+              toDelete.map(u => userRepository.delete(u.id).catch(() => {}))
             );
           }
         }));

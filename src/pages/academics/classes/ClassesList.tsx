@@ -59,6 +59,8 @@ import ExamsPro from "@/components/classes/ExamsPro";
 import { useExams, deleteExam, updateExam, recordToDatesheet } from "@/lib/examStore";
 import GradebookPro from "@/components/classes/GradebookPro";
 import ReportCardsPro from "@/components/classes/ReportCardsPro";
+import { userRepository } from "@/repositories/UserRepository";
+import { staffRepository } from "@/repositories/StaffRepository";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DrillLevel = "grades" | "grade" | "section";
@@ -585,8 +587,8 @@ export default function ClassesList() {
     const norm = (v: any) => String(v || "").trim().toLowerCase();
     const target = norm(teacherName);
     const [allUsers, allStaff]: any[][] = await Promise.all([
-      fetch("/api/data/users").then(r => r.json()).catch(() => []),
-      fetch("/api/data/staff").then(r => r.json()).catch(() => []),
+      userRepository.getAll().catch(() => []),
+      staffRepository.getAll().catch(() => []),
     ]);
     const teacherUser = (Array.isArray(allUsers) ? allUsers : []).find(
       (u: any) => norm(u.name) === target || norm(u.displayName) === target

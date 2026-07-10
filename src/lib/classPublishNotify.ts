@@ -13,6 +13,8 @@
 // per-recipient-type write sites below.
 import { smartDb } from "@/lib/localDb";
 import { emitNotification } from "@/lib/notificationBus";
+import { studentRepository } from "@/repositories/StudentRepository";
+import { userRepository } from "@/repositories/UserRepository";
 
 function slugify(s: string) {
   return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -50,8 +52,8 @@ export interface ClassPublishOptions {
 export async function notifyClassPublish(opts: ClassPublishOptions): Promise<void> {
   try {
     const [students, users] = await Promise.all([
-      fetch("/api/data/students").then(r => (r.ok ? r.json() : [])).catch(() => []),
-      fetch("/api/data/users").then(r => (r.ok ? r.json() : [])).catch(() => []),
+      studentRepository.getAll().catch(() => []),
+      userRepository.getAll().catch(() => []),
     ]);
     const wantG = canonGrade(opts.grade);
     const wantS = String(opts.section || "").trim().toUpperCase();
@@ -126,7 +128,7 @@ export async function notifyClassTeacherEvent(opts: {
   redirectUrl?: string; excludeEmail?: string;
 }): Promise<void> {
   try {
-    const users = await fetch("/api/data/users").then(r => (r.ok ? r.json() : [])).catch(() => []);
+    const users = await userRepository.getAll().catch(() => []);
     const wantG = canonGrade(opts.grade);
     const wantS = String(opts.section || "").trim().toUpperCase();
     const classTeachers = (Array.isArray(users) ? users : []).filter((u: any) => {

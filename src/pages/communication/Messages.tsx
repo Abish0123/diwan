@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { smartDb } from "@/lib/localDb";
+import { userRepository } from "@/repositories/UserRepository";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationsContext } from "@/contexts/NotificationsContext";
 import { getRole } from "@/lib/roles";
@@ -227,7 +228,7 @@ const Messages = () => {
         (smartDb.getAll("ChatThread") || []) as unknown as Promise<ThreadRow[]>,
         (smartDb.getAll("ChatMessage") || []) as unknown as Promise<MessageRow[]>,
         (smartDb.getAll("ChatThreadState") || []) as unknown as Promise<ThreadStateRow[]>,
-        fetch("/api/data/users").then(r => r.ok ? r.json() : []).catch(() => []),
+        userRepository.getAll().catch(() => []),
         (smartDb.getAll("Student") || []) as unknown as Promise<any[]>,
         (smartDb.getAll("Notification") || []) as unknown as Promise<any[]>,
       ]);

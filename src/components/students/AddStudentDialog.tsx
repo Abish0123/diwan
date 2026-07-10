@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { UserPlus, GraduationCap, Mail, ShieldCheck, Edit3, Phone, MapPin } from "lucide-react";
 import { generateUsername, generatePassword } from "@/lib/roles";
 import { Student } from "@/types";
+import { userRepository } from "@/repositories/UserRepository";
 
 interface AddStudentDialogProps {
   open: boolean;
@@ -178,34 +179,28 @@ export function AddStudentDialog({ open, onOpenChange, student }: AddStudentDial
         } as any]);
 
         // Persist student user record
-        await fetch("/api/data/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: stuUsername,
-            name: formData.name,
-            email: formData.email,
-            role: "student",
-            username: stuUsername,
-            password: stuPassword,
-            status: "Active",
-          }),
+        await userRepository.create({
+          id: stuUsername,
+          uid: stuUsername,
+          name: formData.name,
+          email: formData.email,
+          role: "student",
+          username: stuUsername,
+          password: stuPassword,
+          status: "Active",
         }).catch(() => {});
 
         // Persist parent user record
         const parentEmail = `parent.${formData.email}`;
-        await fetch("/api/data/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: parentUsername,
-            name: `Parent of ${formData.name}`,
-            email: parentEmail,
-            role: "parent",
-            username: parentUsername,
-            password: parentPassword,
-            status: "Active",
-          }),
+        await userRepository.create({
+          id: parentUsername,
+          uid: parentUsername,
+          name: `Parent of ${formData.name}`,
+          email: parentEmail,
+          role: "parent",
+          username: parentUsername,
+          password: parentPassword,
+          status: "Active",
         }).catch(() => {});
 
         toast.success(`Student admitted — credentials generated`, {

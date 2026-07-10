@@ -10,6 +10,9 @@
 import { useEffect, useState } from "react";
 import { smartDb } from "@/lib/localDb";
 import { sendPlainEmail } from "@/lib/emailService";
+import { studentRepository } from "@/repositories/StudentRepository";
+import { userRepository } from "@/repositories/UserRepository";
+import { subjectAssignmentRepository } from "@/repositories/SubjectAssignmentRepository";
 
 export type ExamStatus = "Scheduled" | "Ongoing" | "Completed" | "Published";
 
@@ -286,7 +289,7 @@ async function notifyExamScheduled(exam: ExamRecord) {
   const targets = visibleStudentScopes(exam);
   if (targets.length === 0) return;
   try {
-    const students = (await (await fetch("/api/data/students")).json()) as Record<string, unknown>[];
+    const students = await studentRepository.getAll() as unknown as Record<string, unknown>[];
     if (!Array.isArray(students)) return;
     for (const t of targets) {
       const wantG = normGrade(t.grade);
@@ -380,8 +383,7 @@ async function cascadeDeleteExamData(id: string) {
 // same status) never spam duplicate rows; the backend upserts by id.
 async function notifyNewlyGradableTeachers(exam: ExamRecord) {
   try {
-    const res = await fetch("/api/data/subject_assignments");
-    const assignments = (await res.json()) as { grade: string; section: string; subject: string; teacherName: string; teacherEmail?: string }[];
+    const assignments = await subjectAssignmentRepository.getAll();
     if (!Array.isArray(assignments)) return;
     const plans = getGradePlans(exam);
     const seen = new Set<string>();
@@ -438,8 +440,8 @@ async function notifyLeadershipAndClassTeachers(exam: ExamRecord, targets: { gra
   if (targets.length === 0) return;
   try {
     const [users, assignments] = await Promise.all([
-      (await fetch("/api/data/users")).json() as Promise<Record<string, unknown>[]>,
-      (await fetch("/api/data/subject_assignments")).json() as Promise<{ grade: string; section: string; subject: string; teacherName: string; teacherEmail?: string }[]>,
+      userRepository.getAll() as Promise<Record<string, unknown>[]>,
+      subjectAssignmentRepository.getAll(),
     ]);
     if (!Array.isArray(users)) return;
     const plans = getGradePlans(exam);

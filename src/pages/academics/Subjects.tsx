@@ -7,6 +7,8 @@ import { useStudents } from "@/contexts/StudentContext";
 import { useGrades, useCurriculumContext } from "@/contexts/CurriculumContext";
 import { getDefaultSubjectsForGrade } from "@/lib/curriculumConfig";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
+import { userRepository } from "@/repositories/UserRepository";
+import { staffRepository } from "@/repositories/StaffRepository";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -221,8 +223,8 @@ export default function Subjects() {
       const norm = (v: any) => String(v || "").trim().toLowerCase();
       const target = norm(teacherName);
       const [allUsers, allStaff]: any[][] = await Promise.all([
-        fetch("/api/data/users").then(r => r.json()).catch(() => []),
-        fetch("/api/data/staff").then(r => r.json()).catch(() => []),
+        userRepository.getAll().catch(() => []),
+        staffRepository.getAll().catch(() => []),
       ]);
       const teacherUser = (Array.isArray(allUsers) ? allUsers : []).find(
         (u: any) => norm(u.name) === target || norm(u.displayName) === target
@@ -337,16 +339,12 @@ export default function Subjects() {
       // Update the teacher's own User record so their portal reflects the assignment
       try {
         if (teacherUser && teacherUser.email) {
-          await fetch(`/api/data/users/${encodeURIComponent(teacherUser.email)}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...teacherUser,
-              assignedGrade: selectedGrade,
-              assignedSection: sec,
-              assignedSubject: subject,
-              assignedClassName: `${selectedGrade} Section ${sec}`,
-            }),
+          await userRepository.update(teacherUser.email, {
+            ...teacherUser,
+            assignedGrade: selectedGrade,
+            assignedSection: sec,
+            assignedSubject: subject,
+            assignedClassName: `${selectedGrade} Section ${sec}`,
           });
         }
       } catch {
