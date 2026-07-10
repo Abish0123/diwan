@@ -190,18 +190,34 @@ Tests live in `tests/**/*.spec.ts`.
 ## CI/CD
 
 ### GitHub Actions Workflow
-`.github/workflows/ci.yml` runs on every push/PR:
+`.github/workflows/ci.yml` has two jobs, running on every push/PR:
 
+**`typecheck-test-build`:**
 1. **Typecheck** (`tsc --noEmit`) — catches type errors
 2. **Lint** (`eslint .`) — code style (continue-on-error)
 3. **Test** (`npm run test`) — unit tests
 4. **Build** (`npm run build`) — verifies production build
 
+**`docker-build`:**
+1. Builds the actual image from `Dockerfile` (`docker build`)
+2. Starts a real container from it (`DB_STRICT=false`, no MySQL configured — falls back to
+   SQLite so the smoke test doesn't need production credentials as a CI secret)
+3. Polls the image's own `HEALTHCHECK` until Docker reports the container `healthy`, or fails
+   the job and dumps container logs if it never does
+
+This job exists because the local dev environment this Dockerfile was authored in has no
+Docker installed — GitHub-hosted runners do, so this is the actual, non-simulated proof the
+image builds and the container serves real traffic, not just a manual read-through of the
+Dockerfile. Everything below this job's introduction (native-module build tools in both
+stages, `.dockerignore` correctness, `npm ci` lockfile consistency) was verified by hand
+first; this job is what confirms it end-to-end.
+
 **Status:** View on GitHub Actions tab or `gh run view`
 
 ### Deployment
 
-**Manual Docker Deploy:**
+**Manual Docker Deploy** (requires Docker installed locally — this dev machine does not have it,
+so use the CI job above, or a machine with Docker Desktop / Docker Engine, to actually run this):
 ```bash
 docker build -t studentdiwan:latest .
 docker run -p 3000:3000 \

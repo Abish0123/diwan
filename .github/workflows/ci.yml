@@ -45,3 +45,46 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: "build-placeholder"
           VITE_FIREBASE_MESSAGING_SENDER_ID: "build-placeholder"
           VITE_FIREBASE_APP_ID: "build-placeholder"
+
+  docker-build:
+    # Real verification of the Dockerfile — the local dev environment this
+    # was authored in has no Docker installed, so this job (GitHub-hosted
+    # runners ship Docker preinstalled) is the actual, non-simulated proof
+    # the image builds and the container starts and serves traffic, not
+    # just a manual read-through of the Dockerfile's instructions.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t studentdiwan:ci .
+
+      - name: Start container
+        run: |
+          docker run -d --name sd-ci -p 3000:3000 \
+            -e NODE_ENV=production \
+            -e DB_STRICT=false \
+            studentdiwan:ci
+
+      - name: Wait for container to become healthy
+        run: |
+          for i in $(seq 1 20); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' sd-ci 2>/dev/null || echo "starting")
+            echo "attempt $i: $status"
+            if [ "$status" = "healthy" ]; then exit 0; fi
+            if [ "$status" = "unhealthy" ]; then
+              echo "--- container logs ---"; docker logs sd-ci; exit 1
+            fi
+            sleep 3
+          done
+          echo "Container never reported healthy in time"
+          docker logs sd-ci
+          exit 1
+
+      - name: Dump logs (always, for debugging)
+        if: always()
+        run: docker logs sd-ci || true
+
+      - name: Clean up
+        if: always()
+        run: docker rm -f sd-ci || true

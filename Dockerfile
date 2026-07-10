@@ -9,6 +9,13 @@ FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
 
+# better-sqlite3 is a native module (compiled via node-gyp) if no prebuilt
+# binary matches this exact platform/glibc combo — installing the toolchain
+# up front means npm ci can't fail on a missing compiler, only ever fall
+# back to it silently succeeding either way.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -21,6 +28,9 @@ FROM node:20-bookworm-slim AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
