@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
@@ -101,6 +101,18 @@ export default function Login() {
   const current = PORTALS.find((p) => p.id === portal)!;
   const hero = HERO[portal];
   const col = COLORS[portal];
+
+  // Focus management: AnimatePresence swaps the whole step's content, but
+  // never moves keyboard/screen-reader focus anywhere — without this, a
+  // keyboard user who just activated a portal button (which then unmounts)
+  // is left with focus on nothing, and a screen-reader user gets no
+  // indication the page changed at all. Moving focus to each step's own
+  // heading is the standard fix for this exact "content swap without
+  // navigation" pattern.
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    stepHeadingRef.current?.focus();
+  }, [step]);
 
   const selectPortal = (id: Portal) => {
     setPortal(id);
@@ -270,8 +282,8 @@ export default function Login() {
                   </div>
                 </div>
 
-                <h2 className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight">Welcome Back</h2>
-                <p className="text-slate-500 mb-8">Select your portal to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
+                <p className="text-slate-600 mb-8">Select your portal to continue</p>
 
                 <div className="flex flex-col gap-3">
                   {PORTALS.map((p) => {
@@ -282,14 +294,14 @@ export default function Login() {
                         onClick={() => selectPortal(p.id)}
                         className="group flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-transparent hover:shadow-2xl hover:shadow-slate-300/40 hover:-translate-y-0.5 transition-all duration-200 text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
                       >
-                        <div className={`rounded-2xl bg-gradient-to-br ${p.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform`} style={{ width: "3.25rem", height: "3.25rem" }}>
+                        <div aria-hidden="true" className={`rounded-2xl bg-gradient-to-br ${p.gradient} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform`} style={{ width: "3.25rem", height: "3.25rem" }}>
                           <Icon className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-slate-900 text-base leading-snug">{p.label}</p>
-                          <p className="text-slate-500 text-sm leading-snug mt-0.5">{p.subtitle}</p>
+                          <p className="text-slate-600 text-sm leading-snug mt-0.5">{p.subtitle}</p>
                         </div>
-                        <svg className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg aria-hidden="true" className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
@@ -297,7 +309,7 @@ export default function Login() {
                   })}
                 </div>
 
-                <p className="text-center text-sm text-slate-400 mt-8">
+                <p className="text-center text-sm text-slate-600 mt-8">
                   Admin?{" "}
                   <button
                     onClick={() => { setPortal("staff"); setEmail("educationleadershipexpo@gmail.com"); setPassword("admin123"); setStep("login"); }}
@@ -312,8 +324,8 @@ export default function Login() {
             {/* STEP 2 — Login Form */}
             {step === "login" && (
               <motion.div key="login" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
-                <button onClick={() => setStep("portal")} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-sm font-medium mb-8 transition-colors">
-                  <ArrowLeft className="w-4 h-4" /> All Portals
+                <button type="button" onClick={() => setStep("portal")} className="flex items-center gap-1.5 text-slate-600 hover:text-slate-800 text-sm font-medium mb-8 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded">
+                  <ArrowLeft className="w-4 h-4" aria-hidden="true" /> All Portals
                 </button>
 
                 {/* Portal badge */}
@@ -327,8 +339,8 @@ export default function Login() {
                   </div>
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Welcome Back</h2>
-                <p className="text-slate-500 text-sm mb-7">Enter your credentials to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
+                <p className="text-slate-600 text-sm mb-7">Enter your credentials to continue</p>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1.5">
@@ -367,8 +379,14 @@ export default function Login() {
                         onChange={(e) => setPassword(e.target.value)}
                         className={`h-12 rounded-xl border-slate-200 pr-11 ${col.focus}`}
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                       </button>
                     </div>
                   </div>
