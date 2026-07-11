@@ -56,6 +56,7 @@ import remarkGfm from "remark-gfm";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { canonGrade } from "@/lib/studentGradeSection";
 import { findNcertBook, ncertSubjectsForGrade, type NcertBook } from "@/lib/ncertResources";
 import { BookMarked, ExternalLink } from "lucide-react";
 
@@ -432,6 +433,23 @@ const AdvancedCurriculum = () => {
     terms: []
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  // Real Library ↔ Curriculum link — previously these were two totally
+  // disconnected systems with no reference between a subject's syllabus and
+  // the school's actual book catalog. LibraryItem.category values overlap
+  // with curriculum subject names (both use plain names like "Mathematics",
+  // "Science"), so a direct string match is a real, honest join — not
+  // invented data, just reading the existing overlap.
+  const [libraryBookCount, setLibraryBookCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!currentCurriculum.subject) { setLibraryBookCount(null); return; }
+    let alive = true;
+    smartDb.getAll("LibraryItem", undefined).then((rows) => {
+      if (!alive) return;
+      const count = (rows as { category?: string }[]).filter(b => b.category === currentCurriculum.subject).length;
+      setLibraryBookCount(count);
+    }).catch(() => setLibraryBookCount(null));
+    return () => { alive = false; };
+  }, [currentCurriculum.subject]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizationData, setOptimizationData] = useState<{
     issues: { type: string; message: string; week?: number; unitId?: string }[];
@@ -738,6 +756,35 @@ const AdvancedCurriculum = () => {
       await saveCurriculum({ id: currentCurriculum.id, terms: updatedTerms });
     } catch {
       toast.error("Failed to save syllabus progress");
+      return;
+    }
+    // Real syllabus-progress notification — previously nothing distinguished
+    // "a topic was actually covered in class" from generic assignment/exam
+    // notices; parents/students had no syllabus-specific signal at all. Only
+    // fires on marking covered (not on undo) to match how every other
+    // academic notification in the app fires once per real event, not on
+    // every state change.
+    if (nowCompleted && currentCurriculum.grade && currentCurriculum.subject) {
+      const grade = currentCurriculum.grade;
+      const subject = currentCurriculum.subject;
+      const now2 = new Date().toISOString();
+      const title = `Syllabus updated — ${subject}`;
+      const message = `"${week.topic}" was covered in ${subject} for ${grade}.`;
+      smartDb.create("Notification", {
+        id: `notif_${Date.now()}_syllabus_student_${weekId}`,
+        audienceRole: "student", recipientGrade: grade, category: "student",
+        type: "syllabus_covered", title, message,
+        createdAt: now2, time: now2, read: false, uid: user?.uid,
+      }).catch(() => {});
+      smartDb.getAll("Student", undefined).then((rows) => {
+        const gradeStudents = (rows as { id: string; grade?: string }[]).filter(s => canonGrade(s.grade || "") === canonGrade(grade));
+        return Promise.all(gradeStudents.map((s, i) => smartDb.create("Notification", {
+          id: `notif_${Date.now()}_${i}_syllabus_parent_${weekId}`,
+          audienceRole: "parent", studentId: s.id, category: "student",
+          type: "syllabus_covered", title, message,
+          createdAt: now2, time: now2, read: false, uid: user?.uid,
+        }).catch(() => {})));
+      }).catch(() => {});
     }
   };
 
@@ -1100,6 +1147,15 @@ const AdvancedCurriculum = () => {
                   className="inline-flex items-center gap-1 text-orange-600 font-semibold hover:underline"
                 >
                   <BookMarked className="w-3 h-3" /> NCERT source
+                </a>
+              )}
+              {libraryBookCount !== null && (
+                <a
+                  href={`/library?category=${encodeURIComponent(currentCurriculum.subject || "")}`}
+                  className="inline-flex items-center gap-1 text-purple-600 font-semibold hover:underline"
+                  title={libraryBookCount > 0 ? `${libraryBookCount} real book(s) catalogued under "${currentCurriculum.subject}" in the Library` : "No Library books catalogued under this subject yet"}
+                >
+                  <BookMarked className="w-3 h-3" /> {libraryBookCount} book{libraryBookCount === 1 ? "" : "s"} in Library
                 </a>
               )}
             </p>

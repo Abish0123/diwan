@@ -219,7 +219,10 @@ export default function Library() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState("All Categories");
+  // Initialize from ?category= so a real deep link (e.g. from Academics'
+  // Curriculum view, "N books in Library for this subject") lands already
+  // filtered instead of dumping the visitor on an unfiltered catalog.
+  const [category, setCategory] = useState(() => new URLSearchParams(window.location.search).get("category") || "All Categories");
   const [resType, setResType] = useState("All Types");
   const [availability, setAvailability] = useState("All Availability");
   const [page, setPage] = useState(1);
