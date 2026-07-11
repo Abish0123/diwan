@@ -1284,6 +1284,16 @@ async function startServer() {
     // returned every row in the table regardless of who asked — the root cause behind
     // several cross-user data leaks (e.g. Calendar events, per-user health records).
     const uid = typeof req.query.uid === "string" ? req.query.uid : undefined;
+    // 360°-feedback submissions carry each answer's real submitter (`uid`,
+    // `studentId`) — anonymous only means a reviewer never sees that
+    // linkage. A non-full-access caller may only ever fetch THEIR OWN
+    // submissions (the exact ?uid=self-scoped shape the "already submitted"
+    // check already uses); everyone else must go through
+    // /api/feedback-aggregate, which strips identity server-side before it
+    // ever reaches a response body.
+    if (entity === "feedback_submissions" && getRole(auth.role).full !== true) {
+      if (!uid || uid !== auth.uid) return res.status(403).json({ error: "Not authorized for this resource" });
+    }
     // Some entities (e.g. Student) stamp `uid` with whichever STAFF account
     // created the row, not the record's own owner — a student logging in can
     // never match their own Student row by uid. ?email= lets a caller look
@@ -2380,6 +2390,65 @@ async function startServer() {
   // In-memory store for active trips
   // Map<vehicleId, { tripId, status, startTime, studentCount, boardedCount }>
   const activeTrips = new Map<string, Record<string, unknown>>();
+
+  // GET /api/feedback-aggregate?cycleId=... — the ONLY way any client (HOD/
+  // Principal/HR results view) may read 360°-feedback results. Aggregates
+  // server-side and never returns a raw submission row, studentId, or uid —
+  // that's what keeps submissions genuinely anonymous per the original spec,
+  // rather than relying on the UI to simply not render an identity field
+  // that's still sitting in the JSON payload for anyone to inspect.
+  app.get("/api/feedback-aggregate", requireAuth, async (req, res) => {
+    const auth = (req as express.Request & { auth: SessionAuth }).auth;
+    if (auth.role === "student" || auth.role === "parent") {
+      return res.status(403).json({ error: "Not authorized for this resource" });
+    }
+    const cycleId = typeof req.query.cycleId === "string" ? req.query.cycleId : undefined;
+    if (!cycleId) return res.status(400).json({ error: "cycleId is required" });
+    try {
+      const exists = await dbTableExists("feedback_submissions");
+      if (!exists) return res.json([]);
+      const rows = await dbQuery(
+        `SELECT data FROM \`feedback_submissions\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.cycleId')) = ?`,
+        [cycleId]
+      );
+      const submissions = rows.map((r: any) => { try { return JSON.parse(r.data); } catch { return null; } }).filter(Boolean);
+
+      const groups = new Map<string, { teacherName: string; templateKey: string; count: number; ratingSum: number; ratingCount: number; perQuestion: Map<string, { sum: number; count: number }>; comments: string[] }>();
+      for (const s of submissions) {
+        const key = `${s.templateKey}||${s.teacherName}`;
+        if (!groups.has(key)) {
+          groups.set(key, { teacherName: s.teacherName, templateKey: s.templateKey, count: 0, ratingSum: 0, ratingCount: 0, perQuestion: new Map(), comments: [] });
+        }
+        const g = groups.get(key)!;
+        g.count++;
+        (s.answers || []).forEach((a: any) => {
+          if (typeof a.rating === "number") {
+            g.ratingSum += a.rating; g.ratingCount++;
+            const pq = g.perQuestion.get(a.questionId) || { sum: 0, count: 0 };
+            pq.sum += a.rating; pq.count++;
+            g.perQuestion.set(a.questionId, pq);
+          }
+        });
+        if (s.comments && String(s.comments).trim()) g.comments.push(String(s.comments).trim());
+      }
+
+      const result = Array.from(groups.values()).map((g) => ({
+        teacherName: g.teacherName,
+        templateKey: g.templateKey,
+        submissionCount: g.count,
+        averageRating: g.ratingCount > 0 ? Math.round((g.ratingSum / g.ratingCount) * 100) / 100 : null,
+        perQuestionAverage: Object.fromEntries(
+          Array.from(g.perQuestion.entries()).map(([qid, v]) => [qid, Math.round((v.sum / v.count) * 100) / 100])
+        ),
+        comments: g.comments,
+      }));
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error computing feedback aggregate:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
 
   // API Routes
   app.get("/api/health", async (req, res) => {

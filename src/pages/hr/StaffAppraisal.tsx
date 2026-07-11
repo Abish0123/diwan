@@ -31,6 +31,7 @@ import { AppraisalAnalyticsTab } from "./appraisal/AppraisalAnalyticsTab";
 import { FeedbackTemplatesManager } from "./appraisal/FeedbackTemplatesManager";
 import { FeedbackWeightingCard } from "./appraisal/FeedbackWeightingCard";
 import { NotifyFeedbackButton } from "./appraisal/NotifyFeedbackButton";
+import { FeedbackResultsTab } from "./appraisal/FeedbackResultsTab";
 
 const kpiCategories = [
   {
@@ -584,6 +585,9 @@ export default function StaffAppraisal() {
             <TabsTrigger value="feedback" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
               <MessageSquare className="h-4 w-4" /> Feedback Templates
             </TabsTrigger>
+            <TabsTrigger value="feedback-results" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <Star className="h-4 w-4" /> Feedback Results
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
               <Clock className="h-4 w-4" /> Appraisal History
             </TabsTrigger>
@@ -720,6 +724,10 @@ export default function StaffAppraisal() {
             </div>
             <FeedbackWeightingCard />
             <FeedbackTemplatesManager />
+          </TabsContent>
+
+          <TabsContent value="feedback-results" className="mt-4">
+            <FeedbackResultsTab />
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">
