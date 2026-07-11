@@ -172,6 +172,62 @@ function verifyHashedPassword(plain: string, stored: string): boolean {
   return crypto.timingSafeEqual(candidate, expected);
 }
 
+// Default password every freshly-provisioned student/parent login account
+// starts with (told to families out-of-band, same convention as the 3
+// existing demo accounts) — never used to overwrite an account that already
+// has credentials.
+const DEFAULT_STUDENT_PARENT_PASSWORD = "welcome123";
+
+// A Student record on its own has never been enough to log in — nothing
+// created a matching `users` row until now. This mirrors that provisioning
+// step server-side (rather than requiring every client-side caller to also
+// have write access to the admin-only `users` entity) whenever a Student is
+// created: a student login keyed by their admission/roll number (falling
+// back to the Student's own id when neither is set), and — if any parent
+// email is on file — a second login for the parent keyed off the same id,
+// so a family with multiple children gets one login per child rather than
+// silently overwriting a shared parent account. Never touches an existing
+// `users` row — this only fills in accounts that don't exist yet.
+async function provisionStudentParentLogins(studentDbId: string, student: Record<string, any>) {
+  try {
+    const loginId: string = student.admissionNumber || student.rollNumber || studentDbId;
+    const now = new Date().toISOString();
+
+    const [existingStudentUser] = await dbQuery(`SELECT id FROM \`users\` WHERE id = ? LIMIT 1`, [loginId]);
+    if (!existingStudentUser) {
+      await dbCreateTable("users");
+      await dbUpsert(
+        "users", loginId,
+        JSON.stringify({
+          id: loginId, email: student.email || undefined, name: student.name, displayName: student.name,
+          role: "student", studentId: studentDbId, password: hashPassword(DEFAULT_STUDENT_PARENT_PASSWORD),
+        }),
+        studentDbId, now, now
+      );
+    }
+
+    const parentEmail: string | undefined = student.fatherEmail || student.motherEmail || student.guardianEmail;
+    if (parentEmail) {
+      const parentLoginId = `${loginId}-parent`;
+      const [existingParentUser] = await dbQuery(`SELECT id FROM \`users\` WHERE id = ? LIMIT 1`, [parentLoginId]);
+      if (!existingParentUser) {
+        const parentName = student.fatherName || student.motherName || student.guardianName || "Parent";
+        await dbCreateTable("users");
+        await dbUpsert(
+          "users", parentLoginId,
+          JSON.stringify({
+            id: parentLoginId, email: parentEmail, name: parentName, displayName: parentName,
+            role: "parent", studentId: studentDbId, password: hashPassword(DEFAULT_STUDENT_PARENT_PASSWORD),
+          }),
+          studentDbId, now, now
+        );
+      }
+    }
+  } catch (e) {
+    console.error(`Failed to provision student/parent login for ${studentDbId}:`, e);
+  }
+}
+
 // ── Rate limiting ────────────────────────────────────────────────────────────
 // Previously only /api/uploads had any rate limit at all — /api/session/login
 // (a brute-force target: no lockout, and passwords are checked with a plain
@@ -1508,6 +1564,11 @@ async function startServer() {
       await dbCreateTable(entity);
       await dbUpsert(entity, id, JSON.stringify({ ...data, id }), uid, now, now);
       entityCache.delete(entity); // Invalidate cache
+      if (entity === "students") {
+        // Fire-and-forget: a slow/failed login-provisioning step should never
+        // block or fail the actual student-creation response.
+        provisionStudentParentLogins(id, { ...data, id }).catch(() => {});
+      }
       if (entity === "notifications") {
         // Real notification rows (fee reminders, chat messages, alerts, ...)
         // carry their own recipientUid/audienceRole/title — emit that real
