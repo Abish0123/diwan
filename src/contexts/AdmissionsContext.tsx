@@ -498,6 +498,7 @@ export const AdmissionsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const transportId = `TR-${Math.floor(100000 + Math.random() * 900000)}`;
           await smartDb.create('TransportRecord', {
             studentName: lead.studentName,
+            studentId,
             grade, section,
             route: '', vehicle: '',
             stopName: (lead as any).transportDropAddress || '',
