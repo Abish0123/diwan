@@ -1,11 +1,12 @@
 // Real Lab Equipment availability check — shown when a Timetable slot's
-// room looks like a lab, pulling live InventoryItem stock (category "Lab
+// room is a lab, pulling live InventoryItem stock (category "Lab
 // Equipment") instead of the timetable having no equipment awareness at
-// all. Room selection here is still the pre-existing hardcoded CLASSROOMS
-// list (not the real Room entity from settings/RoomManagement.tsx — that's
-// a separate, pre-existing disconnect), so this matches on the room NAME
-// looking like a lab ("Lab 1", "Science Lab", ...) rather than a real
-// Room.type field.
+// all. Timetable now sources its room list from the real Room entity
+// (settings/RoomManagement.tsx), so `roomType` (Room.type, e.g.
+// "Laboratory"/"Computer Lab") is the authoritative check when available;
+// the room-name regex is only a fallback for rooms with no resolved type
+// (e.g. old timetable data referencing a room that's since been renamed
+// or removed from Room Management).
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { smartDb } from "@/lib/localDb";
@@ -16,8 +17,10 @@ interface LabItem {
   status: string;
 }
 
-export function LabEquipmentStatus({ room }: { room: string }) {
-  const isLab = /\blab\b/i.test(room);
+const LAB_ROOM_TYPES = new Set(["Laboratory", "Computer Lab"]);
+
+export function LabEquipmentStatus({ room, roomType }: { room: string; roomType?: string }) {
+  const isLab = roomType ? LAB_ROOM_TYPES.has(roomType) : /\blab\b/i.test(room);
   const [items, setItems] = useState<LabItem[] | null>(null);
   const [loading, setLoading] = useState(false);
 

@@ -7,6 +7,7 @@ import {
   findAssignedTeacher, subjectsAssignedFor, subjectsAssignedToTeacher,
 } from "@/lib/timetableRules";
 import socket from "@/lib/socket";
+import { smartDb } from "@/lib/localDb";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { LabEquipmentStatus } from "@/components/timetable/LabEquipmentStatus";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,10 +40,15 @@ import { useIntegrationConnected } from "@/hooks/useIntegrationStatus";
 type Mode = "Physical" | "Online" | "Hybrid";
 interface Slot { mode: Mode; subject: string; teacher: string; room: string; }
 
+// Real room picked from Settings > Room Management — previously the
+// Classroom/Location field was a hardcoded CLASSROOMS string list with no
+// connection to the school's actual room register at all (a room deleted
+// or renamed there would never be reflected here, and rooms added there
+// would never show up here either).
+interface RoomOption { id: string; roomNo: string; roomName: string; type: string; capacity: number; status: string; }
+
 // ─── Static Data ─────────────────────────────────────────────────────────────
 // TIME_SLOTS is now computed dynamically from TimetableSettings (see useTimetableSettings hook)
-
-const CLASSROOMS = ["Room 201","Room 202","Room 203","Room 204","Room 205","Room 206","Lab 1","Lab 2","Art Room","Play Ground","Library"];
 // Every entry here maps to a real integration provider id (see
 // integrationsConfig.ts) — filtered down to only the ones actually connected
 // before being offered as a choice (see useConnectedPlatforms below), so a
@@ -234,6 +240,21 @@ const Timetable = () => {
   const grades = useGrades();
   const { timeSlots } = useTimetableSettings(user?.uid);
 
+  // Real rooms from Settings > Room Management — unscoped since every
+  // staff member scheduling a class should see the school's full room
+  // register, not just rooms they personally created (same rationale as
+  // PTMBooking.tsx's identical fetch).
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  useEffect(() => {
+    smartDb.getAll("Room", undefined).then((rows: any[]) => {
+      setRooms((rows || []).filter((r) => r.status !== "Inactive"));
+    }).catch(() => setRooms([]));
+  }, []);
+  // Fallback used wherever a room is needed but none was explicitly picked
+  // (new-slot defaults, auto-fill) — the first real configured room, or ""
+  // if the school hasn't set any up yet (no more hardcoded "Room 201").
+  const defaultRoomName = rooms[0] ? (rooms[0].roomName || rooms[0].roomNo) : "";
+
   // Only offer meeting platforms that are actually connected under
   // Administration → Integrations — an unconnected option in this dropdown
   // has nothing real behind it and just confuses whoever picks it.
@@ -307,7 +328,7 @@ const Timetable = () => {
   const [tSection, setTSection]   = useState("A");
   const [tSubject, setTSubject]   = useState("Mathematics");
   const [tMode, setTMode]         = useState<Mode>("Physical");
-  const [tRoom, setTRoom]         = useState("Room 201");
+  const [tRoom, setTRoom]         = useState("");
   const [tLink, setTLink]         = useState("");
   const [tPlatform, setTPlatform] = useState("Jitsi Meet");
 
@@ -507,7 +528,7 @@ const Timetable = () => {
       else { setFRoom(""); setFPlatform(slot.room.includes("Zoom") ? "Zoom" : slot.room.includes("Teams") ? "Microsoft Teams" : slot.room.includes("Meet") ? "Google Meet" : "Jitsi Meet"); setFLink(slot.room.startsWith("http") ? slot.room : ""); }
     } else {
       setFSubject(""); setFTeacher("");
-      setFMode("Physical"); setFRoom("Room 201"); setFLink("");
+      setFMode("Physical"); setFRoom(defaultRoomName); setFLink("");
     }
   }
 
@@ -617,7 +638,7 @@ const Timetable = () => {
 
             if (findTeacherClash(teacherName, ri, ci, key, ri, ci)) continue;
 
-            base[ri][ci] = { mode: "Physical", subject, teacher: teacherName, room: "Room 201" };
+            base[ri][ci] = { mode: "Physical", subject, teacher: teacherName, room: defaultRoomName };
             dayLoadDelta[loadKey] = (dayLoadDelta[loadKey] || 0) + 1;
             filled++;
             placed = true;
@@ -709,7 +730,7 @@ const Timetable = () => {
 
     const room = fMode === "Online"
       ? fLink || `https://meet.jit.si/StudentDiwan-${grade.replace(/\s/g,"")}-${section}-${Date.now().toString(36)}`
-      : fRoom || "Room 201";
+      : fRoom || defaultRoomName;
     const updated: Slot = { mode: fMode, subject: fSubject, teacher: fTeacher, room };
     setTimetables(prev => {
       const base = (prev[key] || generateDefaultGrid(grade, section)).map(r => [...r]);
@@ -1078,7 +1099,7 @@ const Timetable = () => {
       if (slot.mode !== "Online") { setTRoom(slot.room); setTLink(""); }
       else { setTRoom(""); setTLink(slot.room.startsWith("http") ? slot.room : ""); setTPlatform("Jitsi Meet"); }
     } else {
-      setTSubject(""); setTMode("Physical"); setTRoom("Room 201"); setTLink("");
+      setTSubject(""); setTMode("Physical"); setTRoom(defaultRoomName); setTLink("");
     }
   }
 
@@ -1123,7 +1144,7 @@ const Timetable = () => {
 
     const room = tMode === "Online"
       ? tLink || `https://meet.jit.si/StudentDiwan-${tGrade.replace(/\s/g,"")}-${tSection}-${Date.now().toString(36)}`
-      : tRoom || "Room 201";
+      : tRoom || defaultRoomName;
     const updated: Slot = { mode: tMode, subject: tSubject, teacher: teacher, room };
     setTimetables(prev => {
       const base = (prev[classKey] || generateDefaultGrid(tGrade, tSection)).map(r => [...r]);
@@ -1883,12 +1904,16 @@ const Timetable = () => {
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Classroom / Location</Label>
                 <Select value={fRoom} onValueChange={setFRoom}>
-                  <SelectTrigger className="w-full border-gray-200 cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full border-gray-200 cursor-pointer"><SelectValue placeholder="Select a room..." /></SelectTrigger>
                   <SelectContent className="z-[250]">
-                    {CLASSROOMS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {rooms.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-gray-400 text-center">No rooms configured — add them in Settings &gt; Room Management.</div>
+                    ) : (
+                      rooms.map(r => <SelectItem key={r.id} value={r.roomName || r.roomNo}>{r.roomName || r.roomNo}{r.type ? ` (${r.type})` : ""}</SelectItem>)
+                    )}
                   </SelectContent>
                 </Select>
-                <LabEquipmentStatus room={fRoom} />
+                <LabEquipmentStatus room={fRoom} roomType={rooms.find(r => (r.roomName || r.roomNo) === fRoom)?.type} />
               </div>
             )}
 
@@ -2092,12 +2117,16 @@ const Timetable = () => {
               <div className="space-y-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Classroom</Label>
                 <Select value={tRoom} onValueChange={setTRoom}>
-                  <SelectTrigger className="w-full border-gray-200 cursor-pointer"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full border-gray-200 cursor-pointer"><SelectValue placeholder="Select a room..." /></SelectTrigger>
                   <SelectContent className="z-[250]">
-                    {CLASSROOMS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {rooms.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-gray-400 text-center">No rooms configured — add them in Settings &gt; Room Management.</div>
+                    ) : (
+                      rooms.map(r => <SelectItem key={r.id} value={r.roomName || r.roomNo}>{r.roomName || r.roomNo}{r.type ? ` (${r.type})` : ""}</SelectItem>)
+                    )}
                   </SelectContent>
                 </Select>
-                <LabEquipmentStatus room={tRoom} />
+                <LabEquipmentStatus room={tRoom} roomType={rooms.find(r => (r.roomName || r.roomNo) === tRoom)?.type} />
               </div>
             )}
 
