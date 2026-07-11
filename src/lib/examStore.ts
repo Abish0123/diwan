@@ -586,6 +586,34 @@ export function setExams(list: ExamRecord[]) {
   // Upsert all to MySQL in background
   list.forEach(e => void persistExamToDb(e));
 }
+// Real Exams -> Communication Calendar sync — previously the Calendar had
+// zero auto-population from any other module, only manually-typed events.
+// One event per exam (not per subject-slot, to avoid spam), keyed by a
+// deterministic id so repeated saves upsert the same row instead of
+// duplicating it. Targets the same real students/parents the exam is
+// actually published to, via the same GradePlan grade this exam already
+// tracks — a school-wide exam still shows school-wide, but a single-grade
+// exam only shows to that grade.
+function syncExamCalendarEvent(rec: ExamRecord) {
+  const plans = getGradePlans(rec);
+  const grades = [...new Set(plans.map(p => p.grade))].filter(Boolean);
+  const startDate = rec.startDate || plans[0]?.startDate;
+  if (!startDate) return;
+  void smartDb.create("CalendarEvent", {
+    title: rec.name,
+    description: `${rec.type} exam${grades.length > 0 ? ` — ${grades.join(", ")}` : ""}`,
+    date: startDate,
+    time: rec.slots?.[0]?.start || "09:00 AM",
+    location: rec.venue || rec.room || "",
+    category: "Exams",
+    color: "bg-amber-500",
+    status: "Published",
+    targetAudience: "All",
+    targetClass: grades.length === 1 ? grades[0] : "",
+    source: "Exam",
+  }, `exam-cal-${rec.id}`).catch(() => {});
+}
+
 export function addExam(rec: ExamRecord) {
   const list = [rec, ...getExams()];
   commit(list);
@@ -594,6 +622,7 @@ export function addExam(rec: ExamRecord) {
   void notifyExamScheduled(rec);
   const initiallyVisible = visibleStudentScopes(rec);
   if (initiallyVisible.length > 0) void notifyLeadershipAndClassTeachers(rec, initiallyVisible);
+  syncExamCalendarEvent(rec);
 }
 export function updateExam(id: string, patch: Partial<ExamRecord>) {
   const prev = getExams().find(e => e.id === id);
@@ -615,6 +644,7 @@ export function updateExam(id: string, patch: Partial<ExamRecord>) {
   commit(updated);
   const exam = updated.find(e => e.id === id);
   if (exam) void persistExamToDb(exam);
+  if (exam) syncExamCalendarEvent(exam);
   if (exam && !isGradableForTeachers(prev) && isGradableForTeachers(exam)) {
     void notifyNewlyGradableTeachers(exam);
   }
@@ -634,6 +664,7 @@ export function deleteExam(id: string) {
   commit(getExams().filter(e => e.id !== id));
   void deleteExamFromDb(id);
   void cascadeDeleteExamData(id);
+  void smartDb.delete("CalendarEvent", `exam-cal-${id}`).catch(() => {});
 }
 
 // Publish (or unpublish) a single grade's timetable to its students/parents,

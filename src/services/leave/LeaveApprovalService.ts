@@ -40,7 +40,31 @@ export class LeaveApprovalService {
       updatedChain[nextStepIdx]?.label,
     );
 
+    // Real Leave -> Communication Calendar sync, only once fully approved
+    // (not on intermediate chain steps) — previously approved leave had no
+    // presence on the shared calendar at all. Visible to Staff so
+    // colleagues/HR can see who's actually out for coverage planning,
+    // rather than a private, invisible-to-everyone-else approval record.
+    if (isLastStep) void this.syncLeaveCalendarEvent(leave);
+
     return updated;
+  }
+
+  private syncLeaveCalendarEvent(leave: LeaveRequest): void {
+    const id = `leave-cal-${leave.id}`;
+    void smartDb.create("CalendarEvent", {
+      title: `${leave.staffName || "Staff"} — ${leave.type}`,
+      description: `Approved leave (${leave.days} day${leave.days === 1 ? "" : "s"}).`,
+      date: leave.startDate,
+      time: "All day",
+      location: "",
+      category: "Holidays",
+      color: "bg-rose-500",
+      status: "Published",
+      targetAudience: "Staff",
+      targetClass: "",
+      source: "Leave",
+    }, id).catch(() => {});
   }
 
   // Rejects at the current step — rejection always terminates the chain.

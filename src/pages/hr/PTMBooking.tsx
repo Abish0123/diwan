@@ -248,6 +248,32 @@ export default function PTMBooking() {
     toast.success("Jitsi Meet link generated");
   };
 
+  // Real PTM -> Communication Calendar sync — previously PTM sessions had
+  // no presence on the shared calendar at all. Targeted at the specific
+  // student's real grade/section (via the same real Student lookup used
+  // for the picker), so this only shows to that student's own parent/
+  // family, not the whole school. studentId may be missing on slot-booked
+  // sessions with no student selected yet — skip in that case rather than
+  // fabricate a school-wide event for an unassigned slot.
+  const syncPtmCalendarEvent = (record: PTMSession) => {
+    const student = record.studentId ? students.find((s: any) => s.id === record.studentId) : undefined;
+    if (!student?.grade) return;
+    const targetClass = student.section ? `${student.grade}-${student.section}` : student.grade;
+    void smartDb.create("CalendarEvent", {
+      title: `PTM — ${record.teacher} & ${record.student}`,
+      description: `Parent-Teacher Meeting for ${record.subject || "General"}.`,
+      date: record.date,
+      time: record.timeRange || "TBD",
+      location: record.location || "",
+      category: "Meetings",
+      color: "bg-purple-500",
+      status: "Published",
+      targetAudience: "Parents",
+      targetClass,
+      source: "PTM",
+    }, `ptm-cal-${record.id}`).catch(() => {});
+  };
+
   const handleCreatePTM = async () => {
     if (!user) return;
     if (!newPTM.teacher || !newPTM.date || !newPTM.student) {
@@ -289,6 +315,7 @@ export default function PTMBooking() {
     await smartDb.create("PTMSession", record, id);
     setSessions((prev) => [...prev, record]);
     await notifyPTMEvent("scheduled-by-teacher", record);
+    syncPtmCalendarEvent(record);
     setNewOpen(false);
     setNewPTM(emptyForm());
     toast.success("New PTM session created");

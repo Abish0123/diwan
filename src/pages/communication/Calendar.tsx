@@ -56,6 +56,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStudents } from "@/contexts/StudentContext";
+import { useParentChildren } from "@/hooks/useParentChildren";
+import { audienceGroupForRole, filterAnnouncementsForViewer, ViewerClass } from "@/lib/announcementAudience";
 
 interface Event {
   id: string | number;
@@ -66,45 +69,29 @@ interface Event {
   location: string;
   category: string;
   color: string;
+  // Real audience targeting — the same fields/enforcement Announcements
+  // already uses (src/lib/announcementAudience.ts). Previously this
+  // calendar had none of these; every event was queried WHERE uid = ?,
+  // making it a private per-account list, not a shared school calendar.
+  status?: string;         // "Published" — reuses the same status gate as Notice
+  targetAudience?: string; // "All" | "Students" | "Staff" | "Parents"
+  targetClass?: string;    // e.g. "Grade 5-B" — empty = school-wide
+  // Marks events auto-created by another real module, instead of manually
+  // typed — lets the UI show where an event actually came from.
+  source?: "Manual" | "Exam" | "PTM" | "Leave";
+  createdBy?: string;
 }
-
-const INITIAL_EVENTS: Event[] = [
-  {
-    id: "1",
-    title: "Annual Sports Day",
-    description: "The biggest sports event of the year with various track and field activities.",
-    date: format(new Date(), "yyyy-MM-dd"),
-    time: "09:00 AM",
-    location: "Main Ground",
-    category: "Sports",
-    color: "bg-emerald-500",
-  },
-  {
-    id: "2",
-    title: "Parent-Teacher Meeting",
-    description: "Quarterly review of student progress with parents.",
-    date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
-    time: "10:00 AM",
-    location: "Auditorium",
-    category: "Academic",
-    color: "bg-blue-500",
-  },
-  {
-    id: "3",
-    title: "Science Fair 2024",
-    description: "Students showcasing their innovative science projects.",
-    date: format(addDays(new Date(), 7), "yyyy-MM-dd"),
-    time: "11:00 AM",
-    location: "Science Lab",
-    category: "Exhibition",
-    color: "bg-amber-500",
-  },
-];
 
 export default function CommunicationCalendar() {
   const { user, role } = useAuth();
   const uid = user?.uid;
-  const isStudent = role === 'student';
+  const { students } = useStudents();
+  const { children: parentChildren } = useParentChildren();
+  const audienceGroup = audienceGroupForRole(role);
+  const isStudent = audienceGroup === 'student';
+  // Only admin/staff manage the shared calendar; students and parents are
+  // read-only viewers — same split Announcements already enforces.
+  const canManage = audienceGroup === 'admin' || audienceGroup === 'staff';
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day">("month");
   const [events, setEvents] = useState<Event[]>([]);
@@ -121,38 +108,47 @@ export default function CommunicationCalendar() {
     time: "09:00 AM",
     location: "",
     category: "Academic",
+    targetAudience: "All",
+    targetClass: "",
   });
 
   const categories = ['Academic', 'Sports', 'Holidays', 'Exams', 'Meetings', 'Exhibition'];
 
-  // Seed-on-empty + hydrate persisted events from the DB.
+  // Hydrate persisted events from the DB — unscoped (school-wide), not
+  // filtered by the viewer's own uid. This used to be `smartDb.getAll(
+  // "CalendarEvent", uid)`, which silently made every user's calendar
+  // private to them — an admin's real events were invisible to everyone
+  // else, including parents and students. No more hardcoded seed data
+  // either — an empty real calendar now honestly shows as empty.
   useEffect(() => {
     let cancelled = false;
-
-    const hydrate = async () => {
-      let rows = await smartDb.getAll("CalendarEvent", uid);
-
-      if (!rows || rows.length === 0) {
-        for (const ev of INITIAL_EVENTS) {
-          // id in the body too so the local API upserts (idempotent re-seed).
-          await smartDb.create(
-            "CalendarEvent",
-            { ...ev, id: String(ev.id), uid, createdAt: new Date().toISOString() },
-            String(ev.id)
-          );
-        }
-        rows = await smartDb.getAll("CalendarEvent", uid);
-      }
-
+    smartDb.getAll("CalendarEvent", undefined).then((rows) => {
       if (cancelled) return;
-      setEvents(rows as Event[]);
-    };
+      setEvents((rows as Event[]) || []);
+    }).catch(() => { if (!cancelled) setEvents([]); });
+    return () => { cancelled = true; };
+  }, []);
 
-    hydrate();
-    return () => {
-      cancelled = true;
-    };
-  }, [uid]);
+  // The viewer's own class (student) or their children's classes (parent) —
+  // same real audience-enforcement helper Announcements already uses.
+  const viewerClasses = useMemo<ViewerClass[]>(() => {
+    if (audienceGroup === "student") {
+      const me = students.find((s) =>
+        (user?.email && s.email === user.email) ||
+        (user?.displayName && s.name === user.displayName)
+      ) || students[0];
+      return me ? [{ grade: me.grade, section: me.section }] : [];
+    }
+    if (audienceGroup === "parent") {
+      return parentChildren.map((c) => ({ grade: c.grade, section: c.section }));
+    }
+    return [];
+  }, [audienceGroup, students, parentChildren, user]);
+
+  const visibleEvents = useMemo(
+    () => filterAnnouncementsForViewer(events, role, viewerClasses),
+    [events, role, viewerClasses]
+  );
 
   const next = () => {
     if (view === "month") setCurrentMonth(addMonths(currentMonth, 1));
@@ -169,13 +165,13 @@ export default function CommunicationCalendar() {
   const goToToday = () => setCurrentMonth(new Date());
 
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+    return visibleEvents.filter(event => {
       const matchesCategory = selectedCategory === "All" || event.category === selectedCategory;
-      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            event.location.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [events, selectedCategory, searchQuery]);
+  }, [visibleEvents, selectedCategory, searchQuery]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -204,37 +200,68 @@ export default function CommunicationCalendar() {
       'Exhibition': 'bg-orange-500'
     };
 
-    const id = Math.random().toString(36).substr(2, 9);
-    const eventToAdd: Event = {
+    // Real id assignment from the server (same as every other real entity
+    // this app creates) instead of a client-generated Math.random() id.
+    const record = {
       ...newEvent,
-      id,
-      color: categoryColors[newEvent.category] || 'bg-slate-500'
+      color: categoryColors[newEvent.category] || 'bg-slate-500',
+      status: "Published",
+      source: "Manual" as const,
+      createdBy: uid,
+      createdAt: new Date().toISOString(),
     };
 
-    setEvents([...events, eventToAdd]);
-    setIsAddEventOpen(false);
-    setNewEvent({
-      title: "",
-      description: "",
-      date: format(new Date(), "yyyy-MM-dd"),
-      time: "09:00 AM",
-      location: "",
-      category: "Academic",
-    });
-    toast.success("Event created successfully");
-
-    await smartDb.create(
-      "CalendarEvent",
-      { ...eventToAdd, uid, createdAt: new Date().toISOString() },
-      id
-    );
+    try {
+      const created: any = await smartDb.create("CalendarEvent", record);
+      const eventToAdd: Event = { ...record, id: created?.id ?? `${Date.now()}` };
+      setEvents(prev => [...prev, eventToAdd]);
+      setIsAddEventOpen(false);
+      setNewEvent({
+        title: "",
+        description: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        time: "09:00 AM",
+        location: "",
+        category: "Academic",
+        targetAudience: "All",
+        targetClass: "",
+      });
+      toast.success("Event created successfully");
+    } catch {
+      toast.error("Failed to create event");
+    }
   };
 
   const deleteEvent = async (id: string | number) => {
-    setEvents(events.filter(e => e.id !== id));
+    setEvents(prev => prev.filter(e => e.id !== id));
     setSelectedEvent(null);
     toast.success("Event deleted");
     await smartDb.delete("CalendarEvent", String(id));
+  };
+
+  // "Add to My Calendar" used to be a bare toast with no real action behind
+  // it. Downloads a real .ics file the user can actually import into
+  // Google/Outlook/Apple Calendar — a genuine action matching the label.
+  const downloadIcs = (event: Event) => {
+    const dt = event.date.replace(/-/g, "");
+    const esc = (s: string) => s.replace(/[,;]/g, "\\$&").replace(/\n/g, "\\n");
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Student Diwan//Calendar//EN",
+      "BEGIN:VEVENT",
+      `UID:${event.id}@studentdiwan`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+      `DTSTART;VALUE=DATE:${dt}`,
+      `SUMMARY:${esc(event.title)}`,
+      event.location ? `LOCATION:${esc(event.location)}` : "",
+      event.description ? `DESCRIPTION:${esc(event.description)}` : "",
+      "END:VEVENT", "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${event.title.replace(/\s+/g, "_")}.ics`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("Calendar file downloaded — import it into your calendar app");
   };
 
   return (
@@ -261,7 +288,7 @@ export default function CommunicationCalendar() {
               />
             </div>
             <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-              {!isStudent && (
+              {canManage && (
                 <DialogTrigger asChild>
                   <Button className="gradient-primary h-9 text-xs font-bold">
                     <Plus className="mr-2 h-4 w-4" /> Create Event
@@ -332,12 +359,39 @@ export default function CommunicationCalendar() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider">Description</Label>
-                    <Input 
-                      id="description" 
-                      placeholder="Brief description of the event" 
+                    <Input
+                      id="description"
+                      placeholder="Brief description of the event"
                       value={newEvent.description}
                       onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="audience" className="text-xs font-bold uppercase tracking-wider">Visible To</Label>
+                      <Select
+                        value={newEvent.targetAudience}
+                        onValueChange={(value) => setNewEvent({...newEvent, targetAudience: value})}
+                      >
+                        <SelectTrigger id="audience">
+                          <SelectValue placeholder="Everyone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["All", "Students", "Staff", "Parents"].map(a => (
+                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="targetClass" className="text-xs font-bold uppercase tracking-wider">Class (optional)</Label>
+                      <Input
+                        id="targetClass"
+                        placeholder="e.g. Grade 5-B"
+                        value={newEvent.targetClass}
+                        onChange={(e) => setNewEvent({...newEvent, targetClass: e.target.value})}
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -561,7 +615,7 @@ export default function CommunicationCalendar() {
                       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
                         <CalendarIcon className="h-12 w-12 mb-4" strokeWidth={1} />
                         <p className="text-sm font-medium">No events scheduled for today</p>
-                        {!isStudent && (
+                        {canManage && (
                           <Button variant="outline" size="sm" className="mt-4" onClick={() => setIsAddEventOpen(true)}>
                             <Plus className="h-4 w-4 mr-2" /> Add Event
                           </Button>
@@ -623,10 +677,10 @@ export default function CommunicationCalendar() {
                     <div className="h-2 w-2 rounded-full bg-slate-400" />
                     <span className="text-xs font-bold group-hover:text-primary transition-colors">All Categories</span>
                   </div>
-                  <Badge variant="outline" className="text-[9px] font-bold border-none bg-muted/50">{events.length}</Badge>
+                  <Badge variant="outline" className="text-[9px] font-bold border-none bg-muted/50">{visibleEvents.length}</Badge>
                 </div>
                 {categories.map(cat => {
-                  const count = events.filter(e => e.category === cat).length;
+                  const count = visibleEvents.filter(e => e.category === cat).length;
                   return (
                     <div 
                       key={cat} 
@@ -705,7 +759,7 @@ export default function CommunicationCalendar() {
               </div>
             </div>
             <DialogFooter className="flex sm:justify-between gap-2">
-              {!isStudent ? (
+              {canManage ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -719,10 +773,7 @@ export default function CommunicationCalendar() {
               )}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setSelectedEvent(null)}>Close</Button>
-                <Button className="gradient-primary" onClick={() => {
-                  toast.success("Event added to your personal calendar");
-                  setSelectedEvent(null);
-                }}>Add to My Calendar</Button>
+                <Button className="gradient-primary" onClick={() => selectedEvent && downloadIcs(selectedEvent)}>Add to My Calendar</Button>
               </div>
             </DialogFooter>
           </DialogContent>
