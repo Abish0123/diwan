@@ -61,10 +61,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { smartDb } from "@/lib/localDb";
 import { createHostelFeeInvoice } from "@/hooks/useFees";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudents } from "@/contexts/StudentContext";
+import { ChevronsUpDown } from "lucide-react";
 
 interface Allocation {
   id: string;
@@ -88,6 +92,7 @@ interface Room {
 
 const Allocation = () => {
   const { user } = useAuth();
+  const { students } = useStudents();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roomFilter = searchParams.get("room");
@@ -99,6 +104,12 @@ const Allocation = () => {
   const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(null);
   const [filterHostel, setFilterHostel] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
+
+  const selectStudent = (s: { id: string; name: string }) => {
+    setFormData(p => ({ ...p, studentId: s.id, studentName: s.name }));
+    setStudentPickerOpen(false);
+  };
 
   const [formData, setFormData] = useState<Allocation>({
     id: "",
@@ -207,6 +218,10 @@ const Allocation = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.studentName) {
+      toast.error("Select a student first");
+      return;
+    }
     if (!formData.room) {
       toast.error("Please select a room");
       return;
@@ -646,24 +661,53 @@ const Allocation = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="studentName">Student Name</Label>
-              <Input 
-                id="studentName" 
-                value={formData.studentName} 
-                onChange={(e) => setFormData({...formData, studentName: e.target.value})}
-                placeholder="Enter student name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="studentId">Student ID</Label>
-              <Input 
-                id="studentId" 
-                value={formData.studentId} 
-                onChange={(e) => setFormData({...formData, studentId: e.target.value})}
-                placeholder="STU-1234"
-                required
-              />
+              <Label>Student</Label>
+              <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" role="combobox" aria-expanded={studentPickerOpen}
+                    className="w-full justify-between font-normal">
+                    {formData.studentName ? (
+                      <span className="flex items-center gap-2 truncate">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.studentName}`} />
+                          <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">
+                            {formData.studentName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{formData.studentName}</span>
+                        {!formData.studentId && <span className="text-[10px] text-amber-600">(unlinked)</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">Search and select student…</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Type a name to search…" className="h-9 text-sm" />
+                    <CommandList className="max-h-64">
+                      <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">No student found.</CommandEmpty>
+                      <CommandGroup heading={`${students.length} students`}>
+                        {students.map(s => (
+                          <CommandItem key={s.id} value={s.name} onSelect={() => selectStudent(s)}
+                            className="flex items-center gap-3 py-2 px-3 cursor-pointer">
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`} />
+                              <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">
+                                {(s.name || "").split(" ").map(n => n[0]).join("").slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold truncate">{s.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{s.grade || "—"} {s.section ? `· ${s.section}` : ""}</p>
+                            </div>
+                            {formData.studentId === s.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
