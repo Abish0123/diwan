@@ -2901,6 +2901,22 @@ async function startServer() {
     }
   }
 
+  // Direct lookup by real Student.id — used once a TransportRecord/
+  // enrollment row carries a real studentId (Allocation.tsx's student
+  // picker), skipping the fuzzy name match above entirely.
+  async function resolveStudentById(studentId: string): Promise<{ studentId: string; studentLoginId: string } | null> {
+    if (!studentId) return null;
+    try {
+      const rows = await dbQuery(`SELECT id, data FROM \`students\` WHERE id = ? LIMIT 1`, [studentId]);
+      if (rows.length === 0) return null;
+      const data = JSON.parse(rows[0].data);
+      const studentLoginId = data.admissionNumber || data.rollNumber || studentId;
+      return { studentId, studentLoginId };
+    } catch {
+      return null;
+    }
+  }
+
   async function emitTransportNotif(opts: {
     type: string; category: string; title: string; body?: string;
     // Real affected students for this event (a single student for a
@@ -2908,7 +2924,7 @@ async function startServer() {
     // delay event) — resolved to their real student+parent accounts and
     // notified individually, in addition to the existing admin-tier
     // broadcast below.
-    targets?: Array<{ studentName: string; grade?: string; section?: string }>;
+    targets?: Array<{ studentName: string; grade?: string; section?: string; studentId?: string }>;
   }) {
     const notifId = `tn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const time = new Date().toISOString();
@@ -2941,7 +2957,9 @@ async function startServer() {
     // De-dupe so a whole-bus event only ever notifies each real student once.
     const notifiedStudentIds = new Set<string>();
     for (const t of opts.targets) {
-      const resolved = await resolveRealStudentId(t.studentName, t.grade, t.section);
+      const resolved = t.studentId
+        ? await resolveStudentById(t.studentId)
+        : await resolveRealStudentId(t.studentName, t.grade, t.section);
       if (!resolved || notifiedStudentIds.has(resolved.studentId)) continue;
       notifiedStudentIds.add(resolved.studentId);
 
@@ -2997,7 +3015,7 @@ async function startServer() {
     const bMap = new Map<string, Record<string, unknown>>();
     students.forEach((s, i) => {
       const sid = String(s.id || `s-${i}`);
-      bMap.set(sid, { studentName: s.studentName, grade: s.grade, section: s.section, stopName: s.stopName, mode: s.mode, boardingStatus: "pending" });
+      bMap.set(sid, { studentName: s.studentName, studentId: s.studentId, grade: s.grade, section: s.section, stopName: s.stopName, mode: s.mode, boardingStatus: "pending" });
     });
     boardingState.set(vehicleId, bMap);
 
@@ -3012,7 +3030,7 @@ async function startServer() {
       category: "transport",
       title: `Bus ${vehicleId} has started its trip at ${timeStr}`,
       body: `Driver: ${driverName || "Unknown"} · ${students.length} students on board`,
-      targets: students.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined })),
+      targets: students.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined, studentId: s.studentId as string | undefined })),
     });
 
     res.json({ tripId, studentCount: students.length });
@@ -3035,7 +3053,7 @@ async function startServer() {
       category: "transport",
       title: `Bus ${vehicleId} has completed its trip at ${timeStr}`,
       body: `All students have been dropped safely.`,
-      targets: endedTripStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined })),
+      targets: endedTripStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined, studentId: s.studentId as string | undefined })),
     });
 
     res.json({ status: "ended" });
@@ -3081,7 +3099,7 @@ async function startServer() {
 
     // Parent notification
     const timeStr = new Date(markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-    const boardTarget = [{ studentName: sName, grade: existing["grade"] as string | undefined, section: existing["section"] as string | undefined }];
+    const boardTarget = [{ studentName: sName, grade: existing["grade"] as string | undefined, section: existing["section"] as string | undefined, studentId: existing["studentId"] as string | undefined }];
     if (status === "boarded") {
       await emitTransportNotif({
         type: "student_boarded",
@@ -3205,7 +3223,7 @@ async function startServer() {
         // real roster so every affected parent (not just admins) is notified.
         const incidentVehicleId = req.body.vehicleId;
         const incidentStudents = incidentVehicleId ? await getStudentsForVehicle(incidentVehicleId) : [];
-        const incidentTargets = incidentStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined }));
+        const incidentTargets = incidentStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined, studentId: s.studentId as string | undefined }));
         // SOS: broadcast dedicated socket event + persistent notification
         if (req.body.type === "SOS") {
           io.emit("sos_alert", { ...req.body, id });

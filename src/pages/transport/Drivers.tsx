@@ -1,8 +1,9 @@
 /**
- * Crew Registry — MySQL-backed driver and helper management.
- * Replaces the old localStorage-based Drivers page.
+ * Crew Registry — drivers and helpers are real Staff records (department
+ * "Transport"), not a separate parallel table. Vehicles.tsx's driver/helper
+ * pickers and this page both read/write the same Staff directory.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useStaff } from "@/contexts/StaffContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -18,21 +20,20 @@ import {
   Phone, AlertTriangle, CheckCircle2, Star, Bus, Shield,
 } from "lucide-react";
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || window.location.origin;
-
-interface Driver {
-  id: string; name: string; role: string; phone: string;
-  licenseNumber: string | null; licenseExpiry: string | null;
-  vehicleId: string; vehicleReg: string; experience: number;
-  status: string; rating: number; uid?: string; createdAt?: string;
+interface CrewForm {
+  name: string; role: string; phone: string; email: string;
+  licenseNumber: string; licenseExpiry: string;
+  assignedVehicleReg: string; experienceYears: number;
+  dutyStatus: string; rating: number;
 }
 
-const EMPTY: Omit<Driver, "id" | "uid" | "createdAt"> = {
-  name: "", role: "Driver", phone: "", licenseNumber: "", licenseExpiry: "",
-  vehicleId: "", vehicleReg: "", experience: 0, status: "Available", rating: 4.5,
+const EMPTY: CrewForm = {
+  name: "", role: "Driver", phone: "", email: "",
+  licenseNumber: "", licenseExpiry: "",
+  assignedVehicleReg: "", experienceYears: 0, dutyStatus: "Available", rating: 4.5,
 };
 
-function daysUntil(dateStr: string | null) {
+function daysUntil(dateStr: string | undefined) {
   if (!dateStr) return null;
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
@@ -45,62 +46,69 @@ function licenseColor(days: number | null) {
 }
 
 export default function CrewRegistry() {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { staff, addStaff, updateStaff, deleteStaff, loading } = useStaff();
+  const drivers = staff.filter(s => s.department === "Transport" && (s.role === "Driver" || s.role === "Bus Helper"));
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Driver | null>(null);
-  const [form, setForm] = useState<Omit<Driver, "id" | "uid" | "createdAt">>(EMPTY);
+  const [editing, setEditing] = useState<typeof staff[number] | null>(null);
+  const [form, setForm] = useState<CrewForm>(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/transport/drivers`);
-      if (res.ok) setDrivers(await res.json());
-    } catch { toast.error("Could not load crew data"); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
   const openAdd = () => { setEditing(null); setForm(EMPTY); setOpen(true); };
-  const openEdit = (d: Driver) => { setEditing(d); setForm({ ...EMPTY, ...d }); setOpen(true); };
+  const openEdit = (d: typeof staff[number]) => {
+    setEditing(d);
+    setForm({
+      name: d.name, role: d.role, phone: d.phone || "", email: d.email || "",
+      licenseNumber: d.licenseNumber || "", licenseExpiry: d.licenseExpiry || "",
+      assignedVehicleReg: d.assignedVehicleReg || "", experienceYears: d.experienceYears || 0,
+      dutyStatus: d.dutyStatus || "Available", rating: d.rating ?? 4.5,
+    });
+    setOpen(true);
+  };
 
   const save = async () => {
     if (!form.name.trim()) { toast.error("Name required"); return; }
     if (form.role === "Driver" && !form.licenseNumber) { toast.error("License number required for drivers"); return; }
     setSaving(true);
     try {
-      const url = editing ? `${API_URL}/api/transport/drivers/${editing.id}` : `${API_URL}/api/transport/drivers`;
-      const method = editing ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-      if (!res.ok) throw new Error("Save failed");
-      toast.success(editing ? "Crew member updated" : "Crew member added");
+      const payload = {
+        name: form.name, role: form.role, department: "Transport", status: "Active",
+        email: form.email, phone: form.phone,
+        licenseNumber: form.role === "Driver" ? form.licenseNumber : undefined,
+        licenseExpiry: form.role === "Driver" ? form.licenseExpiry : undefined,
+        assignedVehicleReg: form.assignedVehicleReg, experienceYears: form.experienceYears,
+        dutyStatus: form.dutyStatus, rating: form.rating,
+      };
+      if (editing) {
+        await updateStaff(editing.id, payload);
+        toast.success("Crew member updated");
+      } else {
+        await addStaff(payload);
+        toast.success("Crew member added");
+      }
       setOpen(false);
-      await load();
     } catch { toast.error("Failed to save"); }
     finally { setSaving(false); }
   };
 
-  const remove = async (d: Driver) => {
+  const remove = async (d: typeof staff[number]) => {
     if (!confirm(`Remove ${d.name} from crew?`)) return;
     try {
-      await fetch(`${API_URL}/api/transport/drivers/${d.id}`, { method: "DELETE" });
+      await deleteStaff(d.id);
       toast.success("Crew member removed");
-      await load();
     } catch { toast.error("Failed to remove"); }
   };
 
   const filtered = drivers.filter(d => {
     const q = search.toLowerCase();
-    const matchSearch = !q || d.name.toLowerCase().includes(q) || (d.vehicleReg || "").toLowerCase().includes(q) || d.phone.includes(q);
+    const matchSearch = !q || d.name.toLowerCase().includes(q) || (d.assignedVehicleReg || "").toLowerCase().includes(q) || (d.phone || "").includes(q);
     const matchRole = roleFilter === "all" || d.role === roleFilter;
     return matchSearch && matchRole;
   });
 
-  const onDuty = drivers.filter(d => d.status === "On Duty").length;
+  const onDuty = drivers.filter(d => d.dutyStatus === "On Duty").length;
   const expiringSoon = drivers.filter(d => { const days = daysUntil(d.licenseExpiry); return days !== null && days < 90; }).length;
   const avgRating = drivers.length ? (drivers.reduce((s, d) => s + (d.rating ?? 0), 0) / drivers.length).toFixed(1) : "—";
 
@@ -121,15 +129,12 @@ export default function CrewRegistry() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Crew Registry</h1>
-              <p className="text-sm text-slate-400">Drivers and helpers — license tracking, duty status</p>
+              <p className="text-sm text-slate-400">Drivers and helpers — real Staff records, license tracking, duty status</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={load}><RefreshCw className="h-4 w-4" /></Button>
-            <Button onClick={openAdd} className="gap-2 bg-purple-600 hover:bg-purple-700">
-              <Plus className="h-4 w-4" /> Add Crew Member
-            </Button>
-          </div>
+          <Button onClick={openAdd} className="gap-2 bg-purple-600 hover:bg-purple-700">
+            <Plus className="h-4 w-4" /> Add Crew Member
+          </Button>
         </div>
 
         {/* Stats */}
@@ -162,7 +167,7 @@ export default function CrewRegistry() {
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {["all", "Driver", "Helper"].map(r => <SelectItem key={r} value={r}>{r === "all" ? "All Roles" : r}</SelectItem>)}
+              {["all", "Driver", "Bus Helper"].map(r => <SelectItem key={r} value={r}>{r === "all" ? "All Roles" : r}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -174,6 +179,7 @@ export default function CrewRegistry() {
           <Card className="border-dashed"><CardContent className="py-16 text-center text-slate-400">
             <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
             <p className="font-medium">No crew members found</p>
+            <p className="text-sm mt-1">Add a driver or helper — they'll appear in the Staff Directory too</p>
           </CardContent></Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -198,16 +204,16 @@ export default function CrewRegistry() {
                           </Badge>
                         </div>
                       </div>
-                      <Badge variant="outline" className={cn("text-[10px] border", statusStyles[d.status] ?? "bg-slate-100 text-slate-600")}>
-                        {d.status}
+                      <Badge variant="outline" className={cn("text-[10px] border", statusStyles[d.dutyStatus || "Available"] ?? "bg-slate-100 text-slate-600")}>
+                        {d.dutyStatus || "Available"}
                       </Badge>
                     </div>
 
                     {/* Vehicle */}
-                    {d.vehicleReg && (
+                    {d.assignedVehicleReg && (
                       <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
                         <Bus className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="font-medium">{d.vehicleReg}</span>
+                        <span className="font-medium">{d.assignedVehicleReg}</span>
                       </div>
                     )}
 
@@ -221,7 +227,7 @@ export default function CrewRegistry() {
                       )}
                       <div className="flex items-center gap-2">
                         <Star className="h-3 w-3 shrink-0 text-amber-400" />
-                        <span>Rating: {d.rating}/5 · {d.experience} yrs exp</span>
+                        <span>Rating: {d.rating ?? "—"}/5 · {d.experienceYears ?? 0} yrs exp</span>
                       </div>
                     </div>
 
@@ -278,13 +284,13 @@ export default function CrewRegistry() {
               <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Driver", "Helper"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {["Driver", "Bus Helper"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Status</Label>
-              <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+              <Label className="text-xs">Duty Status</Label>
+              <Select value={form.dutyStatus} onValueChange={v => setForm(p => ({ ...p, dutyStatus: v }))}>
                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["On Duty", "Available", "Off Duty"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -296,12 +302,16 @@ export default function CrewRegistry() {
               <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="mt-1 h-8 text-sm" placeholder="+974-…" />
             </div>
             <div>
+              <Label className="text-xs">Email</Label>
+              <Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="mt-1 h-8 text-sm" placeholder="optional" />
+            </div>
+            <div>
               <Label className="text-xs">Experience (years)</Label>
-              <Input type="number" value={form.experience} onChange={e => setForm(p => ({ ...p, experience: Number(e.target.value) }))} className="mt-1 h-8 text-sm" />
+              <Input type="number" value={form.experienceYears} onChange={e => setForm(p => ({ ...p, experienceYears: Number(e.target.value) }))} className="mt-1 h-8 text-sm" />
             </div>
             <div>
               <Label className="text-xs">Vehicle Reg</Label>
-              <Input value={form.vehicleReg} onChange={e => setForm(p => ({ ...p, vehicleReg: e.target.value }))} className="mt-1 h-8 text-sm" placeholder="KA-01-MT-…" />
+              <Input value={form.assignedVehicleReg} onChange={e => setForm(p => ({ ...p, assignedVehicleReg: e.target.value }))} className="mt-1 h-8 text-sm" placeholder="KA-01-MT-…" />
             </div>
             <div>
               <Label className="text-xs">Rating (1–5)</Label>
@@ -311,11 +321,11 @@ export default function CrewRegistry() {
               <>
                 <div>
                   <Label className="text-xs">License Number *</Label>
-                  <Input value={form.licenseNumber ?? ""} onChange={e => setForm(p => ({ ...p, licenseNumber: e.target.value }))} className="mt-1 h-8 text-sm" />
+                  <Input value={form.licenseNumber} onChange={e => setForm(p => ({ ...p, licenseNumber: e.target.value }))} className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
                   <Label className="text-xs">License Expiry</Label>
-                  <Input type="date" value={form.licenseExpiry ?? ""} onChange={e => setForm(p => ({ ...p, licenseExpiry: e.target.value }))} className="mt-1 h-8 text-sm" />
+                  <Input type="date" value={form.licenseExpiry} onChange={e => setForm(p => ({ ...p, licenseExpiry: e.target.value }))} className="mt-1 h-8 text-sm" />
                 </div>
               </>
             )}

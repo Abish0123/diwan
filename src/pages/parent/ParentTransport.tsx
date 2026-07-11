@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { MapPin, Clock, Bus, Phone, User, AlertTriangle, Users2 } from "lucide-react";
 
 interface TransportRecord {
-  id: string; studentName: string; grade: string; section: string;
+  id: string; studentName: string; studentId?: string; grade: string; section: string;
   route: string; vehicle: string; stopName: string; mode: string;
   status: string; monthlyFee: number; uid?: string; createdAt?: string;
 }
@@ -47,7 +47,12 @@ export default function ParentTransport() {
 
   const allocation = useMemo(() => {
     if (!selected) return null;
-    return records.find(r => norm(r.studentName) === norm(selected.name)) || null;
+    // Real Student ID link first (added once Allocation.tsx started storing
+    // studentId); name match stays only as a fallback for allocation rows
+    // created before that field existed.
+    return records.find(r => r.studentId === selected.id)
+      || records.find(r => !r.studentId && norm(r.studentName) === norm(selected.name))
+      || null;
   }, [records, selected]);
 
   const route = useMemo(() => {

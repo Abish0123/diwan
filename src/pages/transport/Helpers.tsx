@@ -1,4 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+/**
+ * Bus Helpers — Helper-role slice of the same real Staff directory the
+ * Crew Registry (Drivers.tsx) manages. No separate table.
+ */
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useStaff } from "@/contexts/StaffContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -14,18 +19,11 @@ import {
   Phone, CheckCircle2, Bus, AlertTriangle,
 } from "lucide-react";
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || window.location.origin;
-
-interface Helper {
-  id: string; name: string; role: string; employeeId: string;
-  phone: string; vehicleReg: string; vehicleId: string;
-  status: string; uid?: string; createdAt?: string;
+interface HelperForm {
+  name: string; phone: string; email: string; assignedVehicleReg: string; dutyStatus: string;
 }
 
-const EMPTY: Omit<Helper, "id" | "uid" | "createdAt"> = {
-  name: "", role: "Helper", employeeId: "", phone: "",
-  vehicleReg: "", vehicleId: "", status: "Available",
-};
+const EMPTY: HelperForm = { name: "", phone: "", email: "", assignedVehicleReg: "", dutyStatus: "Available" };
 
 const statusStyles: Record<string, string> = {
   "On Duty":    "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -34,65 +32,63 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function HelpersPage() {
-  const [helpers, setHelpers] = useState<Helper[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { staff, addStaff, updateStaff, deleteStaff, loading } = useStaff();
+  const helpers = staff.filter(s => s.department === "Transport" && s.role === "Bus Helper");
+
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Helper | null>(null);
-  const [form, setForm] = useState<Omit<Helper, "id" | "uid" | "createdAt">>(EMPTY);
+  const [editing, setEditing] = useState<typeof staff[number] | null>(null);
+  const [form, setForm] = useState<HelperForm>(EMPTY);
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/transport/drivers`);
-      if (res.ok) {
-        const all = await res.json();
-        setHelpers((all as Helper[]).filter((d) => d.role === "Helper"));
-      }
-    } catch { toast.error("Could not load helpers"); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const openAdd  = () => { setEditing(null);  setForm(EMPTY); setOpen(true); };
-  const openEdit = (h: Helper) => { setEditing(h); setForm({ ...EMPTY, ...h }); setOpen(true); };
+  const openAdd  = () => { setEditing(null); setForm(EMPTY); setOpen(true); };
+  const openEdit = (h: typeof staff[number]) => {
+    setEditing(h);
+    setForm({
+      name: h.name, phone: h.phone || "", email: h.email || "",
+      assignedVehicleReg: h.assignedVehicleReg || "", dutyStatus: h.dutyStatus || "Available",
+    });
+    setOpen(true);
+  };
 
   const save = async () => {
     if (!form.name.trim()) { toast.error("Name required"); return; }
     setSaving(true);
     try {
-      const payload = { ...form, role: "Helper" };
-      const url    = editing ? `${API_URL}/api/transport/drivers/${editing.id}` : `${API_URL}/api/transport/drivers`;
-      const method = editing ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error("Save failed");
-      toast.success(editing ? "Helper updated" : "Helper added");
+      const payload = {
+        name: form.name, role: "Bus Helper", department: "Transport", status: "Active",
+        email: form.email, phone: form.phone,
+        assignedVehicleReg: form.assignedVehicleReg, dutyStatus: form.dutyStatus,
+      };
+      if (editing) {
+        await updateStaff(editing.id, payload);
+        toast.success("Helper updated");
+      } else {
+        await addStaff(payload);
+        toast.success("Helper added");
+      }
       setOpen(false);
-      await load();
     } catch { toast.error("Failed to save"); }
     finally { setSaving(false); }
   };
 
-  const remove = async (h: Helper) => {
+  const remove = async (h: typeof staff[number]) => {
     if (!confirm(`Remove ${h.name}?`)) return;
     try {
-      await fetch(`${API_URL}/api/transport/drivers/${h.id}`, { method: "DELETE" });
+      await deleteStaff(h.id);
       toast.success("Helper removed");
-      await load();
     } catch { toast.error("Failed to remove"); }
   };
 
   const filtered = helpers.filter(h => {
     const q = search.toLowerCase();
-    return !q || h.name.toLowerCase().includes(q) || h.vehicleReg.toLowerCase().includes(q) || h.phone.includes(q) || (h.employeeId || "").toLowerCase().includes(q);
+    return !q || h.name.toLowerCase().includes(q) || (h.assignedVehicleReg || "").toLowerCase().includes(q) || (h.phone || "").includes(q);
   });
 
-  const onDuty    = helpers.filter(h => h.status === "On Duty").length;
-  const available = helpers.filter(h => h.status === "Available").length;
+  const onDuty    = helpers.filter(h => h.dutyStatus === "On Duty").length;
+  const available = helpers.filter(h => h.dutyStatus === "Available" || !h.dutyStatus).length;
 
-  const set = (key: keyof typeof form, val: string) => setForm(p => ({ ...p, [key]: val }));
+  const set = (key: keyof HelperForm, val: string) => setForm(p => ({ ...p, [key]: val }));
 
   return (
     <DashboardLayout>
@@ -106,16 +102,13 @@ export default function HelpersPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Bus Helpers</h1>
               <p className="text-sm text-slate-400">
-                Manage helpers assigned to buses — attendance, student safety
+                Real Staff records (role: Bus Helper) — attendance, student safety
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={load}><RefreshCw className="h-4 w-4" /></Button>
-            <Button onClick={openAdd} className="gap-2 bg-purple-600 hover:bg-purple-700">
-              <Plus className="h-4 w-4" /> Add Helper
-            </Button>
-          </div>
+          <Button onClick={openAdd} className="gap-2 bg-purple-600 hover:bg-purple-700">
+            <Plus className="h-4 w-4" /> Add Helper
+          </Button>
         </div>
 
         {/* Stats */}
@@ -170,19 +163,18 @@ export default function HelpersPage() {
                       </div>
                       <div>
                         <p className="font-bold text-slate-800">{h.name}</p>
-                        {h.employeeId && <p className="text-xs text-slate-400 mt-0.5">EMP: {h.employeeId}</p>}
                       </div>
                     </div>
-                    <Badge variant="outline" className={cn("text-[10px] border", statusStyles[h.status] ?? "bg-slate-100 text-slate-600")}>
-                      {h.status}
+                    <Badge variant="outline" className={cn("text-[10px] border", statusStyles[h.dutyStatus || "Available"] ?? "bg-slate-100 text-slate-600")}>
+                      {h.dutyStatus || "Available"}
                     </Badge>
                   </div>
 
                   {/* Vehicle */}
-                  {h.vehicleReg && (
+                  {h.assignedVehicleReg && (
                     <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg px-3 py-2">
                       <Bus className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span className="font-medium">{h.vehicleReg}</span>
+                      <span className="font-medium">{h.assignedVehicleReg}</span>
                       <span className="text-xs text-slate-400 ml-1">assigned bus</span>
                     </div>
                   )}
@@ -230,12 +222,8 @@ export default function HelpersPage() {
               <Input value={form.name} onChange={e => set("name", e.target.value)} className="mt-1 h-8 text-sm" placeholder="e.g. Fatima Noor" />
             </div>
             <div>
-              <Label className="text-xs">Employee ID</Label>
-              <Input value={form.employeeId} onChange={e => set("employeeId", e.target.value)} className="mt-1 h-8 text-sm" placeholder="EMP-001" />
-            </div>
-            <div>
-              <Label className="text-xs">Status</Label>
-              <Select value={form.status} onValueChange={v => set("status", v)}>
+              <Label className="text-xs">Duty Status</Label>
+              <Select value={form.dutyStatus} onValueChange={v => set("dutyStatus", v)}>
                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["On Duty", "Available", "Off Duty"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -247,8 +235,12 @@ export default function HelpersPage() {
               <Input value={form.phone} onChange={e => set("phone", e.target.value)} className="mt-1 h-8 text-sm" placeholder="+91 9876543210" />
             </div>
             <div>
+              <Label className="text-xs">Email</Label>
+              <Input value={form.email} onChange={e => set("email", e.target.value)} className="mt-1 h-8 text-sm" placeholder="optional" />
+            </div>
+            <div>
               <Label className="text-xs">Assigned Vehicle Reg</Label>
-              <Input value={form.vehicleReg} onChange={e => set("vehicleReg", e.target.value)} className="mt-1 h-8 text-sm" placeholder="KA-01-MT-1234" />
+              <Input value={form.assignedVehicleReg} onChange={e => set("assignedVehicleReg", e.target.value)} className="mt-1 h-8 text-sm" placeholder="KA-01-MT-1234" />
             </div>
           </div>
           <DialogFooter>

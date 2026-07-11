@@ -11,18 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
 import { createTransportFeeInvoice } from "@/hooks/useFees";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Users, Plus, Search, Pencil, Trash2, RefreshCw,
-  Bus, MapPin, CheckCircle2, Clock, AlertTriangle, Shield,
+  Bus, MapPin, CheckCircle2, Clock, AlertTriangle, Shield, ChevronsUpDown,
 } from "lucide-react";
 
 interface Alloc {
-  id: string; studentName: string; grade: string; section: string;
+  id: string; studentName: string; studentId?: string; grade: string; section: string;
   route: string; vehicle: string; stopName: string; mode: string;
   status: string; monthlyFee: number; uid?: string; createdAt?: string;
   dropAddress?: string; dropLat?: number; dropLng?: number;
@@ -31,12 +35,13 @@ interface Route { id: string; name: string; vehicle: string; status: string; }
 interface Vehicle { id: string; regNumber: string; capacity: number; }
 
 const EMPTY: Omit<Alloc, "id" | "uid" | "createdAt"> = {
-  studentName: "", grade: "", section: "", route: "", vehicle: "",
+  studentName: "", studentId: "", grade: "", section: "", route: "", vehicle: "",
   stopName: "", mode: "Both", status: "Active", monthlyFee: 0,
 };
 
 export default function StudentManifest() {
   const { user } = useAuth();
+  const { students } = useStudents();
   const [allocs, setAllocs] = useState<Alloc[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -47,6 +52,12 @@ export default function StudentManifest() {
   const [editing, setEditing] = useState<Alloc | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [studentPickerOpen, setStudentPickerOpen] = useState(false);
+
+  const selectStudent = (s: { id: string; name: string; grade?: string; section?: string }) => {
+    setForm(p => ({ ...p, studentId: s.id, studentName: s.name, grade: s.grade || p.grade, section: s.section || p.section }));
+    setStudentPickerOpen(false);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -339,8 +350,53 @@ export default function StudentManifest() {
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="col-span-2">
-              <Label className="text-xs">Student Name *</Label>
-              <Input value={form.studentName} onChange={e => setForm(p => ({ ...p, studentName: e.target.value }))} className="mt-1 h-8 text-sm" placeholder="Full name" />
+              <Label className="text-xs">Student *</Label>
+              <Popover open={studentPickerOpen} onOpenChange={setStudentPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={studentPickerOpen}
+                    className="w-full mt-1 h-8 justify-between text-sm font-normal">
+                    {form.studentName ? (
+                      <span className="flex items-center gap-2 truncate">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${form.studentName}`} />
+                          <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">
+                            {form.studentName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{form.studentName}</span>
+                        {!form.studentId && <span className="text-[10px] text-amber-600">(unlinked)</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">Search and select student…</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[380px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Type a name to search…" className="h-9 text-sm" />
+                    <CommandList className="max-h-64">
+                      <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">No student found.</CommandEmpty>
+                      <CommandGroup heading={`${students.length} students`}>
+                        {students.map(s => (
+                          <CommandItem key={s.id} value={s.name} onSelect={() => selectStudent(s)}
+                            className="flex items-center gap-3 py-2 px-3 cursor-pointer">
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${s.name}`} />
+                              <AvatarFallback className="text-[8px] font-bold bg-primary/10 text-primary">
+                                {(s.name || "").split(" ").map(n => n[0]).join("").slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold truncate">{s.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{s.grade || "—"} {s.section ? `· ${s.section}` : ""}</p>
+                            </div>
+                            {form.studentId === s.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">Grade</Label>

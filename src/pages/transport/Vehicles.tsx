@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { useStaff } from "@/contexts/StaffContext";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -42,10 +43,9 @@ function daysUntil(dateStr: string) {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
 
-interface CrewMember { id: string; name: string; role: string; status: string; }
-
 export default function FleetControl() {
   const { user } = useAuth();
+  const { staff: crewList } = useStaff();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [fleetGPS, setFleetGPS] = useState<Record<string, FleetGPS>>({});
   const [search, setSearch] = useState("");
@@ -55,21 +55,12 @@ export default function FleetControl() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [crewList, setCrewList] = useState<CrewMember[]>([]);
   const [maintenanceVehicle, setMaintenanceVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     if (!user) return;
     return smartDb.watch("TransportVehicle", user.uid, d => setVehicles(d as Vehicle[]));
   }, [user]);
-
-  // Load onboarded drivers and helpers
-  useEffect(() => {
-    fetch(`${API_URL}/api/transport/drivers`)
-      .then(r => r.ok ? r.json() : [])
-      .then((data: CrewMember[]) => setCrewList(data))
-      .catch(() => {});
-  }, []);
 
   const refreshGPS = useCallback(async () => {
     setIsRefreshing(true);
@@ -328,19 +319,19 @@ export default function FleetControl() {
                 <SelectContent className="max-h-48 overflow-y-auto">
                   <SelectItem value="__none__"><span className="text-slate-400">— No driver —</span></SelectItem>
                   {crewList
-                    .filter(c => c.role === "Driver")
+                    .filter(c => c.department === "Transport" && c.role === "Driver")
                     .map(c => (
                       <SelectItem key={c.id} value={c.name}>
                         <span className="flex items-center gap-2">
                           {c.name}
-                          {c.status !== "Available" && (
-                            <span className="text-[10px] text-amber-500 ml-1">({c.status})</span>
+                          {c.dutyStatus && c.dutyStatus !== "Available" && (
+                            <span className="text-[10px] text-amber-500 ml-1">({c.dutyStatus})</span>
                           )}
                         </span>
                       </SelectItem>
                     ))
                   }
-                  {crewList.filter(c => c.role === "Driver").length === 0 && (
+                  {crewList.filter(c => c.department === "Transport" && c.role === "Driver").length === 0 && (
                     <div className="px-3 py-2 text-xs text-slate-400">No drivers onboarded yet</div>
                   )}
                 </SelectContent>
@@ -357,19 +348,19 @@ export default function FleetControl() {
                 <SelectContent className="max-h-48 overflow-y-auto">
                   <SelectItem value="__none__"><span className="text-slate-400">— None —</span></SelectItem>
                   {crewList
-                    .filter(c => c.role === "Helper")
+                    .filter(c => c.department === "Transport" && c.role === "Bus Helper")
                     .map(c => (
                       <SelectItem key={c.id} value={c.name}>
                         <span className="flex items-center gap-2">
                           {c.name}
-                          {c.status !== "Available" && (
-                            <span className="text-[10px] text-amber-500 ml-1">({c.status})</span>
+                          {c.dutyStatus && c.dutyStatus !== "Available" && (
+                            <span className="text-[10px] text-amber-500 ml-1">({c.dutyStatus})</span>
                           )}
                         </span>
                       </SelectItem>
                     ))
                   }
-                  {crewList.filter(c => c.role === "Helper").length === 0 && (
+                  {crewList.filter(c => c.department === "Transport" && c.role === "Bus Helper").length === 0 && (
                     <div className="px-3 py-2 text-xs text-slate-400">No helpers onboarded yet</div>
                   )}
                 </SelectContent>

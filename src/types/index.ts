@@ -184,6 +184,17 @@ export interface Staff {
     seconds: number;
     nanoseconds: number;
   } | string;
+  // Transport crew fields — only meaningful when role is "Driver"/"Bus
+  // Helper" (department "Transport"). Drivers/helpers used to live in a
+  // separate transport_drivers table with no link to the real Staff
+  // directory; they are now real Staff records, and these are the fields
+  // that table had no Staff equivalent for.
+  licenseNumber?: string;
+  licenseExpiry?: string;
+  dutyStatus?: string;
+  rating?: number;
+  experienceYears?: number;
+  assignedVehicleReg?: string;
 }
 
 export type LeaveStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
