@@ -2282,7 +2282,25 @@ export default function Library() {
                       <button
                         onClick={async () => {
                           try {
-                            await smartDb.update("LibraryFine", f.id, { status: "paid", paidAt: new Date().toISOString() });
+                            const now = new Date().toISOString();
+                            await smartDb.update("LibraryFine", f.id, { status: "paid", paidAt: now });
+                            // "Mark Paid" only ever flipped the fine's own
+                            // status — the collected money never touched
+                            // Finance's books. Same real revenue ledger
+                            // every other payment flow in the app writes to
+                            // (fee payments, transport, cafeteria top-ups).
+                            await smartDb.create("StudentRevenue", {
+                              student: f.studentName,
+                              studentId: f.studentId,
+                              fineId: f.id,
+                              amount: f.amount,
+                              category: "Library Fine",
+                              date: now.split("T")[0],
+                              paymentMethod: "Cash",
+                              status: "Paid",
+                              uid: user?.uid || "local-user",
+                              createdAt: now,
+                            }).catch(() => {});
                             toast.success(`Fine marked paid — ${f.studentName}`);
                             loadFines();
                           } catch { toast.error("Failed to update the fine. Please try again."); }

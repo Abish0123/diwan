@@ -66,7 +66,7 @@ export interface Invoice {
   uid: string;
   createdAt: string | Date;
   // Absent == regular tuition invoice (existing behaviour, unchanged).
-  feeType?: 'Tuition' | 'Admission' | 'SchoolFee' | 'Transport' | 'Hostel';
+  feeType?: 'Tuition' | 'Admission' | 'SchoolFee' | 'Transport' | 'Hostel' | 'Exam';
   // Set only on Admission/SchoolFee invoices — ties the invoice back to the
   // Admissions Lead it was generated for, so paying it in full can advance
   // that lead's pipeline stage automatically. See advanceLeadOnFeeInvoicePaid.
@@ -339,6 +339,50 @@ export async function createTransportFeeInvoice(input: {
     status: 'Unpaid' as const,
     penalty: 0,
     feeType: 'Transport' as const,
+    uid: input.uid,
+    createdAt: new Date().toISOString(),
+  };
+  const created: any = await smartDb.create("Invoice", record);
+  window.dispatchEvent(new Event("fees-updated"));
+  return { ...record, id: created?.id ?? invoiceNumber } as Invoice;
+}
+
+/**
+ * Auto-generate an Exam fee invoice when a student is given a real seat
+ * allocation for an exam that has a fee attached. Like Transport, this
+ * reads a real per-exam fee already set on the exam record (ExamRecord.
+ * examFee) rather than a central FeeStructure lookup — exam fees vary per
+ * exam, not by a fixed structure. Returns null (no fabrication) if the exam
+ * has no fee set (the common case — most exams are free).
+ */
+export async function createExamFeeInvoice(input: {
+  uid: string;
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  examFee: number;
+  examName?: string;
+  dueInDays?: number;
+}): Promise<Invoice | null> {
+  if (!input.examFee || input.examFee <= 0) return null;
+
+  const invoiceNumber = await nextInvoiceNumber(input.uid);
+  const dueDate = new Date(Date.now() + (input.dueInDays ?? 7) * 24 * 60 * 60 * 1000).toISOString();
+  const record = {
+    invoiceNumber,
+    studentId: input.studentId,
+    studentName: input.studentName,
+    classId: input.classId,
+    className: input.className,
+    category: input.examName ? `Exam Fee — ${input.examName}` : "Exam Fee",
+    amount: input.examFee,
+    paidAmount: 0,
+    dueAmount: input.examFee,
+    dueDate,
+    status: 'Unpaid' as const,
+    penalty: 0,
+    feeType: 'Exam' as const,
     uid: input.uid,
     createdAt: new Date().toISOString(),
   };

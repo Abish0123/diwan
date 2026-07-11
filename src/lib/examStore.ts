@@ -85,6 +85,13 @@ export interface ExamRecord {
   passingMarks: number;      // passing threshold
   publishedToTeachers: boolean; // visible to teachers for mark entry
   publishedToStudents: boolean; // visible to students/parents (hall ticket + schedule)
+
+  // Real per-exam fee (QAR) — most exams are free (0/unset). When set, a
+  // real Exam Fee Invoice is generated per student at seat allocation time
+  // (see createExamFeeInvoice in useFees.ts, called from
+  // exams/RoomAllocation.tsx), the same way Transport generates an invoice
+  // from a real per-student monthlyFee.
+  examFee?: number;
 }
 
 // The grade plans for an exam — for legacy single-grade exams (no gradePlans

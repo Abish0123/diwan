@@ -266,7 +266,7 @@ const emptyForm = (): Exam => ({ id: "", name: "", type: "Unit Test", grade: "",
   // Allocation RBAC, so hiding the exam itself behind a manual publish step
   // just meant admins forgot it and assigned teachers never got marks-entry
   // access even after marking the exam Completed.
-  mode: "Offline", venue: "", room: "", invigilator: "", durationMin: 120, maxMarks: 100, passingMarks: 40, publishedToTeachers: true, publishedToStudents: false });
+  mode: "Offline", venue: "", room: "", invigilator: "", durationMin: 120, maxMarks: 100, passingMarks: 40, publishedToTeachers: true, publishedToStudents: false, examFee: 0 });
 
 // One grade's in-progress edit state inside the Create/Edit Exam dialog —
 // its own sections, roll counts and subject-wise schedule.
@@ -1372,6 +1372,11 @@ const Exams = () => {
                 <div>
                   <Label className="text-xs font-semibold text-gray-600 mb-1 block">Passing Marks</Label>
                   <Input type="number" min={0} value={form.passingMarks || ""} onChange={e => setForm(f => ({ ...f, passingMarks: Number(e.target.value) }))} placeholder="40" className="border-gray-200" />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Fee (QAR) <span className="text-gray-300 font-normal">(optional)</span></Label>
+                  <Input type="number" min={0} value={form.examFee || ""} onChange={e => setForm(f => ({ ...f, examFee: Number(e.target.value) }))} placeholder="0 — free" className="border-gray-200" />
+                  <p className="text-[10px] text-gray-400 mt-1">A real invoice is generated per student when seats are allocated in Room Allocation.</p>
                 </div>
               </div>
             </div>

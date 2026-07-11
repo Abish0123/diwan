@@ -3,6 +3,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useExams, examGrades, getGradePlans } from "@/lib/examStore";
 import { useGrades } from "@/contexts/CurriculumContext";
 import { smartDb } from "@/lib/localDb";
+import { useAuth } from "@/hooks/useAuth";
+import { createExamFeeInvoice } from "@/hooks/useFees";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -60,6 +62,7 @@ function fmtDay(iso: string): string {
 export function RoomAllocationContent({ examId, onExamIdChange }: { examId: string; onExamIdChange: (id: string) => void }) {
   const exams = useExams();
   const allGrades = useGrades();
+  const { user } = useAuth();
   const selectedId = examId;
   const setSelectedId = onExamIdChange;
   // Which of the exam's OWN grades (its gradePlans) are included in this
@@ -173,7 +176,7 @@ export function RoomAllocationContent({ examId, onExamIdChange }: { examId: stri
   }
   function removeRoom(id: string) { set("rooms", cfg.rooms.filter(r => r.id !== id)); }
 
-  function handleAllocate() {
+  async function handleAllocate() {
     if (!selectedId) { toast.error("Select an exam first"); return; }
     if (students.length === 0) { toast.error("No students found for this exam"); return; }
     const result = allocateSeats(students, cfg);
@@ -185,6 +188,29 @@ export function RoomAllocationContent({ examId, onExamIdChange }: { examId: stri
       toast.warning(`${result.assignments.length} seated · ${result.unallocated.length} could not be placed — add rooms or raise capacity`);
     } else {
       toast.success(`Allocated ${result.assignments.length} students across ${result.rooms.length} rooms`);
+    }
+
+    // Real Exam Fee invoice per seated student — only when this exam has a
+    // real fee set (most exams are free, examFee 0/unset). Guarded against
+    // re-allocating the same exam creating duplicate invoices by checking
+    // for an existing invoice under this exam's own category first.
+    if (selected?.examFee && selected.examFee > 0 && user && result.assignments.length > 0) {
+      try {
+        const category = `Exam Fee — ${selected.name}`;
+        const existing: any[] = await smartDb.getAll("Invoice");
+        const alreadyInvoiced = new Set(existing.filter(inv => inv.category === category).map(inv => inv.studentId));
+        const toInvoice = result.assignments.filter(a => !alreadyInvoiced.has(a.studentId));
+        let created = 0;
+        for (const a of toInvoice) {
+          const inv = await createExamFeeInvoice({
+            uid: user.uid, studentId: a.studentId, studentName: a.name,
+            classId: a.grade, className: `${a.grade}${a.section ? "-" + a.section : ""}`,
+            examFee: selected.examFee, examName: selected.name,
+          });
+          if (inv) created++;
+        }
+        if (created > 0) toast.success(`${created} Exam Fee invoice${created === 1 ? "" : "s"} generated (QAR ${selected.examFee} each)`);
+      } catch { /* non-fatal — seating already saved either way */ }
     }
   }
 
