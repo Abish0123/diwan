@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
+import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
 import {
   BarChart3, UserCheck, FileText, TrendingUp, Shield, MessageSquare,
@@ -19,6 +20,66 @@ export default function Reports() {
   const { assignment, classStudents } = useTeacherClass();
   const [preview, setPreview] = useState<string | null>(null);
 
+  // Real per-student metrics — previously attendance defaulted to a
+  // hardcoded 92%, "progress" was an arbitrary index-based formula
+  // unrelated to any real mark, and Behavior/Communication always showed a
+  // static "OK" for every student regardless of real records.
+  const [attendancePct, setAttendancePct] = useState<Record<string, number | null>>({});
+  const [progressPct, setProgressPct] = useState<Record<string, number | null>>({});
+  const [incidentCount, setIncidentCount] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (classStudents.length === 0) return;
+    const ids = new Set(classStudents.map(s => s.id));
+
+    smartDb.getAll("attendance", undefined).then((rows) => {
+      const byStudent = new Map<string, { present: number; late: number; total: number }>();
+      (rows as { studentId?: string; status?: string }[]).forEach(r => {
+        if (!r.studentId || !ids.has(r.studentId)) return;
+        const cur = byStudent.get(r.studentId) || { present: 0, late: 0, total: 0 };
+        cur.total++;
+        if (r.status === "Present") cur.present++;
+        if (r.status === "Late") cur.late++;
+        byStudent.set(r.studentId, cur);
+      });
+      const pct: Record<string, number | null> = {};
+      ids.forEach(id => {
+        const s = byStudent.get(id);
+        pct[id] = s && s.total > 0 ? Math.round(((s.present + s.late * 0.5) / s.total) * 100) : null;
+      });
+      setAttendancePct(pct);
+    }).catch(() => {});
+
+    smartDb.getAll("ExamMark", "").then((rows) => {
+      const sums = new Map<string, { total: number; count: number }>();
+      (rows as Record<string, unknown>[]).forEach(row => {
+        Object.entries(row).forEach(([key, val]) => {
+          if (key === "id" || typeof val !== "object" || val === null) return;
+          Object.entries(val as Record<string, unknown>).forEach(([studentId, mark]) => {
+            if (!ids.has(studentId) || typeof mark !== "number") return;
+            const cur = sums.get(studentId) || { total: 0, count: 0 };
+            cur.total += mark; cur.count++;
+            sums.set(studentId, cur);
+          });
+        });
+      });
+      const pct: Record<string, number | null> = {};
+      ids.forEach(id => {
+        const s = sums.get(id);
+        pct[id] = s && s.count > 0 ? Math.round(s.total / s.count) : null;
+      });
+      setProgressPct(pct);
+    }).catch(() => {});
+
+    smartDb.getAll("BehaviorIncident", undefined).then((rows) => {
+      const counts: Record<string, number> = {};
+      (rows as { studentId?: string }[]).forEach(r => {
+        if (!r.studentId || !ids.has(r.studentId)) return;
+        counts[r.studentId] = (counts[r.studentId] || 0) + 1;
+      });
+      setIncidentCount(counts);
+    }).catch(() => {});
+  }, [classStudents.map(s => s.id).join(",")]);
+
   const generate = (key: string, action: "preview" | "download" | "print") => {
     const report = REPORTS.find(r => r.key === key)!;
     if (action === "preview") { setPreview(key); return; }
@@ -27,7 +88,15 @@ export default function Reports() {
       setTimeout(() => window.print(), 300);
       return;
     }
-    // download: produce a CSV summary
+    // download: produce a CSV summary, with the same real per-student
+    // metric shown in the preview table (not a fabricated value).
+    const metricLabel = key === "attendance" ? "Attendance %" : key === "progress" ? "Avg Score %" : key === "behavior" ? "Incidents" : "Status";
+    const metricFor = (id: string) => {
+      if (key === "attendance") return attendancePct[id] != null ? String(attendancePct[id]) : "No records";
+      if (key === "progress") return progressPct[id] != null ? String(progressPct[id]) : "No marks yet";
+      if (key === "behavior") return String(incidentCount[id] || 0);
+      return "Not tracked";
+    };
     const rows = [
       ["Report", report.title],
       ["Class", assignment.className],
@@ -35,8 +104,8 @@ export default function Reports() {
       ["Generated", new Date().toLocaleString()],
       ["Total Students", String(classStudents.length)],
       [],
-      ["Roll", "Student ID", "Student Name"],
-      ...classStudents.map((s, i) => [String(i + 1), s.id, s.name || ""]),
+      ["Roll", "Student ID", "Student Name", metricLabel],
+      ...classStudents.map((s, i) => [String(i + 1), s.id, s.name || "", metricFor(s.id)]),
     ];
     const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -97,23 +166,34 @@ export default function Reports() {
                 <thead>
                   <tr className="text-left text-xs font-semibold text-slate-400 uppercase border-b border-slate-100">
                     <th className="py-2 pr-4">#</th><th className="py-2 pr-4">Student</th><th className="py-2 pr-4">ID</th>
-                    <th className="py-2 text-right">{previewReport.key === "attendance" ? "Attendance" : previewReport.key === "progress" ? "Avg Score" : "Status"}</th>
+                    <th className="py-2 text-right">{previewReport.key === "attendance" ? "Attendance" : previewReport.key === "progress" ? "Avg Score" : previewReport.key === "behavior" ? "Incidents" : "Status"}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {classStudents.map((s, i) => (
-                    <tr key={s.id} className="border-b border-slate-50">
-                      <td className="py-2 pr-4 text-slate-400 font-mono text-xs">{i + 1}</td>
-                      <td className="py-2 pr-4 font-medium text-slate-700">{s.name}</td>
-                      <td className="py-2 pr-4 text-slate-400 text-xs">{s.id}</td>
-                      <td className="py-2 text-right font-semibold text-slate-700">
-                        {previewReport.key === "attendance" ? `${(s as any).attendance ?? 92}%`
-                          : previewReport.key === "progress" ? `${65 + (i * 7) % 30}%`
-                          : "OK"}
-                      </td>
-                    </tr>
-                  ))}
+                  {classStudents.map((s, i) => {
+                    const att = attendancePct[s.id];
+                    const prog = progressPct[s.id];
+                    const incidents = incidentCount[s.id] || 0;
+                    return (
+                      <tr key={s.id} className="border-b border-slate-50">
+                        <td className="py-2 pr-4 text-slate-400 font-mono text-xs">{i + 1}</td>
+                        <td className="py-2 pr-4 font-medium text-slate-700">{s.name}</td>
+                        <td className="py-2 pr-4 text-slate-400 text-xs">{s.id}</td>
+                        <td className="py-2 text-right font-semibold text-slate-700">
+                          {previewReport.key === "attendance" ? (att != null ? `${att}%` : <span className="text-slate-300 font-normal">No records</span>)
+                            : previewReport.key === "progress" ? (prog != null ? `${prog}%` : <span className="text-slate-300 font-normal">No marks yet</span>)
+                            : previewReport.key === "behavior" ? (incidents > 0 ? <span className="text-amber-600">{incidents} incident{incidents === 1 ? "" : "s"}</span> : <span className="text-emerald-600">Clean</span>)
+                            : <span className="text-slate-300 font-normal">Not tracked</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {classStudents.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400">No students in this class</td></tr>}
+                  {previewReport.key === "communication" && classStudents.length > 0 && (
+                    <tr><td colSpan={4} className="py-4 text-center text-xs text-slate-400">
+                      No parent-communication log exists yet in this app — this column is honestly unavailable rather than a placeholder value.
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
             </div>

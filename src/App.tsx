@@ -191,6 +191,9 @@ const ParentSettings         = lazy(() => import("./pages/parent/ParentSettings.
 
 // AI / Reports / Misc
 const AICenter               = lazy(() => import("./pages/ai-center/AICenter.tsx"));
+const SmartReports           = lazy(() => import("./pages/ai-center/SmartReports.tsx"));
+const ExecutiveInsights      = lazy(() => import("./pages/ai-center/ExecutiveInsights.tsx"));
+const ReportsHub             = lazy(() => import("./pages/reports/ReportsHub.tsx"));
 const KHDAReport             = lazy(() => import("./pages/reports/KHDAReport.tsx"));
 const BranchManagement       = lazy(() => import("./pages/branches/BranchManagement.tsx"));
 const Cafeteria              = lazy(() => import("./pages/cafeteria/Cafeteria.tsx"));
@@ -550,6 +553,9 @@ const App = () => (
 
                                             {/* AI / Analytics */}
                                             <Route path="/ai-center" element={<AICenter />} />
+                                            <Route path="/ai-center/smart-reports" element={<SmartReports />} />
+                                            <Route path="/ai-center/executive-insights" element={<ExecutiveInsights />} />
+                                            <Route path="/reports" element={<ReportsHub />} />
                                             <Route path="/analytics" element={<AnalyticsHome />} />
                                             <Route path="/analytics/academic" element={<AcademicReports />} />
                                             <Route path="/analytics/finance" element={<FinanceReports />} />
