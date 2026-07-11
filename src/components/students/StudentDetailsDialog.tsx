@@ -117,6 +117,10 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
   const [examResults, setExamResults] = useState<Record<string, unknown>[]>([]);
   const [behaviorIncidents, setBehaviorIncidents] = useState<Record<string, unknown>[]>([]);
   const [documents, setDocuments] = useState<Record<string, unknown>[]>([]);
+  // Hostel used to be a one-way link — Hostel Allocation knew the student,
+  // but nothing on the student's own profile showed it. Real Active/Expiring
+  // allocation for this student, or null if none.
+  const [hostelAllocation, setHostelAllocation] = useState<Record<string, unknown> | null>(null);
   const [newResult, setNewResult] = useState({ subject: "", marks: "", total: "100" });
   const [isUploading, setIsUploading] = useState(false);
   const [reportingIncident, setReportingIncident] = useState(false);
@@ -241,10 +245,29 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
 
   const handleLibraryClearance = async () => {
     if (!student) return;
+    // Used to be a bare toast.success() with no real check behind it — any
+    // student could be "cleared" regardless of actual unreturned books or
+    // unpaid fines. Now checks the real library_loans/LibraryFine records.
     try {
-      toast.success(`Library clearance requested for ${student.name}. Admin will review.`);
+      const [loans, fines] = await Promise.all([
+        smartDb.getAll("library_loans", undefined),
+        smartDb.getAll("LibraryFine", undefined),
+      ]);
+      const outstandingLoans = (loans as any[]).filter(l => l.studentId === student.id && !l.returnedAt);
+      const unpaidFines = (fines as any[]).filter(f => f.studentId === student.id && f.status === "unpaid");
+      if (outstandingLoans.length === 0 && unpaidFines.length === 0) {
+        toast.success(`${student.name} is cleared — no unreturned books or unpaid library fines.`);
+      } else {
+        const parts: string[] = [];
+        if (outstandingLoans.length > 0) parts.push(`${outstandingLoans.length} unreturned book${outstandingLoans.length === 1 ? "" : "s"}`);
+        if (unpaidFines.length > 0) {
+          const total = unpaidFines.reduce((s, f) => s + (f.amount || 0), 0);
+          parts.push(`${unpaidFines.length} unpaid fine${unpaidFines.length === 1 ? "" : "s"} (${total.toFixed(2)})`);
+        }
+        toast.error(`${student.name} is NOT cleared — ${parts.join(" and ")}.`);
+      }
     } catch (error) {
-      toast.error("Failed to request clearance");
+      toast.error("Failed to check library clearance");
     }
   };
 
@@ -337,6 +360,9 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
       smartDb.getAll("BehaviorIncident").then(r => setBehaviorIncidents((r as any[]).filter(x => x.studentId === sid || x.studentName === student.name))),
       smartDb.getAll("StudentDocument").then(r => setDocuments((r as any[]).filter(x => x.studentId === sid))),
       smartDb.getAll("Curriculum").then(r => setCurriculums((r as any[]).filter(c => c.status === "published"))),
+      smartDb.getAll("HostelAllocation").then(r => setHostelAllocation(
+        (r as any[]).find(x => x.studentId === sid && (x.status === "Active" || x.status === "Expiring Soon")) || null
+      )),
     ]).catch(() => {});
   }, [student?.id]);
 
@@ -788,6 +814,18 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
                           <Label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Grade Coordinator</Label>
                           <p className="text-sm font-semibold text-slate-800 py-1.5">{gradeCoordinator || "—"}</p>
                         </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Hostel</Label>
+                        {hostelAllocation ? (
+                          <p className="text-sm font-semibold text-slate-800 py-1.5">
+                            Room {String(hostelAllocation.room)} · {String(hostelAllocation.block)}
+                            <span className="ml-2 text-[10px] font-bold uppercase text-emerald-600">{String(hostelAllocation.status)}</span>
+                          </p>
+                        ) : (
+                          <p className="text-sm text-slate-400 py-1.5">Not allocated a hostel room</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
