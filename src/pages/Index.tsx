@@ -12,6 +12,7 @@ import { TeacherWorkloadCard } from "@/components/dashboard/TeacherWorkloadCard"
 import { RecentActivitiesCard } from "@/components/dashboard/RecentActivitiesCard";
 import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { ApprovalsOverviewCard } from "@/components/dashboard/ApprovalsOverviewCard";
+import { PerformanceOverviewCard } from "@/components/dashboard/PerformanceOverviewCard";
 import { QuickAccessGrid } from "@/components/dashboard/QuickAccessGrid";
 import { Users, UserCheck, GraduationCap, DollarSign, ClipboardList, Sparkles } from "lucide-react";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
@@ -193,8 +194,11 @@ const AdminIndex = () => {
           <ApprovalsOverviewCard data={overview.approvalChips} loading={overview.loading} />
         </div>
 
-        {/* Quick Access */}
-        <QuickAccessGrid />
+        {/* Performance Overview / Quick Access Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-1"><PerformanceOverviewCard /></div>
+          <div className="lg:col-span-2"><QuickAccessGrid /></div>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -27,6 +27,7 @@ import { AppraisalCycleWizard } from "./appraisal/AppraisalCycleWizard";
 import { CycleSuccessScreen } from "./appraisal/CycleSuccessScreen";
 import { createAppraisalCycle, CreationResult } from "./appraisal/createAppraisalCycle";
 import { KpiCategoryConfig, AppraisalCycleConfig } from "./appraisal/appraisalCycleTypes";
+import { AppraisalAnalyticsTab } from "./appraisal/AppraisalAnalyticsTab";
 
 const kpiCategories = [
   {
@@ -101,6 +102,7 @@ interface Scorecard {
   reminderSentAt?: string;
   reviewers?: { hod?: string; principal?: string; hr?: string };
   department?: string;
+  deadlines?: { selfReview?: string; managerReview?: string; principalApproval?: string; hrFinalize?: string };
 }
 
 interface Cycle {
@@ -556,10 +558,11 @@ export default function StaffAppraisal() {
         </div>
 
         <Tabs defaultValue="scorecards">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="scorecards">Staff Scorecards</TabsTrigger>
             <TabsTrigger value="kpi">KPI Framework</TabsTrigger>
             <TabsTrigger value="history">Appraisal History</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="scorecards" className="mt-4">
@@ -683,6 +686,15 @@ export default function StaffAppraisal() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-4">
+            <AppraisalAnalyticsTab
+              cards={cycleScorecards}
+              allStaff={allStaff}
+              cycleName={cycle?.title}
+              onExport={handleDownloadReports}
+            />
           </TabsContent>
         </Tabs>
 
