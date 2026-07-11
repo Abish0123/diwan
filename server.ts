@@ -1327,6 +1327,31 @@ async function startServer() {
         entityCache.set(entity, data);
       }
 
+      // A personally-targeted notification (recipientUid set — e.g. a bulk
+      // send to hundreds/thousands of students+parents at once, like the
+      // appraisal feedback rollout) can easily fall outside the "newest 300"
+      // window above the moment more than ~300 notifications of ANY kind
+      // exist system-wide, even though it's the only one that specific
+      // person needs to see. Look it up directly by SQL instead of relying
+      // on it surviving the generic recency cap.
+      if (entity === "notifications" && typeof req.query.forUid === "string" && req.query.forUid) {
+        const targetedRows = await dbQuery(
+          `SELECT * FROM \`notifications\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipientUid')) = ? ORDER BY createdAt DESC LIMIT 100`,
+          [req.query.forUid]
+        );
+        const targeted = targetedRows.map((row: any) => {
+          let parsedData = {};
+          try { parsedData = JSON.parse(row.data || '{}'); } catch (e) {}
+          return { ...parsedData, id: row.id, uid: row.uid, createdAt: row.createdAt, updatedAt: row.updatedAt };
+        });
+        // `data` may be the shared entityCache array — build a NEW array
+        // rather than mutating it in place, or these targeted rows would
+        // leak into every other unrelated request's cached result too.
+        const seenIds = new Set(data.map((r: any) => r.id));
+        const extra = targeted.filter((row: any) => !seenIds.has(row.id));
+        if (extra.length > 0) data = [...data, ...extra];
+      }
+
       if (email) data = data.filter((row: any) => typeof row.email === "string" && row.email.toLowerCase() === email);
 
       // Generic query parameter filtering (e.g. ?studentId=STU-001 or ?studentId=STU-001,STU-002)
