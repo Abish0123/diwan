@@ -177,7 +177,7 @@ function CollapsibleNavGroup({ group, collapsed, unreadCount, pendingPaymentCoun
           dark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-600",
           isSearching && "cursor-default")}
       >
-        <span>{group.label}</span>
+        <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={group.label}>{group.label}</span>
         {!isSearching && <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isOpen && "rotate-180")} aria-hidden="true" />}
       </button>
       {isOpen && (
