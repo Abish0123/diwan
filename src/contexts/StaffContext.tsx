@@ -31,8 +31,17 @@ export const StaffProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await smartDb.getAll("Staff", undefined);
-      setStaff(data);
+      // getAllLatest (not getAll) — this is also called as an explicit
+      // "refresh now" right after creating/editing a staff record (see
+      // StaffOnboarding's handleSubmit). Without the shared generation guard,
+      // the background 20s poll below could have an already-in-flight
+      // request that resolves just after this one and silently overwrite the
+      // record we just created back out of state — exactly the bug where a
+      // newly onboarded staff member intermittently didn't show up in the
+      // Staff Directory. null here means a newer request already superseded
+      // this one, so there's nothing to apply.
+      const data = await smartDb.getAllLatest("Staff", undefined);
+      if (data !== null) setStaff(data);
     } catch (error) {
       console.error("Error fetching staff:", error);
     } finally {

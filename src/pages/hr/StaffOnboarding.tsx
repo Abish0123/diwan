@@ -1026,9 +1026,9 @@ td:first-child{background:#f8fafc;color:#64748b;width:200px}.sign{margin-top:56p
 
 // ─── Success Screen ───────────────────────────────────────────────────────────
 
-function SuccessScreen({ personal, professional, payroll, credentials, onDone }: {
+function SuccessScreen({ personal, professional, payroll, credentials, staffId, onDone }: {
   personal: PersonalInfo; professional: ProfessionalInfo; payroll: EmploymentPayroll;
-  credentials: ProvisionedCredentials | null; onDone: () => void;
+  credentials: ProvisionedCredentials | null; staffId: string; onDone: () => void;
 }) {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -1055,12 +1055,18 @@ function SuccessScreen({ personal, professional, payroll, credentials, onDone }:
     { label:"Print Appointment Letter",icon:Printer,    onClick:() => downloadAppointmentLetter(personal, professional, payroll) },
   ];
 
+  // Each of these already has a real, working page in the app — previously
+  // every "Set Up →" button just fired a fake `toast.info("Opening: ...")`
+  // that did nothing else at all.
   const nextSteps = [
-    "Assign Attendance Access",
-    "Assign Leave Policy",
-    "Assign Salary Structure",
-    "Assign Reporting Manager",
-    "Schedule Orientation",
+    { label: "Assign Attendance Access",  path: "/hr/attendance" },
+    { label: "Assign Leave Policy",       path: "/hr/leave" },
+    { label: "Assign Salary Structure",   path: "/hr/payroll" },
+    // Reporting Manager is a field on this same wizard's Employment &
+    // Payroll step — re-opening this person's own profile in edit mode is
+    // the real place to set it, not a separate page.
+    { label: "Assign Reporting Manager",  path: `/hr/onboarding?edit=${encodeURIComponent(staffId)}` },
+    { label: "Schedule Orientation",      path: "/communication/calendar" },
   ];
 
   return (
@@ -1193,8 +1199,8 @@ function SuccessScreen({ personal, professional, payroll, credentials, onDone }:
               <div className="w-5 h-5 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0">
                 <span className="text-[10px] font-black text-amber-700">{i+1}</span>
               </div>
-              <span className="text-xs font-semibold text-amber-800">{s}</span>
-              <button onClick={() => toast.info(`Opening: ${s}`)}
+              <span className="text-xs font-semibold text-amber-800">{s.label}</span>
+              <button onClick={() => navigate(s.path)}
                 className="ml-auto text-[10px] text-amber-600 font-semibold hover:underline">Set Up →</button>
             </div>
           ))}
@@ -1221,6 +1227,7 @@ export default function StaffOnboarding() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [credentials, setCredentials] = useState<ProvisionedCredentials | null>(null);
+  const [createdStaffId, setCreatedStaffId] = useState("");
   const [personal, setPersonal] = useState<PersonalInfo>(EMPTY_PERSONAL);
   const [professional, setProfessional] = useState<ProfessionalInfo>(EMPTY_PROFESSIONAL);
   const [docs, setDocs] = useState<DocumentInfo>(EMPTY_DOCS);
@@ -1339,6 +1346,7 @@ export default function StaffOnboarding() {
       updatedAt: new Date().toISOString(),
       ...(editId ? {} : { createdAt: new Date().toISOString() })
     };
+    setCreatedStaffId(staffRecord.id);
     try {
       if (editId) {
         await smartDb.update("Staff", editId, staffRecord);
@@ -1419,7 +1427,7 @@ export default function StaffOnboarding() {
       <DashboardLayout>
         <div className="max-w-4xl mx-auto">
           <SuccessScreen personal={personal} professional={professional} payroll={payroll}
-            credentials={credentials} onDone={() => navigate("/hr/staff")} />
+            credentials={credentials} staffId={createdStaffId || editId || ""} onDone={() => navigate("/hr/staff")} />
         </div>
       </DashboardLayout>
     );

@@ -179,6 +179,35 @@ async function fetchAllOrThrow(entity: string, uid?: string, queryParams?: Recor
   return [];
 }
 
+// Guards against an out-of-order response overwriting fresher data. Every
+// context in this app follows the same shape: a smartDb.watch() poll runs
+// every 20s in the background AND callers can force an immediate refetch
+// (e.g. right after creating a record, so the UI doesn't wait up to 20s to
+// show it). If a poll that started BEFORE that explicit refetch happens to
+// resolve AFTER it, its stale response would stomp the just-created record
+// back out of the list — a real, reported bug (a newly onboarded staff
+// member intermittently not appearing in the Staff Directory). Keyed per
+// (entity, uid) so unrelated entities/scopes don't block each other.
+const fetchGenerations = new Map<string, number>();
+function generationKey(entity: string, uid?: string): string {
+  return `${normalizeEntity(entity)}::${uid || ""}`;
+}
+// Runs a fetch tagged with a generation number; if a NEWER fetch for the
+// same (entity, uid) was started before this one resolves, returns null
+// instead of the (now-stale) data, so the caller can skip applying it.
+async function fetchLatest(entity: string, uid?: string): Promise<any[] | null> {
+  const key = generationKey(entity, uid);
+  const myGen = (fetchGenerations.get(key) || 0) + 1;
+  fetchGenerations.set(key, myGen);
+  try {
+    const data = await fetchAllOrThrow(entity, uid);
+    return fetchGenerations.get(key) === myGen ? data : null;
+  } catch (error) {
+    console.error(`Local watch error for ${normalizeEntity(entity)} — keeping last known good data:`, error);
+    return null;
+  }
+}
+
 export const smartDb = {
   async getAll(entity: string, uid?: string, queryParams?: Record<string, string>) {
     try {
@@ -187,6 +216,15 @@ export const smartDb = {
       console.error(`Local DB fetch error for ${normalizeEntity(entity)}:`, error);
       return [];
     }
+  },
+
+  // Same data as getAll(), but participates in the same generation-ordering
+  // guard as watch()'s background poll (see fetchGenerations above) — use
+  // this instead of getAll() whenever the result is about to replace a
+  // context's live state (e.g. a context's refetchX() called right after a
+  // create/update), so a slow, already-in-flight poll can't undo it.
+  async getAllLatest(entity: string, uid?: string): Promise<any[] | null> {
+    return fetchLatest(entity, uid);
   },
 
   // Some entities (Student, chief among them) stamp `uid` with whichever
@@ -332,24 +370,18 @@ export const smartDb = {
       // without changing behavior while the app is actually being used.
       const interval = setInterval(async () => {
         if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-        try {
-          // fetchAllOrThrow (not this.getAll) — a failed poll must be able to
-          // reach this catch and skip the callback instead of silently
-          // overwriting already-rendered data with []. getAll() itself
-          // swallows failures into [] for its ~100+ other direct callers,
-          // which previously made this try/catch unreachable: every poll
-          // "succeeded" with an empty array, so any transient blip (expired
-          // session, brief network hiccup, admin-only 403) blanked whatever
-          // was already correctly showing on screen.
-          const data = await fetchAllOrThrow(entity, uid);
-          callback(data as unknown[]);
-        } catch (error) {
-          console.error(`Local watch error for ${normalizedEntity} — keeping last known good data:`, error);
-        }
+        // fetchLatest (not fetchAllOrThrow directly) — besides swallowing a
+        // failed poll instead of blanking already-rendered data (see below),
+        // this also tags the request with a generation number so a slow poll
+        // that started before some OTHER explicit refetch (e.g. a context's
+        // refetchX() called right after creating a record) can't resolve
+        // after it and stomp the newer data back out with a stale snapshot.
+        const data = await fetchLatest(entity, uid);
+        if (data !== null) callback(data as unknown[]);
       }, 20000); // Poll every 20 seconds
 
-      // Initial fetch
-      this.getAll(entity, uid).then(data => callback(data as unknown[])).catch(console.error);
+      // Initial fetch — also generation-guarded, for the same reason.
+      fetchLatest(entity, uid).then(data => { if (data !== null) callback(data as unknown[]); }).catch(console.error);
 
       return () => clearInterval(interval);
     }
