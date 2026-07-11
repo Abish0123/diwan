@@ -30,6 +30,7 @@ import { KpiCategoryConfig, AppraisalCycleConfig } from "./appraisal/appraisalCy
 import { AppraisalAnalyticsTab } from "./appraisal/AppraisalAnalyticsTab";
 import { FeedbackTemplatesManager } from "./appraisal/FeedbackTemplatesManager";
 import { FeedbackWeightingCard } from "./appraisal/FeedbackWeightingCard";
+import { NotifyFeedbackButton } from "./appraisal/NotifyFeedbackButton";
 
 const kpiCategories = [
   {
@@ -711,6 +712,12 @@ export default function StaffAppraisal() {
           </TabsContent>
 
           <TabsContent value="feedback" className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-400 max-w-md">
+                Students and parents only see this once you notify them — templates and weighting alone don't send anything.
+              </p>
+              <NotifyFeedbackButton />
+            </div>
             <FeedbackWeightingCard />
             <FeedbackTemplatesManager />
           </TabsContent>

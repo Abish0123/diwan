@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useParentChildren } from "@/hooks/useParentChildren";
+import { FeedbackRequestWidget } from "@/components/dashboard/FeedbackRequestWidget";
 import { smartDb } from "@/lib/localDb";
 import { filterAnnouncementsForViewer } from "@/lib/announcementAudience";
 import { SampleBadge } from "@/components/ui/sample-badge";
@@ -1358,6 +1359,8 @@ export default function ParentPortal() {
             </div>
           )}
         </div>
+
+        <FeedbackRequestWidget role="parent" uid={user?.uid} studentId={child?.id} grade={child?.class} section={child?.section} />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>

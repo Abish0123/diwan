@@ -17,6 +17,7 @@ import {
   Megaphone, Brain, Library, DollarSign, Zap,
   ChevronRight, Users, Activity, Target, Shield, AlertCircle
 } from "lucide-react";
+import { FeedbackRequestWidget } from "@/components/dashboard/FeedbackRequestWidget";
 
 // Real "Today's Schedule" is derived from the same published admin timetable
 // (timetable_slots) the full Timetable page reads — see src/pages/student/Timetable.tsx.
@@ -404,6 +405,8 @@ export default function StudentPortal() {
               </div>
             </div>
           </div>
+
+          <FeedbackRequestWidget role="student" uid={user?.uid} studentId={student?.id} grade={student?.grade} section={student?.section} />
 
           {/* ── 2. PREMIUM STAT CARDS ────────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

@@ -134,6 +134,10 @@ const entityMapping: Record<string, string> = {
   // Single-row config: how each feedback source weights into the Final
   // Performance Score (see feedbackTemplateTypes.ts).
   "FeedbackWeighting": "feedback_weighting",
+  // One student/parent's submitted answers about one teacher for one cycle
+  // (see feedbackSubmissionTypes.ts) — `uid`-scoped reads enforce that a
+  // submitter only ever sees their own submissions.
+  "FeedbackSubmission": "feedback_submissions",
 };
 
 function normalizeEntity(entity: string): string {
