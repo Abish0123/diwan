@@ -5,9 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { 
-  Search, 
-  Plus, 
-  Filter, 
+  Search,
+  Filter,
   MoreVertical,
   Calendar,
   DollarSign,
@@ -61,7 +60,6 @@ import { handleFirestoreError, OperationType } from "@/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useHRSettings } from "@/contexts/HRSettingsContext";
 import { PayrollSlipDialog } from "@/components/finance/PayrollSlipDialog";
-import { RecordExpenseDialog } from "@/components/finance/RecordExpenseDialog";
 import { PayrollRecord } from "@/types/hr";
 import { smartDb } from "@/lib/localDb";
 
@@ -74,7 +72,6 @@ const PayrollProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState<PayrollRecord | null>(null);
   const [isSlipOpen, setIsSlipOpen] = useState(false);
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("All");
 
   useEffect(() => {
@@ -238,15 +235,6 @@ const PayrollProcessing = () => {
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button 
-                onClick={() => setIsAddOpen(true)}
-                className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Record New Payroll
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button 
                 onClick={handleProcessAll} 
                 disabled={isProcessing || payroll.filter(p => p.status === "Pending").length === 0}
                 variant="outline"
@@ -365,7 +353,9 @@ const PayrollProcessing = () => {
               ) : filteredPayroll.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    No payroll records found.
+                    {payroll.length === 0
+                      ? "No payroll records yet — they're created automatically when a staff member is onboarded with a Basic Salary set."
+                      : "No payroll records match your search/filter."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -483,12 +473,6 @@ const PayrollProcessing = () => {
           netSalary: selectedPayroll.netSalary || selectedPayroll.amount || 0,
           createdAt: selectedPayroll.createdAt
         } : null} 
-      />
-
-      <RecordExpenseDialog 
-        open={isAddOpen} 
-        onOpenChange={setIsAddOpen} 
-        type="payroll" 
       />
     </DashboardLayout>
   );

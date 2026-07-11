@@ -17,6 +17,7 @@ import { useStaff } from "@/contexts/StaffContext";
 import { provisionUserAccount, ProvisionedCredentials } from "@/lib/staffAccounts";
 import { checkClassTeacherAssignment } from "@/lib/roleAssignmentGuard";
 import { ROLES } from "@/lib/roles";
+import { useAuth } from "@/hooks/useAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1223,6 +1224,7 @@ export default function StaffOnboarding() {
   const editId = searchParams.get("edit");
   const grades = useGrades();
   const { refetchStaff } = useStaff();
+  const { user } = useAuth();
 
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -1325,6 +1327,15 @@ export default function StaffOnboarding() {
         return;
       }
     }
+    // Basic Salary is now the ONLY way a payroll record gets created (see
+    // handleSubmit) — Payroll Processing's manual "Record New Payroll" entry
+    // point was removed so onboarding is the single source of truth. Without
+    // this check, leaving it blank here silently meant that employee never
+    // got a payroll record at all, with no other way to create one.
+    if (step === 4 && (!payroll.basicSalary || Number(payroll.basicSalary) <= 0)) {
+      toast.error("Please enter a Basic Salary — this is what creates the employee's payroll record.");
+      return;
+    }
     if (step === STEPS.length) {
       handleSubmit();
       return;
@@ -1362,6 +1373,44 @@ export default function StaffOnboarding() {
       // silently dropped the record for up to 20 seconds after submit.
       await refetchStaff();
     } catch {}
+
+    // Payroll Processing (src/pages/hr/PayrollProcessing.tsx) no longer has a
+    // manual "Record New Payroll" entry point — onboarding (here) is now the
+    // only place a payroll record gets created, from the real Basic Salary/
+    // Allowances/Deductions captured on Step 4. Keyed by (staffId, period) so
+    // re-submitting this same wizard for the same person in the same month
+    // (e.g. correcting a typo before Review & Submit, or editing an existing
+    // employee's salary) updates that one record instead of creating a
+    // duplicate for every edit.
+    const basicSalary = Number(payroll.basicSalary) || 0;
+    if (basicSalary > 0) {
+      const allowances = Number(payroll.allowances) || 0;
+      const deductions = Number(payroll.deductions) || 0;
+      const period = new Date().toLocaleString("default", { month: "long", year: "numeric" });
+      const payrollId = `payroll-${staffRecord.id}-${period.replace(/\s+/g, "-").toLowerCase()}`;
+      const payrollFields = {
+        staffId: staffRecord.id,
+        staffName: staffRecord.name,
+        role: professional.designation || staffRecord.role,
+        period,
+        baseSalary: basicSalary,
+        totalAllowances: allowances,
+        totalDeductions: deductions,
+        netSalary: basicSalary + allowances - deductions,
+        uid: user?.uid || "local-user",
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        const existingPayroll = await smartDb.getOne("payroll", payrollId);
+        if (existingPayroll) {
+          await smartDb.update("payroll", payrollId, payrollFields);
+        } else {
+          await smartDb.create("payroll", { id: payrollId, ...payrollFields, status: "Pending", createdAt: new Date().toISOString() }, payrollId);
+        }
+      } catch {
+        toast.error("Staff profile saved, but the payroll record could not be created — add it from Payroll Processing.");
+      }
+    }
 
     // Onboarding must also produce a working login. Teaching staff land in the
     // teacher portal, which reads assignedGrade/assignedSection off the User
