@@ -671,6 +671,26 @@ const Exams = () => {
   // admin see at a glance which subjects of a multi-subject/multi-teacher
   // exam still need marks entered, instead of opening Marks Entry per subject.
   const [viewProgress, setViewProgress] = useState<{ students: ExamStudentMini[]; examMarks: ExamMarksMap } | null>(null);
+
+  // Real Library <-> Exams link — previously these had zero connection.
+  // LibraryItem.category values overlap with real subject names (same join
+  // used for Academics/Curriculum's Library link), so per-subject book
+  // counts here are real catalog data, not invented.
+  const [viewLibraryCounts, setViewLibraryCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!viewTarget) { setViewLibraryCounts({}); return; }
+    let active = true;
+    smartDb.getAll("LibraryItem", undefined).then((rows) => {
+      if (!active) return;
+      const counts: Record<string, number> = {};
+      (rows as { category?: string }[]).forEach(b => {
+        if (!b.category) return;
+        counts[b.category] = (counts[b.category] || 0) + 1;
+      });
+      setViewLibraryCounts(counts);
+    }).catch(() => setViewLibraryCounts({}));
+    return () => { active = false; };
+  }, [viewTarget]);
   useEffect(() => {
     if (!viewTarget) { setViewProgress(null); return; }
     let active = true;
@@ -1203,6 +1223,30 @@ const Exams = () => {
                           {s.subject} {s.graded}/{s.total}
                         </span>
                       ))}
+                    </div>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const activePlan = getGradePlans(viewTarget).find(p => p.grade === viewGrade) || getGradePlans(viewTarget)[0];
+                if (activePlan.slots.length === 0) return null;
+                const subjects = [...new Set(activePlan.slots.map(s => s.subject))];
+                if (subjects.length === 0) return null;
+                return (
+                  <div className="mt-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Library — Reading Material by Subject</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {subjects.map(sub => {
+                        const count = viewLibraryCounts[sub] || 0;
+                        return (
+                          <a key={sub} href={`/library?category=${encodeURIComponent(sub)}`}
+                            title={count > 0 ? `${count} real book(s) catalogued under "${sub}"` : "No Library books catalogued under this subject yet"}
+                            className={cn("inline-flex items-center gap-1 text-[10px] font-semibold rounded-md border px-1.5 py-0.5 hover:underline",
+                              count > 0 ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-gray-100 text-gray-400 border-gray-200")}>
+                            {sub}: {count} book{count === 1 ? "" : "s"}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 );

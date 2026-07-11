@@ -3,11 +3,12 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useExams, type ExamRecord } from "@/lib/examStore";
 import { getSeating } from "@/lib/seatingStore";
 import { smartDb } from "@/lib/localDb";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   ClipboardCheck, Check, X, Clock, Users,
-  Download, Printer, Search, AlertCircle,
+  Download, Printer, Search, AlertCircle, Flag,
 } from "lucide-react";
 
 type AttendanceStatus = "present" | "absent" | "late";
@@ -20,6 +21,11 @@ interface AttendanceRecord {
   seatLabel: string;
   status: AttendanceStatus;
   notes: string;
+  // Real exam-malpractice flag — previously exam invigilation had no
+  // connection to the school's Behaviour/conduct records at all. Flagging
+  // here creates a real BehaviorIncident (same entity/shape the student
+  // profile's "Report Incident" action already uses).
+  flaggedMalpractice?: boolean;
 }
 
 function attendanceId(examId: string, slotDate: string): string {
@@ -70,6 +76,7 @@ function exportCsv(exam: ExamRecord, slotLabel: string, records: AttendanceRecor
 // consolidated Exam Setup wizard — see RoomAllocation.tsx for the same pattern.
 export function ExamAttendanceContent({ examId, onExamIdChange }: { examId: string; onExamIdChange: (id: string) => void }) {
   const exams = useExams();
+  const { user } = useAuth();
   const selectedExamId = examId;
   const setSelectedExamId = onExamIdChange;
   const [selectedSlotDate, setSelectedSlotDate] = useState("");
@@ -210,6 +217,26 @@ export function ExamAttendanceContent({ examId, onExamIdChange }: { examId: stri
     setRecords(prev =>
       prev.map(r => (r.studentId === studentId ? { ...r, notes } : r))
     );
+  }
+
+  async function handleFlagMalpractice(record: AttendanceRecord) {
+    if (record.flaggedMalpractice || !user) return;
+    if (!confirm(`Flag ${record.name} for exam malpractice? This creates a real Behaviour record.`)) return;
+    const id = `BHV-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const subject = selectedSlot?.subject || "Exam";
+    try {
+      await smartDb.create("BehaviorIncident", {
+        id, studentId: record.studentId, studentName: record.name,
+        type: "Malpractice", category: "Exam Conduct", severity: "High",
+        description: `Flagged during ${subject} — ${selectedExam?.name || "exam"} (${selectedSlotDate}). Seat ${record.seatLabel}.`,
+        date: new Date().toISOString().split("T")[0],
+        createdAt: new Date().toISOString(), uid: user.uid,
+      }, id);
+      setRecords(prev => prev.map(r => r.studentId === record.studentId ? { ...r, flaggedMalpractice: true } : r));
+      toast.success(`${record.name} flagged — Behaviour record created`);
+    } catch {
+      toast.error("Failed to flag malpractice");
+    }
   }
 
   async function handleSave() {
@@ -442,6 +469,20 @@ export function ExamAttendanceContent({ examId, onExamIdChange }: { examId: stri
                               >
                                 <Clock className="w-3 h-3" />
                                 Late
+                              </button>
+                              <button
+                                onClick={() => handleFlagMalpractice(r)}
+                                disabled={r.flaggedMalpractice}
+                                title={r.flaggedMalpractice ? "Already flagged — a Behaviour record was created" : "Flag exam malpractice — creates a real Behaviour record"}
+                                className={cn(
+                                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border",
+                                  r.flaggedMalpractice
+                                    ? "bg-rose-100 text-rose-700 border-rose-200 cursor-default"
+                                    : "bg-white text-slate-400 border-slate-200 hover:border-rose-200 hover:text-rose-600"
+                                )}
+                              >
+                                <Flag className="w-3 h-3" />
+                                {r.flaggedMalpractice ? "Flagged" : "Flag"}
                               </button>
                             </div>
                           </td>

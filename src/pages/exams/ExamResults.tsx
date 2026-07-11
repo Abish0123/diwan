@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useExams, updateExam } from "@/lib/examStore";
+import { useExams, updateExam, getGradePlans } from "@/lib/examStore";
 import { smartDb } from "@/lib/localDb";
+import { useAuth } from "@/hooks/useAuth";
+import { canonGrade } from "@/lib/studentGradeSection";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +34,7 @@ const GRADE_COLOR: Record<string, string> = {
 // consolidated Exam Setup wizard — see RoomAllocation.tsx for the same pattern.
 export function ExamResultsContent({ examId, onExamIdChange }: { examId: string; onExamIdChange: (id: string) => void }) {
   const exams = useExams();
+  const { user } = useAuth();
   const selectedId = examId;
   const setSelectedId = onExamIdChange;
   const [students, setStudents] = useState<{ uid: string; name: string }[]>([]);
@@ -89,12 +92,43 @@ export function ExamResultsContent({ examId, onExamIdChange }: { examId: string;
   const topScore = appeared > 0 ? Math.max(...studentResults.filter(s => s.scored.length > 0).map(s => s.pct)) : 0;
 
   async function handlePublish() {
-    if (!selectedId) return;
+    if (!selectedId || !selected) return;
     setPublishing(true);
     await new Promise(r => setTimeout(r, 800));
     updateExam(selectedId, { status: "Published", published: true });
     setPublishing(false);
     toast.success("Results published successfully");
+
+    // Publishing used to be a pure status flip — no student/parent ever
+    // learned results were out except by checking manually. Real
+    // notification fan-out: one per-grade student broadcast (covers every
+    // section, all grades this exam spans) plus one per real parent,
+    // same pattern used for syllabus-covered notifications
+    // (AdvancedCurriculum.tsx toggleWeekComplete).
+    try {
+      const grades = [...new Set(getGradePlans(selected).map(p => p.grade))];
+      const now = new Date().toISOString();
+      const title = `Results published — ${selected.name}`;
+      const message = `Results for "${selected.name}" have been published. Check your report for full marks.`;
+      const allStudents = await smartDb.getAll("Student", undefined) as { id: string; grade?: string }[];
+      for (const grade of grades) {
+        smartDb.create("Notification", {
+          id: `notif_${Date.now()}_${grade}_examresult_student`,
+          audienceRole: "student", recipientGrade: grade, category: "student",
+          type: "exam_results_published", title, message,
+          createdAt: now, time: now, read: false, uid: user?.uid,
+        }).catch(() => {});
+        const gradeStudents = allStudents.filter(s => canonGrade(s.grade || "") === canonGrade(grade));
+        gradeStudents.forEach((s, i) => {
+          smartDb.create("Notification", {
+            id: `notif_${Date.now()}_${i}_${grade}_examresult_parent`,
+            audienceRole: "parent", studentId: s.id, category: "student",
+            type: "exam_results_published", title, message,
+            createdAt: now, time: now, read: false, uid: user?.uid,
+          }).catch(() => {});
+        });
+      }
+    } catch { /* non-fatal — results are already published either way */ }
   }
 
   return (
