@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { 
-  Presentation, BarChart3, Users, DollarSign, GraduationCap, 
+import {
+  Presentation, BarChart3, Users, DollarSign, GraduationCap,
   TrendingUp, TrendingDown, AlertCircle, ArrowRight,
   Sparkles, Brain, Target, FileText, PieChart,
-  Calendar, ChevronRight, Loader2
+  Calendar, ChevronRight, Loader2, BookOpen, UtensilsCrossed, ShieldAlert, Code2, ScanSearch,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,10 +38,21 @@ export default function AnalyticsHome() {
   const [examMarks, setExamMarks] = useState<any[]>([]);
   const [attendanceLog, setAttendanceLog] = useState<any[]>([]);
 
+  // Campus-operations data — previously the Intelligence/Analytics layer
+  // referenced only Students/Staff/Finance/Attendance. Library, Cafeteria,
+  // Security, Coding and Plagiarism all have real data and real reports
+  // elsewhere (/reports), but none of it ever showed up here.
+  const [libraryItems, setLibraryItems] = useState<any[]>([]);
+  const [libraryFines, setLibraryFines] = useState<any[]>([]);
+  const [cafeteriaOrders, setCafeteriaOrders] = useState<any[]>([]);
+  const [securityIncidents, setSecurityIncidents] = useState<any[]>([]);
+  const [codingAttempts, setCodingAttempts] = useState<any[]>([]);
+  const [plagiarismReports, setPlagiarismReports] = useState<any[]>([]);
+
   useEffect(() => {
     (async () => {
       try {
-        const [st, sf, sRev, eRev, inv, marks, att] = await Promise.all([
+        const [st, sf, sRev, eRev, inv, marks, att, libItems, libFines, cafOrders, secIncidents, coding, plag] = await Promise.all([
           smartDb.getAll("students"),
           smartDb.getAll("staff"),
           smartDb.getAll("student_revenue"),
@@ -49,6 +60,12 @@ export default function AnalyticsHome() {
           smartDb.getAll("invoices"),
           smartDb.getAll("ExamMark"),
           smartDb.getAll("attendance"),
+          smartDb.getAll("LibraryItem"),
+          smartDb.getAll("LibraryFine"),
+          smartDb.getAll("CafeteriaOrder"),
+          smartDb.getAll("SecurityIncident"),
+          smartDb.getAll("coding_attempts"),
+          smartDb.getAll("project_reports"),
         ]);
         setStudents(st || []);
         setStaff(sf || []);
@@ -57,6 +74,12 @@ export default function AnalyticsHome() {
         setInvoices(inv || []);
         setExamMarks(marks || []);
         setAttendanceLog(att || []);
+        setLibraryItems(libItems || []);
+        setLibraryFines(libFines || []);
+        setCafeteriaOrders(cafOrders || []);
+        setSecurityIncidents(secIncidents || []);
+        setCodingAttempts(coding || []);
+        setPlagiarismReports(plag || []);
       } catch (e) {
         console.error("Error loading analytics data:", e);
       }
@@ -109,6 +132,19 @@ export default function AnalyticsHome() {
     { title: "Fee Pending", value: money(pendingFees, settings.currency), trend: pendingFees > 0 ? "Due" : "Clear", icon: TrendingDown, color: "text-rose-600", bg: "bg-rose-50" },
     { title: "Avg Attendance", value: `${avgAttendance.toFixed(1)}%`, trend: avgAttendance >= 85 ? "Healthy" : "Watch", icon: GraduationCap, color: "text-amber-600", bg: "bg-amber-50" },
     { title: "Staff Strength", value: totalStaff.toLocaleString(), trend: "Stable", icon: Users, color: "text-purple-600", bg: "bg-indigo-50" },
+  ];
+
+  const unpaidFines = libraryFines.filter((f: any) => f.status === "unpaid").length;
+  const cafeteriaRevenue = sumBy(cafeteriaOrders, (o: any) => o.total);
+  const openIncidents = securityIncidents.filter((i: any) => i.status !== "Resolved").length;
+  const criticalIncidents = securityIncidents.filter((i: any) => i.severity === "Critical").length;
+
+  const campusKpiData = [
+    { title: "Library — Unpaid Fines", value: unpaidFines.toLocaleString(), trend: unpaidFines > 0 ? "Follow up" : "Clear", icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Cafeteria Revenue", value: money(cafeteriaRevenue, settings.currency), trend: `${cafeteriaOrders.length} orders`, icon: UtensilsCrossed, color: "text-amber-600", bg: "bg-amber-50" },
+    { title: "Security — Open Incidents", value: openIncidents.toLocaleString(), trend: criticalIncidents > 0 ? `${criticalIncidents} critical` : "None critical", icon: ShieldAlert, color: "text-rose-600", bg: "bg-rose-50" },
+    { title: "Coding — Attempts", value: codingAttempts.length.toLocaleString(), trend: "Real submissions", icon: Code2, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Plagiarism — Reports", value: plagiarismReports.length.toLocaleString(), trend: "Real submissions", icon: ScanSearch, color: "text-purple-600", bg: "bg-indigo-50" },
   ];
 
   const handleExport = () => {
@@ -297,6 +333,40 @@ export default function AnalyticsHome() {
               </Card>
             </motion.div>
           ))}
+        </div>
+
+        {/* Campus Operations — Library/Cafeteria/Security/Coding/Plagiarism,
+            previously entirely absent from this analytics layer despite
+            having real data and real dedicated reports at /reports. */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Campus Operations</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {campusKpiData.map((kpi, index) => (
+              <motion.div
+                key={kpi.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className={cn("p-2 rounded-lg", kpi.bg)}>
+                        <kpi.icon className={cn("h-5 w-5", kpi.color)} />
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] font-bold text-slate-600 bg-slate-50">
+                        {kpi.trend}
+                      </Badge>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{kpi.title}</p>
+                      <h3 className="text-2xl font-bold text-slate-900 mt-1">{kpi.value}</h3>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
 
         {/* AI Insights Hero Section */}

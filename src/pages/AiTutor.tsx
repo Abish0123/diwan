@@ -5,10 +5,37 @@ import { Send, Sparkles, User, Bot, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useStudents } from "@/contexts/StudentContext";
+import { smartDb } from "@/lib/localDb";
+
+const GREETING = "Hello! I'm your AI Tutor. How can I help you with your studies today?";
 
 const AiTutor = () => {
+  const { user } = useAuth();
+  const { students } = useStudents();
+  // Previously a fully generic chatbot with no idea who was asking — same
+  // canned system prompt for every user, no reference to the student's real
+  // grade or real curriculum subjects. Resolved the same way other student
+  // pages match the logged-in account to its real Student record.
+  const me = students.find(s => user?.email && s.email === user.email);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  useEffect(() => {
+    if (!me?.grade) { setSubjects([]); return; }
+    let alive = true;
+    smartDb.getAll("Curriculum", undefined).then((rows) => {
+      if (!alive) return;
+      const list = (rows as { grade?: string; subject?: string; status?: string }[])
+        .filter(c => c.status === "published" && c.grade && me.grade && c.grade.replace(/^grade\s*/i, "").trim() === String(me.grade).replace(/^grade\s*/i, "").trim())
+        .map(c => c.subject)
+        .filter((s): s is string => !!s);
+      setSubjects([...new Set(list)]);
+    }).catch(() => setSubjects([]));
+    return () => { alive = false; };
+  }, [me?.grade]);
+
   const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string }[]>([
-    { role: "bot", content: "Hello! I'm your AI Tutor. How can I help you with your studies today?" },
+    { role: "bot", content: GREETING },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -30,11 +57,19 @@ const AiTutor = () => {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      // Real student context — grade/section from the real Student record,
+      // real published subjects for that grade from Curriculum — so answers
+      // can actually reference what this student is studying, instead of
+      // being identical for every user regardless of who's logged in.
+      const context = me
+        ? `The student you are tutoring is in ${me.grade ? `Grade ${String(me.grade).replace(/^grade\s*/i, "")}` : "an unknown grade"}${me.section ? ` Section ${me.section}` : ""}.` +
+          (subjects.length > 0 ? ` Their real enrolled subjects this year are: ${subjects.join(", ")}. Prefer grounding explanations in these subjects when relevant.` : " No published curriculum subjects were found for their grade yet — ask which subject they need help with.")
+        : "No student profile is linked to this account — answer generally and ask the student to specify their grade/subject if needed.";
       const response = await ai.models.generateContent({
         model: "gemini-flash-latest",
         contents: userMessage,
         config: {
-          systemInstruction: "You are a helpful and encouraging AI Tutor for a student management system. Provide clear, concise, and educational explanations.",
+          systemInstruction: `You are a helpful and encouraging AI Tutor for a student management system. Provide clear, concise, and educational explanations. ${context}`,
         },
       });
 
@@ -49,7 +84,7 @@ const AiTutor = () => {
   };
 
   const handleClear = () => {
-    setMessages([{ role: "bot", content: "Hello! I'm your AI Tutor. How can I help you with your studies today?" }]);
+    setMessages([{ role: "bot", content: GREETING }]);
     toast.success("Chat cleared");
   };
 
@@ -63,7 +98,11 @@ const AiTutor = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">AI Academic Tutor</h1>
-              <p className="text-sm text-slate-400">Your personal learning assistant powered by StudentDiwan AI.</p>
+              <p className="text-sm text-slate-400">
+                {me?.grade
+                  ? `Tuned to Grade ${String(me.grade).replace(/^grade\s*/i, "")}${me.section ? ` Section ${me.section}` : ""}${subjects.length > 0 ? ` — ${subjects.join(", ")}` : ""}.`
+                  : "Your personal learning assistant powered by StudentDiwan AI."}
+              </p>
             </div>
           </div>
           <button 

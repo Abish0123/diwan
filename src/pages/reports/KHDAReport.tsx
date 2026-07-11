@@ -1,14 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useStudents } from "@/contexts/StudentContext";
 import { useStaff } from "@/contexts/StaffContext";
+import { smartDb } from "@/lib/localDb";
+import { canonGrade } from "@/lib/studentGradeSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, CheckCircle2, Building2, FileText, Shield } from "lucide-react";
+import { Download, CheckCircle2, Building2, FileText, Shield, BookOpen } from "lucide-react";
 
 const countries = [
   { id: "uae", flag: "🇦🇪", name: "UAE", ministry: "KHDA" },
@@ -35,6 +37,26 @@ export default function KHDAReport() {
   const [selectedCountry, setSelectedCountry] = useState("uae");
   const { students, totalStudents } = useStudents();
   const { staff } = useStaff();
+
+  // Real per-grade curriculum coverage — the "Curriculum alignment" criterion
+  // below used to be a bare checklist label with no data behind it. Now
+  // backed by the real Curriculum records (Academics → Advanced Curriculum),
+  // grouped by grade, so an inspector sees which real grades actually have a
+  // published curriculum plan on file instead of an unverifiable claim.
+  const [curriculumByGrade, setCurriculumByGrade] = useState<{ grade: string; curriculumType: string; status: string }[]>([]);
+  useEffect(() => {
+    smartDb.getAll("Curriculum", undefined).then((rows) => {
+      const list = (rows as { grade?: string; curriculumType?: string; status?: string }[])
+        .filter(c => c.grade)
+        .map(c => ({ grade: c.grade!, curriculumType: c.curriculumType || "—", status: c.status || "draft" }));
+      setCurriculumByGrade(list);
+    }).catch(() => setCurriculumByGrade([]));
+  }, []);
+  const gradesWithPublishedCurriculum = new Set(curriculumByGrade.filter(c => c.status === "published").map(c => canonGrade(c.grade)));
+  const realGradesInSchool = [...new Set(students.map(s => s.grade).filter(Boolean).map(g => canonGrade(g!)))] as string[];
+  const curriculumCoveragePct = realGradesInSchool.length > 0
+    ? Math.round((realGradesInSchool.filter(g => gradesWithPublishedCurriculum.has(g)).length / realGradesInSchool.length) * 100)
+    : null;
 
   // Real student census rows sourced from the actual Student records — no
   // fabricated names/nationalities/DOBs. Fields with no real source on the
@@ -395,6 +417,36 @@ export default function KHDAReport() {
                       <span className="text-sm text-gray-700">{criterion}</span>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+
+              {/* Real evidence for the "Curriculum alignment" criterion above
+                  — which real grades actually have a published curriculum
+                  plan on file, not just a checklist claim. */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                    Curriculum Coverage — Real Data
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {curriculumCoveragePct === null ? (
+                    <p className="text-sm text-gray-400">No enrolled students to compute coverage against.</p>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-bold text-gray-900">{curriculumCoveragePct}%</span> of grades with enrolled students have a published curriculum plan on file
+                      ({realGradesInSchool.filter(g => gradesWithPublishedCurriculum.has(g)).length}/{realGradesInSchool.length} grades).
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {realGradesInSchool.map(g => (
+                      <div key={g} className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg border ${gradesWithPublishedCurriculum.has(g) ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-gray-50 border-gray-200 text-gray-500"}`}>
+                        <span className="font-semibold">{g}</span>
+                        <span>{gradesWithPublishedCurriculum.has(g) ? "Published" : "Not on file"}</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

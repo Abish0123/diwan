@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  Brain, 
-  BarChart3, 
-  TrendingUp, 
-  Settings2, 
-  FileText, 
+import {
+  Brain,
+  BarChart3,
+  TrendingUp,
+  Settings2,
+  FileText,
   Sparkles,
   ArrowLeft,
   Search,
   Bell,
   User,
-  LayoutDashboard
+  LayoutDashboard,
+  LineChart,
 } from 'lucide-react';
 import { AIModuleCard } from '@/components/ai-center/AIModuleCard';
 import { AskAI } from '@/components/ai-center/AskAI';
@@ -85,6 +86,14 @@ const AICenter: React.FC = () => {
     }
   ];
 
+  // Real pages, not internal tabs — Smart Reports and Executive Insights are
+  // full standalone routes (rebuilt with real data this session). They were
+  // routed but never linked from anywhere inside AI Center itself.
+  const externalModules = [
+    { title: 'Smart Reports', description: 'Generate real, on-demand CSV reports from live school data.', icon: Sparkles, route: '/ai-center/smart-reports' },
+    { title: 'Executive Insights', description: 'Real revenue trend, budget utilization, and attendance-risk from live data.', icon: LineChart, route: '/ai-center/executive-insights' },
+  ];
+
   const renderModule = () => {
     switch (activeModule) {
       case 'ask': return <AskAI onBack={() => handleModuleChange('overview')} />;
@@ -136,6 +145,15 @@ const AICenter: React.FC = () => {
                 description={module.description}
                 icon={module.icon}
                 onClick={() => handleModuleChange(module.id)}
+              />
+            ))}
+            {externalModules.map((module) => (
+              <AIModuleCard
+                key={module.route}
+                title={module.title}
+                description={module.description}
+                icon={module.icon}
+                onClick={() => navigate(module.route)}
               />
             ))}
           </div>
