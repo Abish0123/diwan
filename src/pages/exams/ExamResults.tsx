@@ -127,6 +127,21 @@ export function ExamResultsContent({ examId, onExamIdChange }: { examId: string;
             createdAt: now, time: now, read: false, uid: user?.uid,
           }).catch(() => {});
         });
+        // Real Announcements bridge — a broadcast, dated event like "results
+        // published" belongs on the Announcements feed too, not just as a
+        // bell notification. One real Notice per grade, reusing the exact
+        // same real targetClass this notification fan-out already computed
+        // (not every notification type gets bridged this way — only
+        // genuinely broadcast-worthy events; per-person alerts like a fee
+        // invoice or a single bus boarding stay notification-only).
+        smartDb.create("Notice", {
+          title, content: message,
+          category: "Academic", priority: "Medium", status: "Published",
+          targetAudience: "All", targetClass: grade,
+          postedBy: user?.displayName || user?.email || "Exams",
+          date: now.split("T")[0],
+          views: 0, uid: user?.uid,
+        }, `notice-examresult-${selectedId}-${grade}`).catch(() => {});
       }
     } catch { /* non-fatal — results are already published either way */ }
   }
