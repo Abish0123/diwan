@@ -1985,6 +1985,20 @@ async function startServer() {
         }
       }
 
+      // Real deactivation enforcement — previously Staff.status and the
+      // real login account were fully disconnected: setting a staff member
+      // Inactive/Terminated in Staff Directory never touched their User
+      // row, and login itself never checked status at all, so a terminated
+      // staff member kept a fully working login indefinitely. This is the
+      // one real enforcement point (client-side never gets far enough to
+      // bypass it).
+      if (user) {
+        const userData = JSON.parse(user.data);
+        if (userData.status === "Inactive" || userData.status === "Terminated") {
+          return res.status(403).json({ error: "This account has been deactivated. Contact the school office." });
+        }
+      }
+
       if (checkOnly) return res.json({ success: true });
 
       if (user) {

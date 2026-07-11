@@ -87,6 +87,7 @@ import {
 import { useStaff } from "@/contexts/StaffContext";
 import { useLeave } from "@/contexts/LeaveContext";
 import { Staff } from "@/types";
+import { smartDb } from "@/lib/localDb";
 
 // Annual leave entitlement per school policy — used to compute remaining balance
 // from real approved leave requests (mirrors the policy used in TeacherLeave.tsx).
@@ -107,6 +108,22 @@ const StaffDirectory = () => {
   const [staffToEdit, setStaffToEdit] = useState<Staff | null>(null);
   const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Staff; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  // Real published appraisal scores, keyed by staff id (the Appraisal
+  // entity's own id IS the staff id — StaffAppraisal.tsx writes/updates via
+  // smartDb.update("Appraisal", staff.id, ...)). Previously a published
+  // appraisal score never appeared anywhere outside the appraisal module
+  // itself — a genuine dead end past the publish gate.
+  const [appraisalScores, setAppraisalScores] = useState<Record<string, number>>({});
+  useEffect(() => {
+    smartDb.getAll("Appraisal", undefined).then((rows) => {
+      const scores: Record<string, number> = {};
+      (rows as { id: string; overall?: number; published?: boolean }[]).forEach(r => {
+        if (r.published && typeof r.overall === "number") scores[r.id] = r.overall;
+      });
+      setAppraisalScores(scores);
+    }).catch(() => setAppraisalScores({}));
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -574,6 +591,11 @@ const StaffDirectory = () => {
                       {s.status}
                     </Badge>
                   </div>
+                  {appraisalScores[s.id] != null && (
+                    <Badge variant="outline" className={cn("text-[10px] font-bold w-fit", appraisalScores[s.id] >= 70 ? "border-green-200 text-green-700 bg-green-50" : appraisalScores[s.id] >= 50 ? "border-amber-200 text-amber-700 bg-amber-50" : "border-rose-200 text-rose-700 bg-rose-50")}>
+                      Last Appraisal: {appraisalScores[s.id]}%
+                    </Badge>
+                  )}
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Mail className="h-3 w-3 shrink-0" />
@@ -680,17 +702,24 @@ const StaffDirectory = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="secondary"
-                          className={cn(
-                            "border-none font-bold text-[10px] uppercase tracking-wider",
-                            s.status === "Active" ? "bg-green-100 text-green-600" : 
-                            s.status === "On Leave" ? "bg-orange-100 text-orange-600" :
-                            "bg-slate-100 text-slate-600"
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "border-none font-bold text-[10px] uppercase tracking-wider",
+                              s.status === "Active" ? "bg-green-100 text-green-600" :
+                              s.status === "On Leave" ? "bg-orange-100 text-orange-600" :
+                              "bg-slate-100 text-slate-600"
+                            )}
+                          >
+                            {s.status}
+                          </Badge>
+                          {appraisalScores[s.id] != null && (
+                            <Badge variant="outline" className={cn("text-[9px] font-bold", appraisalScores[s.id] >= 70 ? "border-green-200 text-green-700 bg-green-50" : appraisalScores[s.id] >= 50 ? "border-amber-200 text-amber-700 bg-amber-50" : "border-rose-200 text-rose-700 bg-rose-50")}>
+                              Appraisal: {appraisalScores[s.id]}%
+                            </Badge>
                           )}
-                        >
-                          {s.status}
-                        </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -1081,8 +1110,12 @@ const StaffDirectory = () => {
                       <SelectItem value="Active">Active</SelectItem>
                       <SelectItem value="On Leave">On Leave</SelectItem>
                       <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Terminated">Terminated</SelectItem>
                     </SelectContent>
                   </Select>
+                  {(formData.status === "Inactive" || formData.status === "Terminated") && (
+                    <p className="text-[11px] text-amber-600">Their real login will be deactivated — they won't be able to sign in.</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salary">Monthly Base Salary</Label>

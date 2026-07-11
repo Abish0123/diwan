@@ -1109,6 +1109,9 @@ const HRStaffSettingsDeepWorkflow = () => {
             <Card>
               <CardHeader><CardTitle>Benefits & Allowances</CardTitle><CardDescription>Manage staff perks, gratuity, and reimbursements</CardDescription></CardHeader>
               <CardContent className="space-y-6">
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  These values save for record-keeping, but nothing in the app enforces them yet — gratuity isn't auto-added to Payroll, and fee/subsidy percentages aren't applied anywhere.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4 p-4 border rounded-xl bg-slate-50">
                     <Label className="text-base text-indigo-700">Core Benefits</Label>
@@ -1481,6 +1484,9 @@ const HRStaffSettingsDeepWorkflow = () => {
                 <CardTitle className="text-base font-bold text-slate-900">E-Signature Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-0">
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-1">
+                  Not yet functional — there's no real e-signature capture, countersignature workflow, reminder job, or DMS storage anywhere in the app. These toggles only save a preference.
+                </p>
                 <div className="flex items-center justify-between py-3.5 border-b border-slate-100">
                   <span className="text-sm font-medium text-slate-700">Enable e-signatures on contracts</span>
                   <Switch checked={eSign} onCheckedChange={(v) => setESign(v)} />
@@ -1508,6 +1514,9 @@ const HRStaffSettingsDeepWorkflow = () => {
             <Card>
               <CardHeader><CardTitle>Notification Matrix</CardTitle><CardDescription>Configure alerts per event across 3 channels</CardDescription></CardHeader>
               <CardContent className="space-y-6">
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Not yet wired up — real in-app Notifications already fire for several of these events (leave status, payroll), but not because of this matrix. Email/SMS channels and the digest toggles below have no real sender behind them yet.
+                </p>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1584,6 +1593,9 @@ const HRStaffSettingsDeepWorkflow = () => {
 
                 <div className="p-4 border rounded-xl bg-indigo-50 border-indigo-100 mt-6 space-y-3">
                   <Label className="text-indigo-800">Enforcement Settings</Label>
+                  <p className="text-xs text-amber-700 bg-amber-100 border border-amber-200 rounded-lg px-3 py-2">
+                    Not yet enforced — login and onboarding don't check these flags, so acknowledgement isn't actually required anywhere yet.
+                  </p>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Enforce digital acknowledgement on first login</span>
                     <Switch checked={enforceDigAck} onCheckedChange={setEnforceDigAck} />

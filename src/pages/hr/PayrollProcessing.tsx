@@ -89,6 +89,40 @@ const PayrollProcessing = () => {
     return () => unsubscribe();
   }, [user]);
 
+  // Real Staff Attendance -> Payroll link — previously staff attendance was
+  // a genuine log with zero downstream effect on payroll. Computes real
+  // absence counts per staff member for their payroll period, from the
+  // same real "attendance" entity Attendance.tsx writes to (rows carry
+  // entityType "staff"/"student" and entityId, not a staffId field).
+  const [attendanceRows, setAttendanceRows] = useState<{ entityType?: string; entityId?: string; status?: string; date?: string }[]>([]);
+  useEffect(() => {
+    smartDb.getAll("attendance", undefined).then((rows) => {
+      setAttendanceRows((rows as typeof attendanceRows).filter(r => r.entityType === "staff"));
+    }).catch(() => setAttendanceRows([]));
+  }, []);
+
+  // "July 2026" -> [start, end] of that real month, matching the exact
+  // format StaffOnboarding.tsx stamps onto every payroll record's period.
+  const periodBounds = (period: string): [Date, Date] | null => {
+    const parsed = new Date(`1 ${period}`);
+    if (isNaN(parsed.getTime())) return null;
+    const start = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+    const end = new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0);
+    return [start, end];
+  };
+  const absentDaysFor = (p: PayrollRecord): number | null => {
+    const staffId = (p as any).staffId;
+    if (!staffId) return null;
+    const bounds = periodBounds(p.period);
+    if (!bounds) return null;
+    const [start, end] = bounds;
+    return attendanceRows.filter(r => {
+      if (r.entityId !== staffId || r.status !== "Absent" || !r.date) return false;
+      const d = new Date(r.date);
+      return d >= start && d <= end;
+    }).length;
+  };
+
   // Processing payroll used to only flip the record's own status to "Paid" —
   // the actual payout never created a real Expense/ledger entry, so Finance
   // only ever saw it via Budgeting.tsx fuzzy-matching category names like
@@ -361,6 +395,7 @@ const PayrollProcessing = () => {
             <TableHeader className="bg-secondary/50">
               <TableRow>
                 <TableHead className="font-bold">Staff Member</TableHead>
+                <TableHead className="font-bold">Attendance</TableHead>
                 <TableHead className="font-bold">Base Salary</TableHead>
                 <TableHead className="font-bold">Allowances</TableHead>
                 <TableHead className="font-bold">Deductions</TableHead>
@@ -404,6 +439,18 @@ const PayrollProcessing = () => {
                           <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{p.staffName || p.staff || "Unknown"}</span>
                           <span className="text-[11px] text-muted-foreground font-medium">{p.role || "N/A"} • {p.period}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const absent = absentDaysFor(p);
+                          return absent == null ? (
+                            <span className="text-[10px] text-muted-foreground italic">No data</span>
+                          ) : (
+                            <span className={cn("text-xs font-bold", absent > 0 ? "text-orange-600" : "text-green-600")}>
+                              {absent} day{absent === 1 ? "" : "s"} absent
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <span className="text-sm font-bold">QAR {(p.baseSalary || p.amount || 0).toLocaleString()}</span>

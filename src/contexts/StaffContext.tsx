@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, addDoc, updateDoc, deleteDoc, doc, serve
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
 import { Staff } from "@/types";
+import { userRepository } from "@/repositories/UserRepository";
 
 interface StaffContextType {
   staff: Staff[];
@@ -89,10 +90,26 @@ export const StaffProvider = ({ children }: { children: ReactNode }) => {
     try {
       await smartDb.update("Staff", id, { ...updatedStaff, updatedAt: new Date().toISOString() });
       if (!isFirestoreWorking) fetchStaff();
+      // Real login deactivation — previously Staff.status and the real
+      // login account (provisioned by staffAccounts.ts on onboarding/hire)
+      // were fully disconnected, so a staff member set Inactive/Terminated
+      // here kept a fully working login indefinitely. Mirrors the status
+      // onto their real User row; login itself enforces it server-side
+      // (POST /api/session/login). Symmetric: setting status back to
+      // Active reactivates the login too, so a correction isn't permanent.
+      if (updatedStaff.status === "Inactive" || updatedStaff.status === "Terminated" || updatedStaff.status === "Active") {
+        const email = updatedStaff.email || staff.find(s => s.id === id)?.email;
+        if (email) {
+          userRepository.findByEmail(email).then(existingUser => {
+            if (!existingUser) return;
+            return userRepository.update(existingUser.id, { status: updatedStaff.status === "Active" ? "Active" : "Inactive" });
+          }).catch(() => {});
+        }
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, "Staff");
     }
-  }, [fetchStaff]);
+  }, [fetchStaff, staff]);
 
   const deleteStaff = useCallback(async (id: string) => {
     try {
