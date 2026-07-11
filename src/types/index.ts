@@ -30,6 +30,13 @@ export interface CurriculumWeek {
   content: string[];
   activities: string[];
   detailedContent?: string;
+  // Real syllabus-completion tracking — a teacher marks a week's topic
+  // actually covered in class. Previously curriculum was a static
+  // reference/plan with no progress tracking against what was actually
+  // delivered.
+  completed?: boolean;
+  completedAt?: string;
+  completedBy?: string;
 }
 
 export interface CurriculumAssessment {

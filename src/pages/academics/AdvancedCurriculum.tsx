@@ -54,6 +54,7 @@ import { toast } from "sonner";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { smartDb } from "@/lib/localDb";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { findNcertBook, ncertSubjectsForGrade, type NcertBook } from "@/lib/ncertResources";
 import { BookMarked, ExternalLink } from "lucide-react";
@@ -61,7 +62,7 @@ import { BookMarked, ExternalLink } from "lucide-react";
 // Local type definitions for this advanced curriculum module
 type CurriculumType = 'CBSE' | 'IB' | 'Cambridge' | 'Montessori' | 'AI' | 'Hybrid';
 interface CurriculumAssessment { type: string; week: number; weight: number; }
-interface CurriculumWeek { id?: string; week: number; topic: string; content: string[]; activities: string[]; detailedContent?: string; }
+interface CurriculumWeek { id?: string; week: number; topic: string; content: string[]; activities: string[]; detailedContent?: string; completed?: boolean; completedAt?: string; completedBy?: string; }
 interface CurriculumUnit { id?: string; name: string; difficulty: string; learningOutcomes: string[]; weeks: CurriculumWeek[]; assessments: CurriculumAssessment[]; }
 interface CurriculumTerm { id?: string; name: string; units: CurriculumUnit[]; }
 interface Curriculum {
@@ -711,6 +712,35 @@ const AdvancedCurriculum = () => {
     await applySuggestions(suggestions, "all");
   };
 
+  // Real syllabus-completion tracking — a teacher marks a week actually
+  // taught. Previously curriculum was a static plan with nothing tracking
+  // what was really delivered in class. Persists immediately (not gated
+  // behind a separate "Save" click) since this is a frequent, in-the-moment
+  // action.
+  const toggleWeekComplete = async (termId: string, unitId: string, weekId: string) => {
+    const term = currentCurriculum.terms?.find(t => t.id === termId);
+    const unit = term?.units.find(u => u.id === unitId);
+    const week = unit?.weeks.find(w => w.id === weekId);
+    if (!term || !unit || !week || !currentCurriculum.id) return;
+    const nowCompleted = !week.completed;
+    const now = new Date().toISOString();
+    const updatedTerms = currentCurriculum.terms!.map(t => t.id === termId ? {
+      ...t,
+      units: t.units.map(u => u.id === unitId ? {
+        ...u,
+        weeks: u.weeks.map(w => w.id === weekId
+          ? { ...w, completed: nowCompleted, completedAt: nowCompleted ? now : undefined, completedBy: nowCompleted ? (user?.displayName || user?.email) : undefined }
+          : w)
+      } : u)
+    } : t);
+    setCurrentCurriculum(prev => ({ ...prev, terms: updatedTerms }));
+    try {
+      await saveCurriculum({ id: currentCurriculum.id, terms: updatedTerms });
+    } catch {
+      toast.error("Failed to save syllabus progress");
+    }
+  };
+
   const handleGenerateLesson = async (termId: string, unitId: string, weekId: string) => {
     const term = currentCurriculum.terms?.find(t => t.id === termId);
     const unit = term?.units.find(u => u.id === unitId);
@@ -1275,27 +1305,48 @@ const AdvancedCurriculum = () => {
 
                   {/* Weekly Planner */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <Layout className="w-5 h-5 text-[#d12386]" />
-                      Weekly Planner
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <Layout className="w-5 h-5 text-[#d12386]" />
+                        Weekly Planner
+                      </h3>
+                      {(() => {
+                        const total = activeUnit.weeks.length;
+                        const covered = activeUnit.weeks.filter(w => w.completed).length;
+                        const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+                        return (
+                          <div className="flex items-center gap-2 min-w-[160px]">
+                            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{covered}/{total} covered</span>
+                            <Progress value={pct} className="h-1.5 w-24" />
+                          </div>
+                        );
+                      })()}
+                    </div>
                     <div className="space-y-3">
                       {activeUnit.weeks.map((week, idx) => (
-                        <Card key={week.id} className="bg-white border-none shadow-sm hover:shadow-md transition-shadow group">
+                        <Card key={week.id} className={cn("bg-white border-none shadow-sm hover:shadow-md transition-shadow group", week.completed && "ring-1 ring-emerald-200")}>
                           <CardContent className="p-4 flex items-center gap-4">
-                            <div className="shrink-0 w-12 h-12 rounded-full bg-slate-50 flex flex-col items-center justify-center border border-slate-100">
+                            <div className={cn("shrink-0 w-12 h-12 rounded-full flex flex-col items-center justify-center border",
+                              week.completed ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100")}>
                               <span className="text-[10px] uppercase font-bold text-slate-400">Week</span>
                               <span className="text-lg font-bold text-slate-700 leading-none">{week.week}</span>
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
                                 <h4 className="font-semibold text-slate-900">{week.topic}</h4>
-                                {optimizationData?.issues.find((i: { week?: number }) => i.week === week.week) && (
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[10px]">
-                                    <AlertTriangle className="w-3 h-3 mr-1" />
-                                    Overload Risk
-                                  </Badge>
-                                )}
+                                <div className="flex items-center gap-1.5">
+                                  {week.completed && (
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px]" title={week.completedBy ? `Covered by ${week.completedBy}` : undefined}>
+                                      <CheckCircle2 className="w-3 h-3 mr-1" /> Covered
+                                    </Badge>
+                                  )}
+                                  {optimizationData?.issues.find((i: { week?: number }) => i.week === week.week) && (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[10px]">
+                                      <AlertTriangle className="w-3 h-3 mr-1" />
+                                      Overload Risk
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex flex-wrap gap-2">
                                 {week.content.map((c, i) => (
@@ -1306,9 +1357,22 @@ const AdvancedCurriculum = () => {
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={cn("h-8 text-xs font-bold",
+                                  week.completed ? "border-emerald-200 text-emerald-600 hover:bg-emerald-50" : "border-slate-200 text-slate-500 hover:bg-slate-50")}
+                                onClick={() => {
+                                  const term = currentCurriculum.terms?.find(t => t.units.some(u => u.id === activeUnit.id));
+                                  if (term && week.id) toggleWeekComplete(term.id!, activeUnit.id!, week.id);
+                                }}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                                {week.completed ? "Covered" : "Mark Covered"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="h-8 text-xs font-bold border-[#d12386]/20 text-[#d12386] hover:bg-[#d12386]/5"
                                 onClick={() => {
                                   const term = currentCurriculum.terms?.find(t => t.units.some(u => u.id === activeUnit.id));

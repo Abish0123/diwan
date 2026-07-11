@@ -253,26 +253,22 @@ export default function LiveClassDetails() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-slate-900">Shared Resources</h3>
-                  <Button className="bg-[#9810fa] hover:bg-[#5b4bc4] text-white rounded-xl">
+                  <Button className="bg-[#9810fa] hover:bg-[#5b4bc4] text-white rounded-xl" disabled title="Resource upload isn't wired up yet">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Resource
                   </Button>
                 </div>
-                <div className="space-y-3">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between group hover:border-purple-200 hover:bg-purple-50/30 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Class_Syllabus.pdf</p>
-                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">PDF • 2.4 MB</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="icon" className="rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Download className="h-4 w-4 text-slate-400" />
-                    </Button>
-                  </div>
+                {/* Used to show a hardcoded "Class_Syllabus.pdf" that was never a
+                    real uploaded file — a live class here has no grade/section
+                    field to honestly resolve which class's real syllabus
+                    progress this would even mean, so this stays an honest
+                    empty state rather than fabricated data. Real syllabus
+                    tracking lives in Academics → Curriculum (per-subject
+                    weekly progress). */}
+                <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl bg-slate-50/70 border border-dashed border-slate-200">
+                  <FileText className="h-8 w-8 text-slate-300 mb-3" />
+                  <p className="text-sm font-semibold text-slate-600">No resources shared yet</p>
+                  <p className="text-xs text-slate-400 mt-1">Files shared for this class will appear here.</p>
                 </div>
               </CardContent>
             </Card>
