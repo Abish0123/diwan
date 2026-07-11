@@ -25,7 +25,7 @@ import { useBranch } from "@/contexts/BranchContext";
 import { Staff } from "@/types";
 import { AppraisalCycleWizard } from "./appraisal/AppraisalCycleWizard";
 import { CycleSuccessScreen } from "./appraisal/CycleSuccessScreen";
-import { createAppraisalCycle, CreationResult } from "./appraisal/createAppraisalCycle";
+import { createAppraisalCycle, CreationResult, CreationProgress } from "./appraisal/createAppraisalCycle";
 import { KpiCategoryConfig, AppraisalCycleConfig } from "./appraisal/appraisalCycleTypes";
 import { AppraisalAnalyticsTab } from "./appraisal/AppraisalAnalyticsTab";
 
@@ -159,6 +159,7 @@ export default function StaffAppraisal() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [submittingCycle, setSubmittingCycle] = useState(false);
   const [creationResult, setCreationResult] = useState<CreationResult | null>(null);
+  const [cycleProgress, setCycleProgress] = useState<CreationProgress | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [kpiTemplates, setKpiTemplates] = useState<Record<string, KpiCategoryConfig[]>>({});
 
@@ -327,12 +328,14 @@ export default function StaffAppraisal() {
   async function handleSubmitCycleWizard(config: AppraisalCycleConfig) {
     if (!user) return;
     setSubmittingCycle(true);
+    setCycleProgress(null);
     try {
       const result = await createAppraisalCycle(config, {
         uid: user.uid,
         userName: user.displayName || user.email || "HR Admin",
         role: role || "admin",
         allStaff,
+        onProgress: setCycleProgress,
       });
       setCreationResult(result);
       setWizardOpen(false);
@@ -342,6 +345,7 @@ export default function StaffAppraisal() {
       toast.error(`Failed to create appraisal cycle: ${(e as Error).message}`);
     } finally {
       setSubmittingCycle(false);
+      setCycleProgress(null);
     }
   }
 
@@ -857,6 +861,7 @@ export default function StaffAppraisal() {
           kpiTemplates={kpiTemplates}
           onSaveTemplate={handleSaveKpiTemplate}
           submitting={submittingCycle}
+          progress={cycleProgress}
           onSubmit={handleSubmitCycleWizard}
           onSaveDraft={handleSaveCycleDraft}
         />

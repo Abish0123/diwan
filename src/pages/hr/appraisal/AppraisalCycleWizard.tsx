@@ -22,7 +22,7 @@ import {
   STAFF_CATEGORIES, StaffCategory, DEFAULT_KPI_TEMPLATE,
   staffCategoriesFor,
 } from "./appraisalCycleTypes";
-import { resolveSelectedStaff } from "./createAppraisalCycle";
+import { resolveSelectedStaff, CreationProgress } from "./createAppraisalCycle";
 
 const STEPS = [
   { id: 1, label: "Basic Info", icon: ClipboardCheck },
@@ -79,12 +79,19 @@ interface Props {
   kpiTemplates: Record<string, { title: string; weight: number }[]>;
   onSaveTemplate: (name: string, kpis: { title: string; weight: number }[]) => void;
   submitting: boolean;
+  progress?: CreationProgress | null;
   onSubmit: (config: AppraisalCycleConfig) => void;
   onSaveDraft: (config: AppraisalCycleConfig) => void;
 }
 
+const PROGRESS_PHASE_LABEL: Record<CreationProgress["phase"], string> = {
+  scorecards: "Creating employee scorecards",
+  notifications: "Sending in-app notifications",
+  emails: "Sending emails",
+};
+
 export function AppraisalCycleWizard({
-  open, onOpenChange, staff, branches, academicYear, kpiTemplates, onSaveTemplate, submitting, onSubmit, onSaveDraft,
+  open, onOpenChange, staff, branches, academicYear, kpiTemplates, onSaveTemplate, submitting, progress, onSubmit, onSaveDraft,
 }: Props) {
   const [step, setStep] = useState(1);
   const [config, setConfig] = useState<AppraisalCycleConfig>(() => defaultConfig(academicYear));
@@ -153,7 +160,7 @@ export function AppraisalCycleWizard({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !submitting) handleClose(); }}>
       <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-xl font-bold">Create Appraisal Cycle</DialogTitle>
@@ -535,8 +542,23 @@ export function AppraisalCycleWizard({
             </motion.div>
         </div>
 
+        {submitting && (
+          <div className="px-6 py-3 border-t bg-purple-50 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-purple-800">
+                {progress ? PROGRESS_PHASE_LABEL[progress.phase] : "Starting…"}
+                {progress ? ` — ${progress.done} / ${progress.total}` : ""}
+              </span>
+              <span className="text-purple-500 font-medium">Please don't close this window</span>
+            </div>
+            <Progress value={progress ? Math.round((progress.done / Math.max(1, progress.total)) * 100) : 5} className="h-1.5" />
+            <p className="text-[10px] text-purple-400">
+              Large rosters are deliberately rate-limited to stay within the server's write limits — this can take a few minutes for a full-school cycle.
+            </p>
+          </div>
+        )}
         <div className="px-6 py-4 border-t flex items-center justify-between bg-slate-50 rounded-b-lg">
-          <Button variant="outline" onClick={step === 1 ? handleClose : back}>
+          <Button variant="outline" onClick={step === 1 ? handleClose : back} disabled={submitting}>
             {step === 1 ? "Cancel" : <><ChevronLeft className="h-4 w-4 mr-1" /> Back</>}
           </Button>
           <div className="flex gap-2">

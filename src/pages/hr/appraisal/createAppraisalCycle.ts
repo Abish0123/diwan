@@ -40,9 +40,10 @@ function sleep(ms: number) {
 async function runThrottled<T>(
   items: T[],
   worker: (item: T) => Promise<void>,
-  opts: { batchSize: number; delayMs: number }
+  opts: { batchSize: number; delayMs: number; onProgress?: (done: number, total: number) => void }
 ): Promise<{ succeeded: number; failed: number }> {
-  let succeeded = 0, failed = 0;
+  let succeeded = 0, failed = 0, done = 0;
+  opts.onProgress?.(0, items.length);
   for (let i = 0; i < items.length; i += opts.batchSize) {
     const batch = items.slice(i, i + opts.batchSize);
     await Promise.all(
@@ -60,12 +61,21 @@ async function runThrottled<T>(
           } catch {
             failed++;
           }
+        } finally {
+          done++;
+          opts.onProgress?.(done, items.length);
         }
       })
     );
     if (i + opts.batchSize < items.length) await sleep(opts.delayMs);
   }
   return { succeeded, failed };
+}
+
+export interface CreationProgress {
+  phase: "scorecards" | "notifications" | "emails";
+  done: number;
+  total: number;
 }
 
 // Real scope filtering — no fabricated roster. "All Staff" simply means every
@@ -86,9 +96,9 @@ export function resolveSelectedStaff(config: AppraisalCycleConfig, allStaff: Sta
 
 export async function createAppraisalCycle(
   config: AppraisalCycleConfig,
-  ctx: { uid: string; userName: string; role: string; allStaff: Staff[] }
+  ctx: { uid: string; userName: string; role: string; allStaff: Staff[]; onProgress?: (p: CreationProgress) => void }
 ): Promise<CreationResult> {
-  const { uid, userName, role, allStaff } = ctx;
+  const { uid, userName, role, allStaff, onProgress } = ctx;
   const selected = resolveSelectedStaff(config, allStaff);
   const cycleId = `cycle-${Date.now()}`;
   const now = new Date().toISOString();
@@ -161,7 +171,7 @@ export async function createAppraisalCycle(
         cardId
       );
     },
-    { batchSize: 10, delayMs: 6000 }
+    { batchSize: 10, delayMs: 6000, onProgress: (done, total) => onProgress?.({ phase: "scorecards", done, total }) }
   );
 
   // Real, best-effort notifications — no channel is marked "sent" unless it
@@ -188,7 +198,7 @@ export async function createAppraisalCycle(
           uid,
         });
       },
-      { batchSize: 10, delayMs: 6000 }
+      { batchSize: 10, delayMs: 6000, onProgress: (done, total) => onProgress?.({ phase: "notifications", done, total }) }
     );
     inAppSent = result.succeeded;
   }
@@ -212,7 +222,7 @@ export async function createAppraisalCycle(
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       },
-      { batchSize: 15, delayMs: 2000 }
+      { batchSize: 15, delayMs: 2000, onProgress: (done, total) => onProgress?.({ phase: "emails", done, total }) }
     );
     emailSent = result.succeeded;
   }
