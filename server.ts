@@ -2872,23 +2872,116 @@ async function startServer() {
   });
 
   // ── Transport notification helper ────────────────────────────────────────
+  // Transport allocations (transport_enrollments / TransportRecord) carry
+  // only a free-text `studentName` — never a real Student FK — so reaching
+  // the actual parent means matching that name against the real `students`
+  // table (same fuzzy-by-necessity approach ParentTransport.tsx already
+  // uses to resolve a parent's own child's allocation). Returns null rather
+  // than guessing when no single confident match exists.
+  async function resolveRealStudentId(
+    studentName: string, grade?: string, section?: string
+  ): Promise<{ studentId: string; studentLoginId: string } | null> {
+    if (!studentName) return null;
+    try {
+      const norm = (s: unknown) => String(s || "").trim().toLowerCase();
+      const rows = await dbQuery(
+        `SELECT id, data FROM \`students\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.name')) = ? LIMIT 5`,
+        [studentName]
+      );
+      if (rows.length === 0) return null;
+      const parsed = rows.map((r: any) => ({ id: r.id, data: JSON.parse(r.data) }));
+      const match = (grade
+        ? parsed.find((p) => norm(p.data.grade) === norm(grade) && (!section || norm(p.data.section) === norm(section)))
+        : undefined) || (parsed.length === 1 ? parsed[0] : undefined);
+      if (!match) return null; // multiple same-named students, no grade/section to disambiguate — don't guess
+      const studentLoginId = match.data.admissionNumber || match.data.rollNumber || match.id;
+      return { studentId: match.id, studentLoginId };
+    } catch {
+      return null;
+    }
+  }
+
   async function emitTransportNotif(opts: {
     type: string; category: string; title: string; body?: string;
+    // Real affected students for this event (a single student for a
+    // boarding/drop mark, or the whole vehicle's roster for a trip/SOS/
+    // delay event) — resolved to their real student+parent accounts and
+    // notified individually, in addition to the existing admin-tier
+    // broadcast below.
+    targets?: Array<{ studentName: string; grade?: string; section?: string }>;
   }) {
     const notifId = `tn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const time = new Date().toISOString();
-    const payload = { id: notifId, type: opts.type, entity: "transport", category: opts.category, title: opts.title, body: opts.body ?? "", time };
+    const payload = { id: notifId, type: opts.type, entity: "transport", category: opts.category, title: opts.title, message: opts.body ?? "", body: opts.body ?? "", time };
     // Untargeted (no recipientUid/audienceRole) — matches the same "full-access
     // tier only" semantic client-side isForMe() already enforced for this shape.
     io.to(["tier:full-access"]).emit("notification", payload);
-    // Persist to notifications table so the bell counter reflects it
     if (pool) {
       try {
+        // createdAt/updatedAt are real SQL columns the generic "newest 300"
+        // notifications list (GET /api/data/notifications) sorts by — a raw
+        // INSERT that only fills `data` leaves them NULL, which pushes the
+        // row to the bottom of that sort (past the cap) even though it just
+        // happened. Live socket delivery still works either way; this is
+        // what makes the row visible to a client that's polling/catching up
+        // instead of connected.
         await pool.execute(
-          "INSERT INTO notifications (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
-          [notifId, JSON.stringify(payload)]
+          "INSERT INTO notifications (id, data, createdAt, updatedAt) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data), updatedAt=VALUES(updatedAt)",
+          [notifId, JSON.stringify(payload), time, time]
         );
+        // Every other write path in this file does this after inserting —
+        // skipping it here left the cached "newest 300" list serving stale
+        // data (missing this row) until some unrelated write happened to
+        // invalidate it first.
+        entityCache.delete("notifications");
       } catch { /* non-fatal */ }
+    }
+
+    if (!opts.targets || opts.targets.length === 0) return;
+    // De-dupe so a whole-bus event only ever notifies each real student once.
+    const notifiedStudentIds = new Set<string>();
+    for (const t of opts.targets) {
+      const resolved = await resolveRealStudentId(t.studentName, t.grade, t.section);
+      if (!resolved || notifiedStudentIds.has(resolved.studentId)) continue;
+      notifiedStudentIds.add(resolved.studentId);
+
+      // Parent: audienceRole + studentId, the SAME family-wide-broadcast
+      // scoping isForMe() already applies for every other parent
+      // notification in the app (src/hooks/useNotifications.ts) — matched
+      // against a parent's real children (useParentChildren, by email),
+      // not tied to whether our own provisioned "${loginId}-parent" login
+      // happens to be how this particular parent actually signs in.
+      // Deliberately NOT setting recipientUid here: isForMe() treats
+      // recipientUid as an exact-match short-circuit, which would make
+      // this notification miss any parent who authenticates a different
+      // way (e.g. Google sign-in) even though they're the real parent.
+      const parentId = `tn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const parentPayload = {
+        id: parentId, type: opts.type, entity: "transport", category: opts.category,
+        title: opts.title, message: opts.body ?? "", body: opts.body ?? "", time,
+        audienceRole: "parent", studentId: resolved.studentId,
+      };
+      io.to(`student-parent:${resolved.studentId}`).emit("notification", parentPayload);
+
+      // Student: a single specific person, so recipientUid IS the right
+      // tool here (unlike the parent case above).
+      const studentNotifId = `tn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const studentPayload = {
+        id: studentNotifId, type: opts.type, entity: "transport", category: opts.category,
+        title: opts.title, message: opts.body ?? "", body: opts.body ?? "", time,
+        audienceRole: "student", recipientUid: resolved.studentLoginId, studentId: resolved.studentId,
+      };
+      io.to(`user:${resolved.studentLoginId}`).emit("notification", studentPayload);
+
+      if (pool) {
+        try {
+          await pool.execute(
+            "INSERT INTO notifications (id, data, createdAt, updatedAt) VALUES (?, ?, ?, ?), (?, ?, ?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data), updatedAt=VALUES(updatedAt)",
+            [parentId, JSON.stringify(parentPayload), time, time, studentNotifId, JSON.stringify(studentPayload), time, time]
+          );
+          entityCache.delete("notifications");
+        } catch { /* non-fatal */ }
+      }
     }
   }
 
@@ -2919,6 +3012,7 @@ async function startServer() {
       category: "transport",
       title: `Bus ${vehicleId} has started its trip at ${timeStr}`,
       body: `Driver: ${driverName || "Unknown"} · ${students.length} students on board`,
+      targets: students.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined })),
     });
 
     res.json({ tripId, studentCount: students.length });
@@ -2935,11 +3029,13 @@ async function startServer() {
     io.emit("trip_ended", { vehicleId, tripId });
 
     const timeStr = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const endedTripStudents = await getStudentsForVehicle(vehicleId);
     await emitTransportNotif({
       type: "trip_ended",
       category: "transport",
       title: `Bus ${vehicleId} has completed its trip at ${timeStr}`,
       body: `All students have been dropped safely.`,
+      targets: endedTripStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined })),
     });
 
     res.json({ status: "ended" });
@@ -2985,12 +3081,14 @@ async function startServer() {
 
     // Parent notification
     const timeStr = new Date(markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const boardTarget = [{ studentName: sName, grade: existing["grade"] as string | undefined, section: existing["section"] as string | undefined }];
     if (status === "boarded") {
       await emitTransportNotif({
         type: "student_boarded",
         category: "transport",
         title: `${sName} has boarded ${vehicleId} at ${timeStr}`,
         body: stop ? `Pickup stop: ${stop}` : `Bus ${vehicleId} is on its way.`,
+        targets: boardTarget,
       });
     } else if (status === "dropped") {
       await emitTransportNotif({
@@ -2998,6 +3096,7 @@ async function startServer() {
         category: "transport",
         title: `${sName} has been safely dropped at ${timeStr}`,
         body: stop ? `Drop stop: ${stop}` : ``,
+        targets: boardTarget,
       });
     }
 
@@ -3102,6 +3201,11 @@ async function startServer() {
           "INSERT INTO transport_incidents (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data)",
           [id, JSON.stringify({ ...req.body, id })]
         );
+        // SOS/Delay affect everyone currently on that vehicle — resolve the
+        // real roster so every affected parent (not just admins) is notified.
+        const incidentVehicleId = req.body.vehicleId;
+        const incidentStudents = incidentVehicleId ? await getStudentsForVehicle(incidentVehicleId) : [];
+        const incidentTargets = incidentStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined }));
         // SOS: broadcast dedicated socket event + persistent notification
         if (req.body.type === "SOS") {
           io.emit("sos_alert", { ...req.body, id });
@@ -3110,6 +3214,7 @@ async function startServer() {
             category: "transport",
             title: `🚨 SOS ALERT — ${req.body.vehicleId || "Bus"}: ${req.body.description || "Emergency reported"}`,
             body: `Driver: ${req.body.driverName || "Unknown"} · Location: ${req.body.location || "Unknown"} · Immediate attention required`,
+            targets: incidentTargets,
           });
         } else if (req.body.type === "Delay" && !req.body.resolvedAt) {
           await emitTransportNotif({
@@ -3117,6 +3222,7 @@ async function startServer() {
             category: "transport",
             title: `Bus ${req.body.vehicleId || ""} is delayed — ${req.body.description || "Delay reported"}`,
             body: `Severity: ${req.body.severity || "Low"}`,
+            targets: incidentTargets,
           });
         }
       }
