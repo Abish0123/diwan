@@ -8,6 +8,7 @@ import {
 } from "@/lib/timetableRules";
 import socket from "@/lib/socket";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { LabEquipmentStatus } from "@/components/timetable/LabEquipmentStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -1887,6 +1888,7 @@ const Timetable = () => {
                     {CLASSROOMS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <LabEquipmentStatus room={fRoom} />
               </div>
             )}
 
@@ -2095,6 +2097,7 @@ const Timetable = () => {
                     {CLASSROOMS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                <LabEquipmentStatus room={tRoom} />
               </div>
             )}
 
