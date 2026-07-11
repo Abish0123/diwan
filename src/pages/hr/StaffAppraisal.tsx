@@ -15,12 +15,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download } from "lucide-react";
+import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
 import { pushNotify } from "@/lib/pushNotifications";
 import { useAuth } from "@/hooks/useAuth";
 import { useHRSettings } from "@/contexts/HRSettingsContext";
+import { useBranch } from "@/contexts/BranchContext";
+import { Staff } from "@/types";
+import { AppraisalCycleWizard } from "./appraisal/AppraisalCycleWizard";
+import { CycleSuccessScreen } from "./appraisal/CycleSuccessScreen";
+import { createAppraisalCycle, CreationResult } from "./appraisal/createAppraisalCycle";
+import { KpiCategoryConfig, AppraisalCycleConfig } from "./appraisal/appraisalCycleTypes";
 
 const kpiCategories = [
   {
@@ -78,10 +84,14 @@ interface Scorecard {
   id: string;
   name: string;
   role: string;
-  teaching: number;
-  punctuality: number;
-  feedback: number;
-  admin: number;
+  // Legacy fixed 4-category model (cycles created before the wizard existed).
+  teaching?: number;
+  punctuality?: number;
+  feedback?: number;
+  admin?: number;
+  // Dynamic KPI model (cycles created via the wizard) — category title -> score.
+  kpiScores?: Record<string, number>;
+  kpiWeights?: Record<string, number>;
   overall: number;
   status: string;
   type?: string;
@@ -89,6 +99,8 @@ interface Scorecard {
   createdAt?: string;
   cycleId?: string;
   reminderSentAt?: string;
+  reviewers?: { hod?: string; principal?: string; hr?: string };
+  department?: string;
 }
 
 interface Cycle {
@@ -97,11 +109,14 @@ interface Cycle {
   title?: string;
   startedAt?: string;
   status?: string;
+  employeeCount?: number;
+  kpis?: KpiCategoryConfig[];
 }
 
-function scoreColor(score: number) {
-  if (score >= 90) return "text-green-600 font-semibold";
-  if (score >= 75) return "text-yellow-600 font-semibold";
+function scoreColor(score: number | undefined) {
+  const s = Number(score) || 0;
+  if (s >= 90) return "text-green-600 font-semibold";
+  if (s >= 75) return "text-yellow-600 font-semibold";
   return "text-red-600 font-semibold";
 }
 
@@ -121,8 +136,9 @@ function statusBadge(status: string) {
 }
 
 export default function StaffAppraisal() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const hrSettings = useHRSettings();
+  const { branches } = useBranch();
   const [expandedKpi, setExpandedKpi] = useState<number | null>(null);
   const [obsTeacher, setObsTeacher] = useState("");
   const [obsDate, setObsDate] = useState("");
@@ -130,10 +146,17 @@ export default function StaffAppraisal() {
   const [scorecards, setScorecards] = useState<Scorecard[]>([]);
   const [editCard, setEditCard] = useState<Scorecard | null>(null);
   const [teachingStaff, setTeachingStaff] = useState<{ name: string; role: string; email?: string }[]>([]);
+  const [allStaff, setAllStaff] = useState<Staff[]>([]);
   const [cycle, setCycle] = useState<Cycle | null>(null);
   const [viewCycleOpen, setViewCycleOpen] = useState(false);
-  const [creatingCycle, setCreatingCycle] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
+  // New multi-step wizard flow (replaces the old one-click "New Appraisal
+  // Cycle" button that created a cycle immediately with no configuration).
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [submittingCycle, setSubmittingCycle] = useState(false);
+  const [creationResult, setCreationResult] = useState<CreationResult | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [kpiTemplates, setKpiTemplates] = useState<Record<string, KpiCategoryConfig[]>>({});
 
   function statusForScore(score: number) {
     if (score >= 90) return "Excellent";
@@ -144,14 +167,29 @@ export default function StaffAppraisal() {
 
   async function handleSaveScorecard() {
     if (!editCard) return;
-    const teaching = Number(editCard.teaching) || 0;
-    const punctuality = Number(editCard.punctuality) || 0;
-    const feedback = Number(editCard.feedback) || 0;
-    const admin = Number(editCard.admin) || 0;
-    const overall = Math.round((teaching + punctuality + feedback + admin) / 4);
+    let overall: number;
+    let patch: Partial<Scorecard>;
+    if (editCard.kpiScores) {
+      // Dynamic KPI model — weighted average using the framework snapshotted
+      // onto this scorecard when its cycle was created, so a later change to
+      // the cycle's own KPI list never silently reweights an in-progress card.
+      const weights = editCard.kpiWeights || {};
+      const totalWeight = Object.values(weights).reduce((s, w) => s + (Number(w) || 0), 0) || 1;
+      overall = Math.round(
+        Object.entries(editCard.kpiScores).reduce((sum, [k, v]) => sum + (Number(v) || 0) * (Number(weights[k]) || 0), 0) / totalWeight
+      );
+      patch = { kpiScores: editCard.kpiScores, overall, status: statusForScore(overall) };
+    } else {
+      const teaching = Number(editCard.teaching) || 0;
+      const punctuality = Number(editCard.punctuality) || 0;
+      const feedback = Number(editCard.feedback) || 0;
+      const admin = Number(editCard.admin) || 0;
+      overall = Math.round((teaching + punctuality + feedback + admin) / 4);
+      patch = { teaching, punctuality, feedback, admin, overall, status: statusForScore(overall) };
+    }
     const status = statusForScore(overall);
-    const updated = { ...editCard, teaching, punctuality, feedback, admin, overall, status };
-    await smartDb.update("Appraisal", editCard.id, { teaching, punctuality, feedback, admin, overall, status });
+    const updated = { ...editCard, ...patch, overall, status };
+    await smartDb.update("Appraisal", editCard.id, patch);
     setScorecards((prev) => prev.map((c) => (c.id === editCard.id ? updated : c)));
     setEditCard(null);
     toast.success(`Scorecard updated for ${editCard.name}`);
@@ -163,19 +201,22 @@ export default function StaffAppraisal() {
     if (!user) return;
     // School-wide, not scoped to this admin's own uid — appraisal records and
     // the staff roster are shared org data, same fix as HRDashboard.tsx.
-    const [appraisalData, staffData] = await Promise.all([
+    const [appraisalData, staffData, templates] = await Promise.all([
       smartDb.getAll("Appraisal", undefined) as Promise<Scorecard[]>,
-      smartDb.getAll("Staff", undefined) as Promise<Record<string, unknown>[]>,
+      smartDb.getAll("Staff", undefined) as Promise<Staff[]>,
+      smartDb.getAll("AppraisalKpiTemplate", undefined) as Promise<{ id: string; name: string; kpis: KpiCategoryConfig[] }[]>,
     ]);
     setScorecards(appraisalData.filter((d) => d.type !== "observation" && d.type !== "cycle"));
+    setAllStaff(staffData);
     const teaching = staffData
       .filter((s) => (s.role === "Class Teacher" || s.role === "Subject Teacher") && s.status !== "Inactive")
-      .map((s) => ({ name: (s.name as string) || "", role: (s.role as string) || "Teacher", email: s.email as string | undefined }))
+      .map((s) => ({ name: s.name || "", role: s.role || "Teacher", email: s.email }))
       .filter((s) => s.name);
     setTeachingStaff(teaching);
     const cycles = appraisalData.filter((d) => d.type === "cycle") as unknown as Cycle[];
     const latest = [...cycles].sort((a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime())[0];
     setCycle(latest || null);
+    setKpiTemplates(Object.fromEntries(templates.map((t) => [t.name, t.kpis])));
   }, [user]);
 
   useEffect(() => {
@@ -279,56 +320,51 @@ export default function StaffAppraisal() {
     toast.success(`Exported ${scorecards.length} appraisal scorecards`);
   }
 
-  async function handleNewCycle() {
+  async function handleSubmitCycleWizard(config: AppraisalCycleConfig) {
     if (!user) return;
-    if (teachingStaff.length === 0) {
-      toast.error("No teaching staff found to evaluate — add staff before starting a cycle.");
-      return;
-    }
-    setCreatingCycle(true);
+    setSubmittingCycle(true);
     try {
-      const id = `cycle-${Date.now()}`;
+      const result = await createAppraisalCycle(config, {
+        uid: user.uid,
+        userName: user.displayName || user.email || "HR Admin",
+        role: role || "admin",
+        allStaff,
+      });
+      setCreationResult(result);
+      setWizardOpen(false);
+      setSuccessOpen(true);
+      await loadAll();
+    } catch (e) {
+      toast.error(`Failed to create appraisal cycle: ${(e as Error).message}`);
+    } finally {
+      setSubmittingCycle(false);
+    }
+  }
+
+  async function handleSaveCycleDraft(config: AppraisalCycleConfig) {
+    if (!user) return;
+    try {
+      const id = `cycle-draft-${Date.now()}`;
       await smartDb.create(
         "Appraisal",
-        {
-          id,
-          type: "cycle",
-          title: hrSettings.appraisalCycleLabel || "Appraisal Cycle",
-          startedAt: new Date().toISOString(),
-          status: "In Progress",
-          uid: user.uid,
-          createdAt: new Date().toISOString(),
-        },
+        { id, type: "cycle-draft", ...config, uid: user.uid, createdAt: new Date().toISOString() },
         id
       );
-      // A cycle is only useful once every teaching staff member has a
-      // scorecard to fill in — without this, "Staff Scorecards" stays empty
-      // forever because nothing in the UI could previously create one.
-      await Promise.all(
-        teachingStaff.map((s) => {
-          const cardId = `sc-${id}-${s.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
-          return smartDb.create(
-            "Appraisal",
-            {
-              id: cardId,
-              name: s.name,
-              role: s.role,
-              teaching: 0, punctuality: 0, feedback: 0, admin: 0, overall: 0,
-              status: "Not Started",
-              cycleId: id,
-              uid: user.uid,
-              createdAt: new Date().toISOString(),
-            },
-            cardId
-          );
-        })
-      );
-      toast.success(`New appraisal cycle started — ${teachingStaff.length} staff scorecards created.`);
-      await loadAll();
+      toast.success(`Draft saved — "${config.name || "Untitled cycle"}" can be resumed later.`);
+      setWizardOpen(false);
     } catch {
-      toast.error("Failed to start appraisal cycle");
-    } finally {
-      setCreatingCycle(false);
+      toast.error("Failed to save draft");
+    }
+  }
+
+  async function handleSaveKpiTemplate(name: string, kpis: KpiCategoryConfig[]) {
+    try {
+      const id = `kpitpl-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+      await smartDb.create("AppraisalKpiTemplate", { id, name, kpis, createdAt: new Date().toISOString() }, id);
+      setKpiTemplates((prev) => ({ ...prev, [name]: kpis }));
+      toast.success(`Saved KPI template "${name}"`);
+    } catch {
+      toast.error("Failed to save KPI template");
     }
   }
 
@@ -405,9 +441,9 @@ export default function StaffAppraisal() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleNewCycle} disabled={creatingCycle} className="gap-2">
+            <Button onClick={() => setWizardOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
-              {creatingCycle ? "Starting…" : "New Appraisal Cycle"}
+              New Appraisal Cycle
             </Button>
             <Button variant="outline" onClick={handleDownloadReports} className="gap-2">
               <Download className="h-4 w-4" />
@@ -555,10 +591,10 @@ export default function StaffAppraisal() {
                       <TableRow key={staff.id || staff.name}>
                         <TableCell className="font-medium">{staff.name}</TableCell>
                         <TableCell className="text-gray-500 text-sm">{staff.role}</TableCell>
-                        <TableCell className={cn("text-center", scoreColor(staff.teaching))}>{staff.teaching}%</TableCell>
-                        <TableCell className={cn("text-center", scoreColor(staff.punctuality))}>{staff.punctuality}%</TableCell>
-                        <TableCell className={cn("text-center", scoreColor(staff.feedback))}>{staff.feedback}%</TableCell>
-                        <TableCell className={cn("text-center", scoreColor(staff.admin))}>{staff.admin}%</TableCell>
+                        <TableCell className={cn("text-center", scoreColor(staff.teaching))}>{staff.teaching != null ? `${staff.teaching}%` : "—"}</TableCell>
+                        <TableCell className={cn("text-center", scoreColor(staff.punctuality))}>{staff.punctuality != null ? `${staff.punctuality}%` : "—"}</TableCell>
+                        <TableCell className={cn("text-center", scoreColor(staff.feedback))}>{staff.feedback != null ? `${staff.feedback}%` : "—"}</TableCell>
+                        <TableCell className={cn("text-center", scoreColor(staff.admin))}>{staff.admin != null ? `${staff.admin}%` : "—"}</TableCell>
                         <TableCell className={cn("text-center text-base", scoreColor(staff.overall))}>{staff.overall}%</TableCell>
                         <TableCell>{statusBadge(staff.status)}</TableCell>
                         <TableCell>
@@ -704,22 +740,42 @@ export default function StaffAppraisal() {
               <DialogTitle>{editCard ? `Scorecard — ${editCard.name}` : "Scorecard"}</DialogTitle>
             </DialogHeader>
             {editCard && (
-              <div className="grid grid-cols-2 gap-4 py-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="sc-teaching">Teaching Quality</Label>
-                  <Input id="sc-teaching" type="number" value={editCard.teaching} onChange={(e) => setEditCard({ ...editCard, teaching: Number(e.target.value) })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="sc-punctuality">Punctuality</Label>
-                  <Input id="sc-punctuality" type="number" value={editCard.punctuality} onChange={(e) => setEditCard({ ...editCard, punctuality: Number(e.target.value) })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="sc-feedback">Student Feedback</Label>
-                  <Input id="sc-feedback" type="number" value={editCard.feedback} onChange={(e) => setEditCard({ ...editCard, feedback: Number(e.target.value) })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="sc-admin">Admin Tasks</Label>
-                  <Input id="sc-admin" type="number" value={editCard.admin} onChange={(e) => setEditCard({ ...editCard, admin: Number(e.target.value) })} />
+              <div className="space-y-3 py-2">
+                {editCard.reviewers && (
+                  <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                    <GitBranch className="h-3.5 w-3.5 text-purple-500" />
+                    <span>HOD: <b>{editCard.reviewers.hod || "Unassigned"}</b> · Principal: <b>{editCard.reviewers.principal || "Unassigned"}</b> · HR: <b>{editCard.reviewers.hr || "Unassigned"}</b></span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  {editCard.kpiScores ? (
+                    Object.entries(editCard.kpiScores).map(([title, score]) => (
+                      <div key={title} className="grid gap-2">
+                        <Label htmlFor={`sc-${title}`}>{title}{editCard.kpiWeights?.[title] ? ` (${editCard.kpiWeights[title]}%)` : ""}</Label>
+                        <Input id={`sc-${title}`} type="number" value={score} onChange={(e) =>
+                          setEditCard({ ...editCard, kpiScores: { ...editCard.kpiScores, [title]: Number(e.target.value) } })} />
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sc-teaching">Teaching Quality</Label>
+                        <Input id="sc-teaching" type="number" value={editCard.teaching} onChange={(e) => setEditCard({ ...editCard, teaching: Number(e.target.value) })} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sc-punctuality">Punctuality</Label>
+                        <Input id="sc-punctuality" type="number" value={editCard.punctuality} onChange={(e) => setEditCard({ ...editCard, punctuality: Number(e.target.value) })} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sc-feedback">Student Feedback</Label>
+                        <Input id="sc-feedback" type="number" value={editCard.feedback} onChange={(e) => setEditCard({ ...editCard, feedback: Number(e.target.value) })} />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="sc-admin">Admin Tasks</Label>
+                        <Input id="sc-admin" type="number" value={editCard.admin} onChange={(e) => setEditCard({ ...editCard, admin: Number(e.target.value) })} />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -758,7 +814,12 @@ export default function StaffAppraisal() {
                     <div className="max-h-56 overflow-y-auto space-y-1.5">
                       {pendingScorecards.map((s) => (
                         <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border text-sm">
-                          <span className="font-medium">{s.name}</span>
+                          <div>
+                            <span className="font-medium">{s.name}</span>
+                            {s.reviewers && (
+                              <p className="text-[10px] text-gray-400">HOD: {s.reviewers.hod || "Unassigned"} · Principal: {s.reviewers.principal || "Unassigned"} · HR: {s.reviewers.hr || "Unassigned"}</p>
+                            )}
+                          </div>
                           <span className="text-xs text-gray-400">{s.reminderSentAt ? `Reminded ${new Date(s.reminderSentAt).toLocaleDateString()}` : "No reminder sent"}</span>
                         </div>
                       ))}
@@ -772,6 +833,27 @@ export default function StaffAppraisal() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AppraisalCycleWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          staff={allStaff}
+          branches={branches}
+          academicYear={hrSettings.academicYear}
+          kpiTemplates={kpiTemplates}
+          onSaveTemplate={handleSaveKpiTemplate}
+          submitting={submittingCycle}
+          onSubmit={handleSubmitCycleWizard}
+          onSaveDraft={handleSaveCycleDraft}
+        />
+
+        <CycleSuccessScreen
+          open={successOpen}
+          result={creationResult}
+          onViewCycle={() => { setSuccessOpen(false); setViewCycleOpen(true); }}
+          onAssignReviewers={() => { setSuccessOpen(false); setViewCycleOpen(true); }}
+          onClose={() => setSuccessOpen(false)}
+        />
       </div>
     </DashboardLayout>
   );

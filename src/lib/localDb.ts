@@ -124,6 +124,10 @@ const entityMapping: Record<string, string> = {
   // action) — the raw log that analyticsEngine.ts aggregates into
   // retention/funnel/feature-usage views. See src/lib/analytics.ts.
   "AnalyticsEvent": "analytics_events",
+  // Saved KPI weighting presets for the appraisal-cycle creation wizard
+  // (Step 3's "Save Template" / template picker) — separate from the
+  // Appraisal cycle/scorecard rows themselves.
+  "AppraisalKpiTemplate": "appraisal_kpi_templates",
 };
 
 function normalizeEntity(entity: string): string {
