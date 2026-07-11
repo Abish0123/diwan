@@ -179,6 +179,21 @@ export function canApproveLeave(role: string | null | undefined): boolean {
   return LEAVE_APPROVER_ROLE_IDS.includes(resolveRoleId(role));
 }
 
+// ── Appraisal access ────────────────────────────────────────────────────────
+// Roles that may view every staff member's scorecard (not just their own)
+// and publish results. A regular teacher/staff member — even one being
+// reviewed by HOD/Principal — must never see a colleague's result, and may
+// only see their OWN result once an appraisal-admin role has published it
+// (see server.ts's Appraisal read/write restriction, and the "Publish"
+// action in StaffAppraisal.tsx's Scorecards tab).
+const APPRAISAL_ADMIN_ROLE_IDS = [
+  'admin', 'super_admin', 'school_owner', 'hr_manager', 'principal', 'vice_principal',
+];
+
+export function canManageAppraisals(role: string | null | undefined): boolean {
+  return APPRAISAL_ADMIN_ROLE_IDS.includes(resolveRoleId(role));
+}
+
 export interface ApprovalChainStep {
   roleId: string;
   label: string;

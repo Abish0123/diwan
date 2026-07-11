@@ -21,6 +21,7 @@ export interface AnalyticsScorecard {
   deadlines?: { selfReview?: string };
   reminderSentAt?: string;
   cycleId?: string;
+  published?: boolean;
 }
 
 function scorecardDepartment(card: AnalyticsScorecard, staffByName: Map<string, Staff>): string {

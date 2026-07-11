@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 import { EventEmitter } from "events";
 import { DEFAULT_ADMIN_EMAILS } from "./src/lib/admin-emails.js";
-import { getRole } from "./src/lib/roles.js";
+import { getRole, canManageAppraisals } from "./src/lib/roles.js";
 import { logger } from "./logger.js";
 import { resolveBranchScope, BRANCH_SCOPED_ENTITIES } from "./src/lib/branchAuthorization.js";
 import { IntegrationError } from "./src/services/integrations/IntegrationAdapter.js";
@@ -1362,6 +1362,33 @@ async function startServer() {
         if (extra.length > 0) data = [...data, ...extra];
       }
 
+      // A regular staff member must never see a colleague's scorecard, and
+      // may only ever see their OWN once an appraisal-admin role (HR
+      // Manager/Admin/Principal/VP — see canManageAppraisals()) has
+      // published it. Cycle-type rows carry no individual scores (just
+      // cycle metadata) and stay visible to everyone so "which cycle is
+      // active" lookups (e.g. MyAppraisalWidget) keep working.
+      if (entity === "Appraisal" && !canManageAppraisals(auth.role)) {
+        let myName: string | undefined;
+        try {
+          const staffRows = await dbQuery(
+            `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+            [(auth.email || "").toLowerCase()]
+          );
+          myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
+        } catch { myName = undefined; }
+        const GRADE_STATUSES = new Set(["Excellent", "Good", "Satisfactory", "Needs Improvement"]);
+        data = data
+          .filter((row: any) => row.type === "cycle" || (myName && row.name === myName))
+          .map((row: any) => {
+            if (row.type === "cycle" || row.published === true) return row;
+            const masked = { ...row };
+            if (typeof masked.status === "string" && GRADE_STATUSES.has(masked.status)) masked.status = "Under Review";
+            masked.overall = 0;
+            return masked;
+          });
+      }
+
       if (email) data = data.filter((row: any) => typeof row.email === "string" && row.email.toLowerCase() === email);
 
       // Generic query parameter filtering (e.g. ?studentId=STU-001 or ?studentId=STU-001,STU-002)
@@ -1447,10 +1474,37 @@ async function startServer() {
       const exists = await dbTableExists(entity);
       if (!exists) return res.status(404).json({ error: "Table not found" });
 
+      // Same restriction as the list route above (GET /api/data/:entity),
+      // applied to a direct single-record fetch — every return path below
+      // (cache hit, email-fallback, SQL lookup) funnels through this so a
+      // regular staff member can't bypass the list-level filtering just by
+      // requesting a known colleague's scorecard id directly.
+      const applyAppraisalRestriction = async (item: any): Promise<any | null> => {
+        if (entity !== "Appraisal" || item.type === "cycle" || canManageAppraisals(auth.role)) return item;
+        let myName: string | undefined;
+        try {
+          const staffRows = await dbQuery(
+            `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+            [(auth.email || "").toLowerCase()]
+          );
+          myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
+        } catch { myName = undefined; }
+        if (!myName || item.name !== myName) return null; // caller gets 403 below
+        if (item.published === true) return item;
+        const GRADE_STATUSES = new Set(["Excellent", "Good", "Satisfactory", "Needs Improvement"]);
+        const masked = { ...item, overall: 0 };
+        if (typeof masked.status === "string" && GRADE_STATUSES.has(masked.status)) masked.status = "Under Review";
+        return masked;
+      };
+
       if (entityCache.has(entity)) {
         const cachedList = entityCache.get(entity) || [];
         const item = cachedList.find((x: any) => x.id === id);
-        if (item) return res.json(item);
+        if (item) {
+          const restricted = await applyAppraisalRestriction(item);
+          if (restricted === null) return res.status(403).json({ error: "Not authorized for this resource" });
+          return res.json(restricted);
+        }
         // Real `users` rows are keyed by an internal id ("USER-STF-CT001"),
         // never by email — a self-lookup by email (the only identifier most
         // callers have) would otherwise always miss even once authorized.
@@ -1470,9 +1524,12 @@ async function startServer() {
         });
       }
       if (row) {
-        let parsedData = {};
+        let parsedData: any = {};
         try { parsedData = JSON.parse(row.data || '{}'); } catch (e) {}
-        res.json({ ...parsedData, id: row.id, uid: row.uid, createdAt: row.createdAt, updatedAt: row.updatedAt });
+        const result: any = { ...parsedData, id: row.id, uid: row.uid, createdAt: row.createdAt, updatedAt: row.updatedAt };
+        const restricted = await applyAppraisalRestriction(result);
+        if (restricted === null) return res.status(403).json({ error: "Not authorized for this resource" });
+        res.json(restricted);
       } else {
         res.status(404).json({ error: "Not found" });
       }
@@ -1670,6 +1727,33 @@ async function startServer() {
     // a different branchId in an update payload.
     if (BRANCH_SCOPED_ENTITIES.has(entity) && getRole(auth.role).full !== true) {
       data.branchId = auth.branchId || "main";
+    }
+    // A regular staff member DOES need write access to their own scorecard
+    // (submitting their self-review), but must never be able to publish
+    // their own result or set their own final grade via a raw PUT — those
+    // are appraisal-admin-only actions (see canManageAppraisals()). Strip
+    // them from the payload rather than rejecting the whole request, so a
+    // legitimate self-review submission (which only touches kpiScores/
+    // status="Self Review Submitted") still goes through untouched.
+    if (entity === "Appraisal" && !canManageAppraisals(auth.role)) {
+      const GRADE_STATUSES = new Set(["Excellent", "Good", "Satisfactory", "Needs Improvement"]);
+      delete data.published;
+      delete data.overall;
+      if (typeof data.status === "string" && GRADE_STATUSES.has(data.status)) delete data.status;
+      try {
+        const staffRows = await dbQuery(
+          `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+          [(auth.email || "").toLowerCase()]
+        );
+        const myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
+        const existingRows = await dbQuery(`SELECT data FROM \`Appraisal\` WHERE id = ? LIMIT 1`, [routeId]);
+        const existingRow = existingRows[0] ? JSON.parse(existingRows[0].data) : null;
+        if (existingRow && existingRow.type !== "cycle" && (!myName || existingRow.name !== myName)) {
+          return res.status(403).json({ error: "Not authorized for this resource" });
+        }
+      } catch {
+        return res.status(403).json({ error: "Not authorized for this resource" });
+      }
     }
     const now = new Date().toISOString();
     try {

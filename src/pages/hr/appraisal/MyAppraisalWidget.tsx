@@ -54,6 +54,11 @@ export function MyAppraisalWidget() {
 
   if (!loaded || !card) return null;
 
+  // The server masks a graded status to "Under Review" (and zeroes `overall`)
+  // whenever HR/Principal hasn't published this scorecard yet — see
+  // server.ts's Appraisal read restriction. Show that plainly rather than
+  // rendering "Under Review" as if it were just another workflow stage.
+  const isUnderReview = card.status === "Under Review" && !card.published;
   const progress = STATUS_PROGRESS[card.status] ?? (Number(card.overall) > 0 ? 50 : 20);
   const alreadySubmitted = card.status !== "Not Started";
 
@@ -65,8 +70,10 @@ export function MyAppraisalWidget() {
           <h3 className="text-sm font-bold text-foreground font-heading">{cycleTitle}</h3>
         </div>
         <div className="flex items-center gap-2 mb-3">
-          <span className={`h-2 w-2 rounded-full ${alreadySubmitted ? "bg-emerald-500" : "bg-amber-500"}`} />
-          <span className="text-xs font-semibold text-slate-600">{card.status}</span>
+          <span className={`h-2 w-2 rounded-full ${isUnderReview ? "bg-indigo-400" : alreadySubmitted ? "bg-emerald-500" : "bg-amber-500"}`} />
+          <span className="text-xs font-semibold text-slate-600">
+            {isUnderReview ? "Your result isn't published yet — check back soon" : card.status}
+          </span>
         </div>
         <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
           <motion.div initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.7, ease: "easeOut" }} className="h-full rounded-full bg-gradient-to-r from-[#9810fa] to-[#d12386]" />

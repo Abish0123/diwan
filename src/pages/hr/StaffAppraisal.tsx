@@ -15,11 +15,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock, UserCheck } from "lucide-react";
+import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock, UserCheck, Megaphone, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
 import { pushNotify } from "@/lib/pushNotifications";
 import { useAuth } from "@/hooks/useAuth";
+import { canManageAppraisals } from "@/lib/roles";
 import { useHRSettings } from "@/contexts/HRSettingsContext";
 import { useBranch } from "@/contexts/BranchContext";
 import { Staff } from "@/types";
@@ -57,6 +58,11 @@ interface Scorecard {
   reviewers?: { hod?: string; principal?: string; hr?: string };
   department?: string;
   deadlines?: { selfReview?: string; managerReview?: string; principalApproval?: string; hrFinalize?: string };
+  // Whether the staff member can see this scorecard's own grade yet — set
+  // only by an appraisal-admin (HR/Admin/Principal/VP). Server-side enforced
+  // in server.ts (masks overall/status until true) — this flag is what the
+  // client reads back to reflect that same state, never what grants it.
+  published?: boolean;
 }
 
 interface Cycle {
@@ -95,6 +101,7 @@ function statusBadge(status: string) {
 
 export default function StaffAppraisal() {
   const { user, role } = useAuth();
+  const canPublish = canManageAppraisals(role);
   const hrSettings = useHRSettings();
   const { branches } = useBranch();
   const [obsTeacher, setObsTeacher] = useState("");
@@ -154,6 +161,25 @@ export default function StaffAppraisal() {
     setScorecards((prev) => prev.map((c) => (c.id === editCard.id ? updated : c)));
     setEditCard(null);
     toast.success(`Scorecard updated for ${editCard.name}`);
+  }
+
+  async function handleTogglePublish(staff: Scorecard) {
+    const nextPublished = !staff.published;
+    await smartDb.update("Appraisal", staff.id, { published: nextPublished });
+    setScorecards((prev) => prev.map((c) => (c.id === staff.id ? { ...c, published: nextPublished } : c)));
+    toast.success(nextPublished ? `Result published — ${staff.name} can now see it.` : `Result unpublished — hidden from ${staff.name} again.`);
+  }
+
+  const GRADED_STATUSES = ["Excellent", "Good", "Satisfactory", "Needs Improvement"];
+  async function handlePublishAllGraded() {
+    const toPublish = cycleScorecards.filter((c) => GRADED_STATUSES.includes(c.status) && !c.published);
+    if (toPublish.length === 0) {
+      toast.info("Every graded result in this cycle is already published.");
+      return;
+    }
+    await Promise.all(toPublish.map((c) => smartDb.update("Appraisal", c.id, { published: true })));
+    setScorecards((prev) => prev.map((c) => (toPublish.some((p) => p.id === c.id) ? { ...c, published: true } : c)));
+    toast.success(`Published ${toPublish.length} result${toPublish.length === 1 ? "" : "s"} — staff can now see their own.`);
   }
 
   const teacherOptions = teachingStaff.map((s) => s.name);
@@ -573,8 +599,18 @@ export default function StaffAppraisal() {
                 <Button size="sm" variant="outline" className="border-none bg-white shadow-sm" onClick={() => setScheduleObsOpen(true)}>
                   <CalendarClock className="mr-2 h-4 w-4" /> Schedule Observation
                 </Button>
+                {canPublish && (
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handlePublishAllGraded}>
+                    <Megaphone className="mr-2 h-4 w-4" /> Publish All Graded
+                  </Button>
+                )}
               </div>
             </div>
+            {canPublish && (
+              <p className="text-xs text-slate-400">
+                Staff only see their own result once you publish it here — grading a scorecard alone does not reveal it to them.
+              </p>
+            )}
 
             <Card className="border-none shadow-sm overflow-hidden">
               <CardContent className="pt-4 overflow-x-auto">
@@ -589,13 +625,14 @@ export default function StaffAppraisal() {
                       <TableHead className="text-center">Admin Tasks</TableHead>
                       <TableHead className="text-center">Overall Score</TableHead>
                       <TableHead>Status</TableHead>
+                      {canPublish && <TableHead>Published</TableHead>}
                       <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredScorecards.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-32 text-center text-sm text-gray-400">
+                        <TableCell colSpan={canPublish ? 10 : 9} className="h-32 text-center text-sm text-gray-400">
                           {scorecards.length === 0
                             ? "No appraisal scorecards yet. Start a new appraisal cycle and schedule classroom observations to evaluate staff."
                             : "No staff match your search or filter."}
@@ -612,6 +649,22 @@ export default function StaffAppraisal() {
                         <TableCell className={cn("text-center", scoreColor(staff.admin))}>{staff.admin != null ? `${staff.admin}%` : "—"}</TableCell>
                         <TableCell className={cn("text-center text-base", scoreColor(staff.overall))}>{staff.overall}%</TableCell>
                         <TableCell>{statusBadge(staff.status)}</TableCell>
+                        {canPublish && (
+                          <TableCell>
+                            {GRADED_STATUSES.includes(staff.status) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className={staff.published ? "text-green-700 border-green-200 hover:bg-green-50" : "text-slate-500"}
+                                onClick={() => handleTogglePublish(staff)}
+                              >
+                                {staff.published ? <><Megaphone className="mr-1.5 h-3.5 w-3.5" /> Published</> : <><Lock className="mr-1.5 h-3.5 w-3.5" /> Publish</>}
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-slate-300">Not graded</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <Button size="sm" variant="outline" onClick={() => setEditCard({ ...staff })}>
                             View Details
