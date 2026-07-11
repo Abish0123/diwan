@@ -89,6 +89,30 @@ const PayrollProcessing = () => {
     return () => unsubscribe();
   }, [user]);
 
+  // Processing payroll used to only flip the record's own status to "Paid" —
+  // the actual payout never created a real Expense/ledger entry, so Finance
+  // only ever saw it via Budgeting.tsx fuzzy-matching category names like
+  // "Payroll & Benefits" against the raw payroll records. That broke the
+  // moment a category got renamed, and never produced anything reconcilable
+  // in the Expense ledger itself. Every processed entry now also creates a
+  // real Expense (category "Payroll & Benefits", sourceType "Payroll") —
+  // deterministic id keeps this idempotent if a payroll row is ever
+  // re-processed.
+  const recordPayrollExpense = async (p: PayrollRecord, paidDate: string) => {
+    const expenseId = `expense-payroll-${p.id}`;
+    await smartDb.create("Expense", {
+      category: "Payroll & Benefits",
+      amount: p.netSalary ?? p.amount ?? 0,
+      status: "Paid",
+      date: paidDate.split("T")[0],
+      description: `Payroll — ${p.staffName || p.staff || p.staffId} — ${p.period}`,
+      sourceType: "Payroll",
+      sourceId: p.id,
+      uid: user?.uid,
+      createdAt: paidDate,
+    }, expenseId).catch(() => {});
+  };
+
   const handleProcessAll = async () => {
     const pending = payroll.filter(p => p.status === "Pending");
     if (pending.length === 0) {
@@ -98,15 +122,17 @@ const PayrollProcessing = () => {
 
     setIsProcessing(true);
     try {
+      const now = new Date().toISOString();
       await Promise.all(
         pending.map(p =>
           smartDb.update("payroll", p.id, {
             status: "Paid",
-            paidDate: new Date().toISOString(),
-            paymentDate: new Date().toISOString().split("T")[0],
+            paidDate: now,
+            paymentDate: now.split("T")[0],
           })
         )
       );
+      await Promise.all(pending.map(p => recordPayrollExpense(p, now)));
       toast.success(`Successfully processed ${pending.length} payroll entries`);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, "payroll");
@@ -117,11 +143,14 @@ const PayrollProcessing = () => {
 
   const handleProcessSingle = async (id: string) => {
     try {
+      const now = new Date().toISOString();
+      const record = payroll.find(p => p.id === id);
       await smartDb.update("payroll", id, {
         status: "Paid",
-        paidDate: new Date().toISOString(),
-        paymentDate: new Date().toISOString().split("T")[0],
+        paidDate: now,
+        paymentDate: now.split("T")[0],
       });
+      if (record) await recordPayrollExpense(record, now);
       toast.success("Payroll entry processed successfully");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, "payroll");

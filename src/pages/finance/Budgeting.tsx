@@ -166,14 +166,28 @@ const Budgeting = () => {
     fetchData();
   }, [user, fetchData]);
 
+  // Payroll processing now creates a real Expense (category "Payroll &
+  // Benefits", sourceType "Payroll") per paid entry — see
+  // PayrollProcessing.tsx. Any payroll row already covered by one of those
+  // real Expense rows must be excluded here, or it gets counted twice.
+  // The category-name substring match below now only exists to keep OLDER
+  // payroll — processed before that fix shipped, so it has no matching
+  // Expense — still counted; it's a fallback for pre-existing data, not the
+  // primary path.
+  const payrollExpenseSourceIds = useMemo(() =>
+    new Set(expenses.filter(e => (e as any).sourceType === "Payroll").map(e => (e as any).sourceId)),
+    [expenses]);
+
   const budgets = useMemo(() => {
     return categories.map(cat => {
       const categoryExpenses = expenses
         .filter(e => e.category === cat.name && e.status !== "Cancelled")
         .reduce((acc, curr) => acc + curr.amount, 0);
-      
+
       const categoryPayroll = cat.name.toLowerCase().includes('payroll') || cat.name.toLowerCase().includes('salary')
-        ? payroll.filter(p => p.status !== "Cancelled").reduce((acc, curr) => acc + ((curr as any).netSalary || (curr as any).net || curr.amount || 0), 0)
+        ? payroll
+            .filter(p => p.status !== "Cancelled" && !payrollExpenseSourceIds.has(p.id))
+            .reduce((acc, curr) => acc + ((curr as any).netSalary || (curr as any).net || curr.amount || 0), 0)
         : 0;
 
       const spent = categoryExpenses + categoryPayroll;
