@@ -121,6 +121,12 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
   // but nothing on the student's own profile showed it. Real Active/Expiring
   // allocation for this student, or null if none.
   const [hostelAllocation, setHostelAllocation] = useState<Record<string, unknown> | null>(null);
+  // No connection previously existed from the student profile side to
+  // either Library borrowing history or the Coding/Plagiarism modules —
+  // each already carries a real studentId, just nothing here read it.
+  const [libraryLoans, setLibraryLoans] = useState<Record<string, unknown>[]>([]);
+  const [codingAttempts, setCodingAttempts] = useState<Record<string, unknown>[]>([]);
+  const [plagiarismReports, setPlagiarismReports] = useState<Record<string, unknown>[]>([]);
   const [newResult, setNewResult] = useState({ subject: "", marks: "", total: "100" });
   const [isUploading, setIsUploading] = useState(false);
   const [reportingIncident, setReportingIncident] = useState(false);
@@ -363,6 +369,9 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
       smartDb.getAll("HostelAllocation").then(r => setHostelAllocation(
         (r as any[]).find(x => x.studentId === sid && (x.status === "Active" || x.status === "Expiring Soon")) || null
       )),
+      smartDb.getAll("library_loans", undefined).then(r => setLibraryLoans((r as any[]).filter(x => x.studentId === sid))),
+      smartDb.getAll("coding_attempts", undefined).then(r => setCodingAttempts((r as any[]).filter(x => x.studentId === sid))),
+      smartDb.getAll("project_reports", undefined).then(r => setPlagiarismReports((r as any[]).filter(x => x.studentId === sid))),
     ]).catch(() => {});
   }, [student?.id]);
 
@@ -826,6 +835,55 @@ export function StudentDetailsDialog({ student, open, onOpenChange }: StudentDet
                         ) : (
                           <p className="text-sm text-slate-400 py-1.5">Not allocated a hostel room</p>
                         )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Library</Label>
+                          {libraryLoans.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-1.5">No loans</p>
+                          ) : (
+                            <p className="text-sm font-semibold text-slate-800 py-1.5">
+                              {libraryLoans.filter(l => !l.returnedAt).length} out · {libraryLoans.length} total
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Coding Tests</Label>
+                          {codingAttempts.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-1.5">No attempts</p>
+                          ) : (
+                            <p className="text-sm font-semibold text-slate-800 py-1.5">
+                              {codingAttempts.length} attempt{codingAttempts.length === 1 ? "" : "s"}
+                              {(() => {
+                                const scored = codingAttempts.filter(a => (a.totalMarks as number) > 0);
+                                if (scored.length === 0) return null;
+                                const avgPct = Math.round(scored.reduce((s, a) => s + ((a.totalScore as number) / (a.totalMarks as number)) * 100, 0) / scored.length);
+                                return ` · avg ${avgPct}%`;
+                              })()}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Plagiarism Reports</Label>
+                          {plagiarismReports.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-1.5">No submissions</p>
+                          ) : (
+                            <p className="text-sm font-semibold text-slate-800 py-1.5">
+                              {plagiarismReports.length} submitted
+                              {(() => {
+                                const scored = plagiarismReports.filter(r => (r.result as any)?.overallSimilarity != null);
+                                if (scored.length === 0) return null;
+                                const maxSim = Math.max(...scored.map(r => (r.result as any).overallSimilarity as number));
+                                return (
+                                  <span className={cn("ml-1", maxSim >= 30 ? "text-rose-600" : "text-slate-800")}>
+                                    · max {maxSim}% similarity
+                                  </span>
+                                );
+                              })()}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
