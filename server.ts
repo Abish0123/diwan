@@ -593,6 +593,7 @@ const entityMapping: Record<string, string> = {
   "HealthRecord": "health_records",
   "HostelRecord": "hostel_allocations",
   "TransportRecord": "transport_enrollments",
+  "TransportAttendance": "transport_attendance",
   "Notification": "notifications",
   // Exam workflow stores
   "Exam": "exams",

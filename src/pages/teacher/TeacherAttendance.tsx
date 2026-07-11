@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import {
   Users, CheckCircle2, XCircle, Clock, BarChart3, Calendar as CalendarIcon,
   ChevronLeft, ChevronRight, Search, Save, Upload, MessageSquare,
-  FileSpreadsheet, CalendarDays, Download,
+  FileSpreadsheet, CalendarDays, Download, Bus,
 } from "lucide-react";
 
 // Published timetable's real weekday columns and period time-slots — must
@@ -109,6 +109,32 @@ export default function TeacherAttendance() {
       }).catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // Real Transport boarding marks for the selected date — reference-only
+  // (shown as a small badge next to the student's name). Deliberately never
+  // auto-marks or overrides the actual Present/Absent/Late attendance below:
+  // boarding the bus isn't proof a student made it into class (breakdowns,
+  // a missed scan, or a student who's dropped elsewhere all mean the two
+  // signals can legitimately disagree), so the teacher's own mark stays the
+  // single source of truth for official attendance.
+  const [transportBoarding, setTransportBoarding] = useState<Record<string, { status: string; markedAt: string }>>({});
+  useEffect(() => {
+    let alive = true;
+    smartDb.getAll("TransportAttendance", undefined)
+      .then((rows) => {
+        if (!alive) return;
+        const forDate = (rows as { studentId?: string; status?: string; markedAt?: string }[])
+          .filter(r => r.studentId && r.markedAt && r.markedAt.slice(0, 10) === date);
+        const latest: Record<string, { status: string; markedAt: string }> = {};
+        for (const r of forDate) {
+          const prev = latest[r.studentId!];
+          if (!prev || r.markedAt! > prev.markedAt) latest[r.studentId!] = { status: r.status!, markedAt: r.markedAt! };
+        }
+        setTransportBoarding(latest);
+      })
+      .catch(() => setTransportBoarding({}));
+    return () => { alive = false; };
+  }, [date]);
 
   // Real periods for this teacher's class on the selected date — matched by
   // real teacher name (and subject, when a subject-class is active) against
@@ -539,6 +565,13 @@ export default function TeacherAttendance() {
                           <div className="flex items-center gap-2.5">
                             <StudentAvatar name={s.name} />
                             <span className="font-semibold text-slate-900 text-sm">{s.name}</span>
+                            {transportBoarding[s.id] && (
+                              <span
+                                title={`Transport: ${transportBoarding[s.id].status} at ${new Date(transportBoarding[s.id].markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} — reference only, not an attendance mark`}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-100 shrink-0">
+                                <Bus className="h-2.5 w-2.5" /> {transportBoarding[s.id].status === "boarded" ? "On bus" : "Dropped"}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-5 py-3 text-sm text-slate-500">{s.admNo}</td>
