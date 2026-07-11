@@ -824,28 +824,168 @@ function downloadHtmlDoc(filename: string, html: string) {
   URL.revokeObjectURL(a.href);
 }
 
-function downloadStaffIdCard(personal: PersonalInfo, professional: ProfessionalInfo) {
+// Deterministic accent color per person, drawn from the app's own brand
+// palette (the same violet/indigo/fuchsia family used across dashboard
+// cards) — keyed on employee ID so the same person always gets the same
+// color rather than a random one on every re-download.
+const ID_CARD_ACCENTS: { from: string; to: string; ring: string }[] = [
+  { from: "#7C3AED", to: "#4F46E5", ring: "#8B5CF6" }, // violet → indigo
+  { from: "#DB2777", to: "#9333EA", ring: "#DB2777" }, // pink → purple
+  { from: "#0EA5E9", to: "#4F46E5", ring: "#0EA5E9" }, // sky → indigo
+  { from: "#059669", to: "#0D9488", ring: "#059669" }, // emerald → teal
+  { from: "#EA580C", to: "#DB2777", ring: "#EA580C" }, // orange → pink
+];
+function accentFor(seed: string) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return ID_CARD_ACCENTS[h % ID_CARD_ACCENTS.length];
+}
+
+// Fetches the app's real logo and inlines it as a data URI — the downloaded
+// file is a standalone .html a user opens later (possibly offline or from a
+// different origin), so a plain "/student-diwan-logo.png" src would 404
+// once it's no longer being viewed from this app's own dev/prod origin.
+async function toDataUrl(path: string): Promise<string> {
+  const res = await fetch(path);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function currentAcademicYear(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  return now.getMonth() >= 6 ? `${y}–${y + 1}` : `${y - 1}–${y}`;
+}
+
+async function downloadStaffIdCard(personal: PersonalInfo, professional: ProfessionalInfo) {
   const name = `${personal.firstName} ${personal.lastName}`.trim();
+  const initials = `${personal.firstName?.[0] || ""}${personal.lastName?.[0] || ""}`.toUpperCase() || "SD";
+  const accent = accentFor(professional.employeeId || name);
+
+  // No real photo bytes are ever persisted from onboarding (FileUploadBox only
+  // stores the uploaded file's name, not its contents — see FileUploadBox
+  // above), so a colored initials avatar is the honest choice here rather
+  // than faking a headshot the app doesn't actually have.
+  let logoDataUrl = "";
+  try { logoDataUrl = await toDataUrl("/student-diwan-logo.png"); } catch { /* falls back to text wordmark below */ }
+
+  // Real, scannable summary of the same information printed on the card —
+  // not a live verification link, since there's no backend endpoint for one.
+  let qrDataUrl = "";
+  try {
+    const QRCode = await import("qrcode");
+    qrDataUrl = await QRCode.toDataURL(
+      `Student Diwan School — Staff ID\nName: ${name}\nEmployee ID: ${professional.employeeId}\nDesignation: ${professional.designation || "—"}\nDepartment: ${professional.department || "—"}`,
+      { margin: 1, width: 200, color: { dark: "#0F172A", light: "#FFFFFF" } }
+    );
+  } catch { /* qrcode package unavailable — card still renders without it */ }
+
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Staff ID — ${name}</title>
-<style>body{font-family:sans-serif;background:#f1f5f9;display:flex;justify-content:center;padding:40px}
-.card{width:360px;border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.15)}
-.head{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:20px;text-align:center}
-.head h1{margin:0;font-size:16px;letter-spacing:1px}.head p{margin:4px 0 0;font-size:11px;opacity:.8}
-.body{padding:20px}.row{display:flex;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid #f1f5f9}
-.row span:first-child{color:#94a3b8;width:120px;flex-shrink:0;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-.row span:last-child{font-weight:700;color:#0f172a}
-.foot{background:#f8fafc;padding:12px 20px;font-size:10px;color:#94a3b8;text-align:center}</style></head><body>
-<div class="card"><div class="head"><h1>STUDENT DIWAN SCHOOL</h1><p>Staff Identification Card</p></div>
-<div class="body">
-<div class="row"><span>Name</span><span>${name}</span></div>
-<div class="row"><span>Employee ID</span><span>${professional.employeeId}</span></div>
-<div class="row"><span>Designation</span><span>${professional.designation || "—"}</span></div>
-<div class="row"><span>Department</span><span>${professional.department || "—"}</span></div>
-<div class="row"><span>Email</span><span>${personal.email || "—"}</span></div>
-<div class="row"><span>Phone</span><span>${personal.phone || "—"}</span></div>
-<div class="row"><span>Date of Joining</span><span>${professional.joiningDate || "—"}</span></div>
-<div class="row"><span>Blood Group</span><span>${personal.bloodGroup || "—"}</span></div>
-</div><div class="foot">This card is the property of Student Diwan School. If found, please return to the HR office.</div></div>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #EEF0F6; display: flex; justify-content: center; align-items: flex-start;
+    padding: 48px 20px; margin: 0;
+  }
+  .card {
+    width: 338px; border-radius: 20px; overflow: hidden; background: #fff;
+    box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08);
+    position: relative;
+  }
+  /* Lanyard punch — a small notch at the very top, standard on a real badge */
+  .punch {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 34px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.55); z-index: 3;
+  }
+  .head {
+    background: linear-gradient(135deg, ${accent.from}, ${accent.to});
+    color: #fff; padding: 22px 20px 46px; text-align: center; position: relative;
+  }
+  .head .brand-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .head img.logo { height: 26px; width: auto; filter: brightness(0) invert(1); opacity: 0.95; }
+  .head h1 { margin: 6px 0 0; font-size: 13px; letter-spacing: 2px; font-weight: 700; }
+  .head p { margin: 3px 0 0; font-size: 9.5px; opacity: 0.82; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  .avatar-wrap { display: flex; justify-content: center; margin-top: -40px; position: relative; z-index: 2; }
+  .avatar {
+    width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, ${accent.from}, ${accent.to});
+    border: 4px solid #fff; box-shadow: 0 6px 16px rgba(15,23,42,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 28px; font-weight: 800; letter-spacing: 0.5px;
+  }
+
+  .id-body { padding: 10px 24px 0; text-align: center; }
+  .name { font-size: 18px; font-weight: 800; color: #0F172A; margin: 2px 0 0; letter-spacing: -0.2px; }
+  .role-pill {
+    display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; color: ${accent.to};
+    background: color-mix(in srgb, ${accent.to} 12%, transparent);
+  }
+  .dept { margin: 5px 0 0; font-size: 11px; color: #64748B; font-weight: 600; }
+
+  .divider { height: 1px; background: #EDF0F5; margin: 16px 24px 0; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; padding: 14px 24px 0; }
+  .field .k { font-size: 8.5px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.6px; }
+  .field .v { font-size: 12.5px; font-weight: 700; color: #1E293B; margin-top: 2px; }
+
+  .id-strip {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 18px 20px 0; padding: 12px 14px; border-radius: 14px; background: #F8FAFC; border: 1px solid #EEF1F6;
+  }
+  .id-strip .emp-id { font-family: "SF Mono", Consolas, "Courier New", monospace; font-size: 13px; font-weight: 700; color: #0F172A; letter-spacing: 1px; }
+  .id-strip .emp-id-label { font-size: 8px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.6px; }
+  .id-strip img.qr { width: 52px; height: 52px; border-radius: 8px; }
+
+  .foot {
+    margin-top: 18px; padding: 12px 20px 18px; text-align: center;
+    border-top: 1px dashed #E2E8F0;
+  }
+  .foot .valid { font-size: 9.5px; font-weight: 700; color: ${accent.to}; letter-spacing: 0.4px; }
+  .foot .legal { font-size: 8.5px; color: #94A3B8; margin-top: 5px; line-height: 1.5; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; }
+  }
+</style></head><body>
+<div class="card">
+  <div class="punch"></div>
+  <div class="head">
+    <div class="brand-row">
+      ${logoDataUrl ? `<img class="logo" src="${logoDataUrl}" alt="" />` : ""}
+    </div>
+    <h1>STUDENT DIWAN SCHOOL</h1>
+    <p>Staff Identification Card</p>
+  </div>
+  <div class="avatar-wrap"><div class="avatar">${initials}</div></div>
+  <div class="id-body">
+    <p class="name">${name || "—"}</p>
+    <span class="role-pill">${professional.designation || "Staff"}</span>
+    <p class="dept">${professional.department || "—"}</p>
+  </div>
+  <div class="divider"></div>
+  <div class="grid">
+    <div class="field"><div class="k">Date of Joining</div><div class="v">${professional.joiningDate || "—"}</div></div>
+    <div class="field"><div class="k">Blood Group</div><div class="v">${personal.bloodGroup || "—"}</div></div>
+    <div class="field"><div class="k">Phone</div><div class="v">${personal.phone || "—"}</div></div>
+    <div class="field"><div class="k">Email</div><div class="v" style="font-size:10.5px; word-break:break-all;">${personal.email || "—"}</div></div>
+  </div>
+  <div class="id-strip">
+    <div><div class="emp-id-label">Employee ID</div><div class="emp-id">${professional.employeeId}</div></div>
+    ${qrDataUrl ? `<img class="qr" src="${qrDataUrl}" alt="Scan for staff details" />` : ""}
+  </div>
+  <div class="foot">
+    <p class="valid">VALID — ACADEMIC YEAR ${currentAcademicYear()}</p>
+    <p class="legal">This card is the property of Student Diwan School.<br/>If found, please return to the HR office.</p>
+  </div>
+</div>
 </body></html>`;
   downloadHtmlDoc(`Staff-ID-${professional.employeeId}.html`, html);
   toast.success(`Staff ID card downloaded for ${name}`);
