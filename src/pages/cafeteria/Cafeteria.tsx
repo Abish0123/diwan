@@ -440,6 +440,23 @@ export default function Cafeteria() {
     const today = new Date().toISOString().split("T")[0];
     try {
       await smartDb.update("CafeteriaWallet", id, { balance: newBalance, lastTopUp: today });
+      // Top-ups only ever changed the wallet's own balance — the money
+      // never touched Finance's books at all, unlike every other real
+      // payment flow in the app (fees, transport, etc.), which all write a
+      // real StudentRevenue row. WalletRecord has no real studentId FK
+      // (only a display name), so this carries `walletId` instead for
+      // traceability, same spirit as sourceType/sourceId elsewhere.
+      await smartDb.create("StudentRevenue", {
+        student: wallet.student,
+        walletId: id,
+        amount,
+        category: "Cafeteria Top-up",
+        date: today,
+        paymentMethod: "Cafeteria Wallet Top-up",
+        status: "Paid",
+        uid: user?.uid || "local-user",
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
       setWallets((prev) =>
         prev.map((w) => (w.id === id ? { ...w, balance: newBalance, lastTopUp: today } : w))
       );

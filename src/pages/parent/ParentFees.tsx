@@ -10,6 +10,7 @@ import { Invoice, getInvoiceDisplayStatus, advanceLeadOnFeeInvoicePaid } from "@
 import { downloadInvoiceReceiptPdf } from "@/lib/invoiceReceiptPdf";
 import { createPaymentSession, getPaymentTransaction, GatewayNotConfiguredError } from "@/lib/paymentGateway";
 import { useAuth } from "@/hooks/useAuth";
+import { useIntegrationConnected } from "@/hooks/useIntegrationStatus";
 
 interface FeeRecord {
   id: string; term: string; feeType: string; amount: number;
@@ -60,6 +61,12 @@ export default function ParentFees() {
   const { selected, loading } = useParentChildren();
   const [liveData, setLiveData] = useState<FeeRecord[] | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  // "Pay Now" always claimed it redirects to a secure gateway, even when no
+  // gateway was actually configured — a parent only discovered otherwise
+  // after clicking and hitting the GatewayNotConfiguredError toast below.
+  // Same "don't claim connected unless it's real" pattern already used for
+  // Zoom/WhatsApp in PTMBooking.tsx.
+  const { connected: gatewayConnected } = useIntegrationConnected("paytabs");
 
   // Fetch real invoices from DB — same table the admin Finance module writes to
   useEffect(() => {
@@ -234,9 +241,11 @@ export default function ParentFees() {
             ? "bg-emerald-50 border-emerald-200 text-emerald-700"
             : "bg-amber-50 border-amber-200 text-amber-700")}>
           {fees.length > 0 ? <Wifi className="w-3.5 h-3.5 flex-shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />}
-          {fees.length > 0
-            ? "Live fee data from school finance system. Pay Now redirects to secure payment gateway."
-            : "No invoices found yet for this student."}
+          {fees.length === 0
+            ? "No invoices found yet for this student."
+            : gatewayConnected
+              ? "Live fee data from school finance system. Pay Now redirects to secure payment gateway."
+              : "Live fee data from school finance system. Online payment isn't connected yet — contact the school office to pay."}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -283,11 +292,15 @@ export default function ParentFees() {
                             className="text-xs text-purple-600 hover:underline flex items-center gap-1 mx-auto">
                             <Download className="w-3.5 h-3.5" /> Receipt
                           </button>
-                        ) : (
+                        ) : gatewayConnected ? (
                           <button onClick={() => handlePay(f)} disabled={payingId === f.id}
                             className="px-3 py-1 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-violet-700 transition disabled:opacity-60">
                             {payingId === f.id ? "Redirecting…" : "Pay Now"}
                           </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400" title="Ask the school office to configure a payment gateway in Finance Settings">
+                            Pay at office
+                          </span>
                         )}
                       </td>
                     </tr>
