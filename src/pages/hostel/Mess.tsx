@@ -119,6 +119,8 @@ const Mess = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [kitchenStock, setKitchenStock] = useState<{ id: string; name: string; stock: number; unit?: string; status: string }[]>([]);
+  const [kitchenStockLoading, setKitchenStockLoading] = useState(false);
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
   const [filterDay, setFilterDay] = useState<string>("all");
 
@@ -135,6 +137,25 @@ const Mess = () => {
   useEffect(() => {
     fetchMenu();
   }, []);
+
+  // Real kitchen stock — same InventoryItem/"Cafeteria Supplies" data the
+  // Inventory module tracks, not a hardcoded preview table. Fetched lazily
+  // when the dialog opens rather than on every page load.
+  useEffect(() => {
+    if (!isInventoryOpen) return;
+    let active = true;
+    setKitchenStockLoading(true);
+    smartDb.getAll("InventoryItem", undefined)
+      .then((rows) => {
+        if (!active) return;
+        setKitchenStock((rows as { id: string; name: string; category: string; stock: number; unit?: string; status: string }[])
+          .filter((r) => r.category === "Cafeteria Supplies")
+          .sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => { if (active) setKitchenStock([]); })
+      .finally(() => { if (active) setKitchenStockLoading(false); });
+    return () => { active = false; };
+  }, [isInventoryOpen]);
 
   const fetchMenu = async () => {
     try {
@@ -518,7 +539,7 @@ const Mess = () => {
               </div>
               <div className="flex items-center gap-3">
                 <Button variant="outline" className="h-11 px-6 border-slate-200 rounded-xl font-bold" onClick={() => setIsInventoryOpen(true)}>
-                  View Inventory (Preview)
+                  View Kitchen Inventory
                 </Button>
                 <Button className="gradient-primary h-11 px-6 rounded-xl font-bold shadow-lg shadow-purple-200" onClick={handlePrint}>
                   Print Menu Card
@@ -533,50 +554,53 @@ const Mess = () => {
       <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
         <DialogContent className="sm:max-w-[600px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Kitchen Inventory (Preview)</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Kitchen Inventory</DialogTitle>
             <DialogDescription>
-              Illustrative stock levels for essential kitchen supplies. This preview is not yet connected to a live inventory system.
+              Real stock levels for Cafeteria Supplies — the same inventory Purchases/Stock manage school-wide.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[
-                  { item: "Rice", qty: "450 kg", status: "In Stock" },
-                  { item: "Wheat Flour", qty: "200 kg", status: "In Stock" },
-                  { item: "Cooking Oil", qty: "45 Liters", status: "Low Stock" },
-                  { item: "Potatoes", qty: "80 kg", status: "In Stock" },
-                  { item: "Onions", qty: "15 kg", status: "Critical" },
-                  { item: "Lentils (Dal)", qty: "120 kg", status: "In Stock" },
-                ].map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{row.item}</TableCell>
-                    <TableCell>{row.qty}</TableCell>
-                    <TableCell>
-                      <Badge className={cn(
-                        "font-bold",
-                        row.status === "In Stock" ? "bg-emerald-50 text-emerald-600" : 
-                        row.status === "Low Stock" ? "bg-amber-50 text-amber-600" : 
-                        "bg-destructive/10 text-destructive"
-                      )}>
-                        {row.status}
-                      </Badge>
-                    </TableCell>
+            {kitchenStockLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              </div>
+            ) : kitchenStock.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-10">
+                No Cafeteria Supplies items in stock yet — add them from Inventory &gt; Stock.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {kitchenStock.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.name}</TableCell>
+                      <TableCell>{row.stock} {row.unit || "Units"}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "font-bold",
+                          row.status === "In Stock" ? "bg-emerald-50 text-emerald-600" :
+                          row.status === "Low Stock" ? "bg-amber-50 text-amber-600" :
+                          "bg-destructive/10 text-destructive"
+                        )}>
+                          {row.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsInventoryOpen(false)}>Close</Button>
-            <Button className="gradient-primary" onClick={() => toast.info("Ordering supplies is a preview feature — not yet wired to a live inventory system")}>Order Supplies (Preview)</Button>
+            <Button className="gradient-primary" onClick={() => navigate("/inventory/orders")}>Order Supplies</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
