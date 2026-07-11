@@ -79,6 +79,22 @@ export interface MaintenanceLog {
   uid: string;
 }
 
+// A single fuel fill-up for a Transport vehicle — each log also creates a
+// real Expense (category "Transport") so fuel spend rolls into Budgeting
+// the same way every other Transport cost already does. Previously there
+// was no fuel/running-cost tracking anywhere in Transport at all.
+export interface FuelLog {
+  id: string;
+  vehicleId: string;
+  vehicleReg: string;
+  liters: number;
+  amount: number;
+  odometer?: number;
+  date: string;
+  loggedBy: string;
+  uid: string;
+}
+
 export interface BankTransaction {
   id: string;
   date: string;
