@@ -52,7 +52,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
-import { STOCK_CATEGORIES } from "@/lib/inventoryCategories";
+import { STOCK_CATEGORIES, ASSET_WORTHY_CATEGORIES } from "@/lib/inventoryCategories";
 import { getLineItems, type PurchaseOrder } from "./PurchaseOrders";
 
 interface PurchaseLineItem {
@@ -297,6 +297,48 @@ const Purchases = () => {
         createdAt: new Date().toISOString(),
       };
       await smartDb.create("Purchase", newPurchase as unknown as Record<string, unknown>, id);
+
+      // Post this purchase as a real budget expense — until now nothing ever
+      // created an Expense row, so Inventory & Procurement spend never
+      // actually counted against Finance > Budgeting's category totals
+      // despite the category existing there. "Pending" (not "Paid") because
+      // the purchase is recorded here but payment is a separate step
+      // (Finance > Purchase Approvals' "Release Payment") — Budgeting counts
+      // both the same way, only excluding "Cancelled".
+      await smartDb.create("Expense", {
+        category: "Inventory & Procurement",
+        amount,
+        status: newPurchase.paymentStatus === "Paid" ? "Paid" : "Pending",
+        date: purchaseDate,
+        description: `${newPurchase.purchaseNumber} — ${newPurchase.vendorName} (${newPurchase.poNumber})`,
+        vendorName: newPurchase.vendorName,
+        sourceType: "Purchase",
+        sourceId: id,
+        uid: user.uid,
+        createdAt: new Date().toISOString(),
+      }, `expense-purchase-${id}`);
+
+      // Durable-category lines (IT/Lab/Sports Equipment, Furniture) also
+      // register as a real fixed asset in Finance > Assets — previously a
+      // purchase only ever showed up as a stock-count change, with no link
+      // to the separate Asset register at all.
+      for (const line of validLines) {
+        if (ASSET_WORTHY_CATEGORIES.has(line.category)) {
+          const assetId = `asset-purchase-${id}-${line.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+          const value = line.received * line.unitPrice;
+          await smartDb.create("AssetRecord", {
+            name: line.name.trim(),
+            category: line.category,
+            purchaseDate,
+            purchaseValue: value,
+            currentValue: value,
+            status: "Active",
+            depreciation: "0%",
+            uid: user.uid,
+            createdAt: new Date().toISOString(),
+          }, assetId);
+        }
+      }
 
       for (const line of validLines) {
         await applyStockIncrease(line, newPurchase.purchaseNumber);

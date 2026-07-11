@@ -138,7 +138,12 @@ const Budgeting = () => {
     try {
       const [catsData, expData, payData] = await Promise.all([
         smartDb.getAll("FinancialCategory", user.uid),
-        smartDb.getAll("Expense", user.uid),
+        // Expense rows (e.g. an Inventory & Procurement purchase — see
+        // inventory/Purchases.tsx) are stamped with whichever staff member
+        // recorded them, not the current viewer's uid — same reasoning as
+        // Payroll below, so this must be unfiltered too or a colleague's
+        // recorded spend silently never counts against the budget.
+        smartDb.getAll("Expense"),
         // Payroll is school-wide (see PayrollProcessing.tsx) — rows are stamped
         // with whichever admin/HR user created them, not the current viewer's
         // uid, so this must be unfiltered or budget spend silently undercounts

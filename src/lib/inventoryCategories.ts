@@ -13,3 +13,15 @@ export const STOCK_CATEGORIES = [
   "Cleaning Supplies",
   "Cafeteria Supplies",
 ];
+
+// Which of the categories above are durable enough to track as a fixed
+// asset (Finance > Assets) rather than a consumable that's just stock —
+// recording a Purchase in one of these categories also creates a real
+// AssetRecord (see inventory/Purchases.tsx), instead of the purchase only
+// ever showing up as a stock-count change.
+export const ASSET_WORTHY_CATEGORIES = new Set([
+  "Lab Equipment",
+  "Sports Equipment",
+  "IT Equipment",
+  "Furniture",
+]);

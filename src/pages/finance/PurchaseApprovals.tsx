@@ -239,6 +239,10 @@ const PurchaseApprovals = () => {
       await smartDb.update("Purchase", p.id, {
         invoiceNumber, paymentStatus: "Paid", paidAt: new Date().toISOString(), paidBy: user?.name || user?.email || "Finance",
       });
+      // Flip the matching budget expense from "Pending" to "Paid" — same
+      // deterministic id Purchases.tsx creates it under. Soft-fails for any
+      // purchase recorded before this expense-linking existed.
+      await smartDb.update("Expense", `expense-purchase-${p.id}`, { status: "Paid", paidAt: new Date().toISOString() }).catch(() => {});
       const req = requestByPurchase(p);
       if (req) {
         await smartDb.update("library_requests", req.id, { status: "paid", paidAt: new Date().toISOString() });

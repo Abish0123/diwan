@@ -11,6 +11,7 @@ const entityMapping: Record<string, string> = {
   "EntityRevenue": "entity_revenue",
   "Expense": "expenses",
   "AssetRecord": "assets",
+  "MaintenanceLog": "maintenance_logs",
   "Payroll": "payroll",
   "FinancialCategory": "financial_categories",
   "InventoryItem": "inventory",

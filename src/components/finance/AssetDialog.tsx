@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -33,6 +33,8 @@ import { toast } from "sonner";
 import { Timestamp } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
 
+const UNASSIGNED = "__unassigned__";
+
 const assetSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   category: z.string().min(1, "Category is required"),
@@ -41,6 +43,7 @@ const assetSchema = z.object({
   currentValue: z.coerce.number().min(0, "Current value must be positive"),
   status: z.enum(["Active", "Inactive", "Disposed", "Maintenance"]),
   depreciation: z.string().optional(),
+  assignedToStaffId: z.string().optional(),
 });
 
 type AssetFormValues = z.infer<typeof assetSchema>;
@@ -54,6 +57,7 @@ interface AssetDialogProps {
 
 export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogProps) => {
   const { user } = useAuth();
+  const [staffOptions, setStaffOptions] = useState<{ id: string; name: string }[]>([]);
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     defaultValues: {
@@ -64,8 +68,18 @@ export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogPr
       currentValue: 0,
       status: "Active",
       depreciation: "0%",
+      assignedToStaffId: UNASSIGNED,
     },
   });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    smartDb.getAll("Staff", undefined)
+      .then((rows) => setStaffOptions((rows as { id: string; name: string; status?: string }[])
+        .filter((s) => s.status !== "Inactive")
+        .map((s) => ({ id: s.id, name: s.name }))))
+      .catch(() => setStaffOptions([]));
+  }, [isOpen]);
 
   useEffect(() => {
     if (asset) {
@@ -77,6 +91,7 @@ export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogPr
         currentValue: asset.currentValue,
         status: asset.status as "Active" | "Inactive" | "Disposed" | "Maintenance",
         depreciation: asset.depreciation,
+        assignedToStaffId: asset.assignedToStaffId || UNASSIGNED,
       });
     } else {
       form.reset({
@@ -87,6 +102,7 @@ export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogPr
         currentValue: 0,
         status: "Active",
         depreciation: "0%",
+        assignedToStaffId: UNASSIGNED,
       });
     }
   }, [asset, form, isOpen]);
@@ -95,8 +111,17 @@ export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogPr
     if (!user) return;
 
     try {
+      const assignedStaff = values.assignedToStaffId && values.assignedToStaffId !== UNASSIGNED
+        ? staffOptions.find((s) => s.id === values.assignedToStaffId)
+        : undefined;
       const data = {
         ...values,
+        // `null`, not `undefined` — a field set to `undefined` is dropped
+        // entirely by JSON.stringify, so "un-assigning" a previously
+        // assigned asset would silently leave the old assignment in place
+        // once the server merges `{...existing, ...data}`.
+        assignedToStaffId: assignedStaff?.id ?? null,
+        assignedToName: assignedStaff?.name ?? null,
         uid: user.uid,
         updatedAt: Timestamp.now(),
       };
@@ -233,6 +258,29 @@ export const AssetDialog = ({ isOpen, onClose, asset, onSuccess }: AssetDialogPr
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="assignedToStaffId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-slate-700">Assigned To (optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                      {staffOptions.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={onClose} className="rounded-xl">
                 Cancel

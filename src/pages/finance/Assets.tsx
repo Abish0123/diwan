@@ -49,6 +49,7 @@ import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
 import { AssetDialog } from "@/components/finance/AssetDialog";
+import { AssetMaintenanceDialog } from "@/components/finance/AssetMaintenanceDialog";
 import { Asset } from "@/types/finance";
 
 const Assets = () => {
@@ -59,6 +60,7 @@ const Assets = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | undefined>();
+  const [maintenanceAsset, setMaintenanceAsset] = useState<Asset | null>(null);
 
   const fetchAssets = useCallback(async () => {
     if (!user) return;
@@ -263,6 +265,7 @@ const Assets = () => {
                         <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Category</TableHead>
                         <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Purchase Value</TableHead>
                         <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Current Value</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Assigned To</TableHead>
                         <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Status</TableHead>
                         <TableHead className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Actions</TableHead>
                       </TableRow>
@@ -270,7 +273,7 @@ const Assets = () => {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-16 text-center">
+                          <TableCell colSpan={7} className="py-16 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                               <span className="text-sm font-semibold text-slate-500">Loading assets…</span>
@@ -279,7 +282,7 @@ const Assets = () => {
                         </TableRow>
                       ) : filteredAssets.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-16 text-center text-sm text-slate-400">No assets found</TableCell>
+                          <TableCell colSpan={7} className="py-16 text-center text-sm text-slate-400">No assets found</TableCell>
                         </TableRow>
                       ) : (
                           filteredAssets.map((asset) => (
@@ -315,8 +318,12 @@ const Assets = () => {
                                 </div>
                               </TableCell>
                               <TableCell className="px-4 py-3">
+                                <span className="text-xs text-slate-600">{asset.assignedToName || <span className="text-slate-300">Unassigned</span>}</span>
+                              </TableCell>
+                              <TableCell className="px-4 py-3">
                                 <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap",
-                                  asset.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                                  asset.status === "Active" ? "bg-emerald-100 text-emerald-700" :
+                                  asset.status === "Maintenance" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500")}>
                                   {asset.status}
                                 </span>
                               </TableCell>
@@ -331,7 +338,7 @@ const Assets = () => {
                                     <DropdownMenuItem onClick={() => handleEditAsset(asset)} className="gap-2 cursor-pointer">
                                       <Edit className="h-4 w-4" /> Edit Asset
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                                    <DropdownMenuItem onClick={() => setMaintenanceAsset(asset)} className="gap-2 cursor-pointer">
                                       <History className="h-4 w-4" /> View History
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
@@ -407,11 +414,16 @@ const Assets = () => {
         </div>
       </div>
 
-      <AssetDialog 
+      <AssetDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         asset={selectedAsset}
         onSuccess={fetchAssets}
+      />
+      <AssetMaintenanceDialog
+        asset={maintenanceAsset}
+        onClose={() => setMaintenanceAsset(null)}
+        onChanged={fetchAssets}
       />
     </DashboardLayout>
   );
