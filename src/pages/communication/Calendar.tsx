@@ -150,6 +150,62 @@ export default function CommunicationCalendar() {
     [events, role, viewerClasses]
   );
 
+  // Real Timetable -> Calendar overlay (Week/Day views only). Recurring
+  // weekly periods don't map onto discrete dated CalendarEvent rows without
+  // either exploding into duplicate daily DB rows or inventing a
+  // recurrence concept this calendar doesn't support — so periods are
+  // computed live from the real published grid and never persisted, same
+  // real source (`/api/data/timetable_slots/published-timetable-v3`) every
+  // other timetable-reading page this session already uses.
+  const TT_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const TT_SLOTS = ["08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 01:00"];
+  const normName = (s: string) => (s || "").toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.)\s*/i, "").trim();
+  const [ttGrid, setTtGrid] = useState<Record<string, ({ subject?: string; teacher?: string; room?: string } | null)[][]> | null>(null);
+  useEffect(() => {
+    fetch("/api/data/timetable_slots/published-timetable-v3")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || data.error || !data.gridJson) return;
+        try { setTtGrid(JSON.parse(data.gridJson)); } catch { /* ignore */ }
+      }).catch(() => {});
+  }, []);
+
+  // Real periods for the given real Date, for this viewer only — their own
+  // class (student/parent) or every period they teach (staff, matched by
+  // real name against the grid, same pattern TeacherTimetable.tsx uses).
+  const timetablePeriodsFor = (day: Date): { time: string; subject: string; room: string; classLabel: string }[] => {
+    if (!ttGrid) return [];
+    const dayIdx = TT_DAYS.indexOf(format(day, "EEEE"));
+    if (dayIdx < 0) return [];
+    const results: { time: string; subject: string; room: string; classLabel: string }[] = [];
+    if (audienceGroup === "student" || audienceGroup === "parent") {
+      viewerClasses.forEach(vc => {
+        if (!vc.grade) return;
+        const key = Object.keys(ttGrid).find(k => {
+          const cut = k.lastIndexOf("-");
+          const g = cut > 0 ? k.slice(0, cut) : k;
+          const s = cut > 0 ? k.slice(cut + 1) : "";
+          return g.trim() === vc.grade!.trim() && (!vc.section || s.trim() === vc.section.trim());
+        });
+        const rows = key ? ttGrid[key] : undefined;
+        rows?.forEach((row, pIdx) => {
+          const cell = row?.[dayIdx];
+          if (cell?.subject) results.push({ time: TT_SLOTS[pIdx] || "", subject: cell.subject, room: cell.room || "", classLabel: key! });
+        });
+      });
+    } else if (audienceGroup === "staff" && user?.displayName) {
+      Object.entries(ttGrid).forEach(([key, rows]) => {
+        rows?.forEach((row, pIdx) => {
+          const cell = row?.[dayIdx];
+          if (cell?.teacher && normName(cell.teacher) === normName(user.displayName!)) {
+            results.push({ time: TT_SLOTS[pIdx] || "", subject: cell.subject || "", room: cell.room || "", classLabel: key });
+          }
+        });
+      });
+    }
+    return results.sort((a, b) => a.time.localeCompare(b.time));
+  };
+
   const next = () => {
     if (view === "month") setCurrentMonth(addMonths(currentMonth, 1));
     else if (view === "week") setCurrentMonth(addDays(currentMonth, 7));
@@ -516,6 +572,7 @@ export default function CommunicationCalendar() {
                     end: endOfWeek(currentMonth)
                   }).map((day, i) => {
                     const dayEvents = filteredEvents.filter(event => isSameDay(parseISO(event.date), day));
+                    const dayPeriods = timetablePeriodsFor(day);
                     return (
                       <div key={i} className="flex gap-6">
                         <div className="w-20 shrink-0 text-center">
@@ -526,6 +583,16 @@ export default function CommunicationCalendar() {
                           )}>{format(day, "d")}</p>
                         </div>
                         <div className="flex-1 space-y-2">
+                          {dayPeriods.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {dayPeriods.map((p, pi) => (
+                                <span key={pi} title={`${p.time} · ${p.classLabel}${p.room ? " · " + p.room : ""}`}
+                                  className="text-[10px] font-medium px-2 py-1 rounded-lg border border-dashed border-primary/20 bg-primary/5 text-primary">
+                                  {p.time.split(" ")[0]} {p.subject}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {dayEvents.length > 0 ? (
                             dayEvents.map(event => (
                               <div 
@@ -575,6 +642,23 @@ export default function CommunicationCalendar() {
                     )}
                   </div>
                   
+                  {timetablePeriodsFor(currentMonth).length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Class Periods (from Timetable)</p>
+                      <div className="space-y-2">
+                        {timetablePeriodsFor(currentMonth).map((p, i) => (
+                          <div key={i} className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-primary/20 bg-primary/5">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-bold text-primary">{p.time}</span>
+                              <span className="text-sm font-medium">{p.subject}</span>
+                              <span className="text-[10px] text-muted-foreground">{p.classLabel}{p.room ? ` · ${p.room}` : ""}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[9px]">Timetable</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-4">
                     {filteredEvents.filter(event => isSameDay(parseISO(event.date), currentMonth)).length > 0 ? (
                       filteredEvents

@@ -785,6 +785,25 @@ const AdvancedCurriculum = () => {
           createdAt: now2, time: now2, read: false, uid: user?.uid,
         }).catch(() => {})));
       }).catch(() => {});
+
+      // Real Announcements bridge — but syllabus topics are covered far too
+      // often (potentially dozens per term per subject) to create a NEW
+      // Announcement each time without flooding the feed. Instead, one real
+      // Notice per (grade, subject) is upserted in place — its content
+      // always reflects the real current coverage %, not a growing list of
+      // individual events. Same deterministic-id upsert pattern used for
+      // exam-fee/exam-result bridges this session.
+      const allWeeks = updatedTerms.flatMap(t => t.units.flatMap(u => u.weeks));
+      const coveredCount = allWeeks.filter(w => w.completed).length;
+      const pct = allWeeks.length > 0 ? Math.round((coveredCount / allWeeks.length) * 100) : 0;
+      smartDb.create("Notice", {
+        title: `Syllabus progress — ${subject} (${grade})`,
+        content: `${coveredCount}/${allWeeks.length} topics covered (${pct}%). Most recent: "${week.topic}".`,
+        category: "Academic", priority: "Low", status: "Published",
+        targetAudience: "All", targetClass: grade,
+        postedBy: user?.displayName || user?.email || "Academics",
+        date: now2.split("T")[0], views: 0, uid: user?.uid,
+      }, `notice-syllabus-${currentCurriculum.id}-${subject}`).catch(() => {});
     }
   };
 

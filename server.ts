@@ -3239,7 +3239,11 @@ async function startServer() {
         const incidentVehicleId = req.body.vehicleId;
         const incidentStudents = incidentVehicleId ? await getStudentsForVehicle(incidentVehicleId) : [];
         const incidentTargets = incidentStudents.map((s) => ({ studentName: String(s.studentName || ""), grade: s.grade as string | undefined, section: s.section as string | undefined, studentId: s.studentId as string | undefined }));
-        // SOS: broadcast dedicated socket event + persistent notification
+        // SOS: broadcast dedicated socket event + persistent notification.
+        // Also bridges into a real school-wide Announcement — genuinely
+        // rare and safety-critical, unlike routine trip-start/boarding
+        // alerts or Delay reports, which stay notification-only rather
+        // than spamming the curated Announcements feed.
         if (req.body.type === "SOS") {
           io.emit("sos_alert", { ...req.body, id });
           await emitTransportNotif({
@@ -3249,6 +3253,26 @@ async function startServer() {
             body: `Driver: ${req.body.driverName || "Unknown"} · Location: ${req.body.location || "Unknown"} · Immediate attention required`,
             targets: incidentTargets,
           });
+          if (pool) {
+            try {
+              const noticeId = `notice-transport-sos-${id}`;
+              const now = new Date().toISOString();
+              const noticePayload = {
+                id: noticeId,
+                title: `🚨 SOS ALERT — ${req.body.vehicleId || "Bus"}`,
+                content: `${req.body.description || "Emergency reported"} · Driver: ${req.body.driverName || "Unknown"} · Location: ${req.body.location || "Unknown"}`,
+                category: "Urgent", priority: "High", status: "Published",
+                targetAudience: "All", targetClass: "",
+                postedBy: "Transport", date: now.split("T")[0],
+                views: 0, uid: "system",
+              };
+              await pool.execute(
+                "INSERT INTO notices (id, data, createdAt, updatedAt) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE data=VALUES(data), updatedAt=VALUES(updatedAt)",
+                [noticeId, JSON.stringify(noticePayload), now, now]
+              );
+              entityCache.delete("notices");
+            } catch { /* non-fatal — notifications already fired above */ }
+          }
         } else if (req.body.type === "Delay" && !req.body.resolvedAt) {
           await emitTransportNotif({
             type: "trip_delayed",
