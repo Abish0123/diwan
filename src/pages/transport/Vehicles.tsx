@@ -17,8 +17,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Bus, Plus, Search, Pencil, Trash2, RefreshCw, Navigation,
-  WifiOff, AlertTriangle, CheckCircle2, Users, MapPin,
+  WifiOff, AlertTriangle, CheckCircle2, Users, MapPin, Wrench,
 } from "lucide-react";
+import { VehicleMaintenanceDialog } from "@/components/transport/VehicleMaintenanceDialog";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || window.location.origin;
 
@@ -55,6 +56,7 @@ export default function FleetControl() {
   const [saving, setSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [crewList, setCrewList] = useState<CrewMember[]>([]);
+  const [maintenanceVehicle, setMaintenanceVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -275,6 +277,9 @@ export default function FleetControl() {
                       <Button variant="outline" size="sm" className="flex-1 h-8 gap-1.5" onClick={() => openEdit(v)}>
                         <Pencil className="h-3 w-3" /> Edit
                       </Button>
+                      <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setMaintenanceVehicle(v)}>
+                        <Wrench className="h-3.5 w-3.5" /> Maintenance
+                      </Button>
                       <Button variant="outline" size="sm" className="h-8 text-red-500 hover:bg-red-50 hover:border-red-200" onClick={() => remove(v)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -397,6 +402,12 @@ export default function FleetControl() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VehicleMaintenanceDialog
+        vehicle={maintenanceVehicle}
+        onClose={() => setMaintenanceVehicle(null)}
+        onChanged={() => {}}
+      />
     </DashboardLayout>
   );
 }

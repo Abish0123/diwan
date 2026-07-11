@@ -82,6 +82,9 @@ interface Visitor {
   checkInAt?: string;   // ISO — real check-in timestamp for day/duration math
   checkOutAt?: string;  // ISO — real check-out timestamp
   createdAt?: string;
+  // Set only when purpose === "Vendor Visit" — the real Vendor (Inventory &
+  // Procurement) this visit is for, not just the free-text purpose string.
+  vendorName?: string;
 }
 
 export default function Visitors() {
@@ -93,13 +96,15 @@ export default function Visitors() {
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
 
   const [newVisitor, setNewVisitor] = useState({
     name: "",
     purpose: "",
     host: "",
     phone: "",
-    email: ""
+    email: "",
+    vendorName: ""
   });
 
   // Load visitors from smartDb
@@ -128,6 +133,19 @@ export default function Visitors() {
     smartDb.getAll("VisitorBlacklist").then(data => {
       if (active) setBlacklist(data as BlacklistEntry[]);
     }).catch(err => console.error("Failed to load visitor blacklist:", err));
+    return () => { active = false; };
+  }, []);
+
+  // Real Vendors (Inventory & Procurement) — "Vendor Visit" used to be just
+  // a dropdown string with no link to who's actually visiting.
+  useEffect(() => {
+    let active = true;
+    smartDb.getAll("Vendor").then(data => {
+      if (!active) return;
+      setVendors((data as { id: string; name: string; status?: string }[])
+        .filter(v => v.status !== "Inactive")
+        .map(v => ({ id: v.id, name: v.name })));
+    }).catch(err => console.error("Failed to load vendors:", err));
     return () => { active = false; };
   }, []);
 
@@ -193,6 +211,7 @@ export default function Visitors() {
       host: newVisitor.host,
       phone: newVisitor.phone || undefined,
       email: newVisitor.email || undefined,
+      vendorName: newVisitor.purpose === "Vendor Visit" ? (newVisitor.vendorName || undefined) : undefined,
       checkIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       checkInAt: nowIso,
       checkOut: "-",
@@ -209,7 +228,7 @@ export default function Visitors() {
       }, visitor.id);
 
       setVisitors([visitor, ...visitors]);
-      setNewVisitor({ name: "", purpose: "", host: "", phone: "", email: "" });
+      setNewVisitor({ name: "", purpose: "", host: "", phone: "", email: "", vendorName: "" });
       setIsLogDialogOpen(false);
       toast.success("Visitor logged successfully");
     } catch (err) {
@@ -347,6 +366,21 @@ export default function Visitors() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {newVisitor.purpose === "Vendor Visit" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="vendor">Vendor Company</Label>
+                      <Select value={newVisitor.vendorName} onValueChange={(value) => setNewVisitor({...newVisitor, vendorName: value})}>
+                        <SelectTrigger id="vendor">
+                          <SelectValue placeholder={vendors.length === 0 ? "No active vendors on file" : "Select vendor..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vendors.map((v) => (
+                            <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="grid gap-2">
                     <Label htmlFor="host">Host (Staff/Student)</Label>
                     <Input 
@@ -551,6 +585,12 @@ export default function Visitors() {
                   <p className="text-xs font-bold uppercase text-muted-foreground">Purpose</p>
                   <p className="text-sm font-medium">{selectedVisitor.purpose}</p>
                 </div>
+                {selectedVisitor.vendorName && (
+                  <div>
+                    <p className="text-xs font-bold uppercase text-muted-foreground">Vendor</p>
+                    <p className="text-sm font-medium">{selectedVisitor.vendorName}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-bold uppercase text-muted-foreground">Host</p>
                   <p className="text-sm font-medium">{selectedVisitor.host}</p>

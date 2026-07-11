@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,7 @@ function safeEmoji(emoji: string | undefined): string | null {
 }
 
 export default function Cafeteria() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const currency = financialSettings?.currency || "QAR";
@@ -124,6 +126,9 @@ export default function Cafeteria() {
   const [topUpAmount, setTopUpAmount] = useState("");
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
+  const [kitchenInventoryOpen, setKitchenInventoryOpen] = useState(false);
+  const [kitchenStock, setKitchenStock] = useState<{ id: string; name: string; stock: number; unit?: string; status: string }[]>([]);
+  const [kitchenStockLoading, setKitchenStockLoading] = useState(false);
   const [limitWallet, setLimitWallet] = useState<WalletRecord | null>(null);
   const [limitAmount, setLimitAmount] = useState("");
   const [newItem, setNewItem] = useState({
@@ -285,6 +290,26 @@ export default function Cafeteria() {
       cancelled = true;
     };
   }, [uid]);
+
+  // Real kitchen stock — same InventoryItem/"Cafeteria Supplies" data the
+  // Inventory module tracks, separate from each menu item's own available/
+  // sold-out toggle (no ingredient/recipe linkage exists between the two).
+  // Fetched lazily when the dialog opens, same pattern as Hostel's Mess.tsx.
+  useEffect(() => {
+    if (!kitchenInventoryOpen) return;
+    let active = true;
+    setKitchenStockLoading(true);
+    smartDb.getAll("InventoryItem", undefined)
+      .then((rows) => {
+        if (!active) return;
+        setKitchenStock((rows as { id: string; name: string; category: string; stock: number; unit?: string; status: string }[])
+          .filter((r) => r.category === "Cafeteria Supplies")
+          .sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => { if (active) setKitchenStock([]); })
+      .finally(() => { if (active) setKitchenStockLoading(false); });
+    return () => { active = false; };
+  }, [kitchenInventoryOpen]);
 
   const menuSections = categoryMeta.map((meta) => ({
     ...meta,
@@ -464,6 +489,9 @@ export default function Cafeteria() {
           <div className="flex gap-2">
             <Button onClick={() => setAddItemOpen(true)} className="gap-2 gradient-primary">
               <Plus className="h-4 w-4" /> Add Menu Item
+            </Button>
+            <Button variant="outline" onClick={() => setKitchenInventoryOpen(true)} className="gap-2">
+              <UtensilsCrossed className="h-4 w-4" /> Kitchen Inventory
             </Button>
             <Button
               variant="outline"
@@ -992,6 +1020,60 @@ export default function Cafeteria() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Kitchen Inventory — real Cafeteria Supplies stock from Inventory,
+          same InventoryItem data Hostel's Mess.tsx reads. */}
+      <Dialog open={kitchenInventoryOpen} onOpenChange={setKitchenInventoryOpen}>
+        <DialogContent className="sm:max-w-[600px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Kitchen Inventory</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Real stock levels for Cafeteria Supplies — the same inventory Purchases/Stock manage school-wide.
+            </p>
+          </DialogHeader>
+          <div className="py-4">
+            {kitchenStockLoading ? (
+              <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">Loading…</div>
+            ) : kitchenStock.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-10">
+                No Cafeteria Supplies items in stock yet — add them from Inventory &gt; Stock.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {kitchenStock.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.name}</TableCell>
+                      <TableCell>{row.stock} {row.unit || "Units"}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "font-bold",
+                          row.status === "In Stock" ? "bg-emerald-50 text-emerald-600" :
+                          row.status === "Low Stock" ? "bg-amber-50 text-amber-600" :
+                          "bg-destructive/10 text-destructive"
+                        )}>
+                          {row.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKitchenInventoryOpen(false)}>Close</Button>
+            <Button className="gradient-primary" onClick={() => { setKitchenInventoryOpen(false); navigate("/inventory/orders"); }}>Order Supplies</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
         <DialogContent className="max-w-md">
