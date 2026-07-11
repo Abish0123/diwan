@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch } from "lucide-react";
+import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
 import { pushNotify } from "@/lib/pushNotifications";
@@ -164,6 +164,9 @@ export default function StaffAppraisal() {
   const [cycleProgress, setCycleProgress] = useState<CreationProgress | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [kpiTemplates, setKpiTemplates] = useState<Record<string, KpiCategoryConfig[]>>({});
+  const [scorecardSearch, setScorecardSearch] = useState("");
+  const [scorecardStatusFilter, setScorecardStatusFilter] = useState("all");
+  const [scheduleObsOpen, setScheduleObsOpen] = useState(false);
 
   function statusForScore(score: number) {
     if (score >= 90) return "Excellent";
@@ -235,6 +238,15 @@ export default function StaffAppraisal() {
   const completedCount = cycleScorecards.filter((s) => (Number(s.overall) || 0) > 0).length;
   const cycleCompletionPct = cycleScorecards.length ? Math.round((completedCount / cycleScorecards.length) * 100) : 0;
   const pendingScorecards = cycleScorecards.filter((s) => (Number(s.overall) || 0) === 0);
+
+  const filteredScorecards = useMemo(() => {
+    const q = scorecardSearch.trim().toLowerCase();
+    return cycleScorecards.filter((s) => {
+      const matchesQuery = !q || s.name?.toLowerCase().includes(q) || s.role?.toLowerCase().includes(q);
+      const matchesStatus = scorecardStatusFilter === "all" || s.status === scorecardStatusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [cycleScorecards, scorecardSearch, scorecardStatusFilter]);
 
   function toggleKpi(idx: number) {
     setExpandedKpi(expandedKpi === idx ? null : idx);
@@ -410,11 +422,11 @@ export default function StaffAppraisal() {
     }
   }
 
-  async function handleScheduleObs() {
-    if (!user) return;
+  async function handleScheduleObs(): Promise<boolean> {
+    if (!user) return false;
     if (!obsTeacher || !obsDate || !obsObserver) {
       toast.error("Please fill in all observation fields.");
-      return;
+      return false;
     }
     const id = `obs-${Date.now()}`;
     await smartDb.create(
@@ -435,6 +447,7 @@ export default function StaffAppraisal() {
     setObsTeacher("");
     setObsDate("");
     setObsObserver("");
+    return true;
   }
 
   return (
@@ -450,67 +463,61 @@ export default function StaffAppraisal() {
               <p className="text-sm text-slate-400">Manage staff KPIs, appraisal cycles, and performance reviews</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setWizardOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Appraisal Cycle
-            </Button>
-            <Button variant="outline" onClick={handleDownloadReports} className="gap-2">
-              <Download className="h-4 w-4" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleDownloadReports}>
+              <Download className="mr-2 h-4 w-4" />
               Download Reports
+            </Button>
+            <Button size="sm" className="gradient-primary" onClick={() => setWizardOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Appraisal Cycle
             </Button>
           </div>
         </div>
 
-        {/* HR Settings strip */}
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border bg-purple-50 border-purple-100 text-sm">
-          <span className="font-semibold text-purple-800">Appraisal Config (from HR Settings):</span>
-          <span className="text-purple-700">Cycle: <b>{hrSettings.appraisalCycleLabel}</b></span>
-          <span className="text-purple-400">·</span>
-          <span className="text-purple-700">Rating Scale: <b>1 to {hrSettings.ratingScale}</b></span>
-          <span className="text-purple-400">·</span>
-          <span className="text-purple-700">360° Peer Feedback: <b>{hrSettings.peer360 ? 'Enabled' : 'Disabled'}</b></span>
-        </div>
-
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="pt-5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold text-blue-900">{hrSettings.academicYear} · {cycle?.title || hrSettings.appraisalCycleLabel}</h2>
+        {/* Current cycle summary — consolidates cycle status + HR config into one card */}
+        <Card className="border-none shadow-sm bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 shrink-0">
+                <Award className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold">{hrSettings.academicYear} · {cycle?.title || hrSettings.appraisalCycleLabel}</p>
                   <Badge className={cycle ? "bg-green-100 text-green-700 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}>
                     {cycle ? cycle.status || "In Progress" : "No Active Cycle"}
                   </Badge>
                 </div>
-                <p className="text-sm text-blue-700">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {cycle ? (
-                    <>Started: <span className="font-medium">{new Date(cycle.startedAt || "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></>
+                    <>Started {new Date(cycle.startedAt || "").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} · Rating scale 1–{hrSettings.ratingScale} · 360° Peer Feedback {hrSettings.peer360 ? "on" : "off"}</>
                   ) : (
-                    "Start a new cycle to generate scorecards for every teaching staff member."
+                    <>Start a new cycle to generate scorecards for every teaching staff member. Rating scale 1–{hrSettings.ratingScale} · 360° Peer Feedback {hrSettings.peer360 ? "on" : "off"}</>
                   )}
                 </p>
                 {cycle && (
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="w-48 h-2 bg-blue-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-600 rounded-full" style={{ width: `${cycleCompletionPct}%` }} />
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <div className="w-40 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${cycleCompletionPct}%` }} />
                     </div>
-                    <span className="text-sm font-semibold text-blue-800">{cycleCompletionPct}% Complete ({completedCount}/{cycleScorecards.length})</span>
+                    <span className="text-xs font-semibold text-slate-600">{cycleCompletionPct}% · {completedCount}/{cycleScorecards.length}</span>
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-blue-300 text-blue-800 hover:bg-blue-100" disabled={!cycle} onClick={() => setViewCycleOpen(true)}>
-                  View Cycle
-                </Button>
-                <Button className="bg-purple-600 hover:bg-purple-700 text-white" disabled={!cycle || sendingReminders} onClick={handleSendReminders}>
-                  {sendingReminders ? "Sending…" : "Send Reminders"}
-                </Button>
-              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" className="text-xs" disabled={!cycle} onClick={() => setViewCycleOpen(true)}>
+                View Cycle
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs border-primary/20 hover:bg-primary/5" disabled={!cycle || sendingReminders} onClick={handleSendReminders}>
+                {sendingReminders ? "Sending…" : "Send Reminders"}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
             <CardContent className="pt-5">
               <div className="flex items-center gap-3">
@@ -565,17 +572,58 @@ export default function StaffAppraisal() {
           </Card>
         </div>
 
-        <Tabs defaultValue="scorecards">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="scorecards">Staff Scorecards</TabsTrigger>
-            <TabsTrigger value="kpi">KPI Framework</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback Templates</TabsTrigger>
-            <TabsTrigger value="history">Appraisal History</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        <Tabs defaultValue="scorecards" className="space-y-4">
+          <TabsList className="bg-transparent p-0 h-auto gap-1 justify-start flex-wrap">
+            <TabsTrigger value="scorecards" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <Users className="h-4 w-4" /> Staff Scorecards
+            </TabsTrigger>
+            <TabsTrigger value="kpi" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <ClipboardList className="h-4 w-4" /> KPI Framework
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <MessageSquare className="h-4 w-4" /> Feedback Templates
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <Clock className="h-4 w-4" /> Appraisal History
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <TrendingUp className="h-4 w-4" /> Analytics
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="scorecards" className="mt-4">
-            <Card>
+          <TabsContent value="scorecards" className="mt-0 space-y-4">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search staff name or role..."
+                  className="pl-10 rounded-xl bg-white border-none shadow-sm"
+                  value={scorecardSearch}
+                  onChange={(e) => setScorecardSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={scorecardStatusFilter}
+                  onChange={(e) => setScorecardStatusFilter(e.target.value)}
+                  className="h-9 rounded-xl border-none bg-white pl-3 pr-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Excellent">Excellent</option>
+                  <option value="Good">Good</option>
+                  <option value="Satisfactory">Satisfactory</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Self Review Submitted">Self Review Submitted</option>
+                  <option value="Not Started">Not Started</option>
+                </select>
+                <Button size="sm" variant="outline" className="border-none bg-white shadow-sm" onClick={() => setScheduleObsOpen(true)}>
+                  <CalendarClock className="mr-2 h-4 w-4" /> Schedule Observation
+                </Button>
+              </div>
+            </div>
+
+            <Card className="border-none shadow-sm overflow-hidden">
               <CardContent className="pt-4 overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -592,14 +640,16 @@ export default function StaffAppraisal() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {scorecards.length === 0 && (
+                    {filteredScorecards.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={9} className="h-32 text-center text-sm text-gray-400">
-                          No appraisal scorecards yet. Start a new appraisal cycle and schedule classroom observations to evaluate staff.
+                          {scorecards.length === 0
+                            ? "No appraisal scorecards yet. Start a new appraisal cycle and schedule classroom observations to evaluate staff."
+                            : "No staff match your search or filter."}
                         </TableCell>
                       </TableRow>
                     )}
-                    {scorecards.map((staff) => (
+                    {filteredScorecards.map((staff) => (
                       <TableRow key={staff.id || staff.name}>
                         <TableCell className="font-medium">{staff.name}</TableCell>
                         <TableCell className="text-gray-500 text-sm">{staff.role}</TableCell>
@@ -712,17 +762,17 @@ export default function StaffAppraisal() {
           </TabsContent>
         </Tabs>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-indigo-500" />
-              Schedule Classroom Observation
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Dialog open={scheduleObsOpen} onOpenChange={setScheduleObsOpen}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-indigo-500" />
+                Schedule Classroom Observation
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
+                <Label className="block mb-1">Teacher</Label>
                 <select
                   className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   value={obsTeacher}
@@ -735,7 +785,7 @@ export default function StaffAppraisal() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observation Date</label>
+                <Label className="block mb-1">Observation Date</Label>
                 <Input
                   type="date"
                   value={obsDate}
@@ -743,7 +793,7 @@ export default function StaffAppraisal() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observer Name</label>
+                <Label className="block mb-1">Observer Name</Label>
                 <Input
                   placeholder="e.g. Dr. Khalid Nasser Al-Farsi"
                   value={obsObserver}
@@ -751,14 +801,18 @@ export default function StaffAppraisal() {
                 />
               </div>
             </div>
-            <div className="mt-4">
-              <Button onClick={handleScheduleObs} className="gap-2">
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setScheduleObsOpen(false)}>Cancel</Button>
+              <Button
+                className="gap-2"
+                onClick={async () => { if (await handleScheduleObs()) setScheduleObsOpen(false); }}
+              >
                 <Plus className="h-4 w-4" />
                 Schedule Observation
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={!!editCard} onOpenChange={(o) => !o && setEditCard(null)}>
           <DialogContent className="sm:max-w-[480px]">
