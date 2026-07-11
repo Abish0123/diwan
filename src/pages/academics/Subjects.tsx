@@ -145,6 +145,24 @@ export default function Subjects() {
     [students, selectedGrade]
   );
 
+  // Real per-stream enrollment for this grade — Student.stream is captured
+  // at Admissions but previously nothing in Academics ever read it, so
+  // whoever manages Grade 11/12 electives here had no visibility into how
+  // many real students actually picked Science/Commerce/Arts. Only shown
+  // for grades where streaming is a real school decision (11-12) — lower
+  // grades don't stream, so "1 General" for everyone would just be noise.
+  const isStreamingGrade = /\b(11|12)\b/.test(selectedGrade);
+  const streamBreakdown = useMemo(() => {
+    if (!isStreamingGrade) return [];
+    const counts = new Map<string, number>();
+    (students || []).forEach((s: any) => {
+      if (canonGrade(s.grade) !== canonGrade(selectedGrade)) return;
+      const stream = s.stream || "General";
+      counts.set(stream, (counts.get(stream) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  }, [students, selectedGrade, isStreamingGrade]);
+
   const teacherName = (gradeClasses[0] as any)?.teacher;
 
   // Fetch subject_assignments for the selected grade+section so SubjectsPro can
@@ -578,6 +596,19 @@ export default function Subjects() {
                   </Button>
                 )}
               </div>
+
+              {streamBreakdown.length > 0 && (
+                <div className="mb-5 p-3 bg-white rounded-xl border border-slate-100 flex items-center gap-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Real Stream Enrollment</p>
+                  <div className="flex flex-wrap gap-2">
+                    {streamBreakdown.map(([stream, count]) => (
+                      <span key={stream} className="px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-[11px] font-bold">
+                        {stream}: {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <SubjectsPro
                 key={selectedGrade}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +101,40 @@ const LeaveManagement = () => {
     field: 'startDate',
     order: 'desc'
   });
+
+  // Real weekly teaching-period load per staff name — previously a
+  // teacher's actual Subject Allocation/Timetable load had zero connection
+  // to leave approval, so an approver had no idea whether granting leave
+  // meant N periods needed covering. Computed off the same real published
+  // timetable grid TeacherTimetable.tsx/TeacherAttendance.tsx already read,
+  // using the identical name-normalization so it matches the same way.
+  const [teacherWorkload, setTeacherWorkload] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let alive = true;
+    const normName = (s: string) => (s || "").toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.)\s*/i, "").trim();
+    fetch("/api/data/timetable_slots/published-timetable-v3")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!alive || !data || data.error || !data.gridJson) return;
+        const grid = JSON.parse(data.gridJson) as Record<string, ({ subject?: string; teacher?: string } | null)[][]>;
+        const counts: Record<string, number> = {};
+        Object.values(grid).forEach(dayRows => {
+          dayRows.forEach(row => {
+            row.forEach(cell => {
+              if (!cell?.teacher) return;
+              const key = normName(cell.teacher);
+              counts[key] = (counts[key] || 0) + 1;
+            });
+          });
+        });
+        setTeacherWorkload(counts);
+      }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const weeklyPeriodsFor = (staffName: string) => {
+    const normName = (s: string) => (s || "").toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.)\s*/i, "").trim();
+    return teacherWorkload[normName(staffName)] || 0;
+  };
 
   const [formData, setFormData] = useState({
     staffId: "",
@@ -366,7 +400,15 @@ const LeaveManagement = () => {
                           </Avatar>
                           <div className="flex flex-col">
                             <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{l.staffName}</span>
-                            <span className="text-[11px] text-muted-foreground font-medium capitalize">{l.category ?? 'staff'}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-muted-foreground font-medium capitalize">{l.category ?? 'staff'}</span>
+                              {(l.category ?? 'staff') === 'staff' && weeklyPeriodsFor(l.staffName) > 0 && (
+                                <Badge variant="outline" className="rounded-md px-1.5 py-0 text-[9px] font-bold border-amber-200 text-amber-700 bg-amber-50"
+                                  title="Real weekly teaching periods, from Subject Allocation/Timetable — periods on leave days will need covering">
+                                  {weeklyPeriodsFor(l.staffName)} periods/wk
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
