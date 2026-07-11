@@ -128,6 +128,12 @@ const entityMapping: Record<string, string> = {
   // (Step 3's "Save Template" / template picker) — separate from the
   // Appraisal cycle/scorecard rows themselves.
   "AppraisalKpiTemplate": "appraisal_kpi_templates",
+  // 360° feedback question sets (Student→Subject Teacher, Parent→Teacher,
+  // HOD Evaluation, ...) — HR-editable, seeded once from a standard library.
+  "FeedbackTemplate": "feedback_templates",
+  // Single-row config: how each feedback source weights into the Final
+  // Performance Score (see feedbackTemplateTypes.ts).
+  "FeedbackWeighting": "feedback_weighting",
 };
 
 function normalizeEntity(entity: string): string {

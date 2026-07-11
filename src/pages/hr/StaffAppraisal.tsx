@@ -28,6 +28,8 @@ import { CycleSuccessScreen } from "./appraisal/CycleSuccessScreen";
 import { createAppraisalCycle, CreationResult, CreationProgress } from "./appraisal/createAppraisalCycle";
 import { KpiCategoryConfig, AppraisalCycleConfig } from "./appraisal/appraisalCycleTypes";
 import { AppraisalAnalyticsTab } from "./appraisal/AppraisalAnalyticsTab";
+import { FeedbackTemplatesManager } from "./appraisal/FeedbackTemplatesManager";
+import { FeedbackWeightingCard } from "./appraisal/FeedbackWeightingCard";
 
 const kpiCategories = [
   {
@@ -564,9 +566,10 @@ export default function StaffAppraisal() {
         </div>
 
         <Tabs defaultValue="scorecards">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="scorecards">Staff Scorecards</TabsTrigger>
             <TabsTrigger value="kpi">KPI Framework</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback Templates</TabsTrigger>
             <TabsTrigger value="history">Appraisal History</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -655,6 +658,11 @@ export default function StaffAppraisal() {
                 )}
               </Card>
             ))}
+          </TabsContent>
+
+          <TabsContent value="feedback" className="mt-4 space-y-4">
+            <FeedbackWeightingCard />
+            <FeedbackTemplatesManager />
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">
