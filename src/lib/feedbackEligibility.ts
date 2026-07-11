@@ -7,7 +7,7 @@
 // rather than re-deriving the mapping.
 import { smartDb } from "./localDb";
 import { canonGrade, canonSection, classSection } from "./studentGradeSection";
-import { subjectAssignmentRepository } from "@/repositories/SubjectAssignmentRepository";
+import { subjectAssignmentRepository, SubjectAssignment } from "@/repositories/SubjectAssignmentRepository";
 import { RateableTeacher } from "@/pages/hr/appraisal/feedbackSubmissionTypes";
 
 export async function getRateableTeachersForStudent(
@@ -15,14 +15,27 @@ export async function getRateableTeachersForStudent(
   section?: string,
   audience: "student" | "parent" = "student"
 ): Promise<RateableTeacher[]> {
-  if (!grade) return [];
-  const wantG = canonGrade(grade);
-  const wantS = canonSection(section);
-
   const [classes, assignments] = await Promise.all([
     smartDb.getAll("Class", undefined) as Promise<any[]>,
     subjectAssignmentRepository.getAll(),
   ]);
+  return rateableTeachersFrom(grade, section, audience, classes, assignments);
+}
+
+// Pure, synchronous core — split out so a bulk caller (e.g. a submission-
+// tracking view over 800+ students) can fetch Class/subject_assignments
+// ONCE and run this in a loop, instead of the async wrapper's per-call
+// re-fetch making an 861-student page issue 1700+ redundant network calls.
+export function rateableTeachersFrom(
+  grade: string | undefined,
+  section: string | undefined,
+  audience: "student" | "parent",
+  classes: any[],
+  assignments: SubjectAssignment[]
+): RateableTeacher[] {
+  if (!grade) return [];
+  const wantG = canonGrade(grade);
+  const wantS = canonSection(section);
 
   const out: RateableTeacher[] = [];
   const cls = (classes || []).find(

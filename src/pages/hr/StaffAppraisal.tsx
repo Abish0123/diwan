@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock } from "lucide-react";
+import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
 import { pushNotify } from "@/lib/pushNotifications";
@@ -32,58 +32,8 @@ import { FeedbackTemplatesManager } from "./appraisal/FeedbackTemplatesManager";
 import { FeedbackWeightingCard } from "./appraisal/FeedbackWeightingCard";
 import { NotifyFeedbackButton } from "./appraisal/NotifyFeedbackButton";
 import { FeedbackResultsTab } from "./appraisal/FeedbackResultsTab";
-
-const kpiCategories = [
-  {
-    title: "Teaching Quality",
-    weight: 30,
-    criteria: [
-      "Lesson plan preparation and alignment with curriculum",
-      "Clarity and effectiveness of instruction delivery",
-      "Use of diverse teaching methodologies",
-      "Integration of technology in lessons",
-      "Differentiation for varied learning needs",
-    ],
-  },
-  {
-    title: "Classroom Management",
-    weight: 20,
-    criteria: [
-      "Maintaining a positive and productive environment",
-      "Effective handling of student behaviour",
-      "Time management and lesson pacing",
-      "Classroom organisation and resource management",
-    ],
-  },
-  {
-    title: "Student Outcomes",
-    weight: 25,
-    criteria: [
-      "Student assessment scores and progression",
-      "Improvement rates across term benchmarks",
-      "Completion of curriculum targets",
-      "Student satisfaction and engagement metrics",
-    ],
-  },
-  {
-    title: "Professional Development",
-    weight: 15,
-    criteria: [
-      "Participation in CPD workshops and training",
-      "Self-reflection and professional goal-setting",
-      "Contribution to department improvement plans",
-    ],
-  },
-  {
-    title: "Administrative Compliance",
-    weight: 10,
-    criteria: [
-      "Timely submission of reports and grades",
-      "Attendance and punctuality records",
-      "Adherence to school policies and procedures",
-    ],
-  },
-];
+import { KpiFrameworkManager } from "./appraisal/KpiFrameworkManager";
+import { SubmissionTrackingTab } from "./appraisal/SubmissionTrackingTab";
 
 interface Scorecard {
   id: string;
@@ -147,7 +97,6 @@ export default function StaffAppraisal() {
   const { user, role } = useAuth();
   const hrSettings = useHRSettings();
   const { branches } = useBranch();
-  const [expandedKpi, setExpandedKpi] = useState<number | null>(null);
   const [obsTeacher, setObsTeacher] = useState("");
   const [obsDate, setObsDate] = useState("");
   const [obsObserver, setObsObserver] = useState("");
@@ -249,10 +198,6 @@ export default function StaffAppraisal() {
       return matchesQuery && matchesStatus;
     });
   }, [cycleScorecards, scorecardSearch, scorecardStatusFilter]);
-
-  function toggleKpi(idx: number) {
-    setExpandedKpi(expandedKpi === idx ? null : idx);
-  }
 
   // Only graded scorecards count toward these — a freshly-created cycle's
   // blank "Not Started" rows would otherwise drag the average toward 0.
@@ -588,6 +533,9 @@ export default function StaffAppraisal() {
             <TabsTrigger value="feedback-results" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
               <Star className="h-4 w-4" /> Feedback Results
             </TabsTrigger>
+            <TabsTrigger value="submission-tracking" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
+              <UserCheck className="h-4 w-4" /> Submission Tracking
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
               <Clock className="h-4 w-4" /> Appraisal History
             </TabsTrigger>
@@ -677,42 +625,8 @@ export default function StaffAppraisal() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="kpi" className="mt-4 space-y-3">
-            {kpiCategories.map((cat, idx) => (
-              <Card key={cat.title}>
-                <CardHeader className="pb-0 pt-4">
-                  <button
-                    className="flex items-center justify-between w-full text-left"
-                    onClick={() => toggleKpi(idx)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <ClipboardList className="h-5 w-5 text-indigo-500" />
-                      <CardTitle className="text-base">{cat.title}</CardTitle>
-                      <Badge variant="outline" className="text-xs">{cat.weight}% weight</Badge>
-                    </div>
-                    {expandedKpi === idx ? (
-                      <ChevronUp className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </CardHeader>
-                {expandedKpi === idx && (
-                  <CardContent className="pt-3 pb-4">
-                    <ul className="space-y-2">
-                      {cat.criteria.map((criterion) => (
-                        <li key={criterion} className="flex items-start gap-2 text-sm text-gray-700">
-                          <span className="mt-0.5 h-4 w-4 rounded border border-indigo-300 bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                            <span className="block h-2 w-2 rounded-sm bg-indigo-400" />
-                          </span>
-                          {criterion}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
+          <TabsContent value="kpi" className="mt-4">
+            <KpiFrameworkManager />
           </TabsContent>
 
           <TabsContent value="feedback" className="mt-4 space-y-4">
@@ -728,6 +642,10 @@ export default function StaffAppraisal() {
 
           <TabsContent value="feedback-results" className="mt-4">
             <FeedbackResultsTab />
+          </TabsContent>
+
+          <TabsContent value="submission-tracking" className="mt-4">
+            <SubmissionTrackingTab cycle={cycle} cycleScorecards={cycleScorecards} />
           </TabsContent>
 
           <TabsContent value="history" className="mt-4">

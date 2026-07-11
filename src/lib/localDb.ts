@@ -138,6 +138,9 @@ const entityMapping: Record<string, string> = {
   // (see feedbackSubmissionTypes.ts) — `uid`-scoped reads enforce that a
   // submitter only ever sees their own submissions.
   "FeedbackSubmission": "feedback_submissions",
+  // HR-editable KPI Framework reference categories (see kpiFrameworkTypes.ts)
+  // — replaces what used to be a hardcoded const in StaffAppraisal.tsx.
+  "KpiFrameworkCategory": "kpi_framework_categories",
 };
 
 function normalizeEntity(entity: string): string {
