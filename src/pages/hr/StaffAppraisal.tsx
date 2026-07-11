@@ -132,6 +132,8 @@ function statusBadge(status: string) {
       return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">{status}</Badge>;
     case "Needs Improvement":
       return <Badge className="bg-red-100 text-red-700 border-red-200">{status}</Badge>;
+    case "Self Review Submitted":
+      return <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">{status}</Badge>;
     default:
       return <Badge>{status}</Badge>;
   }

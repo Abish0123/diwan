@@ -13,6 +13,7 @@ import { RecentActivitiesCard } from "@/components/dashboard/RecentActivitiesCar
 import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { ApprovalsOverviewCard } from "@/components/dashboard/ApprovalsOverviewCard";
 import { PerformanceOverviewCard } from "@/components/dashboard/PerformanceOverviewCard";
+import { MyAppraisalWidget } from "@/pages/hr/appraisal/MyAppraisalWidget";
 import { QuickAccessGrid } from "@/components/dashboard/QuickAccessGrid";
 import { Users, UserCheck, GraduationCap, DollarSign, ClipboardList, Sparkles } from "lucide-react";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
@@ -109,6 +110,10 @@ const AdminIndex = () => {
             </Button>
           </div>
         </motion.div>
+
+        {/* My Appraisal — renders nothing unless the logged-in user has a
+            real, active scorecard of their own to complete. */}
+        <MyAppraisalWidget />
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">

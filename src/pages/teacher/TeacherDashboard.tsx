@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MyAppraisalWidget } from "@/pages/hr/appraisal/MyAppraisalWidget";
 import {
   Users, GraduationCap, ClipboardList, CheckCircle2, BarChart3, Award,
   CalendarCheck, FilePlus2, UploadCloud, CalendarRange, ChevronDown, ChevronRight,
@@ -311,6 +312,8 @@ export default function TeacherDashboard() {
             </div>
           ))}
         </div>
+
+        <MyAppraisalWidget />
 
         {/* ── My Subject Classes ─────────────────────────────────── */}
         {mySubjects.length > 0 && (
