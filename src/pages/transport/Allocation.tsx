@@ -2,7 +2,7 @@
  * Student Manifest — who's on which bus, boarding status, fee management.
  * Safety-first view of student transport allocations.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,18 @@ export default function StudentManifest() {
   const selectStudent = (s: { id: string; name: string; grade?: string; section?: string }) => {
     setForm(p => ({ ...p, studentId: s.id, studentName: s.name, grade: s.grade || p.grade, section: s.section || p.section }));
     setStudentPickerOpen(false);
+  };
+
+  // Real Student directory keyed by id — used to display each allocation's
+  // CURRENT grade/section live off the real Student record instead of the
+  // copy taken at allocation time, which otherwise silently goes stale the
+  // moment a linked student is promoted or moved sections. Only linked rows
+  // (studentId set) benefit; older/unlinked rows still show their stored
+  // grade/section as a fallback.
+  const studentById = useMemo(() => new Map(students.map(s => [s.id, s])), [students]);
+  const liveGradeSection = (a: Alloc) => {
+    const live = a.studentId ? studentById.get(a.studentId) : undefined;
+    return live ? { grade: live.grade || a.grade, section: live.section || a.section } : { grade: a.grade, section: a.section };
   };
 
   useEffect(() => {
@@ -150,7 +162,8 @@ export default function StudentManifest() {
 
   const filtered = allocs.filter(a => {
     const q = search.toLowerCase();
-    const matchSearch = !q || a.studentName.toLowerCase().includes(q) || a.route.toLowerCase().includes(q) || a.stopName.toLowerCase().includes(q) || `${a.grade}${a.section}`.toLowerCase().includes(q);
+    const { grade, section } = liveGradeSection(a);
+    const matchSearch = !q || a.studentName.toLowerCase().includes(q) || a.route.toLowerCase().includes(q) || a.stopName.toLowerCase().includes(q) || `${grade}${section}`.toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || a.status === statusFilter;
     const matchRoute = routeFilter === "all" || a.route === routeFilter;
     return matchSearch && matchStatus && matchRoute;
@@ -289,7 +302,16 @@ export default function StudentManifest() {
                         {/* Name + grade */}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 text-sm truncate">{a.studentName}</p>
-                          <p className="text-xs text-slate-400">Grade {a.grade}{a.section} · {a.stopName || "No stop"}</p>
+                          {(() => {
+                            const { grade, section } = liveGradeSection(a);
+                            const stale = a.studentId && (grade !== a.grade || section !== a.section);
+                            return (
+                              <p className="text-xs text-slate-400">
+                                Grade {grade}{section} · {a.stopName || "No stop"}
+                                {stale && <span className="text-amber-500 ml-1" title="This student's grade/section changed since they were allocated">(updated)</span>}
+                              </p>
+                            );
+                          })()}
                         </div>
 
                         {/* Mode */}
