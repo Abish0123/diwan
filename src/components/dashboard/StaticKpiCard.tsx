@@ -15,10 +15,11 @@ interface StaticKpiCardProps {
   accentColor?: string;
 }
 
-// Plain, non-animated KPI card matching /finance/statements' KPI row exactly:
-// static div (no motion/framer-motion), no hover effects, no count-up number,
-// and a Recharts sparkline left at its default one-time draw-in animation
-// (isAnimationActive is NOT set to false, same as FinancialStatements.tsx).
+// Plain, non-animated KPI card matching /finance/statements' KPI row: static
+// div (no motion/framer-motion), no hover effects, no count-up number. The
+// sparkline keeps its one-time draw-in animation but slower than Recharts'
+// 1500ms default (3000ms, ease-out) — the only intentional deviation from
+// FinancialStatements.tsx, which uses the unmodified default duration.
 export const StaticKpiCard = ({
   title,
   value,
@@ -71,6 +72,9 @@ export const StaticKpiCard = ({
               strokeWidth={2}
               fillOpacity={1}
               fill={`url(#${gradientId})`}
+              isAnimationActive
+              animationDuration={3000}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ResponsiveContainer>
