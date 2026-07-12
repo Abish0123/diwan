@@ -1485,6 +1485,45 @@ async function startServer() {
     }
   });
 
+  // Narrow, non-admin-safe lookup: "who is the class (homeroom) teacher for
+  // this grade+section" — used by src/lib/classPublishNotify.ts so a teacher
+  // (not just an admin) can route a real-time notification to the right
+  // class teacher without needing bulk access to the admin-only "users"
+  // table. Returns only the minimal {name, email} pair for each match, never
+  // the full row (no password hash, no role, no other account fields) —
+  // registered before the generic /api/data/:entity/:id route below so this
+  // more specific path is never swallowed by that one's :entity/:id params.
+  app.get("/api/data/users/class-teacher", requireAuth, async (req, res) => {
+    const grade = typeof req.query.grade === "string" ? req.query.grade : "";
+    const section = typeof req.query.section === "string" ? req.query.section : "";
+    if (!grade || !section) return res.status(400).json({ error: "grade and section are required" });
+    const canonGrade = (g: string) => g.trim().toLowerCase().replace(/^grade\s*/, "").replace(/\s+/g, "");
+    const parseClassSection = (cs?: string): { grade: string; section: string } | null => {
+      const m = String(cs || "").trim().match(/^(.+?)[\s-]+([A-Za-z])$/);
+      if (!m) return null;
+      return { grade: m[1].trim(), section: m[2].toUpperCase() };
+    };
+    const wantG = canonGrade(grade);
+    const wantS = section.trim().toUpperCase();
+    try {
+      const rows = await dbQuery(`SELECT data FROM \`users\``);
+      const matches: { name: string; email: string }[] = [];
+      for (const row of rows as { data: string }[]) {
+        let u: any;
+        try { u = JSON.parse(row.data); } catch { continue; }
+        const parsed = parseClassSection(u.classSection);
+        if (!parsed) continue;
+        if (canonGrade(parsed.grade) === wantG && parsed.section === wantS) {
+          const email = String(u.email || "");
+          if (email) matches.push({ name: u.name || u.displayName || "", email });
+        }
+      }
+      res.json(matches);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   app.get("/api/data/:entity/:id", requireAuth, async (req, res) => {
     const entity = String(req.params.entity);
     const id = String(req.params.id);

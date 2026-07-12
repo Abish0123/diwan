@@ -14,20 +14,29 @@
 import { smartDb } from "@/lib/localDb";
 import { emitNotification } from "@/lib/notificationBus";
 import { studentRepository } from "@/repositories/StudentRepository";
-import { userRepository } from "@/repositories/UserRepository";
+
+// Narrow, non-admin-safe lookup — the "users" table is admin-only-listable
+// server-side (see server.ts authorizeEntityAccess), so a teacher calling
+// this (not just an admin) previously got a silent 403 from
+// userRepository.getAll() and the class-teacher notification below just
+// never sent. This hits a dedicated endpoint that only ever returns the
+// matching class teacher's {name, email} — never the full users table.
+async function findClassTeachers(grade: string, section: string): Promise<{ name: string; email: string }[]> {
+  try {
+    const res = await fetch(`/api/data/users/class-teacher?grade=${encodeURIComponent(grade)}&section=${encodeURIComponent(section)}`);
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
 
 function slugify(s: string) {
   return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 function canonGrade(g?: string) {
   return String(g || "").trim().toLowerCase().replace(/^grade\s*/, "").replace(/\s+/g, "");
-}
-// Real seeded class-teacher rows store classSection (e.g. "Grade 7-C"), NOT
-// assignedGrade/assignedSection — see useTeacherClass.ts for the same fix.
-function parseClassSection(cs?: string): { grade: string; section: string } | null {
-  const m = String(cs || "").trim().match(/^(.+?)[\s-]+([A-Za-z])$/);
-  if (!m) return null;
-  return { grade: m[1].trim(), section: m[2].toUpperCase() };
 }
 
 const LEADERSHIP_ROLES = ["academic_coordinator", "principal", "vice_principal"];
@@ -51,9 +60,9 @@ export interface ClassPublishOptions {
  * action itself. */
 export async function notifyClassPublish(opts: ClassPublishOptions): Promise<void> {
   try {
-    const [students, users] = await Promise.all([
+    const [students, classTeachers] = await Promise.all([
       studentRepository.getAll().catch(() => []),
-      userRepository.getAll().catch(() => []),
+      findClassTeachers(opts.grade, opts.section),
     ]);
     const wantG = canonGrade(opts.grade);
     const wantS = String(opts.section || "").trim().toUpperCase();
@@ -90,11 +99,6 @@ export async function notifyClassPublish(opts: ClassPublishOptions): Promise<voi
       }));
     }
 
-    const classTeachers = (Array.isArray(users) ? users : []).filter((u: any) => {
-      const parsed = parseClassSection(u.classSection);
-      if (!parsed) return false;
-      return canonGrade(parsed.grade) === wantG && parsed.section === wantS;
-    });
     for (const t of classTeachers) {
       const email = String(t.email ?? "");
       if (!email) continue;
@@ -128,14 +132,7 @@ export async function notifyClassTeacherEvent(opts: {
   redirectUrl?: string; excludeEmail?: string;
 }): Promise<void> {
   try {
-    const users = await userRepository.getAll().catch(() => []);
-    const wantG = canonGrade(opts.grade);
-    const wantS = String(opts.section || "").trim().toUpperCase();
-    const classTeachers = (Array.isArray(users) ? users : []).filter((u: any) => {
-      const parsed = parseClassSection(u.classSection);
-      if (!parsed) return false;
-      return canonGrade(parsed.grade) === wantG && parsed.section === wantS;
-    });
+    const classTeachers = await findClassTeachers(opts.grade, opts.section);
     const stamp = new Date().toISOString();
     await Promise.all(classTeachers.map((t: any) => {
       const email = String(t.email ?? "");
