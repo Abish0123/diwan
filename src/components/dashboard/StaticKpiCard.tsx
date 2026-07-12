@@ -1,6 +1,7 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { CountUpNumber } from "./CountUpNumber";
 
 interface StaticKpiCardProps {
   title: string;
@@ -15,10 +16,10 @@ interface StaticKpiCardProps {
   accentColor?: string;
 }
 
-// Fully static KPI card — no motion/framer-motion, no hover effects, no
-// count-up number, and the Recharts sparkline has its draw-in animation
-// explicitly disabled (isAnimationActive={false}) so nothing on the card
-// animates at any point, including first load.
+// Static-layout KPI card (no motion/framer-motion, no hover-lift/rotate —
+// same plain div structure as /finance/statements) but with two content-level
+// animations layered back in: a Recharts sparkline draw-in on the trend
+// chart, and a CountUpNumber tween on the headline value.
 export const StaticKpiCard = ({
   title,
   value,
@@ -35,6 +36,7 @@ export const StaticKpiCard = ({
   const series = base.length >= 2 ? base : [base[0] ?? 0, base[0] ?? 0];
   const data = series.map((v, i) => ({ i, v }));
   const gradientId = `static-kpi-${title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  const isNumeric = typeof value === "number";
 
   return (
     <div className={cn("bg-white border border-slate-100 rounded-xl p-4 shadow-sm", className)}>
@@ -52,7 +54,9 @@ export const StaticKpiCard = ({
         )}
       </div>
 
-      <div className="text-2xl font-bold text-slate-900 tabular-nums">{value}</div>
+      <div className="text-2xl font-bold text-slate-900 tabular-nums">
+        {isNumeric ? <CountUpNumber value={value as number} /> : value}
+      </div>
       {description && <p className="text-[11px] text-slate-400 mt-0.5 mb-2">{description}</p>}
 
       <div className="h-14 w-full mt-2">
@@ -71,7 +75,9 @@ export const StaticKpiCard = ({
               strokeWidth={2}
               fillOpacity={1}
               fill={`url(#${gradientId})`}
-              isAnimationActive={false}
+              isAnimationActive
+              animationDuration={3000}
+              animationEasing="ease-out"
             />
           </AreaChart>
         </ResponsiveContainer>
