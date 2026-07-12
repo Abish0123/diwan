@@ -119,7 +119,14 @@ export default function TeacherProjectReports() {
   const reviewed   = reports.filter(r => r.status === "Reviewed").length;
   const submitted  = reports.filter(r => r.status === "Submitted").length;
   const pending    = reports.filter(r => r.status === "Pending").length;
-  const avgScore   = reports.filter(r => r.score != null).reduce((a,r)=>a+(r.score||0),0) / Math.max(1,reports.filter(r=>r.score!=null).length);
+  // Each project can have a different maxScore (whatever the assignment's
+  // totalMarks was), so scores must be normalised to a % before averaging —
+  // averaging raw scores directly (e.g. 366/456) against a hardcoded "/100"
+  // label produced nonsense values like "309/100".
+  const gradedReports = reports.filter(r => r.score != null && r.maxScore > 0);
+  const avgScorePct = gradedReports.length
+    ? Math.round(gradedReports.reduce((a, r) => a + (r.score! / r.maxScore) * 100, 0) / gradedReports.length)
+    : null;
 
   const handleExport = async () => {
     if (filtered.length === 0) { toast.error("No reports to export"); return; }
@@ -175,7 +182,7 @@ export default function TeacherProjectReports() {
             { label:"Total Projects",  value: reports.length,      icon: FileText,    color:"text-purple-600 bg-violet-50" },
             { label:"Reviewed",        value: reviewed,            icon: CheckCircle, color:"text-emerald-600 bg-emerald-50" },
             { label:"Awaiting Review", value: submitted,           icon: Clock,       color:"text-purple-600 bg-blue-50" },
-            { label:"Avg. Score",      value: `${Math.round(avgScore)}/100`, icon: Star, color:"text-amber-600 bg-amber-50" },
+            { label:"Avg. Score",      value: avgScorePct != null ? `${avgScorePct}%` : "—", icon: Star, color:"text-amber-600 bg-amber-50" },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", k.color)}>
