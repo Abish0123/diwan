@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
@@ -80,7 +81,6 @@ function subjectVisual(subject: string) {
 
 const WHATS_NEXT: { title: string; type: string; date: string; time: string; bg: string; ic: string; icon: any }[] = [];
 
-const DUE_DAYS: number[] = [];
 const TODAY_DAY = new Date().getDate();
 
 function fmtDue(iso: string) {
@@ -131,6 +131,7 @@ function TeacherResources({ assignment }: { assignment: Assignment }) {
 }
 
 export default function StudentAssignments() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { students } = useStudents();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -226,7 +227,7 @@ export default function StudentAssignments() {
 
   // ── Unified row shape rendered everywhere on the page ─────────────────
   type Row = Assignment & {
-    status: "due" | "upcoming";
+    status: "due" | "upcoming" | "overdue";
     weekday: string;
     chapter: string;
     submitted: boolean;
@@ -245,6 +246,9 @@ export default function StudentAssignments() {
         const sub = getSubmission(a.id);
         const d = new Date(a.dueDate);
         const diff = Math.ceil((d.getTime() - Date.now()) / 86400000);
+        const submitted = !!sub && sub.status !== "resubmission_requested";
+        const status: "due" | "upcoming" | "overdue" =
+          !submitted && diff < 0 ? "overdue" : diff <= 3 ? "due" : "upcoming";
         return {
           id: a.id, subject: a.subject, title: a.title, type: a.type,
           chapter: a.chapter || "—",
@@ -254,8 +258,8 @@ export default function StudentAssignments() {
           attachments: a.attachments,
           links: a.links,
           weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
-          status: (diff <= 3 ? "due" : "upcoming") as "due" | "upcoming",
-          submitted: !!sub && sub.status !== "resubmission_requested",
+          status,
+          submitted,
           graded: sub?.marks !== undefined && sub.status !== "resubmission_requested",
           resubmissionRequested: sub?.status === "resubmission_requested",
           resubmissionNote: sub?.status === "resubmission_requested" ? (sub as any).resubmissionNote : undefined,
@@ -284,8 +288,9 @@ export default function StudentAssignments() {
   const counts = useMemo(() => {
     const submitted = allRows.filter(r => r.submitted && !r.graded).length;
     const graded = allRows.filter(r => r.graded).length;
-    const upcoming = allRows.filter(r => !r.submitted).length;
-    return { total: allRows.length, upcoming, submitted, graded, overdue: 0 };
+    const overdue = allRows.filter(r => r.status === "overdue").length;
+    const upcoming = allRows.filter(r => !r.submitted && r.status !== "overdue").length;
+    return { total: allRows.length, upcoming, submitted, graded, overdue };
   }, [allRows]);
 
   // Rows shown in the "Upcoming Assignments" card = the not-yet-submitted ones.
@@ -344,10 +349,23 @@ export default function StudentAssignments() {
   const R = 40, C = 2 * Math.PI * R;
   let donutOffset = 0;
 
-  // ── Calendar (navigable, defaults to May 2026) ────────────────────────
-  const [viewMonth, setViewMonth] = useState(() => new Date(2026, 4, 1));
+  // ── Calendar (navigable, defaults to current month) ────────────────────
+  const [viewMonth, setViewMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const calLabel = viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const isMay2026 = viewMonth.getFullYear() === 2026 && viewMonth.getMonth() === 4;
+  const now0 = new Date();
+  const isCurrentMonth = viewMonth.getFullYear() === now0.getFullYear() && viewMonth.getMonth() === now0.getMonth();
+  // Real due-date dots for the viewed month, derived from the same rows the
+  // list/KPIs use — previously a permanently-empty static array, so no due
+  // date ever showed regardless of what was actually assigned.
+  const dueDays = useMemo(() => {
+    const days = new Set<number>();
+    allRows.forEach(r => {
+      if (!r.dueDate) return;
+      const d = new Date(r.dueDate + "T00:00:00");
+      if (d.getFullYear() === viewMonth.getFullYear() && d.getMonth() === viewMonth.getMonth()) days.add(d.getDate());
+    });
+    return days;
+  }, [allRows, viewMonth]);
   const calCells = useMemo(() => {
     const y = viewMonth.getFullYear();
     const m = viewMonth.getMonth();
@@ -456,10 +474,12 @@ export default function StudentAssignments() {
                         row.resubmissionRequested ? "bg-orange-100 text-orange-700"
                           : row.graded ? "bg-violet-100 text-violet-700"
                           : row.submitted ? "bg-emerald-100 text-emerald-700"
+                          : row.status === "overdue" ? "bg-rose-100 text-rose-700"
                           : row.status === "due" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700")}>
                         {row.resubmissionRequested ? "⚠ Resubmit Required"
                           : row.graded ? "Graded"
                           : row.submitted ? "Submitted"
+                          : row.status === "overdue" ? "Overdue"
                           : row.status === "due" ? "Due Soon" : "Upcoming"}
                       </span>
                       <button
@@ -538,8 +558,8 @@ export default function StudentAssignments() {
               <div className="grid grid-cols-7 gap-1">
                 {calCells.map((day, i) => {
                   if (day === null) return <div key={i} />;
-                  const isToday = isMay2026 && day === TODAY_DAY;
-                  const isDue = isMay2026 && DUE_DAYS.includes(day);
+                  const isToday = isCurrentMonth && day === TODAY_DAY;
+                  const isDue = dueDays.has(day);
                   return (
                     <div key={i}
                       className={cn("relative aspect-square rounded-lg text-[11px] font-semibold flex items-center justify-center",
@@ -625,7 +645,7 @@ export default function StudentAssignments() {
               <p className="text-xs text-slate-500 leading-relaxed">
                 If you have any questions about assignments, deadlines or submissions, contact your teacher.
               </p>
-              <button onClick={() => toast.info("Opening message to your teacher…")}
+              <button onClick={() => navigate("/communication/messages")}
                 className="mt-3 w-full h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
                 <MessageSquare className="h-4 w-4" /> Message Teacher
               </button>

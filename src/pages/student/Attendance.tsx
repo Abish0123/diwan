@@ -86,6 +86,31 @@ function CircularProgress({ percent }: { percent: number }) {
 
 // ─── Tab: Attendance Records ──────────────────────────────────────────────────
 
+// Builds a real CSV from the student's actual attendance records — no fake
+// "downloading…" toast with nothing behind it.
+function downloadAttendanceReport(records: DayRecord[], student: any) {
+  if (!records.length) {
+    toast.error("No attendance records to download yet.");
+    return;
+  }
+  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
+  const rows = [
+    ["Date", "Status", "Remarks"],
+    ...sorted.map(r => [r.date, statusMeta(r.status).label, r.remarks || ""]),
+  ];
+  const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `attendance-${(student?.name || "student").replace(/\s+/g, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast.success("Attendance report downloaded.");
+}
+
 function RecordsTab({ records, student }: { records: DayRecord[]; student: any }) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -98,7 +123,7 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
         <div className="flex items-center gap-2 text-violet-700 text-sm font-semibold">
           <FileText className="w-4 h-4" /> Attendance Records — {student?.name || "Student"}
         </div>
-        <button onClick={() => toast.success("Downloading attendance report…")}
+        <button onClick={() => downloadAttendanceReport(records, student)}
           className="flex items-center gap-1.5 text-xs text-purple-600 font-semibold hover:underline">
           <Download className="w-3.5 h-3.5" /> Download Report
         </button>

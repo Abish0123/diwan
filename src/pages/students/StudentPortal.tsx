@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
 import { filterAnnouncementsForViewer } from "@/lib/announcementAudience";
+import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,7 @@ export default function StudentPortal() {
   const { students } = useStudents();
 
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [notices, setNotices] = useState<any[]>([]);
@@ -175,8 +177,9 @@ export default function StudentPortal() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [asgn, ex, asmt, ntc, achv, att] = await Promise.allSettled([
+        const [asgn, subs, ex, asmt, ntc, achv, att] = await Promise.allSettled([
           smartDb.getAll("TeacherAssignment", undefined),
+          smartDb.getAll("AssignmentSubmission", undefined),
           smartDb.getAll("sd_exams", undefined),
           smartDb.getAll("Assessment", undefined),
           smartDb.getAll("Notice", undefined),
@@ -184,6 +187,7 @@ export default function StudentPortal() {
           smartDb.getAll("TeacherAttendance", undefined),
         ]);
         if (asgn.status === "fulfilled") setAssignments((asgn.value || []) as any[]);
+        if (subs.status === "fulfilled") setSubmissions((subs.value || []) as any[]);
         if (ex.status === "fulfilled") setExams((ex.value || []) as any[]);
         if (asmt.status === "fulfilled") setAssessments((asmt.value || []) as any[]);
         if (ntc.status === "fulfilled") setNotices((ntc.value || []) as any[]);
@@ -201,15 +205,28 @@ export default function StudentPortal() {
     load();
   }, []);
 
+  // Published assignments for this student's grade/section — canon-normalized
+  // since TeacherAssignment.grade is stored "Grade 3"-style while the
+  // student's own grade is often bare ("3"); a plain == silently matched
+  // nothing. Real per-student status comes from the student's own
+  // AssignmentSubmission row (mirrors src/pages/student/Assignments.tsx),
+  // not from the assignment's own publish-state field.
   const myAssignments = assignments.filter((a: any) =>
-    (!a.grade || a.grade == grade) && (!a.section || a.section === section)
+    a.status === "Active" &&
+    (!a.grade || canonGrade(a.grade) === canonGrade(grade)) &&
+    (!a.section || canonSection(a.section) === canonSection(section))
   );
-  const pendingCount = myAssignments.filter((a: any) => a.status !== "Submitted").length || myAssignments.length;
+  const mySubmissions = useMemo(
+    () => submissions.filter((s: any) => String(s.studentId) === String(student?.id)),
+    [submissions, student]
+  );
+  const getSubmission = (id: string) => mySubmissions.find((s: any) => String(s.assignmentId) === String(id));
+  const pendingCount = myAssignments.filter((a: any) => !getSubmission(a.id)).length;
 
   const myExams = exams.filter((e: any) => {
     const g = e.grade || e.Grade || "";
     const s = e.section || e.Section || "";
-    return (!g || g == grade) && (!s || s === section);
+    return (!g || canonGrade(g) === canonGrade(grade)) && (!s || canonSection(s) === canonSection(section));
   });
   const upcomingExams = myExams.filter((e: any) => {
     const d = e.date || e.startDate || "";
@@ -217,7 +234,7 @@ export default function StudentPortal() {
   }).length;
 
   const myAttRec = attendance.filter((a: any) =>
-    (!a.grade || a.grade == grade) && (!a.section || a.section === section)
+    (!a.grade || canonGrade(a.grade) === canonGrade(grade)) && (!a.section || canonSection(a.section) === canonSection(section))
   );
   const attendancePct = useMemo(() => {
     if (!myAttRec.length || !student) return null;
@@ -236,7 +253,7 @@ export default function StudentPortal() {
   });
 
   const myAssessments = assessments.filter((a: any) =>
-    (!a.grade || a.grade == grade) && (!a.section || a.section === section)
+    (!a.grade || canonGrade(a.grade) === canonGrade(grade)) && (!a.section || canonSection(a.section) === canonSection(section))
   );
   const subjectScores = useMemo(() => {
     const map: Record<string, { total: number; count: number; max: number }> = {};
@@ -270,7 +287,7 @@ export default function StudentPortal() {
     title: a.title, subject: a.subject || "General",
     due: a.dueDate ? new Date(a.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—",
     priority: a.priority || "Medium",
-    submitted: a.status === "Submitted",
+    submitted: !!getSubmission(a.id),
   }));
 
   // Audience-enforced: students only see Published notices addressed to

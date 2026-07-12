@@ -1,9 +1,13 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import socket from "@/lib/socket";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { useClasses } from "@/contexts/ClassContext";
+import { smartDb } from "@/lib/localDb";
+import { filterAnnouncementsForViewer } from "@/lib/announcementAudience";
+import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -99,8 +103,6 @@ type Cell = { subject: string; teacher: string; room: string };
 /* Calendar (May 2026)                                                 */
 /* ------------------------------------------------------------------ */
 
-const MARKED_DAYS: number[] = []; // populated from real events
-
 function buildCalendar(year: number, month: number) {
   const first = new Date(year, month, 1);
   const startDay = first.getDay();
@@ -111,15 +113,10 @@ function buildCalendar(year: number, month: number) {
   return { cells, label: first.toLocaleDateString("en-US", { month: "long", year: "numeric" }) };
 }
 
-/* ------------------------------------------------------------------ */
-/* Notices (static)                                                   */
-/* ------------------------------------------------------------------ */
-
-const NOTICES: { title: string; body: string; color: string }[] = [];
-
 /* ================================================================== */
 
 export default function StudentTimetable() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { students } = useStudents();
   const [view, setView] = useState<"weekly" | "daily" | "list">("weekly");
@@ -155,6 +152,44 @@ export default function StudentTimetable() {
 
   const gradeLabel = `${normalizedGrade} - ${normalizedSection}`;
   const isSampleTimetable = !student?.grade;
+
+  // Real "Today's Notices" + calendar deadline dots — previously both were
+  // hardcoded-empty arrays that could never show anything regardless of
+  // what the school actually published, even though the Dashboard
+  // (StudentPortal.tsx) already fetches and gates the same data correctly.
+  const [notices, setNotices] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+
+  useEffect(() => {
+    Promise.allSettled([
+      smartDb.getAll("Notice", undefined),
+      smartDb.getAll("sd_exams", undefined),
+      smartDb.getAll("Assessment", undefined),
+      smartDb.getAll("TeacherAssignment", undefined),
+    ]).then(([ntc, ex, asmt, asgn]) => {
+      if (ntc.status === "fulfilled") setNotices((ntc.value || []) as any[]);
+      if (ex.status === "fulfilled") setExams((ex.value || []) as any[]);
+      if (asmt.status === "fulfilled") setAssessments((asmt.value || []) as any[]);
+      if (asgn.status === "fulfilled") setAssignments((asgn.value || []) as any[]);
+    }).catch(() => {});
+  }, []);
+
+  // Audience-enforced, same helper the Dashboard uses — students only see
+  // Published notices addressed to Students/All or their own grade/section.
+  const displayNotices = useMemo(() => {
+    if (!student) return [];
+    const visible = filterAnnouncementsForViewer(
+      notices, "student", [{ grade: student.grade, section: student.section }], student.id ? [student.id] : []
+    );
+    return visible.slice(0, 4).map((n: any) => ({
+      title: n.title || n.subject || "Notice",
+      body: n.content || n.body || n.description || "",
+      color: "bg-violet-50 text-purple-600",
+    }));
+  }, [notices, student]);
+
 
   // Real class teacher for this student's own section, looked up from the
   // same Class/Section records the admin's Classes module manages — no
@@ -356,6 +391,26 @@ export default function StudentTimetable() {
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
 
   const calendar = useMemo(() => buildCalendar(calYear, calMonth), [calYear, calMonth]);
+
+  // Real deadline dots for the currently-viewed calendar month, merged from
+  // exams/assessments/assignment due dates for this student's grade/section.
+  const markedDays = useMemo(() => {
+    if (!student) return new Set<number>();
+    const g = student.grade, s = student.section;
+    const matches = (recG: any, recS: any) =>
+      (!recG || canonGrade(recG) === canonGrade(g)) && (!recS || canonSection(recS) === canonSection(s));
+    const days = new Set<number>();
+    const consider = (dateStr: any, recG: any, recS: any) => {
+      if (!dateStr || !matches(recG, recS)) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() === calYear && d.getMonth() === calMonth) days.add(d.getDate());
+    };
+    exams.forEach((e: any) => consider(e.date || e.startDate, e.grade || e.Grade, e.section || e.Section));
+    assessments.forEach((a: any) => consider(a.date || a.dueDate, a.grade, a.section));
+    assignments.forEach((a: any) => { if (a.status === "Active") consider(a.dueDate, a.grade, a.section); });
+    return days;
+  }, [exams, assessments, assignments, student, calYear, calMonth]);
 
   const handlePrevMonth = () => {
     setCalMonth(prev => {
@@ -777,7 +832,7 @@ export default function StudentTimetable() {
                 {calendar.cells.map((day, i) => {
                   if (day === null) return <div key={i} />;
                   const isToday = day === new Date().getDate() && calMonth === new Date().getMonth() && calYear === new Date().getFullYear();
-                  const marked = MARKED_DAYS.includes(day) && !isToday;
+                  const marked = markedDays.has(day) && !isToday;
                   return (
                     <button
                       key={i}
@@ -803,7 +858,7 @@ export default function StudentTimetable() {
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-900 text-sm">Today's Classes</h3>
-                <button onClick={() => toast.info("All of today's classes")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <button onClick={() => setView("list")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
               </div>
               <div className="space-y-2.5">
                 {upcomingClasses.length > 0 ? (
@@ -830,13 +885,13 @@ export default function StudentTimetable() {
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-900 text-sm">Today's Notices</h3>
-                <button onClick={() => toast.info("All notices")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <button onClick={() => navigate("/communication/announcements")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
               </div>
-              {NOTICES.length === 0 ? (
+              {displayNotices.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-2">No notices today</p>
               ) : (
                 <div className="space-y-2.5">
-                  {NOTICES.map((n, i) => (
+                  {displayNotices.map((n, i) => (
                     <div key={i} className="flex items-start gap-2.5">
                       <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", n.color)}>
                         <Bell className="h-3.5 w-3.5" />
