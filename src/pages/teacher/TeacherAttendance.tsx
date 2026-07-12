@@ -355,6 +355,27 @@ export default function TeacherAttendance() {
       const existing = await smartDb.getOne("TeacherAttendance", recordKey).catch(() => null);
       if (existing) await smartDb.update("TeacherAttendance", recordKey, payload);
       else await smartDb.create("TeacherAttendance", payload, recordKey);
+
+      // Also mirror each student's mark into the real "attendance" entity —
+      // the one StudentContext.tsx actually computes Student.attendance %
+      // and riskScore-driving status from (used by Students/Behavior/"At
+      // Risk" elsewhere). This page previously only wrote to
+      // TeacherAttendance, so marks made here never moved those numbers.
+      // Same id scheme (`ATT-STU-{studentId}-{date}`) admin's own
+      // Attendance.tsx uses, so a re-save on the same date upserts instead
+      // of creating duplicates.
+      const createdAt = new Date().toISOString();
+      const STATUS_NAME: Record<Status, string> = { P: "Present", A: "Absent", L: "Late" };
+      await Promise.all(students.map(s => {
+        const rec = {
+          id: `ATT-STU-${s.id}-${date}`, entityId: s.id, entityType: "student",
+          name: s.name, class: className, status: STATUS_NAME[marks[s.id] || "P"],
+          date, time: "", createdAt,
+        };
+        return smartDb.create("attendance", rec, rec.id).catch(() => {});
+      }));
+      window.dispatchEvent(new Event("attendance-updated"));
+
       toast.success("Attendance saved successfully");
 
       // Absentee/late parents get a direct alert (not the whole section —
@@ -599,7 +620,20 @@ export default function TeacherAttendance() {
                             className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
                         </td>
                         <td className="px-2 py-3 text-center">
-                          <button onClick={() => toast.info(`Message parent of ${s.name}`)}
+                          <button
+                            onClick={() => {
+                              notifyParentsOfStudents(
+                                [{ id: s.id, name: s.name, message: `Your class teacher sent a note about ${s.name}'s attendance on ${fmtLongDate(date)}.` }],
+                                {
+                                  entity: "Attendance", type: "attendance_note",
+                                  title: "Attendance Note",
+                                  sourceId: `${recordKey}-${s.id}`, grade, section,
+                                  redirectUrl: "/parent/attendance",
+                                }
+                              ).then(() => toast.success(`Note sent to ${s.name}'s parent`))
+                                .catch(() => toast.error("Failed to send note"));
+                            }}
+                            title="Notify parent"
                             className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-purple-50 hover:text-purple-600 text-slate-400 transition-colors">
                             <MessageSquare className="h-3.5 w-3.5" />
                           </button>
