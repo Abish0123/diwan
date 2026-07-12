@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
@@ -18,8 +19,18 @@ interface StaticKpiCardProps {
 
 // Static-layout KPI card (no motion/framer-motion, no hover-lift/rotate —
 // same plain div structure as /finance/statements) but with two content-level
-// animations layered back in: a Recharts sparkline draw-in on the trend
-// chart, and a CountUpNumber tween on the headline value.
+// animations layered back in: a sparkline draw-in on the trend chart, and a
+// CountUpNumber tween on the headline value.
+//
+// The sparkline reveal deliberately does NOT use Recharts' built-in
+// isAnimationActive — that's driven by requestAnimationFrame (react-smooth),
+// which browsers fully PAUSE (not just throttle) whenever the tab isn't the
+// active/visible one, leaving the reveal frozen at 0 width indefinitely —
+// the exact same class of bug CountUpNumber.tsx already documents and works
+// around by using setTimeout instead of rAF. Same fix here: a CSS clip-path
+// driven by a setTimeout tick loop, which still advances (just less often)
+// on a backgrounded tab.
+const SPARKLINE_DURATION_MS = 3000;
 export const StaticKpiCard = ({
   title,
   value,
@@ -37,6 +48,25 @@ export const StaticKpiCard = ({
   const data = series.map((v, i) => ({ i, v }));
   const gradientId = `static-kpi-${title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
   const isNumeric = typeof value === "number";
+
+  // setTimeout-driven reveal percentage (0-100), not requestAnimationFrame —
+  // see the comment above this component for why.
+  const [revealPct, setRevealPct] = useState(0);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    startRef.current = Date.now();
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const elapsed = Date.now() - (startRef.current ?? Date.now());
+      const progress = Math.min(1, elapsed / SPARKLINE_DURATION_MS);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setRevealPct(eased * 100);
+      if (progress < 1) timer = setTimeout(tick, 16);
+    };
+    timer = setTimeout(tick, 16);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className={cn("bg-white border border-slate-100 rounded-xl p-4 shadow-sm", className)}>
@@ -59,7 +89,10 @@ export const StaticKpiCard = ({
       </div>
       {description && <p className="text-[11px] text-slate-400 mt-0.5 mb-2">{description}</p>}
 
-      <div className="h-14 w-full mt-2">
+      <div
+        className="h-14 w-full mt-2"
+        style={{ clipPath: `inset(0 ${100 - revealPct}% 0 0)` }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
@@ -75,9 +108,7 @@ export const StaticKpiCard = ({
               strokeWidth={2}
               fillOpacity={1}
               fill={`url(#${gradientId})`}
-              isAnimationActive
-              animationDuration={3000}
-              animationEasing="ease-out"
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>
