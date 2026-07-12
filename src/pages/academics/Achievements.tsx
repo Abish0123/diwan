@@ -164,8 +164,16 @@ export default function Achievements() {
   // SEED_ACHIEVEMENTS on first run so the DB isn't empty forever.
   const loadAchievements = useCallback(async () => {
     try {
-      const data = await smartDb.getAll("Achievement") as Achievement[];
-      if (data && data.length > 0) {
+      const raw = await smartDb.getAll("Achievement") as Achievement[];
+      // The shared "achievements" table already has ~39 unrelated legacy
+      // rows from a different feature entirely (status values like
+      // "Verified"/"Issued", no `students` array, no `type`) — coercing
+      // those into this page's shape would either crash every `.students.
+      // length`/`.map()` call site or fabricate fake "0 students, unknown
+      // type" achievement cards. They aren't real Achievement records for
+      // this feature, so they're filtered out rather than displayed.
+      const data = (raw || []).filter(a => a && typeof a.title === "string" && Array.isArray(a.students));
+      if (data.length > 0) {
         setAchievements(data);
       } else {
         // First run — persist the seed set so it survives refresh, then load it back.
@@ -552,9 +560,9 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
                   </thead>
                   <tbody>
                     {achievements.slice(0,6).map(a => {
-                      const cfg = CAT_CONFIG[a.type];
+                      const cfg = CAT_CONFIG[a.type] || CAT_CONFIG.Custom;
                       const Icon = cfg.icon;
-                      const sc = STATUS_CONFIG[a.status];
+                      const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.Draft;
                       return (
                         <tr key={a.id} onClick={() => setDetailAch(a)}
                           className="border-b border-gray-50 hover:bg-violet-50/40 transition-colors cursor-pointer">
@@ -666,9 +674,9 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
                     </thead>
                     <tbody>
                       {filtered.map(a => {
-                        const cfg = CAT_CONFIG[a.type];
+                        const cfg = CAT_CONFIG[a.type] || CAT_CONFIG.Custom;
                         const Icon = cfg.icon;
-                        const sc = STATUS_CONFIG[a.status];
+                        const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.Draft;
                         return (
                           <tr key={a.id} onClick={() => setDetailAch(a)}
                             className="border-b border-gray-50 hover:bg-violet-50/30 transition-colors group cursor-pointer">
@@ -744,9 +752,9 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
               ) : (
                 <div className="grid grid-cols-3 gap-4">
                   {filtered.map(a => {
-                    const cfg = CAT_CONFIG[a.type];
+                    const cfg = CAT_CONFIG[a.type] || CAT_CONFIG.Custom;
                     const Icon = cfg.icon;
-                    const sc = STATUS_CONFIG[a.status];
+                    const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG.Draft;
                     return (
                       <div key={a.id} onClick={() => setDetailAch(a)}
                         className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-violet-200 transition-all group cursor-pointer">
@@ -1110,7 +1118,7 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
                   <div className="relative pl-5 space-y-4">
                     <div className="absolute left-1.5 top-0 bottom-0 w-0.5 bg-violet-100" />
                     {achievements.filter(a => a.students.includes("Advait Kapoor")).map(a => {
-                      const cfg = CAT_CONFIG[a.type];
+                      const cfg = CAT_CONFIG[a.type] || CAT_CONFIG.Custom;
                       const Icon = cfg.icon;
                       return (
                         <div key={a.id} className="relative flex items-start gap-3">
@@ -1159,7 +1167,7 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
                       </div>
                       <div className="p-3 space-y-2 min-h-[300px]">
                         {cards.map(a => {
-                          const cfg = CAT_CONFIG[a.type];
+                          const cfg = CAT_CONFIG[a.type] || CAT_CONFIG.Custom;
                           const Icon = cfg.icon;
                           return (
                             <div key={a.id} className={cn("p-3 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all", cfg.border)}>
@@ -1432,9 +1440,9 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
       <Sheet open={liveDetail !== null} onOpenChange={open => !open && setDetailAch(null)}>
         <SheetContent className="sm:max-w-xl w-full bg-white z-[200] p-0 overflow-y-auto">
           {liveDetail && (() => {
-            const cfg = CAT_CONFIG[liveDetail.type];
+            const cfg = CAT_CONFIG[liveDetail.type] || CAT_CONFIG.Custom;
             const Icon = cfg.icon;
-            const sc = STATUS_CONFIG[liveDetail.status];
+            const sc = STATUS_CONFIG[liveDetail.status] || STATUS_CONFIG.Draft;
             const stageIdx = APPROVAL_STAGES.indexOf(liveDetail.status);
             return (
               <>

@@ -77,6 +77,7 @@ const LMS                    = lazy(() => import("./pages/academics/LMS.tsx"));
 const Subjects               = lazy(() => import("./pages/academics/Subjects.tsx"));
 const AITimetableGenerator    = lazy(() => import("./pages/academics/AITimetableGenerator.tsx"));
 const Assessments            = lazy(() => import("./pages/academics/Assessments.tsx"));
+const Achievements           = lazy(() => import("./pages/academics/Achievements.tsx"));
 
 // HR
 const HRDashboard            = lazy(() => import("./pages/hr/HRDashboard.tsx"));
@@ -470,6 +471,7 @@ const App = () => (
                                             <Route path="/academics/ai-timetable" element={<AITimetableGenerator />} />
                                             <Route path="/academics/assessments" element={<Assessments />} />
                                             <Route path="/academics/transcripts" element={<Transcripts />} />
+                                            <Route path="/academics/achievements" element={<Achievements />} />
                                             <Route path="/assignments" element={<Assignments />} />
                                             <Route path="/assignments/new" element={<CreateAssignment />} />
                                             <Route path="/assignments/:assignmentId/edit" element={<CreateAssignment />} />

@@ -57,6 +57,7 @@ export const navGroups: NavGroup[] = [
       { title: "Assignments",         url: "/assignments",            icon: FileText },
       { title: "Assessments",         url: "/academics/assessments",  icon: ClipboardCheck },
       { title: "Gradebook",           url: "/academics/gradebook",    icon: BarChart3 },
+      { title: "Achievements",        url: "/academics/achievements", icon: Award },
       { title: "Flashcards",          url: "/academics/flashcards",   icon: Brain },
       { title: "Library",             url: "/library",                icon: BookOpen },
       { title: "Room Management",     url: "/academics/rooms",        icon: Home },
