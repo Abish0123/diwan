@@ -25,9 +25,17 @@ export default function StudentAchievements() {
     smartDb.getAll("Achievement", undefined).then((rows: any[]) => {
       const s = student as any;
       if (!s) return;
+      // The real writer (academics/Achievements.tsx) stores `students` as a
+      // plain array of name strings, never objects with id/name — the old
+      // `list.some(x => x.id === ... || x.name === ...)` check evaluated
+      // those properties on a string primitive, always undefined, so this
+      // page could never match a single real achievement. Also gate on
+      // status === "Published" so a student can't see one still awaiting
+      // approval.
       const filtered = (rows || []).filter(a => {
-        const list = a.recipients || a.students || [];
-        return list.some((x: any) => x.id === s.id || x.name === s.name);
+        if (a.status !== "Published") return false;
+        const list: any[] = a.recipients || a.students || [];
+        return list.some((x: any) => typeof x === "string" ? x === s.name : (x.id === s.id || x.name === s.name));
       });
       setAchievements(filtered);
     }).catch(() => {});

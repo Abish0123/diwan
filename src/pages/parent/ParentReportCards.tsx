@@ -8,9 +8,10 @@ import {
   loadGradebookSources, computeStudentGradebook,
   type GradebookSources, type StudentGradebook,
 } from "@/lib/gradebookEngine";
-import { usePublishedReportCard } from "@/lib/reportCardStore";
+import { usePublishedReportCard, useAllPublishedReportCards, getPrincipalName } from "@/lib/reportCardStore";
+import { downloadReportCardPdf } from "@/lib/reportCardPdf";
+import { getSchoolName, getSchoolAddress } from "@/lib/transportSettings";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { FileCheck, Download, Info, UserCheck, Users2, GraduationCap } from "lucide-react";
 
 function gradeColor(g: string) {
@@ -32,7 +33,18 @@ export default function ParentReportCards() {
   // Report card is generated FROM the finalized gradebook — identical engine to
   // the student portal, so parent and student always see the same grades.
   const childId = selected ? String((selected as any).studentId ?? selected.id) : "";
-  const published = usePublishedReportCard(childId);
+  const latestPublished = usePublishedReportCard(childId);
+  // Every published term for this child, so a parent can look at a prior
+  // term's official report card — previously this page only ever showed the
+  // single latest published record with no way to pick an older one, even
+  // though the Gradebook page (fixed earlier this session) already lets a
+  // parent view a specific term.
+  const allPublished = useAllPublishedReportCards(childId);
+  const [termOverride, setTermOverride] = useState<string | null>(null);
+  useEffect(() => { setTermOverride(null); }, [childId]);
+  const published = termOverride
+    ? allPublished.find(r => r.term === termOverride) ?? latestPublished
+    : latestPublished;
 
   const gb: StudentGradebook | null = useMemo(() => {
     if (!sources || !selected) return null;
@@ -52,6 +64,23 @@ export default function ParentReportCards() {
       }));
   const overallPct = published ? published.overallPct : (gb ? Math.round(gb.overallPercentage) : 0);
   const overallLetter = published ? published.overallGrade : (gb?.overallLetter ?? "—");
+
+  // Real PDF, built from the same rows/overallPct/overallLetter already
+  // rendered on screen — replaces a toast.success() stub that claimed
+  // success but never generated a file.
+  const handleDownload = async () => {
+    if (!selected || rows.length === 0) return;
+    const principalName = published?.principalName || await getPrincipalName().catch(() => "");
+    downloadReportCardPdf(getSchoolName(), getSchoolAddress(), {
+      studentName: selected.name, grade: selected.grade || "", section: selected.section || "",
+      term: published?.term || "Current Term", year: published?.year || String(new Date().getFullYear()),
+      subjects: rows, overallPct, overallGrade: overallLetter,
+      attendancePct: published?.attendancePct ?? null,
+      classTeacherRemark: published?.classTeacherRemark, principalRemark: published?.principalRemark,
+      teacherName: published?.teacherName, principalName,
+      published: !!published,
+    });
+  };
 
   if (childrenLoading) {
     return <DashboardLayout><div className="p-6 text-center text-slate-400 text-sm">Loading…</div></DashboardLayout>;
@@ -94,7 +123,15 @@ export default function ParentReportCards() {
               <p className="text-sm text-slate-400">{selected.name} — {published ? `published by ${published.teacherName}` : "auto-generated from the gradebook"} · {curriculum.shortName}</p>
             </div>
           </div>
-          <ChildSwitcher className="w-56" />
+          <div className="flex items-center gap-2">
+            {allPublished.length > 1 && (
+              <select value={published?.term || ""} onChange={e => setTermOverride(e.target.value)}
+                className="h-10 px-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200">
+                {allPublished.map(r => <option key={r.id} value={r.term}>{r.term}</option>)}
+              </select>
+            )}
+            <ChildSwitcher className="w-56" />
+          </div>
         </div>
 
         {rows.length === 0 ? (
@@ -121,7 +158,7 @@ export default function ParentReportCards() {
               </div>
               <div className="text-right">
                 <p className="text-white/60 text-xs">Grade {selected.grade} · Section {selected.section}</p>
-                <button onClick={() => toast.success("Downloading PDF report card…")}
+                <button onClick={handleDownload}
                   className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition">
                   <Download className="w-3.5 h-3.5" /> Download PDF
                 </button>

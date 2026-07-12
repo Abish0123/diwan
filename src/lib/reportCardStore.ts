@@ -469,3 +469,47 @@ export function usePublishedReportCard(studentId: string | undefined): ReportCar
   }, [studentId]);
   return rec;
 }
+
+// React hook — every PUBLISHED report card for a student, newest first. Used
+// where a viewer needs to pick a specific past term (not just the latest one
+// usePublishedReportCard returns), e.g. a parent's Report Cards term selector.
+// Same hydrate-from-MySQL-on-mount + live-refresh behavior as
+// usePublishedReportCard, just returning the full list instead of one record.
+export function useAllPublishedReportCards(studentId: string | undefined): ReportCardRecord[] {
+  const getMine = () => studentId
+    ? Object.values(read())
+        .filter(r => String(r.studentId) === String(studentId) && r.status === "published" && r.publishedToStudents)
+        .sort((a, b) => (b.generatedAt || "").localeCompare(a.generatedAt || ""))
+    : [];
+  const [recs, setRecs] = useState<ReportCardRecord[]>(getMine);
+  useEffect(() => {
+    const refresh = () => setRecs(getMine());
+    refresh();
+    window.addEventListener(CHANGE_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+
+    if (studentId) {
+      smartDb.getAll("ReportCard").then(rows => {
+        if (!rows || rows.length === 0) return;
+        const s = read();
+        let changed = false;
+        (rows as unknown as ReportCardRecord[]).forEach(r => {
+          if (r && r.id && r.studentId && String(r.studentId) === String(studentId) && !s[r.id]) {
+            s[r.id] = r;
+            changed = true;
+          }
+        });
+        if (changed) {
+          try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {}
+          refresh();
+        }
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [studentId]);
+  return recs;
+}

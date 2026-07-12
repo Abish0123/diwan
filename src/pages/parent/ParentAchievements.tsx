@@ -4,13 +4,14 @@ import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { downloadCertificate } from "@/lib/certificateReports";
 import { Award, Star, Trophy, Download, Medal, Users2 } from "lucide-react";
 
 interface Achievement {
   id: string; title: string; category: string; date: string;
   level: "School" | "Zone" | "National" | "International";
   description: string; award: string;
+  event: string; grade: string; section: string; certNo: string;
 }
 
 function levelColor(l: string) {
@@ -31,6 +32,10 @@ function mapAchievement(a: any): Achievement {
     level: a.level || "School",
     description: a.description || "Awarded for exceptional performance.",
     award: a.award || a.position || "Certificate",
+    event: a.event || a.title || "Achievement",
+    grade: a.grade || "",
+    section: a.section || "",
+    certNo: a.certNo || "—",
   };
 }
 
@@ -38,15 +43,24 @@ export default function ParentAchievements() {
   const { selected, loading } = useParentChildren();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
 
-  // Fetch real Achievement rows — filter by recipients/students list matching this child
+  // Fetch real Achievement rows — filter by the students list matching this
+  // child. The real writer (academics/Achievements.tsx) stores `students` as
+  // a plain array of name strings (e.g. ["Advait Kapoor"]), never objects
+  // with an id/name field — the old `list.some(x => x.id === ... || x.name
+  // === ...)` check evaluated those properties on a string primitive, which
+  // is always undefined, so this page could never match a single real row.
+  // Also gate on status === "Published" — a parent shouldn't see an
+  // achievement still in Draft/Pending Review/Coordinator or Principal
+  // Approval, the same way reportCardStore only surfaces published cards.
   useEffect(() => {
     setAchievements([]);
     if (!selected?.id) return;
 
     smartDb.getAll("Achievement", undefined).then((rows: any[]) => {
       const filtered = (rows || []).filter((a: any) => {
-        const list = a.recipients || a.students || [];
-        return list.some((x: any) => x.id === selected.id || x.name === selected.name);
+        if (a.status !== "Published") return false;
+        const list: any[] = a.recipients || a.students || [];
+        return list.some((x: any) => typeof x === "string" ? x === selected.name : (x.id === selected.id || x.name === selected.name));
       });
       setAchievements(filtered.map(mapAchievement));
     }).catch(() => {});
@@ -129,7 +143,7 @@ export default function ParentAchievements() {
                   <p className="text-xs text-slate-500 mt-0.5">{a.description}</p>
                   <p className="text-xs text-amber-600 font-semibold mt-1">{a.award}</p>
                 </div>
-                <button onClick={() => toast.success("Downloading certificate…")}
+                <button onClick={() => downloadCertificate(a, selected.name)}
                   className="flex-shrink-0 p-2 rounded-lg hover:bg-slate-50 transition">
                   <Download className="w-4 h-4 text-slate-400" />
                 </button>
