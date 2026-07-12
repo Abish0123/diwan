@@ -9,7 +9,7 @@ import {
   MessageSquare, Bell, Mail, Bus, MapPin, Truck, Navigation,
   Home, Bed, UserCircle, Utensils, Package, ClipboardList,
   ShoppingCart, Store, LineChart, Lock, Database, History,
-  Activity, Heart, FileCheck, Video, Terminal, Code2, Monitor, Library, ShieldCheck, FileSearch,
+  Activity, Heart, FileCheck, Video, Terminal, Monitor, Library, ShieldCheck, FileSearch,
   Moon, Sun, Wallet, Layers, ClipboardCheck, Globe, Map, CalendarOff,
   Search, X, Wrench, AlertTriangle, Bot, Clock,
 } from "lucide-react";
@@ -56,7 +56,7 @@ const NAV_TITLE_TO_KEY: Record<string, string> = {
   "Gradebook": "nav.gradebook", "Study Materials": "nav.studyMaterials", "Flash Cards": "nav.flashCards",
   "Marks Entry": "nav.marksEntry", "My Invigilations": "nav.myInvigilations",
   "Messages": "nav.messages", "Announcements": "nav.announcements", "Notifications": "nav.notifications",
-  "PTM Booking": "nav.ptmBooking", "Coding Assessments": "nav.coding", "Analytics": "nav.analytics",
+  "PTM Booking": "nav.ptmBooking", "Analytics": "nav.analytics",
   "Leave Management": "nav.leave", "Project Reports": "nav.projectReports", "Settings": "nav.settings",
 };
 
@@ -287,7 +287,6 @@ const staffNavItems: NavItem[] = [
   { title: "PTM Booking",        url: "/teacher/ptm",                 icon: Calendar },
   // ── Tools ─────────────────────────────────────────────────────────────────────
   { title: "Project Reports",    url: "/teacher/project-reports",     icon: FileText },
-  { title: "Coding Assessments", url: "/coding",                      icon: Code2 },
   { title: "Analytics",          url: "/teacher/analytics",           icon: BarChart3 },
   { title: "Leave Management",   url: "/teacher/leave",               icon: CalendarOff },
   // ── Account ───────────────────────────────────────────────────────────────────
