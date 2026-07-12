@@ -55,7 +55,7 @@ export const StaticKpiCard = ({
       </div>
 
       <div className="text-2xl font-bold text-slate-900 tabular-nums">
-        {isNumeric ? <CountUpNumber value={value as number} /> : value}
+        {isNumeric ? <CountUpNumber value={value as number} animateOnMount duration={1200} /> : value}
       </div>
       {description && <p className="text-[11px] text-slate-400 mt-0.5 mb-2">{description}</p>}
 

@@ -6,6 +6,14 @@ interface CountUpNumberProps {
   prefix?: string;
   suffix?: string;
   decimals?: number;
+  /** Play the count-up tween (from 0) on first mount too, instead of the
+   *  default behavior of showing the real value immediately on first
+   *  render and only animating on later updates. Off by default — most
+   *  callers render this once per page load, where a from-0 mount
+   *  animation is exactly the effect they want; leave it opt-in so
+   *  existing callers that rely on the "no flash on load" guarantee are
+   *  unaffected. */
+  animateOnMount?: boolean;
 }
 
 // Animates from 0 (or the previous value) to the real value whenever it
@@ -19,22 +27,25 @@ interface CountUpNumberProps {
 // admin dashboard commonly sits in. setTimeout still fires (just less
 // often) when backgrounded, so the real value always converges even
 // without a smooth animation in that case.
-export function CountUpNumber({ value, duration = 700, prefix = "", suffix = "", decimals = 0 }: CountUpNumberProps) {
+export function CountUpNumber({ value, duration = 700, prefix = "", suffix = "", decimals = 0, animateOnMount = false }: CountUpNumberProps) {
   const target = Number.isFinite(value) ? value : 0;
-  const [display, setDisplay] = useState(target);
-  const fromRef = useRef(target);
+  const [display, setDisplay] = useState(animateOnMount ? 0 : target);
+  const fromRef = useRef(animateOnMount ? 0 : target);
   const didMountRef = useRef(false);
 
   useEffect(() => {
     // Skip the animation on first mount — show the real value immediately
     // rather than always starting from 0, so a slow/backgrounded tab never
-    // shows a wrong number even transiently.
-    if (!didMountRef.current) {
+    // shows a wrong number even transiently. animateOnMount opts out of
+    // this guarantee for callers that specifically want a from-0 tween on
+    // page load.
+    if (!didMountRef.current && !animateOnMount) {
       didMountRef.current = true;
       fromRef.current = target;
       setDisplay(target);
       return;
     }
+    didMountRef.current = true;
 
     const from = fromRef.current;
     const to = target;
