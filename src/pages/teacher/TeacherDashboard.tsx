@@ -61,7 +61,7 @@ function TeacherKpiCard({ icon: Icon, label, sub, value, bg, ic, glow, index }: 
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
       whileHover={{ y: -6, scale: 1.02 }}
-      className="group relative bg-white border border-slate-100 rounded-2xl p-4 shadow-sm transition-shadow duration-200 hover:shadow-lg cursor-default overflow-hidden"
+      className="group relative bg-card border border-border/50 rounded-[24px] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(152,16,250,0.12)] cursor-default overflow-hidden"
     >
       <div
         className="pointer-events-none absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-2xl"
@@ -71,12 +71,12 @@ function TeacherKpiCard({ icon: Icon, label, sub, value, bg, ic, glow, index }: 
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:rotate-[8deg] group-hover:scale-110", bg)}>
           <Icon className={cn("h-5 w-5", ic)} />
         </div>
-        <span className="text-xs text-slate-500 font-medium leading-tight">{label}</span>
+        <span className="text-xs text-muted-foreground font-medium leading-tight">{label}</span>
       </div>
-      <p className="relative text-2xl font-bold text-slate-900 leading-none tabular-nums">
+      <p className="relative text-2xl font-bold text-foreground leading-none tabular-nums">
         {numeric ? <CountUpNumber value={value as number} animateOnMount duration={900} /> : value}
       </p>
-      <p className="relative text-xs text-slate-400 mt-1.5">{sub}</p>
+      <p className="relative text-xs text-muted-foreground mt-1.5">{sub}</p>
     </motion.div>
   );
 }
@@ -91,16 +91,16 @@ function ScheduleTimeline({ periods, onViewAll }: { periods: TimetablePeriod[]; 
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.5, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-          <Clock className="h-4 w-4 text-purple-500" /> Today's Schedule
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <Clock className="h-4 w-4 text-primary" /> Today's Schedule
         </h3>
-        <button onClick={onViewAll} className="text-xs text-purple-600 font-semibold hover:underline">View Timetable</button>
+        <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline">View Timetable</button>
       </div>
       {periods.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">No timetable published yet</p>
+        <p className="text-sm text-muted-foreground text-center py-6">No timetable published yet</p>
       ) : (
         <div className="relative pl-1">
           {periods.map((p, i) => (
@@ -112,14 +112,14 @@ function ScheduleTimeline({ periods, onViewAll }: { periods: TimetablePeriod[]; 
               className="relative flex gap-3 pb-5 last:pb-0"
             >
               {i < periods.length - 1 && (
-                <span className="absolute left-[9px] top-5 bottom-0 w-px bg-slate-100" aria-hidden="true" />
+                <span className="absolute left-[9px] top-5 bottom-0 w-px bg-muted" aria-hidden="true" />
               )}
               <div
                 className={cn(
                   "relative z-10 mt-1 w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 border-2",
                   p.status === "Completed" ? "bg-emerald-500 border-emerald-500" :
-                  p.status === "Current" ? "bg-white border-purple-500" :
-                  "bg-white border-slate-200"
+                  p.status === "Current" ? "bg-card border-primary" :
+                  "bg-card border-border"
                 )}
                 style={p.status === "Current" ? { animation: "td-current-pulse 1.6s ease-out infinite" } : undefined}
               >
@@ -128,22 +128,22 @@ function ScheduleTimeline({ periods, onViewAll }: { periods: TimetablePeriod[]; 
               <div
                 className={cn(
                   "flex-1 min-w-0 rounded-xl border p-3 transition-colors",
-                  p.status === "Current" ? "border-purple-200 bg-purple-50/50" : "border-slate-100"
+                  p.status === "Current" ? "border-primary/30 bg-primary/5" : "border-border"
                 )}
-                style={p.status === "Current" ? { borderLeftWidth: 3, borderLeftColor: "#9333ea" } : undefined}
+                style={p.status === "Current" ? { borderLeftWidth: 3, borderLeftColor: "#9810fa" } : undefined}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{p.subject}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{p.subject}</p>
                   <span className={cn(
                     "text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0",
-                    p.status === "Completed" ? "bg-slate-100 text-slate-500" :
+                    p.status === "Completed" ? "bg-muted text-muted-foreground" :
                     p.status === "Current" ? "bg-emerald-50 text-emerald-600" :
-                    "bg-blue-50 text-purple-600"
+                    "bg-primary/10 text-primary"
                   )}>
                     {p.status}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">{p.grade} · {p.time}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{p.grade} · {p.time}</p>
               </div>
             </motion.div>
           ))}
@@ -151,9 +151,9 @@ function ScheduleTimeline({ periods, onViewAll }: { periods: TimetablePeriod[]; 
       )}
       <style>{`
         @keyframes td-current-pulse {
-          0% { box-shadow: 0 0 0 0 rgba(147,51,234,0.35); }
-          70% { box-shadow: 0 0 0 8px rgba(147,51,234,0); }
-          100% { box-shadow: 0 0 0 0 rgba(147,51,234,0); }
+          0% { box-shadow: 0 0 0 0 rgba(152,16,250,0.35); }
+          70% { box-shadow: 0 0 0 8px rgba(152,16,250,0); }
+          100% { box-shadow: 0 0 0 0 rgba(152,16,250,0); }
         }
       `}</style>
     </motion.div>
@@ -184,14 +184,14 @@ function ClassOverviewDonut({ overview, submissionStats }: { overview: Overview;
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.58, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-slate-900 text-sm">Class Overview</h3>
+        <h3 className="font-bold text-foreground text-sm">Class Overview</h3>
       </div>
       {!ready ? (
         <div className="h-[150px] flex items-center justify-center">
-          <div className="h-[110px] w-[110px] rounded-full bg-slate-100 animate-pulse" />
+          <div className="h-[110px] w-[110px] rounded-full bg-muted animate-pulse" />
         </div>
       ) : (
         <>
@@ -216,10 +216,10 @@ function ClassOverviewDonut({ overview, submissionStats }: { overview: Overview;
                 })}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-extrabold text-slate-900 leading-none tabular-nums">
+                <span className="text-xl font-extrabold text-foreground leading-none tabular-nums">
                   <CountUpNumber value={Number(overview.pPct)} animateOnMount duration={900} decimals={0} suffix="%" />
                 </span>
-                <span className="text-[10px] text-slate-400 mt-1 font-semibold">
+                <span className="text-[10px] text-muted-foreground mt-1 font-semibold">
                   {Number(overview.pPct) >= 90 ? "Excellent Attendance" : "Attendance"}
                 </span>
               </div>
@@ -233,15 +233,15 @@ function ClassOverviewDonut({ overview, submissionStats }: { overview: Overview;
             ].map((r2) => (
               <div key={r2.label} className="flex items-center gap-1.5">
                 <span className={cn("w-2 h-2 rounded-full", r2.color)} />
-                <span className="text-[11px] text-slate-500">{r2.label} <span className="font-semibold text-slate-700">{r2.value}</span></span>
+                <span className="text-[11px] text-muted-foreground">{r2.label} <span className="font-semibold text-foreground">{r2.value}</span></span>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-center">
+          <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-border text-center">
             {submissionStats.map((s) => (
               <div key={s.label}>
-                <p className="text-base font-bold text-slate-900 leading-none tabular-nums">{s.value}</p>
-                <p className="text-[10px] text-slate-400 mt-1">{s.label}</p>
+                <p className="text-base font-bold text-foreground leading-none tabular-nums">{s.value}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{s.label}</p>
               </div>
             ))}
           </div>
@@ -281,25 +281,25 @@ function MiniCalendar({ events, onViewAll }: { events: TeacherCalendarEvent[]; o
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.66, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-          <CalendarDays className="h-4 w-4 text-purple-500" /> Calendar
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <CalendarDays className="h-4 w-4 text-primary" /> Calendar
         </h3>
         <div className="flex items-center gap-1">
-          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center">
-            <ChevronLeft className="h-3.5 w-3.5 text-slate-400" />
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="w-6 h-6 rounded-md hover:bg-muted flex items-center justify-center">
+            <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
-          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center">
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="w-6 h-6 rounded-md hover:bg-muted flex items-center justify-center">
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
         </div>
       </div>
-      <p className="text-xs font-semibold text-slate-500 mb-2">{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+      <p className="text-xs font-semibold text-muted-foreground mb-2">{cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
       <div className="grid grid-cols-7 gap-1 text-center">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-          <span key={i} className="text-[10px] font-bold text-slate-300 py-1">{d}</span>
+          <span key={i} className="text-[10px] font-bold text-muted-foreground/70 py-1">{d}</span>
         ))}
         {cells.map((day, i) => (
           <div key={i} className="flex items-center justify-center py-0.5">
@@ -307,25 +307,25 @@ function MiniCalendar({ events, onViewAll }: { events: TeacherCalendarEvent[]; o
               <span
                 className={cn(
                   "relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-medium cursor-default transition-all duration-150",
-                  isToday(day) ? "bg-purple-600 text-white font-bold" : "text-slate-600 hover:bg-purple-50 hover:scale-110"
+                  isToday(day) ? "bg-primary text-white font-bold" : "text-foreground/90 hover:bg-primary/10 hover:scale-110"
                 )}
                 style={isToday(day) ? { animation: "td-today-ring 2s ease-out infinite" } : undefined}
               >
                 {day}
                 {eventDatesInMonth.has(day) && !isToday(day) && (
-                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-purple-500" />
+                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary/100" />
                 )}
               </span>
             )}
           </div>
         ))}
       </div>
-      <button onClick={onViewAll} className="text-xs text-purple-600 font-semibold hover:underline mt-3">View Calendar</button>
+      <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline mt-3">View Calendar</button>
       <style>{`
         @keyframes td-today-ring {
-          0% { box-shadow: 0 0 0 0 rgba(147,51,234,0.4); }
-          70% { box-shadow: 0 0 0 6px rgba(147,51,234,0); }
-          100% { box-shadow: 0 0 0 0 rgba(147,51,234,0); }
+          0% { box-shadow: 0 0 0 0 rgba(152,16,250,0.4); }
+          70% { box-shadow: 0 0 0 6px rgba(152,16,250,0); }
+          100% { box-shadow: 0 0 0 0 rgba(152,16,250,0); }
         }
       `}</style>
     </motion.div>
@@ -342,16 +342,16 @@ function AnnouncementsCard({ notices, onViewAll }: { notices: NoticeItem[]; onVi
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.74, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-          <Bell className="h-4 w-4 text-purple-500" /> Recent Announcements
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <Bell className="h-4 w-4 text-primary" /> Recent Announcements
         </h3>
-        <button onClick={onViewAll} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+        <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline">View All</button>
       </div>
       {notices.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">No notices published yet</p>
+        <p className="text-sm text-muted-foreground text-center py-6">No notices published yet</p>
       ) : (
         <div className="space-y-1">
           {notices.map((n, i) => (
@@ -360,14 +360,14 @@ function AnnouncementsCard({ notices, onViewAll }: { notices: NoticeItem[]; onVi
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 + i * 0.08, duration: 0.3 }}
-              className="flex items-start gap-2.5 p-2 -mx-2 rounded-xl transition-colors hover:bg-slate-50"
+              className="flex items-start gap-2.5 p-2 -mx-2 rounded-xl transition-colors hover:bg-muted/60"
             >
-              <div className={cn("w-2 h-2 rounded-full mt-2 flex-shrink-0", n.unread ? "bg-purple-500" : "bg-transparent")} />
+              <div className={cn("w-2 h-2 rounded-full mt-2 flex-shrink-0", n.unread ? "bg-primary/100" : "bg-transparent")} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{n.title}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{n.content?.slice(0, 60) || ""}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{n.title}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{n.content?.slice(0, 60) || ""}</p>
               </div>
-              <span className="text-[10px] text-slate-300 flex-shrink-0">{n.ago}</span>
+              <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">{n.ago}</span>
             </motion.div>
           ))}
         </div>
@@ -384,20 +384,20 @@ function UpcomingEventsCard({ events, loading, onViewAll }: { events: TeacherCal
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.82, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-          <CalendarDays className="h-4 w-4 text-purple-500" /> Upcoming Events
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <CalendarDays className="h-4 w-4 text-primary" /> Upcoming Events
         </h3>
-        <button onClick={onViewAll} className="text-xs text-purple-600 font-semibold hover:underline">View Calendar</button>
+        <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline">View Calendar</button>
       </div>
       {loading ? (
         <div className="space-y-2">
-          {[0, 1, 2].map((i) => <div key={i} className="h-10 rounded-lg bg-slate-100 animate-pulse" />)}
+          {[0, 1, 2].map((i) => <div key={i} className="h-10 rounded-lg bg-muted animate-pulse" />)}
         </div>
       ) : events.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">No upcoming events</p>
+        <p className="text-sm text-muted-foreground text-center py-6">No upcoming events</p>
       ) : (
         <div className="space-y-2.5">
           {events.slice(0, 4).map((e, i) => (
@@ -408,12 +408,12 @@ function UpcomingEventsCard({ events, loading, onViewAll }: { events: TeacherCal
               transition={{ delay: 0.88 + i * 0.08, duration: 0.3, type: "spring", stiffness: 300 }}
               className="flex items-center gap-3"
             >
-              <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
                 <CalendarDays className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{e.title}</p>
-                <p className="text-[11px] text-slate-400">{new Date(e.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{e.title}</p>
+                <p className="text-[11px] text-muted-foreground">{new Date(e.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
               </div>
             </motion.div>
           ))}
@@ -431,7 +431,7 @@ const URGENCY_STYLE: Record<PendingTask["urgency"], string> = {
   overdue: "bg-rose-50 text-rose-600",
   today: "bg-rose-50 text-rose-600",
   soon: "bg-amber-50 text-amber-600",
-  later: "bg-blue-50 text-purple-600",
+  later: "bg-primary/10 text-primary",
 };
 
 function PendingTasksCard({ tasks, onViewAll }: { tasks: PendingTask[]; onViewAll: () => void }) {
@@ -440,16 +440,16 @@ function PendingTasksCard({ tasks, onViewAll }: { tasks: PendingTask[]; onViewAl
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.9, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-          <ClipboardCheck className="h-4 w-4 text-purple-500" /> Pending Tasks
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <ClipboardCheck className="h-4 w-4 text-primary" /> Pending Tasks
         </h3>
-        <button onClick={onViewAll} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+        <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline">View All</button>
       </div>
       {tasks.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-6">Nothing pending — you're all caught up.</p>
+        <p className="text-sm text-muted-foreground text-center py-6">Nothing pending — you're all caught up.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {tasks.map((t, i) => (
@@ -459,20 +459,20 @@ function PendingTasksCard({ tasks, onViewAll }: { tasks: PendingTask[]; onViewAl
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.96 + i * 0.06, duration: 0.3 }}
               whileHover={{ y: -3 }}
-              className="rounded-xl border border-slate-100 p-3 transition-shadow hover:shadow-md"
+              className="rounded-xl border border-border p-3 transition-shadow hover:shadow-md"
             >
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <p className="text-sm font-semibold text-slate-800 truncate">{t.title}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{t.title}</p>
                 <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0", URGENCY_STYLE[t.urgency])}>{t.dueLabel}</span>
               </div>
-              <p className="text-[11px] text-slate-400 mb-2">{t.subject}</p>
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <p className="text-[11px] text-muted-foreground mb-2">{t.subject}</p>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700 ease-out"
+                  className="h-full rounded-full bg-gradient-to-r from-[#d12386] to-[#9810fa] transition-all duration-700 ease-out"
                   style={{ width: `${t.progressPct}%` }}
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">{t.progressPct}% submitted</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t.progressPct}% submitted</p>
             </motion.div>
           ))}
         </div>
@@ -491,20 +491,20 @@ function QuickLinksRow({ links }: { links: QuickLink[] }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1.02, duration: 0.4 }}
-      className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4"
+      className="premium-card p-4"
     >
-      <h3 className="font-bold text-slate-900 text-sm mb-3">Quick Links</h3>
+      <h3 className="font-bold text-foreground text-sm mb-3">Quick Links</h3>
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {links.map((q) => (
           <button
             key={q.label}
             onClick={q.fn}
-            className="group flex flex-col items-center gap-1.5 p-2.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all"
+            className="group flex flex-col items-center gap-1.5 p-2.5 rounded-xl hover:bg-muted/60 border border-transparent hover:border-border transition-all"
           >
             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:rotate-[8deg]", q.bg)}>
               <q.icon className={cn("h-4.5 w-4.5", q.ic)} />
             </div>
-            <span className="text-[10px] font-semibold text-slate-600 text-center leading-tight">{q.label}</span>
+            <span className="text-[10px] font-semibold text-foreground/90 text-center leading-tight">{q.label}</span>
           </button>
         ))}
       </div>
@@ -662,19 +662,19 @@ export default function TeacherDashboard() {
   }, [assignments, totalStudents]);
 
   const KPIS: KpiSpec[] = [
-    { icon: GraduationCap, label: "My Classes", sub: `${myClassesCount} Active Class${myClassesCount === 1 ? "" : "es"}`, value: myClassesCount, bg: "bg-purple-50", ic: "text-purple-600", glow: "radial-gradient(circle, #9333ea55, transparent 70%)" },
+    { icon: GraduationCap, label: "My Classes", sub: `${myClassesCount} Active Class${myClassesCount === 1 ? "" : "es"}`, value: myClassesCount, bg: "bg-primary/10", ic: "text-primary", glow: "radial-gradient(circle, #9810fa55, transparent 70%)" },
     { icon: Users, label: "Students", sub: "Total students", value: totalStudents, bg: "bg-blue-50", ic: "text-blue-600", glow: "radial-gradient(circle, #3b82f655, transparent 70%)" },
     { icon: CheckCircle2, label: "Attendance", sub: "Present today", value: markedToday ? `${attendancePct}%` : "—", bg: "bg-emerald-50", ic: "text-emerald-600", glow: "radial-gradient(circle, #10b98155, transparent 70%)" },
     { icon: ClipboardList, label: "Pending Assignments", sub: "To be graded", value: pendingAssignmentsCount, bg: "bg-orange-50", ic: "text-orange-600", glow: "radial-gradient(circle, #f9731655, transparent 70%)" },
-    { icon: MessageSquare, label: "Messages", sub: "Unread messages", value: unreadMessages, bg: "bg-pink-50", ic: "text-pink-600", glow: "radial-gradient(circle, #ec489955, transparent 70%)" },
+    { icon: MessageSquare, label: "Messages", sub: "Unread messages", value: unreadMessages, bg: "bg-[#d12386]/10", ic: "text-[#d12386]", glow: "radial-gradient(circle, #d1238655, transparent 70%)" },
   ];
 
   const quickLinks: QuickLink[] = [
     { label: "Take Attendance", icon: CalendarCheck, bg: "bg-emerald-50", ic: "text-emerald-600", fn: () => navigate("/teacher/attendance") },
-    { label: "Create Assignment", icon: FilePlus2, bg: "bg-blue-50", ic: "text-purple-600", fn: () => navigate("/teacher/assignments") },
-    { label: "Enter Marks", icon: ClipboardCheck, bg: "bg-purple-50", ic: "text-purple-600", fn: () => navigate("/teacher/exams") },
+    { label: "Create Assignment", icon: FilePlus2, bg: "bg-blue-50", ic: "text-blue-600", fn: () => navigate("/teacher/assignments") },
+    { label: "Enter Marks", icon: ClipboardCheck, bg: "bg-primary/10", ic: "text-primary", fn: () => navigate("/teacher/exams") },
     { label: "Upload Material", icon: UploadCloud, bg: "bg-orange-50", ic: "text-orange-600", fn: () => navigate("/teacher/study-materials") },
-    { label: "Send Message", icon: MessageSquare, bg: "bg-pink-50", ic: "text-pink-600", fn: () => navigate("/communication/messages") },
+    { label: "Send Message", icon: MessageSquare, bg: "bg-[#d12386]/10", ic: "text-[#d12386]", fn: () => navigate("/communication/messages") },
     { label: "View Reports", icon: FileText, bg: "bg-teal-50", ic: "text-teal-600", fn: () => navigate("/teacher/report-cards") },
   ];
 
@@ -682,14 +682,14 @@ export default function TeacherDashboard() {
     <DashboardLayout>
       <div className="relative space-y-5 pb-12">
         {/* Faint floating gradient blobs — page-level decoration only, not shared chrome */}
-        <div className="pointer-events-none absolute -top-16 -right-16 w-72 h-72 rounded-full bg-purple-200/20 blur-3xl" style={{ animation: "td-blob-float 20s ease-in-out infinite" }} />
-        <div className="pointer-events-none absolute top-52 -left-16 w-56 h-56 rounded-full bg-pink-200/15 blur-3xl" style={{ animation: "td-blob-float 24s ease-in-out infinite reverse" }} />
+        <div className="pointer-events-none absolute -top-16 -right-16 w-72 h-72 rounded-full bg-[#9810fa]/10 blur-3xl" style={{ animation: "td-blob-float 20s ease-in-out infinite" }} />
+        <div className="pointer-events-none absolute top-52 -left-16 w-56 h-56 rounded-full bg-[#d12386]/10 blur-3xl" style={{ animation: "td-blob-float 24s ease-in-out infinite reverse" }} />
 
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative flex items-center gap-3">
           <StudentAvatar name={firstName} />
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Good Morning, {firstName}! 👋</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Here's what's happening in your classes today.</p>
+            <h1 className="text-2xl font-bold text-foreground">Good Morning, {firstName}! 👋</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Here's what's happening in your classes today.</p>
           </div>
         </motion.div>
 
