@@ -200,13 +200,37 @@ const Behavior = () => {
       
       toast.success("Behavior incident reported successfully");
 
-      // Behavior Threshold Rules Engine
+      // Behavior Threshold Rules Engine — each tier now fires a real
+      // Notification to the parent (private, studentId-scoped) and admin,
+      // instead of only a local toast the acting staff member happened to
+      // be looking at. Previously the toast text claimed "an automated
+      // notice has been sent to parent and registrar" while nothing was
+      // ever actually sent.
       if (record.type === "Demerit") {
+        const now = new Date().toISOString();
+        const fireThresholdNotification = async (tier: string, title: string, message: string) => {
+          const notifId = `notif-behavior-${tier}-${id}`;
+          await smartDb.create("Notification", {
+            id: notifId, uid: user?.uid, audienceRole: "parent", studentId,
+            category: "behavior", type: "behavior_threshold", title, message,
+            createdAt: now, time: now, read: false,
+          }, notifId).catch(() => {});
+          await smartDb.create("Notification", {
+            id: `${notifId}-admin`, uid: user?.uid, audienceRole: "admin",
+            category: "behavior", type: "behavior_threshold", title, message,
+            createdAt: now, time: now, read: false,
+          }, `${notifId}-admin`).catch(() => {});
+        };
+
         if (totalDemeritsAfterThis >= 10) {
           toast.warning(`🚨 CRITICAL THRESHOLD REACHED: ${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits. Escalating to Principal & Scheduling Suspension Review.`, {
             duration: 10000,
-            description: "An automated notice has been sent to parent and registrar."
+            description: "A notification has been sent to parent and admin."
           });
+          await fireThresholdNotification(
+            "critical", "🚨 Critical Behavior Threshold Reached",
+            `${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits — escalating to Principal, suspension review being scheduled.`
+          );
           try {
             await updateStudent(studentId, { riskScore: 95, performance: "Poor" });
           } catch (e) {
@@ -215,8 +239,12 @@ const Behavior = () => {
         } else if (totalDemeritsAfterThis >= 5) {
           toast.warning(`⚠️ Parent-Teacher Conference Triggered: ${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits. Status updated to At-Risk.`, {
             duration: 8000,
-            description: "System dispatching automated PTC email."
+            description: "A notification has been sent to parent and admin."
           });
+          await fireThresholdNotification(
+            "ptc", "⚠️ Parent-Teacher Conference Recommended",
+            `${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits — student is now At-Risk, a PTC is recommended.`
+          );
           try {
             await updateStudent(studentId, { riskScore: 75, performance: "Below Average" });
           } catch (e) {
@@ -226,6 +254,10 @@ const Behavior = () => {
           toast.info(`ℹ️ Behavior Alert: ${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits. Warning notification dispatched.`, {
             duration: 6000
           });
+          await fireThresholdNotification(
+            "warning", "Behavior Alert",
+            `${record.studentName} has accumulated ${totalDemeritsAfterThis} demerits.`
+          );
           try {
             await updateStudent(studentId, { riskScore: 50 });
           } catch (e) {

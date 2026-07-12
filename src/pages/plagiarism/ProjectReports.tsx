@@ -37,6 +37,7 @@ import {
 import { RiskBadge, StatusBadge } from "@/components/plagiarism/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { notifyRoles } from "@/lib/notificationBus";
 
 const ACCEPT = ".pdf,.docx,.doc,.txt,.rtf";
 
@@ -120,6 +121,20 @@ export default function ProjectReports() {
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
     await smartDb.create(PROJECT_REPORTS, report as never, report.id);
+    // A report that crosses the manual-review threshold is a real,
+    // high-signal event with no path to a reviewer today — it only ever
+    // showed up if an admin happened to open this page. One notification,
+    // deterministic id keyed off the report so re-checking never duplicates.
+    if (status === "Under Review") {
+      notifyRoles(["admin"], {
+        idPrefix: `plagiarism_${report.id}`,
+        entity: "ProjectReport",
+        category: "academic",
+        type: "plagiarism_flagged",
+        title: "Plagiarism Review Needed",
+        message: `${report.studentName}'s "${report.title}" scored ${sim}% similarity — needs manual review.`,
+      }).catch(() => {});
+    }
     setAnalyzing(false); setOpen(false);
     setForm({ studentName: user?.displayName || "", title: "", subject: "", department: "Computer Science", guideName: "", semester: "6", description: "" });
     setFile(null); setPastedText("");

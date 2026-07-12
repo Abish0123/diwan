@@ -173,6 +173,26 @@ const Stock = () => {
     }
   };
 
+  // Fires a real admin Notification the moment an item's stock CROSSES into
+  // Low/Out of Stock (not on every subsequent edit while it stays there —
+  // previousStatus === newStatus is a no-op). Previously the dashboard's
+  // Low Stock Alerts count was real but purely a stat nobody was actually
+  // told about; procurement had to notice it themselves.
+  const notifyIfLowStock = async (item: StockItem, previousStatus: string | undefined, newStatus: string) => {
+    if (newStatus === "In Stock" || previousStatus === newStatus) return;
+    const id = `low-stock-${item.id}`;
+    const now = new Date().toISOString();
+    await smartDb.create("Notification", {
+      id, uid: user?.uid, audienceRole: "admin", category: "inventory",
+      type: "low_stock", priority: newStatus === "Out of Stock" ? "high" : "medium",
+      title: newStatus === "Out of Stock" ? "Item Out of Stock" : "Low Stock Alert",
+      message: newStatus === "Out of Stock"
+        ? `${item.name} is out of stock.`
+        : `${item.name} is low on stock (${item.stock} ${item.unit || "units"} remaining, minimum ${item.minLevel || 10}).`,
+      createdAt: now, time: now, read: false,
+    }, id).catch(() => {});
+  };
+
   // Every stock-changing action writes a StockMovement row so "who changed
   // this and when" is always answerable, instead of silently overwriting the
   // stock number with no trace.
@@ -213,6 +233,7 @@ const Stock = () => {
       if (original && original.stock !== newStock) {
         await logMovement(original, newStock - original.stock, newStock, "Manual Edit");
       }
+      if (original) await notifyIfLowStock(updatedItem as unknown as StockItem, original.status, updatedItem.status);
       toast.success("Item updated successfully");
       setIsEditDialogOpen(false);
       setCurrentItem({});
@@ -248,6 +269,7 @@ const Stock = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       await logMovement(item, newStock - item.stock, newStock, "Manual Adjustment");
+      await notifyIfLowStock({ ...item, stock: newStock }, item.status, newStatus);
       toast.success(`Stock adjusted for ${item.name}`);
       fetchItems();
     } catch (error) {
