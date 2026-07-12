@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export default function TeacherStudents() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [page, setPage]     = useState(1);
   const [selected, setSelected] = useState<StudentRow | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const baseList = useMemo<StudentRow[]>(() => {
     return classStudents.map((s, i) => ({
@@ -69,6 +71,20 @@ export default function TeacherStudents() {
       remarks: "",
     }));
   }, [classStudents]);
+
+  // Deep-link support so other pages (e.g. My Class's "view profile" action)
+  // can open a specific student's drawer directly via ?id=.
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) return;
+    const match = baseList.find(s => s.id === id);
+    if (match) {
+      setSelected(match);
+      const next = new URLSearchParams(searchParams);
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, baseList, setSearchParams]);
 
   const filtered = useMemo(() => {
     let r = baseList;

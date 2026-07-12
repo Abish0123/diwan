@@ -3,13 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurriculum } from "@/hooks/useCurriculum";
+import { getBandForGrade } from "@/lib/curriculumConfig";
+import { loadGradebookSources, computeClassGradebook, type GradebookSources } from "@/lib/gradebookEngine";
+import { canonGrade, canonSection } from "@/lib/studentGradeSection";
+import { useTeacherCalendarEvents } from "@/hooks/useTeacherCalendarEvents";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Users, UserCheck, FileText, BarChart3, Star, ChevronRight,
-  Search, Plus, Eye, MessageSquare, MoreVertical, Clock,
-  Calendar, ClipboardList, Award, BookOpen, ChevronDown,
+  Search, Plus, Eye, MessageSquare, Clock,
+  Calendar, ClipboardList, Award, BookOpen,
   ChevronLeft,
 } from "lucide-react";
 
@@ -42,12 +47,14 @@ function getSlotStatus(start: string): "Completed" | "Current" | "Upcoming" {
   return "Upcoming";
 }
 
-function getGrade(avg: number) {
-  if (avg >= 90) return { g: "A+", cls: "bg-emerald-100 text-emerald-700" };
-  if (avg >= 80) return { g: "A",  cls: "bg-blue-100 text-blue-700" };
-  if (avg >= 70) return { g: "B+", cls: "bg-purple-100 text-purple-700" };
-  if (avg >= 60) return { g: "B",  cls: "bg-amber-100 text-amber-700" };
-  return { g: "C", cls: "bg-rose-100 text-rose-700" };
+function getGrade(letter: string) {
+  const map: Record<string, string> = {
+    "A+": "bg-emerald-100 text-emerald-700",
+    "A": "bg-blue-100 text-blue-700",
+    "B+": "bg-purple-100 text-purple-700",
+    "B": "bg-amber-100 text-amber-700",
+  };
+  return { g: letter, cls: map[letter] || "bg-rose-100 text-rose-700" };
 }
 
 function StudentAvatar({ name }: { name: string }) {
@@ -91,6 +98,8 @@ export default function MyClass() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { assignment, classStudents } = useTeacherClass();
+  const { curriculum } = useCurriculum();
+  const { upcoming: upcomingEvents } = useTeacherCalendarEvents();
 
   const [searchQ, setSearchQ] = useState("");
   const [page, setPage] = useState(1);
@@ -102,34 +111,83 @@ export default function MyClass() {
   const className = `${grade} - ${section}`;
 
   const [dbAssignments, setDbAssignments] = useState<any[]>([]);
-  const [attMap, setAttMap] = useState<Record<string, string>>({});
+  const [attRecords, setAttRecords] = useState<any[]>([]);
+  const [gbSources, setGbSources] = useState<GradebookSources | null>(null);
 
   useEffect(() => {
     Promise.allSettled([
       smartDb.getAll("TeacherAssignment", undefined),
       smartDb.getAll("TeacherAttendance", undefined),
-    ]).then(([a, att]) => {
-      if (a.status === "fulfilled") setDbAssignments((a.value as any[]) || []);
-      if (att.status === "fulfilled") {
-        const last = ((att.value as any[]) || []).slice(-1)[0] as any;
-        if (last?.students) setAttMap(last.students);
+      loadGradebookSources(),
+    ]).then(([a, att, gb]) => {
+      if (a.status === "fulfilled") {
+        setDbAssignments(((a.value as any[]) || []).filter(r =>
+          canonGrade(r.grade) === canonGrade(grade) && canonSection(r.section) === canonSection(section)));
       }
+      if (att.status === "fulfilled") {
+        setAttRecords(((att.value as any[]) || []).filter(r =>
+          canonGrade(r.grade) === canonGrade(grade) && canonSection(r.section) === canonSection(section)));
+      }
+      if (gb.status === "fulfilled") setGbSources(gb.value as GradebookSources);
     });
-  }, []);
+  }, [grade, section]);
+
+  // Most recent real attendance record for THIS class (not the whole
+  // school's last row, and not today only — falls back to the latest date
+  // this class actually has a record for).
+  const attMap: Record<string, string> = useMemo(() => {
+    const sorted = [...attRecords].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    return sorted[0]?.marks || {};
+  }, [attRecords]);
+
+  // Real per-student month attendance % from actual TeacherAttendance rows,
+  // same computation TeacherAttendance.tsx uses for "This Month Average" —
+  // replaces the static seed-time Student.attendance field, which never
+  // changes when a teacher actually marks attendance.
+  const attPctByStudent = useMemo(() => {
+    const map: Record<string, number> = {};
+    classStudents.forEach((s: any) => {
+      const marked = attRecords.filter(r => r.marks && s.id in r.marks);
+      if (marked.length === 0) { map[s.id] = -1; return; }
+      const present = marked.filter(r => r.marks[s.id] === "P" || r.marks[s.id] === "Present").length;
+      map[s.id] = Math.round((present / marked.length) * 100);
+    });
+    return map;
+  }, [classStudents, attRecords]);
+
+  // Real per-subject, per-student grades via the shared gradebook engine
+  // (same source TeacherGradebook.tsx uses) — replaces the always-empty
+  // Student.gpa field, which is never populated anywhere in the app.
+  const band = useMemo(() => getBandForGrade(curriculum, grade), [curriculum, grade]);
+  const gbStudents = useMemo(() =>
+    classStudents.map((s: any) => ({ id: String(s.id), name: s.name, grade, section })),
+    [classStudents, grade, section]);
+  const classGradebook = useMemo(() => {
+    if (!gbSources) return [];
+    return computeClassGradebook(gbStudents, band, gbSources);
+  }, [gbSources, gbStudents, band]);
+  const gradebookByStudent = useMemo(() => {
+    const map = new Map(classGradebook.map(r => [r.studentId, r]));
+    return map;
+  }, [classGradebook]);
 
   const students = useMemo(() => {
     return classStudents.map((s: any, i: number) => {
-      const avg = typeof s.gpa === "number" ? Math.round(s.gpa * 25) : 0;
-      const att = typeof s.attendance === "number" ? s.attendance : 0;
-      const { g, cls } = getGrade(avg);
+      const gb = gradebookByStudent.get(String(s.id));
+      const avg = gb?.overallPercentage ?? 0;
+      const hasGrade = gb?.subjects.some(sub => sub.hasData) ?? false;
+      const attPct = attPctByStudent[s.id];
+      const att = attPct !== undefined && attPct >= 0 ? attPct : 0;
+      const hasAtt = attPct !== undefined && attPct >= 0;
+      const { g, cls } = getGrade(hasGrade ? (gb?.overallLetter || "—") : "—");
       return {
         ...s,
         rollNo: s.rollNumber || String(i + 1).padStart(2, "0"),
         admNo: s.studentId || s.id || `—`,
-        avg, att, grade: g, gradeCls: cls,
+        avg, hasGrade, att, hasAtt, grade: g, gradeCls: cls,
       };
     });
-  }, [classStudents]);
+  }, [classStudents, gradebookByStudent, attPctByStudent]);
 
   const filtered = useMemo(() =>
     students.filter(s =>
@@ -146,9 +204,27 @@ export default function MyClass() {
   }, [students, attMap]);
 
   const pendingAssignments = dbAssignments.filter(a => a.status !== "Graded").length;
-  const classAvg = students.length ? Math.round(students.reduce((s, st) => s + st.avg, 0) / students.length) : 0;
-  const achievements = students.filter(s => s.avg >= 90).length;
-  const attPct = students.length ? Math.round((presentToday / students.length) * 100) : 0;
+  const gradedStudents = students.filter(s => s.hasGrade);
+  const classAvg = gradedStudents.length ? Math.round(gradedStudents.reduce((s, st) => s + st.avg, 0) / gradedStudents.length) : 0;
+  const achievements = gradedStudents.filter(s => s.avg >= 90).length;
+  const attendedStudents = students.filter(s => s.hasAtt);
+  const attPct = attendedStudents.length ? Math.round(attendedStudents.reduce((s, st) => s + st.att, 0) / attendedStudents.length) : 0;
+
+  // Real Present/Absent/Late split for the latest marked day (attMap) —
+  // previously fabricated as an arbitrary 70/30 split of the remainder.
+  const attendanceBreakdown = useMemo(() => {
+    const vals = Object.values(attMap);
+    const present = vals.filter(v => v === "P" || v === "Present").length;
+    const absent = vals.filter(v => v === "A" || v === "Absent").length;
+    const late = vals.filter(v => v === "L" || v === "Late").length;
+    const total = vals.length || 1;
+    return {
+      present, absent, late,
+      presentPct: Math.round((present / total) * 100),
+      absentPct: Math.round((absent / total) * 100),
+      latePct: Math.round((late / total) * 100),
+    };
+  }, [attMap]);
 
   const todaySchedule = useMemo(() => {
     try {
@@ -178,12 +254,12 @@ export default function MyClass() {
   }, [grade, section]);
 
   const gradeDistribution = useMemo(() => {
-    const total = students.length || 1;
-    const aPlus = students.filter(s => s.avg >= 90).length;
-    const a = students.filter(s => s.avg >= 80 && s.avg < 90).length;
-    const bPlus = students.filter(s => s.avg >= 70 && s.avg < 80).length;
-    const b = students.filter(s => s.avg >= 60 && s.avg < 70).length;
-    const c = students.filter(s => s.avg < 60).length;
+    const total = gradedStudents.length || 1;
+    const aPlus = gradedStudents.filter(s => s.avg >= 90).length;
+    const a = gradedStudents.filter(s => s.avg >= 80 && s.avg < 90).length;
+    const bPlus = gradedStudents.filter(s => s.avg >= 70 && s.avg < 80).length;
+    const b = gradedStudents.filter(s => s.avg >= 60 && s.avg < 70).length;
+    const c = gradedStudents.filter(s => s.avg < 60).length;
     return [
       { label: "A+ (90–100)", color: "#6366f1", pct: Math.round(aPlus / total * 100), count: aPlus },
       { label: "A  (80–89)",  color: "#3b82f6", pct: Math.round(a / total * 100),     count: a },
@@ -191,12 +267,40 @@ export default function MyClass() {
       { label: "B  (60–69)",  color: "#f59e0b", pct: Math.round(b / total * 100),     count: b },
       { label: "C  (<60)",    color: "#ef4444", pct: Math.round(c / total * 100),     count: c },
     ];
-  }, [students]);
+  }, [gradedStudents]);
 
-  const subjectAvgs = useMemo(() =>
-    ["Mathematics", "Science", "English", "Islamic Studies", "Computer"].map(subj => ({
-      subj, avg: 0,
-    })), []);
+  // Real per-subject class averages — mean of each graded student's
+  // percentage in that subject, from the same gradebook computation as the
+  // roster's Average column (not a hardcoded subject list at 0%).
+  const subjectAvgs = useMemo(() => {
+    const bySubject = new Map<string, number[]>();
+    classGradebook.forEach(row => {
+      row.subjects.forEach(sub => {
+        if (!sub.hasData) return;
+        if (!bySubject.has(sub.subject)) bySubject.set(sub.subject, []);
+        bySubject.get(sub.subject)!.push(sub.percentage);
+      });
+    });
+    return Array.from(bySubject.entries())
+      .map(([subj, vals]) => ({ subj, avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 5);
+  }, [classGradebook]);
+
+  // Real upcoming CalendarEvent rows (same source/audience filter as
+  // TeacherDashboard's Upcoming Events) — previously a hardcoded, stale
+  // May-2025-dated array.
+  const realUpcomingEvents = useMemo(() =>
+    upcomingEvents.slice(0, 3).map(ev => {
+      const d = new Date(ev.date);
+      return {
+        id: ev.id,
+        day: isNaN(d.getTime()) ? "—" : String(d.getDate()).padStart(2, "0"),
+        month: isNaN(d.getTime()) ? "" : d.toLocaleString("en-US", { month: "short" }),
+        title: ev.title,
+        sub: ev.time ? `Starts at ${ev.time}` : `Due on ${d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`,
+      };
+    }), [upcomingEvents]);
 
   const paginationPages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1);
 
@@ -220,7 +324,7 @@ export default function MyClass() {
         {/* ── KPI Cards ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-5 gap-3">
           {[
-            { icon: Users,     bg: "bg-purple-50",  ic: "text-purple-500",  value: students.length,    label: "Total Students",       link: "View All Students",  fn: () => {} },
+            { icon: Users,     bg: "bg-purple-50",  ic: "text-purple-500",  value: students.length,    label: "Total Students",       link: "View All Students",  fn: () => navigate("/teacher/students") },
             { icon: UserCheck, bg: "bg-emerald-50", ic: "text-emerald-500", value: presentToday,        label: "Present Today",        link: "View Attendance",    fn: () => navigate("/teacher/attendance") },
             { icon: FileText,  bg: "bg-orange-50",  ic: "text-orange-500",  value: pendingAssignments, label: "Pending Assignments",  link: "View Assignments",   fn: () => navigate("/teacher/assignments") },
             { icon: BarChart3, bg: "bg-blue-50",    ic: "text-blue-500",    value: `${classAvg}%`,     label: "Class Average",        link: "View Gradebook",     fn: () => navigate("/teacher/assessments") },
@@ -264,12 +368,9 @@ export default function MyClass() {
                     />
                   </div>
                   <button
-                    onClick={() => toast.info("Add student via Admissions module")}
+                    onClick={() => navigate("/admissions/new")}
                     className="flex items-center gap-1.5 h-8 px-3 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700">
                     <Plus className="h-3.5 w-3.5" /> Add Student
-                  </button>
-                  <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50">
-                    <MoreVertical className="h-4 w-4 text-slate-400" />
                   </button>
                 </div>
               </div>
@@ -302,16 +403,24 @@ export default function MyClass() {
                         </td>
                         <td className="px-5 py-3.5 text-sm text-slate-500">{s.admNo}</td>
                         <td className="px-5 py-3.5 text-center">
-                          <span className={cn("text-sm font-semibold",
-                            s.att >= 90 ? "text-emerald-600" : s.att >= 75 ? "text-amber-600" : "text-rose-600")}>
-                            {s.att}%
-                          </span>
+                          {s.hasAtt ? (
+                            <span className={cn("text-sm font-semibold",
+                              s.att >= 90 ? "text-emerald-600" : s.att >= 75 ? "text-amber-600" : "text-rose-600")}>
+                              {s.att}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">No records</span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-center">
-                          <span className={cn("text-sm font-semibold",
-                            s.avg >= 80 ? "text-emerald-600" : s.avg >= 70 ? "text-purple-600" : s.avg >= 60 ? "text-amber-600" : "text-rose-600")}>
-                            {s.avg.toFixed(2)}%
-                          </span>
+                          {s.hasGrade ? (
+                            <span className={cn("text-sm font-semibold",
+                              s.avg >= 80 ? "text-emerald-600" : s.avg >= 70 ? "text-purple-600" : s.avg >= 60 ? "text-amber-600" : "text-rose-600")}>
+                              {s.avg.toFixed(2)}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">Not graded</span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-center">
                           <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg", s.gradeCls)}>
@@ -321,17 +430,16 @@ export default function MyClass() {
                         <td className="px-5 py-3.5">
                           <div className="flex items-center justify-center gap-1.5">
                             <button
-                              onClick={() => toast.info(`Opening ${s.name}'s profile`)}
+                              onClick={() => navigate(`/teacher/students?id=${encodeURIComponent(s.id)}`)}
+                              title="View profile"
                               className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-colors text-slate-400">
                               <Eye className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => toast.info(`Messaging parent of ${s.name}`)}
+                              onClick={() => navigate("/communication/messages")}
+                              title="Message parent"
                               className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 hover:text-purple-600 transition-colors text-slate-400">
                               <MessageSquare className="h-3.5 w-3.5" />
-                            </button>
-                            <button className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-400">
-                              <MoreVertical className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </td>
@@ -376,9 +484,7 @@ export default function MyClass() {
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="font-bold text-slate-900 text-sm">Class Performance Overview</h2>
-                <button className="flex items-center gap-1.5 text-xs border border-slate-200 rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-50">
-                  This Term <ChevronDown className="h-3.5 w-3.5" />
-                </button>
+                <span className="text-xs text-slate-400">All graded work to date</span>
               </div>
               <div className="grid grid-cols-3 gap-6">
 
@@ -404,6 +510,9 @@ export default function MyClass() {
                 {/* Subject Average */}
                 <div>
                   <p className="text-xs font-semibold text-slate-700 mb-3">Subject Average</p>
+                  {subjectAvgs.length === 0 ? (
+                    <p className="text-[11px] text-slate-400">No graded work yet.</p>
+                  ) : (
                   <div className="space-y-2.5">
                     {subjectAvgs.map(s => (
                       <div key={s.subj}>
@@ -423,6 +532,7 @@ export default function MyClass() {
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
 
                 {/* Attendance Overview */}
@@ -431,9 +541,9 @@ export default function MyClass() {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <DonutChart segments={[
-                        { color: "#10b981", pct: attPct },
-                        { color: "#ef4444", pct: Math.round((100 - attPct) * 0.7) },
-                        { color: "#f59e0b", pct: Math.round((100 - attPct) * 0.3) },
+                        { color: "#10b981", pct: attendanceBreakdown.presentPct },
+                        { color: "#ef4444", pct: attendanceBreakdown.absentPct },
+                        { color: "#f59e0b", pct: attendanceBreakdown.latePct },
                       ]} />
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span className="text-base font-bold text-slate-900">{attPct}%</span>
@@ -443,13 +553,14 @@ export default function MyClass() {
                     </div>
                     <div className="space-y-1.5 w-full">
                       {[
-                        { label: "Present Days", color: "#10b981", icon: "✓" },
-                        { label: "Absent Days",  color: "#ef4444", icon: "✗" },
-                        { label: "Late Days",    color: "#f59e0b", icon: "!" },
+                        { label: "Present", color: "#10b981", icon: "✓", count: attendanceBreakdown.present },
+                        { label: "Absent",  color: "#ef4444", icon: "✗", count: attendanceBreakdown.absent },
+                        { label: "Late",    color: "#f59e0b", icon: "!", count: attendanceBreakdown.late },
                       ].map(l => (
                         <div key={l.label} className="flex items-center gap-2">
                           <span className="text-[11px] font-bold" style={{ color: l.color }}>{l.icon}</span>
-                          <span className="text-[11px] text-slate-500">{l.label}</span>
+                          <span className="text-[11px] text-slate-500 flex-1">{l.label} Today</span>
+                          <span className="text-[11px] font-semibold text-slate-700">{l.count}</span>
                         </div>
                       ))}
                     </div>
@@ -470,11 +581,16 @@ export default function MyClass() {
                   <Clock className="h-4 w-4 text-purple-500" />
                   Class Timetable (Today)
                 </h3>
-                <button className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-0.5">
+                <button
+                  onClick={() => navigate("/teacher/timetable")}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-0.5">
                   View Full Timetable <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="divide-y divide-slate-50">
+                {todaySchedule.length === 0 && (
+                  <p className="text-xs text-slate-400 px-4 py-4 text-center">No timetable published for today.</p>
+                )}
                 {todaySchedule.map(slot => (
                   <div key={slot.period}
                     className={cn("flex items-center gap-3 px-4 py-2.5",
@@ -515,17 +631,17 @@ export default function MyClass() {
                   <Calendar className="h-4 w-4 text-purple-500" />
                   Upcoming Events
                 </h3>
-                <button className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-0.5">
+                <button
+                  onClick={() => navigate("/communication/calendar")}
+                  className="text-xs text-purple-600 font-semibold hover:underline flex items-center gap-0.5">
                   View Calendar <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="divide-y divide-slate-50">
-                {[
-                  { day: "25", month: "May", title: "Science Project Submission", sub: "Due on 25 May 2025" },
-                  { day: "28", month: "May", title: "English Essay Submission",   sub: "Due on 28 May 2025" },
-                  { day: "30", month: "May", title: "Monthly Test – All Subjects", sub: "Starts at 09:00 AM" },
-                ].map((ev, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                {realUpcomingEvents.length === 0 ? (
+                  <p className="text-xs text-slate-400 px-4 py-4 text-center">No upcoming events.</p>
+                ) : realUpcomingEvents.map((ev, i) => (
+                  <div key={ev.id ?? i} className="flex items-center gap-3 px-4 py-3">
                     <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 flex flex-col items-center justify-center flex-shrink-0">
                       <p className="text-[9px] font-bold text-purple-500 uppercase leading-none">{ev.month}</p>
                       <p className="text-base font-bold text-purple-700 leading-tight">{ev.day}</p>
@@ -548,7 +664,7 @@ export default function MyClass() {
                   { label: "Create\nAssignment",  icon: FileText,      bg: "bg-orange-100", ic: "text-orange-500", href: "/teacher/assignments" },
                   { label: "Enter\nMarks",        icon: BookOpen,      bg: "bg-yellow-100", ic: "text-yellow-600", href: "/teacher/assessments" },
                   { label: "View\nGradebook",     icon: BarChart3,     bg: "bg-blue-100",   ic: "text-purple-600",   href: "/teacher/assessments" },
-                  { label: "Message\nClass",      icon: MessageSquare, bg: "bg-pink-100",   ic: "text-pink-600",   fn: () => toast.success("Message sent to class parents") },
+                  { label: "Message\nClass",      icon: MessageSquare, bg: "bg-pink-100",   ic: "text-pink-600",   href: "/communication/messages" },
                   { label: "Generate\nReport Card",icon: Award,        bg: "bg-emerald-100",ic: "text-emerald-600",href: "/teacher/report-cards" },
                 ].map((a, i) => (
                   <button key={i}
