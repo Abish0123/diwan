@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { useStudentTeachers } from "@/hooks/useStudentTeachers";
+import { userRepository } from "@/repositories/UserRepository";
 import {
   UserCircle, GraduationCap, Hash, Phone, Mail, MapPin,
   AlertCircle, Home, User, Shield, Camera, Award, Calendar, Bookmark
@@ -54,22 +55,28 @@ export default function StudentProfile() {
   const s = student as any;
   const { classTeacher, gradeCoordinator } = useStudentTeachers(s);
 
-  // Per-account avatar key so one student's choice doesn't leak across logins.
-  const avatarKey = useMemo(
-    () => `student_custom_avatar_${s?.id || user?.email || "anon"}`,
-    [s?.id, user?.email]
-  );
-
+  // Real avatar, persisted on the user's own `users` row (photoURL is in
+  // server.ts's USER_SELF_WRITABLE_FIELDS allowlist) — previously this only
+  // ever wrote to localStorage, so the "saved" avatar never left this
+  // browser and was invisible anywhere else the photo might be shown.
   const [avatar, setAvatar] = useState(AVATAR_OPTIONS[0]);
   useEffect(() => {
-    setAvatar(localStorage.getItem(avatarKey) || AVATAR_OPTIONS[0]);
-  }, [avatarKey]);
+    if (!user?.uid) return;
+    userRepository.getOne(user.uid).then(row => {
+      if (row?.photoURL) setAvatar(row.photoURL);
+    }).catch(() => {});
+  }, [user?.uid]);
 
-  const handleAvatarChange = (url: string) => {
+  const handleAvatarChange = async (url: string) => {
     setAvatar(url);
-    localStorage.setItem(avatarKey, url);
-    toast.success("Profile avatar updated successfully!");
     setShowAvatarPicker(false);
+    if (!user?.uid) return;
+    try {
+      await userRepository.update(user.uid, { photoURL: url } as any);
+      toast.success("Profile avatar updated successfully!");
+    } catch {
+      toast.error("Failed to save avatar");
+    }
   };
 
   if (!students || students.length === 0 || !student) {

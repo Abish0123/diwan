@@ -48,6 +48,7 @@ export default function StudentCertificates() {
           status: r.status || "Pending",
           code: r.code,
           createdAt: r.createdAt || 0,
+          approvedAt: r.approvedAt || null,
         }))
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setRequests(saved);
@@ -57,14 +58,16 @@ export default function StudentCertificates() {
   }, [ownerUid]);
 
   // A certificate is only "official" when an approved/issued request exists
-  // for its type. Pending/unrequested certs render as unofficial previews.
-  const isCertApproved = useMemo(() => {
-    return requests.some(
+  // for its type — resolved from real school-side action, not the student's
+  // own submission. Pending/unrequested certs render as unofficial previews.
+  const approvedRequest = useMemo(() => {
+    return requests.find(
       (r) =>
         r.title === selectedCert.title &&
         ["approved", "issued"].includes(String(r.status || "").toLowerCase())
-    );
+    ) || null;
   }, [requests, selectedCert]);
+  const isCertApproved = !!approvedRequest;
 
   const handleRequest = async (cert: typeof CERT_TYPES[0]) => {
     setRequestingId(cert.id);
@@ -176,10 +179,12 @@ export default function StudentCertificates() {
                         <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-xs leading-none">{req.title}</h4>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-semibold">Submitted: {req.date} · Code: {req.code}</p>
                       </div>
-                      <Badge 
+                      <Badge
                         className={cn(
                           "text-[9px] font-extrabold border-none px-2 py-0.5 rounded-full uppercase tracking-wider",
-                          req.status === "Approved" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20" : "bg-amber-50 text-amber-600 dark:bg-amber-950/20"
+                          req.status === "Issued" || req.status === "Approved" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20" :
+                          req.status === "Rejected" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/20" :
+                          "bg-amber-50 text-amber-600 dark:bg-amber-950/20"
                         )}
                       >
                         {req.status}
@@ -240,14 +245,18 @@ export default function StudentCertificates() {
                     {s?.name || "Student Diwan Guest"}
                   </p>
                   <p className="text-[9px] text-slate-600 max-w-sm mx-auto leading-relaxed">
-                    is registered as an active student of <strong className="font-extrabold">Grade {s?.grade || "5"} · Section {s?.section || "A"}</strong> under Admission admission reference number <strong className="font-extrabold">{s?.id || "9283-09"}</strong>. The student is verified as compliant with all behavioral and administrative rules.
+                    is registered as an active student of <strong className="font-extrabold">Grade {s?.grade || "—"} · Section {s?.section || "—"}</strong> under Admission admission reference number <strong className="font-extrabold">{s?.id || "—"}</strong>. The student is verified as compliant with all behavioral and administrative rules.
                   </p>
                 </div>
 
                 {/* Signatures */}
                 <div className="flex justify-between items-end w-full px-6 pt-4 border-t border-slate-100">
                   <div className="text-left">
-                    <p className="text-[8px] font-bold text-slate-800">27 June 2026</p>
+                    <p className="text-[8px] font-bold text-slate-800">
+                      {isCertApproved && approvedRequest?.approvedAt
+                        ? new Date(approvedRequest.approvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                        : "—"}
+                    </p>
                     <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">Date of Attestation</p>
                   </div>
                   

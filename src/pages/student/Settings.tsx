@@ -46,6 +46,12 @@ export default function StudentSettings() {
   const [smsNotif, setSmsNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
   const [changingPassword, setChangingPassword] = useState(false);
+  // Editable drafts for the fields already in USER_SELF_WRITABLE_FIELDS
+  // (name/displayName, phone) — previously rendered readOnly even though
+  // the exact same write path already works for emailNotif/smsNotif below.
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -110,9 +116,37 @@ export default function StudentSettings() {
   const gender = s?.gender || '—';
   const username =
     s?.email ? String(s.email).split('@')[0] : user?.email ? String(user.email).split('@')[0] : '—';
+
+  // Seed the editable drafts once the real values resolve; after that the
+  // draft (what the student is editing / has saved) wins over the source
+  // record.
+  useEffect(() => {
+    if (nameDraft === null && fullName !== '—') setNameDraft(fullName);
+  }, [fullName, nameDraft]);
+  useEffect(() => {
+    if (phoneDraft === null && contactNumber !== '—') setPhoneDraft(contactNumber);
+  }, [contactNumber, phoneDraft]);
+
+  const displayName = nameDraft ?? fullName;
+  const displayPhone = phoneDraft ?? contactNumber;
+  const profileDirty = displayName !== fullName || displayPhone !== contactNumber;
+
+  async function saveProfileFields() {
+    if (!user?.uid) return;
+    setSavingProfile(true);
+    try {
+      await userRepository.update(user.uid, { name: displayName, displayName, phone: displayPhone } as any);
+      toast.success("Profile updated");
+    } catch {
+      toast.error("Failed to save profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   const initials =
-    fullName !== '—'
-      ? fullName
+    displayName !== '—'
+      ? displayName
           .split(' ')
           .map((p: string) => p[0])
           .filter(Boolean)
@@ -159,9 +193,6 @@ export default function StudentSettings() {
                           <Icon className="w-4 h-4 shrink-0" />
                           {item.label}
                         </span>
-                        {item.hasChevron && (
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        )}
                       </button>
                     </li>
                   );
@@ -173,6 +204,7 @@ export default function StudentSettings() {
           {/* Main Content */}
           <div className="flex-1 flex flex-col gap-6">
             {/* Profile Settings */}
+            {activeSection === 'profile' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
                 <h2 className="text-base font-semibold text-gray-900">Profile Settings</h2>
@@ -191,9 +223,9 @@ export default function StudentSettings() {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
-                      readOnly
-                      value={fullName}
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
+                      value={displayName === '—' ? '' : displayName}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     />
                   </div>
                 </div>
@@ -257,9 +289,10 @@ export default function StudentSettings() {
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
-                      readOnly
-                      value={contactNumber}
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
+                      value={displayPhone === '—' ? '' : displayPhone}
+                      onChange={(e) => setPhoneDraft(e.target.value)}
+                      placeholder="Add a contact number"
+                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     />
                   </div>
                 </div>
@@ -295,9 +328,21 @@ export default function StudentSettings() {
                   </select>
                 </div>
               </div>
+
+              <div className="flex justify-end mt-5">
+                <button
+                  onClick={saveProfileFields}
+                  disabled={savingProfile || !profileDirty}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  {savingProfile ? "Saving…" : "Save Changes"}
+                </button>
+              </div>
             </div>
+            )}
 
             {/* Account Settings */}
+            {activeSection === 'account' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
                 <h2 className="text-base font-semibold text-gray-900">Account Settings</h2>
@@ -359,8 +404,10 @@ export default function StudentSettings() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Notification Settings */}
+            {activeSection === 'notifications' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
                 <h2 className="text-base font-semibold text-gray-900">Notification Settings</h2>
@@ -446,6 +493,7 @@ export default function StudentSettings() {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* Right Sidebar */}
@@ -455,7 +503,7 @@ export default function StudentSettings() {
               <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mb-3">
                 <span className="text-white text-xl font-bold tracking-wide">{initials}</span>
               </div>
-              <p className="font-semibold text-gray-900 text-sm">{fullName}</p>
+              <p className="font-semibold text-gray-900 text-sm">{displayName}</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {grade}
                 {section !== '—' ? ` - ${section}` : ''}

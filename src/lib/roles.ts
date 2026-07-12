@@ -61,7 +61,7 @@ export const ROLES: RoleDef[] = [
   { id: "parent", label: "Parent", description: "View child information", layout: "parent", prefix: "PRT", badge: "bg-emerald-100 text-emerald-700" },
   { id: "student", label: "Student", description: "Assignments, attendance, results", layout: "student", prefix: "ST", badge: "bg-sky-100 text-sky-700" },
   { id: "hostel_warden", label: "Hostel Warden", description: "Hostel management", layout: "admin", groups: ["Hostel & Cafeteria"], prefix: "HSTL", badge: "bg-cyan-100 text-cyan-700" },
-  { id: "event_coordinator", label: "Event Coordinator", description: "Events and certificates", layout: "admin", groups: ["Communication"], items: ["/academics/achievements"], prefix: "EVT", badge: "bg-fuchsia-100 text-fuchsia-700" },
+  { id: "event_coordinator", label: "Event Coordinator", description: "Events and certificates", layout: "admin", groups: ["Communication"], items: ["/academics/achievements", "/academics/certificate-requests"], prefix: "EVT", badge: "bg-fuchsia-100 text-fuchsia-700" },
   { id: "alumni_coordinator", label: "Alumni Coordinator", description: "Alumni management", layout: "admin", groups: ["Communication"], items: ["/students/alumni", "/graduates"], prefix: "ALM", badge: "bg-lime-100 text-lime-700" },
 ];
 
