@@ -223,11 +223,18 @@ function ClassOverviewDonut({ overview, submissionStats }: { overview: Overview;
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-border text-center">
-            {submissionStats.map((s) => (
-              <div key={s.label}>
-                <p className="text-base font-bold text-foreground leading-none tabular-nums">{s.value}</p>
+            {submissionStats.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 + i * 0.1, duration: 0.35 }}
+              >
+                <p className="text-base font-bold text-foreground leading-none tabular-nums">
+                  <CountUpNumber value={s.value} animateOnMount duration={700} />
+                </p>
                 <p className="text-[10px] text-muted-foreground mt-1">{s.label}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </>
@@ -420,6 +427,14 @@ const URGENCY_STYLE: Record<PendingTask["urgency"], string> = {
 };
 
 function PendingTasksCard({ tasks, onViewAll }: { tasks: PendingTask[]; onViewAll: () => void }) {
+  // Progress bars grow from 0 on load — CSS `transition-all` alone does NOT
+  // animate the initial paint (it only animates a style value that changes
+  // AFTER mount), so without this the bars silently appeared already-filled.
+  // Same setTimeout-driven sweep as the donut/attendance rings, not
+  // Recharts/requestAnimationFrame, for the same backgrounded-tab reason
+  // documented on useSweepProgress itself.
+  const sweep = useSweepProgress(700, tasks.length > 0);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -453,11 +468,18 @@ function PendingTasksCard({ tasks, onViewAll }: { tasks: PendingTask[]; onViewAl
               <p className="text-[11px] text-muted-foreground mb-2">{t.subject}</p>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#d12386] to-[#9810fa] transition-all duration-700 ease-out"
-                  style={{ width: `${t.progressPct}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-[#d12386] to-[#9810fa]"
+                  style={{ width: `${t.progressPct * sweep}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">{t.progressPct}% submitted</p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: sweep >= 0.999 ? 1 : 0 }}
+                transition={{ duration: 0.25 }}
+                className="text-[10px] text-muted-foreground mt-1"
+              >
+                {t.progressPct}% submitted
+              </motion.p>
             </motion.div>
           ))}
         </div>
