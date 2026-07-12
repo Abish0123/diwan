@@ -115,8 +115,17 @@ const AdminIndex = () => {
             real, active scorecard of their own to complete. */}
         <MyAppraisalWidget />
 
-        {/* KPI Cards */}
+        {/* KPI Cards — same loading-skeleton treatment as /finance/statements'
+            KPI row (Array(N).fill(0).map(... animate-pulse h-32 ...)) while
+            the real overview data is still loading, instead of rendering
+            cards with stale/zeroed values for a flash. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {overview.loading ? (
+            Array(5).fill(0).map((_, i) => (
+              <div key={i} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm animate-pulse h-32" />
+            ))
+          ) : (
+          <>
           <StaticKpiCard
             title="Total Students"
             value={totalStudents || 0}
@@ -171,6 +180,8 @@ const AdminIndex = () => {
             iconClassName="bg-rose-50 text-rose-600"
             accentColor="#f43f5e"
           />
+          </>
+          )}
         </div>
 
         {/* Student Distribution / Attendance / Fees Row */}
