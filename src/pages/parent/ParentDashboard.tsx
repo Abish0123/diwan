@@ -85,9 +85,19 @@ export default function ParentDashboard() {
       const mine = (rows || []).filter((inv: any) =>
         inv.studentId === selected.id || (selected.name && inv.entity === selected.name)
       );
+      // Real remaining balance, not the invoice's original amount — a
+      // Partial invoice (e.g. amount 1000, paid 800) only still owes 200,
+      // not 1000. Same normalization as ParentFees.tsx/useFees.ts so the
+      // dashboard tile and the Fees page never disagree.
       const owed = mine
         .filter((inv: any) => inv.status?.toLowerCase() !== "paid")
-        .reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
+        .reduce((sum: number, inv: any) => {
+          const amount = Number(inv.amount) || 0;
+          const paidAmount = inv.paidAmount !== undefined ? Number(inv.paidAmount) : 0;
+          const dueAmount = inv.dueAmount !== undefined ? Number(inv.dueAmount)
+            : (inv.status === "Unpaid" || inv.status === "Overdue" ? amount : amount - paidAmount);
+          return sum + dueAmount;
+        }, 0);
       setOutstandingFees(owed);
     }).catch(() => {});
 

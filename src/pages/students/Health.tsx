@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -86,6 +87,14 @@ export default function Health() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<HealthRecord | null>(null);
   const [historyRecord, setHistoryRecord] = useState<HealthRecord | null>(null);
+
+  // Nurse Visit logging — NurseVisit is read by ParentHealth.tsx (parent
+  // portal), ParentDashboard.tsx's Family Snapshot, and student/Health.tsx,
+  // but no page anywhere ever wrote to it — every "Nurse Visits" section in
+  // the app was permanently empty regardless of real activity.
+  const [isNurseVisitOpen, setIsNurseVisitOpen] = useState(false);
+  const [nurseVisitRecord, setNurseVisitRecord] = useState<HealthRecord | null>(null);
+  const [nurseVisitForm, setNurseVisitForm] = useState({ reason: "", treatment: "", notes: "" });
 
   // New entry form
   const [newEntry, setNewEntry] = useState({ ...EMPTY_NEW });
@@ -363,6 +372,31 @@ export default function Health() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to log checkup");
+    }
+  };
+
+  const handleLogNurseVisit = async () => {
+    const rec = nurseVisitRecord;
+    if (!rec || !rec.studentId) return;
+    if (!nurseVisitForm.reason.trim()) { toast.error("Reason for the visit is required"); return; }
+    const today = new Date().toISOString().split("T")[0];
+    const id = `NV-${rec.studentId}-${Date.now()}`;
+    try {
+      await smartDb.create("NurseVisit", {
+        studentId: rec.studentId, studentName: rec.name,
+        reason: nurseVisitForm.reason.trim(), treatment: nurseVisitForm.treatment.trim() || undefined,
+        notes: nurseVisitForm.notes.trim() || undefined,
+        date: today, status: "Completed",
+        uid: user?.uid,
+      }, id);
+      await logAccess("Log Nurse Visit", `Logged nurse visit for ${rec.name}: ${nurseVisitForm.reason.trim()}.`);
+      toast.success("Nurse visit logged");
+      setIsNurseVisitOpen(false);
+      setNurseVisitForm({ reason: "", treatment: "", notes: "" });
+      setNurseVisitRecord(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to log nurse visit");
     }
   };
 
@@ -828,6 +862,36 @@ export default function Health() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={isNurseVisitOpen} onOpenChange={(o) => { setIsNurseVisitOpen(o); if (!o) setNurseVisitRecord(null); }}>
+          <DialogContent className="sm:max-w-[460px] rounded-3xl p-0 border-none shadow-2xl overflow-hidden">
+            <DialogHeader className="px-7 pt-7 pb-4 border-b border-slate-100">
+              <DialogTitle className="text-xl font-black">Log Nurse Visit</DialogTitle>
+              <DialogDescription>{nurseVisitRecord?.name} — visible in the parent portal's Health Records</DialogDescription>
+            </DialogHeader>
+            <div className="px-7 py-5 space-y-4">
+              <div className="space-y-2">
+                <Label>Reason for Visit *</Label>
+                <Input value={nurseVisitForm.reason} onChange={e => setNurseVisitForm(f => ({ ...f, reason: e.target.value }))}
+                  placeholder="e.g. Headache, minor fall, fever check" className="rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label>Treatment Given</Label>
+                <Input value={nurseVisitForm.treatment} onChange={e => setNurseVisitForm(f => ({ ...f, treatment: e.target.value }))}
+                  placeholder="e.g. Rest in sick bay, paracetamol" className="rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea value={nurseVisitForm.notes} onChange={e => setNurseVisitForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="Additional notes…" className="rounded-xl resize-none" rows={3} />
+              </div>
+            </div>
+            <DialogFooter className="px-7 py-4 border-t border-slate-100">
+              <Button variant="outline" className="rounded-xl" onClick={() => setIsNurseVisitOpen(false)}>Cancel</Button>
+              <Button onClick={handleLogNurseVisit} className="gradient-primary rounded-xl px-6">Log Visit</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* ── REGISTRY TABLE ── */}
         <Card className="premium-card overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-muted/20">
@@ -976,6 +1040,11 @@ export default function Health() {
                                 <DropdownMenuItem onClick={() => handleLogCheckup(record.id)}>
                                   <History className="mr-2 h-4 w-4" /> Log Checkup
                                 </DropdownMenuItem>
+                                {record.type === "student" && record.studentId && (
+                                  <DropdownMenuItem onClick={() => { setNurseVisitRecord(record); setNurseVisitForm({ reason: "", treatment: "", notes: "" }); setIsNurseVisitOpen(true); }}>
+                                    <Clock className="mr-2 h-4 w-4" /> Log Nurse Visit
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-rose-600" onClick={() => handleEmergencyAlert(record)}>
                                   <AlertCircle className="mr-2 h-4 w-4" /> Emergency Alert

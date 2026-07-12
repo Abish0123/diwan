@@ -14,6 +14,10 @@ import { useIntegrationConnected } from "@/hooks/useIntegrationStatus";
 
 interface FeeRecord {
   id: string; term: string; feeType: string; amount: number;
+  // Real remaining balance — distinct from `amount` (the invoice's original
+  // total). A Partial invoice (e.g. amount 1000, paid 800) still owes 200,
+  // not 1000.
+  dueAmount: number;
   dueDate: string; paidDate?: string;
   status: "Paid" | "Unpaid" | "Overdue" | "Partial";
   displayStatus: ReturnType<typeof getInvoiceDisplayStatus>;
@@ -41,18 +45,31 @@ function mapInvoiceStatus(s: string): FeeRecord["status"] {
   return "Unpaid";
 }
 
-function mapInvoice(inv: any): FeeRecord {
+// Same real-outstanding-balance normalization useFees.ts uses (line ~587) —
+// a raw Invoice row's `dueAmount` may be absent on legacy rows, so fall back
+// to deriving it from status/amount/paidAmount rather than ever treating the
+// original `amount` as still-owed on a Partial invoice.
+function normalizeInvoice(inv: any): Invoice {
+  const amount = Number(inv.amount) || 0;
+  const paidAmount = inv.paidAmount !== undefined ? Number(inv.paidAmount) : (inv.status === "Paid" ? amount : 0);
+  const dueAmount = inv.dueAmount !== undefined ? Number(inv.dueAmount) : (inv.status === "Unpaid" || inv.status === "Overdue" ? amount : (inv.status === "Paid" ? 0 : amount - paidAmount));
+  return { ...inv, amount, paidAmount, dueAmount };
+}
+
+function mapInvoice(raw: any): FeeRecord {
+  const inv = normalizeInvoice(raw);
   return {
     id: inv.id,
     term: inv.term || inv.period || inv.category || "General",
     feeType: inv.description || inv.feeType || inv.category || inv.type || "Fee",
     amount: Number(inv.amount || inv.total || 0),
+    dueAmount: inv.dueAmount,
     dueDate: inv.dueDate || "—",
     paidDate: inv.paidAt || inv.paidDate || (inv.status?.toLowerCase() === "paid" ? inv.updatedAt : undefined),
     status: mapInvoiceStatus(inv.status),
     displayStatus: getInvoiceDisplayStatus(inv),
     invoiceNo: inv.invoiceNumber || inv.invoiceNo || inv.id,
-    invoice: inv as Invoice,
+    invoice: inv,
   };
 }
 
@@ -84,7 +101,9 @@ export default function ParentFees() {
   const fees = liveData ?? [];
 
   const totalPaid = fees.filter(f=>f.status==="Paid").reduce((a,f)=>a+f.amount,0);
-  const totalOwed = fees.filter(f=>f.status!=="Paid").reduce((a,f)=>a+f.amount,0);
+  // Real remaining balance, not the original invoice amount — a Partial
+  // invoice only still owes its dueAmount.
+  const totalOwed = fees.filter(f=>f.status!=="Paid").reduce((a,f)=>a+f.dueAmount,0);
   const overdue   = fees.filter(f=>f.status==="Overdue").length;
 
   // Marks the invoice paid the same way useFees.ts's collectFee does — that
@@ -154,8 +173,11 @@ export default function ParentFees() {
     const orderId = `PFEE-${Date.now()}`;
     try {
       const returnUrl = `${window.location.origin}/parent/fees?payment=1&orderId=${orderId}`;
+      // Charge the real remaining balance, not the invoice's original amount
+      // — a parent paying off a Partial invoice must only be charged
+      // dueAmount, or they'd be billed the full original amount again.
       const { redirectUrl } = await createPaymentSession({
-        amount: f.amount,
+        amount: f.dueAmount,
         currency: "QAR",
         description: `Fee payment — ${f.invoiceNo}`,
         customerName: selected?.name,
@@ -165,7 +187,7 @@ export default function ParentFees() {
       });
       sessionStorage.setItem(
         `parent_fee_pending_${orderId}`,
-        JSON.stringify({ invoiceId: f.id, amount: f.amount, paymentMethod: "Card" })
+        JSON.stringify({ invoiceId: f.id, amount: f.dueAmount, paymentMethod: "Card" })
       );
       window.location.href = redirectUrl;
     } catch (error) {
@@ -260,6 +282,7 @@ export default function ParentFees() {
                   <th className="px-4 py-3 text-left">Term</th>
                   <th className="px-4 py-3 text-left">Fee Type</th>
                   <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3 text-right">Balance Due</th>
                   <th className="px-4 py-3 text-center">Due Date</th>
                   <th className="px-4 py-3 text-center">Paid Date</th>
                   <th className="px-4 py-3 text-center">Status</th>
@@ -268,7 +291,7 @@ export default function ParentFees() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {fees.length === 0 && (
-                  <tr><td colSpan={8} className="py-12 text-center text-slate-400">No invoices found.</td></tr>
+                  <tr><td colSpan={9} className="py-12 text-center text-slate-400">No invoices found.</td></tr>
                 )}
                 {fees.map(f => {
                   const meta = statusMeta(f.displayStatus);
@@ -278,6 +301,7 @@ export default function ParentFees() {
                       <td className="px-4 py-3 text-slate-700">{f.term}</td>
                       <td className="px-4 py-3 font-semibold text-slate-900">{f.feeType}</td>
                       <td className="px-4 py-3 text-right font-bold text-slate-900">QAR {f.amount.toLocaleString()}</td>
+                      <td className={cn("px-4 py-3 text-right font-bold", f.dueAmount > 0 ? "text-rose-600" : "text-emerald-600")}>QAR {f.dueAmount.toLocaleString()}</td>
                       <td className="px-4 py-3 text-center text-slate-500 text-xs">{f.dueDate}</td>
                       <td className="px-4 py-3 text-center text-slate-500 text-xs">{f.paidDate || "—"}</td>
                       <td className="px-4 py-3 text-center">
@@ -309,7 +333,7 @@ export default function ParentFees() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-200 bg-slate-50">
-                  <td colSpan={3} className="px-4 py-3 font-bold text-slate-900 text-right">Total Outstanding:</td>
+                  <td colSpan={4} className="px-4 py-3 font-bold text-slate-900 text-right">Total Outstanding:</td>
                   <td className="px-4 py-3 text-right font-black text-rose-600">QAR {totalOwed.toLocaleString()}</td>
                   <td colSpan={4} />
                 </tr>

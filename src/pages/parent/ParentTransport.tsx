@@ -4,7 +4,6 @@ import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { MapPin, Clock, Bus, Phone, User, AlertTriangle, Users2 } from "lucide-react";
 
 interface TransportRecord {
@@ -163,10 +162,10 @@ export default function ParentTransport() {
                       {vehicle.driverPhone && <p className="text-xs text-slate-500">{vehicle.driverPhone}</p>}
                     </div>
                     {vehicle.driverPhone && (
-                      <button onClick={() => toast.info(`Calling ${vehicle.driver}…`)}
+                      <a href={`tel:${vehicle.driverPhone}`}
                         className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 transition">
                         <Phone className="w-4 h-4 text-purple-600" />
-                      </button>
+                      </a>
                     )}
                   </div>
                 ) : (

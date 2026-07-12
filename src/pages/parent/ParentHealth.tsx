@@ -4,31 +4,37 @@ import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
-import { Heart, Shield, AlertTriangle, Phone, Syringe, Users2, Check } from "lucide-react";
-
-function vacStatus(s: string) {
-  switch (s) {
-    case "Given":     return "bg-emerald-100 text-emerald-700";
-    case "Scheduled": return "bg-blue-100 text-blue-700";
-    case "Overdue":   return "bg-rose-100 text-rose-700";
-    default:          return "bg-slate-100 text-slate-600";
-  }
-}
+import { Heart, Shield, AlertTriangle, Phone, Syringe, Users2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function ParentHealth() {
   const { selected, loading } = useParentChildren();
   const [healthRecord, setHealthRecord] = useState<any>(null);
   const [nurseVisits, setNurseVisits] = useState<any[]>([]);
+  // Full Student row — the ParentChild shape useParentChildren returns is
+  // deliberately narrow; emergencyContactName/emergencyContactPhone/
+  // medicalConditions only exist on the real Student record, same reason
+  // MyChildren.tsx fetches it separately instead of reading `selected`.
+  const [studentRecord, setStudentRecord] = useState<any>(null);
 
   // Fetch real HealthRecord + NurseVisit rows — same tables the school nurse writes to
   useEffect(() => {
     setHealthRecord(null);
     setNurseVisits([]);
+    setStudentRecord(null);
     if (!selected?.id) return;
 
-    smartDb.getOne("HealthRecord", selected.id).then(rec => {
-      setHealthRecord(rec || null);
+    // Real HealthRecord rows are keyed by an internal id (`HLT-{timestamp}`,
+    // see students/Health.tsx's handleAddEntry) — NOT by the student's own
+    // id — so a getOne(..., selected.id) lookup could never find a real
+    // record, even a fully populated one. Must scan by the row's studentId
+    // field instead, same as NurseVisit below.
+    smartDb.getAll("HealthRecord").then((rows: any[]) => {
+      const mine = (rows || []).filter((r: any) => r.studentId === selected.id);
+      mine.sort((a: any, b: any) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
+      setHealthRecord(mine[0] || null);
     }).catch(() => setHealthRecord(null));
+
+    smartDb.getOne("Student", selected.id).then(setStudentRecord).catch(() => setStudentRecord(null));
 
     smartDb.getAll("NurseVisit").then((rows: any[]) => {
       setNurseVisits(
@@ -60,15 +66,16 @@ export default function ParentHealth() {
   }
 
   const rec = healthRecord;
-  const bloodGroup   = rec?.bloodGroup || selected.bloodGroup || "Not recorded";
-  const allergies     = rec?.allergies || "Not recorded";
-  const conditions    = rec?.chronicConditions || rec?.conditions || "Not recorded";
-  const medications   = rec?.medications || rec?.currentMedications || "Not recorded";
-  const emergencyContact = rec?.emergencyContact || "Not recorded";
-  const emergencyPhone   = rec?.emergencyPhone || "Not recorded";
-  const doctorName    = rec?.doctorName || "Not recorded";
-  const doctorPhone   = rec?.doctorPhone || "Not recorded";
-  const vaccinations: any[] = rec?.vaccinations || [];
+  const bloodGroup = rec?.bloodGroup || selected.bloodGroup || "Not recorded";
+  const allergies  = rec?.allergies || "Not recorded";
+  // Real field is HealthRecord.condition (a single nurse-entered string) —
+  // falls back to the Student record's own admission-time medicalConditions
+  // when the nurse hasn't logged anything yet, same field MyChildren.tsx and
+  // StudentDetailsDialog.tsx already use.
+  const conditions = (rec?.condition && rec.condition !== "None") ? rec.condition : (studentRecord?.medicalConditions || "Not recorded");
+  // Real Student fields — HealthRecord has no emergency-contact field at all.
+  const emergencyContact = studentRecord?.emergencyContactName || "Not recorded";
+  const emergencyPhone   = studentRecord?.emergencyContactPhone || studentRecord?.guardianPhone || studentRecord?.phone || "Not recorded";
 
   const hasAllergy = allergies && allergies !== "Not recorded" && allergies.toLowerCase() !== "none" && allergies.toLowerCase() !== "none known";
 
@@ -110,7 +117,6 @@ export default function ParentHealth() {
               ["Blood Group",        bloodGroup],
               ["Allergies",          allergies],
               ["Chronic Conditions", conditions],
-              ["Current Medications", medications],
             ].map(([l,v]) => (
               <div key={l} className="flex justify-between py-2 border-b border-slate-50 last:border-0">
                 <span className="text-xs text-slate-400 font-medium">{l}</span>
@@ -125,37 +131,24 @@ export default function ParentHealth() {
                 <p className="text-xs text-rose-500">{emergencyPhone}</p>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-              <Shield className="w-4 h-4 text-slate-500 flex-shrink-0" />
-              <div>
-                <p className="text-[11px] text-slate-400">Primary Doctor</p>
-                <p className="text-xs font-bold text-slate-700">{doctorName}</p>
-                <p className="text-xs text-slate-500">{doctorPhone}</p>
-              </div>
-            </div>
           </div>
 
-          {/* Vaccinations */}
+          {/* Vaccination status — real HealthRecord.isVaccinated boolean +
+              lastCheckup date, not a per-vaccine list (no writer anywhere in
+              the app ever populates a vaccinations array). */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <h3 className="font-black text-slate-900 mb-3 flex items-center gap-2"><Syringe className="w-4 h-4 text-blue-500" /> Vaccination Record</h3>
-            {vaccinations.length === 0 ? (
-              <p className="text-sm text-slate-400 py-4 text-center">No vaccination records on file.</p>
+            <h3 className="font-black text-slate-900 mb-3 flex items-center gap-2"><Syringe className="w-4 h-4 text-blue-500" /> Vaccination Status</h3>
+            {!rec ? (
+              <p className="text-sm text-slate-400 py-4 text-center">No record on file.</p>
             ) : (
-              <div className="space-y-3">
-                {vaccinations.map((v: any, i: number) => (
-                  <div key={i} className="p-3 rounded-xl bg-slate-50 flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">{v.name || v.vaccine}</p>
-                      {v.date && <p className="text-[10px] text-slate-400">Date: {v.date}</p>}
-                      {v.nextDue && <p className="text-[10px] text-blue-500">Due: {v.nextDue}</p>}
-                    </div>
-                    {v.status ? (
-                      <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0", vacStatus(v.status))}>{v.status}</span>
-                    ) : (
-                      <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    )}
-                  </div>
-                ))}
+              <div className={cn("flex items-center gap-3 p-4 rounded-xl", rec.isVaccinated ? "bg-emerald-50" : "bg-amber-50")}>
+                {rec.isVaccinated ? <CheckCircle2 className="w-6 h-6 text-emerald-500 flex-shrink-0" /> : <XCircle className="w-6 h-6 text-amber-500 flex-shrink-0" />}
+                <div>
+                  <p className={cn("text-sm font-bold", rec.isVaccinated ? "text-emerald-700" : "text-amber-700")}>
+                    {rec.isVaccinated ? "Up to date" : "Not marked vaccinated"}
+                  </p>
+                  {rec.lastCheckup && <p className="text-xs text-slate-500 mt-0.5">Last checkup: {rec.lastCheckup}</p>}
+                </div>
               </div>
             )}
           </div>
