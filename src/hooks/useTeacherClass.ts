@@ -66,7 +66,7 @@ export function useTeacherClass() {
   // admin-only (silently dropping every real teacher onto DEFAULT_CLASS with
   // no visible error), bulk-listing every account's email/uid/role to any
   // signed-in teacher was itself more access than this lookup ever needed.
-  const { data: rec } = useQuery({
+  const { data: rec, isLoading: recLoading } = useQuery({
     queryKey: ["teacher-user-record", user?.email],
     queryFn: async () => {
       const email = user!.email as string;
@@ -74,6 +74,21 @@ export function useTeacherClass() {
     },
     enabled: !!user?.email,
   });
+
+  // True only when the teacher's own DB record genuinely has no homeroom
+  // data at all (no assignedGrade/assignedSection, no parseable
+  // classSection) and we've fallen all the way through to the hardcoded
+  // DEFAULT_CLASS. Previously every such teacher silently saw the demo
+  // account's Grade 3-B roster with no indication it wasn't really theirs —
+  // callers should show an honest "not assigned" state instead of treating
+  // this data as real.
+  const isDefaultFallback = useMemo(() => {
+    const r = rec as any;
+    if (!r) return false; // still loading / no record fetched yet — not a confirmed gap
+    if (r?.assignedGrade && r?.assignedSection) return false;
+    if (parseClassSection(r?.classSection)) return false;
+    return true;
+  }, [rec]);
 
   const assignment = useMemo<TeacherClass>(() => {
     const r = rec as any;
@@ -113,5 +128,5 @@ export function useTeacherClass() {
     return students.filter((st) => matchesGradeSection(st, assignment.grade, assignment.section));
   }, [students, assignment]);
 
-  return { assignment, classStudents, loading };
+  return { assignment, classStudents, loading, isDefaultFallback, recLoading };
 }

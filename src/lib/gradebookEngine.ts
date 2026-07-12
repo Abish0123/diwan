@@ -230,7 +230,7 @@ function assessmentPct(subject: string, student: GradebookStudent, src: Gradeboo
 // specific grade-plan that actually matches the student before looking at
 // its slots, so a Grade 1 student's marks aren't gated by what Pre-KG sits.
 function slotsForStudent(exam: ExamRecord, student: GradebookStudent): { subject: string }[] {
-  const plan = getGradePlans(exam).find(p => p.grade === student.grade);
+  const plan = getGradePlans(exam).find(p => normGrade(p.grade) === normGrade(student.grade));
   return plan?.slots || exam.slots || [];
 }
 

@@ -97,7 +97,7 @@ function DonutChart({ segments, size = 110 }: { segments: { color: string; pct: 
 export default function MyClass() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { assignment, classStudents } = useTeacherClass();
+  const { assignment, classStudents, isDefaultFallback, recLoading } = useTeacherClass();
   const { curriculum } = useCurriculum();
   const { upcoming: upcomingEvents } = useTeacherCalendarEvents();
 
@@ -303,6 +303,28 @@ export default function MyClass() {
     }), [upcomingEvents]);
 
   const paginationPages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1);
+
+  // Honest empty state: this account has no real homeroom assignment on
+  // file (no assignedGrade/assignedSection, no parseable classSection) —
+  // previously this silently fell back to rendering the demo teacher's
+  // Grade 3-B roster with no indication it wasn't really this teacher's
+  // class.
+  if (!recLoading && isDefaultFallback) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+          <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center mb-4">
+            <Users className="h-7 w-7 text-purple-400" />
+          </div>
+          <h1 className="text-lg font-bold text-slate-900">No Class Assigned Yet</h1>
+          <p className="text-sm text-slate-500 mt-1.5 max-w-sm">
+            Your account isn't currently set up as a class (homeroom) teacher for any grade/section.
+            Contact your school admin to get a class assigned.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
