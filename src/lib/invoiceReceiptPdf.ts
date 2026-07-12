@@ -4,6 +4,7 @@
 import jsPDF from "jspdf";
 import { Invoice } from "@/hooks/useFees";
 import { getSchoolName } from "@/lib/transportSettings";
+import { smartDb } from "@/lib/localDb";
 import { format } from "date-fns";
 
 export interface ReceiptPdfOptions {
@@ -12,6 +13,32 @@ export interface ReceiptPdfOptions {
   headerText?: string;
   footerText?: string;
   accentColor?: string; // hex, e.g. "#2563eb"
+}
+
+// The Receipt Template card (Finance Setup → Administration) used to save
+// under the editing admin's own uid, which no student/parent portal could
+// ever read back — every receipt silently used hardcoded defaults regardless
+// of what was configured. Stored under one fixed global id instead (same
+// pattern as transportSettings.ts's school name/address), with an in-memory
+// cache so the ~6 synchronous PDF call sites don't need to await a fetch.
+export const RECEIPT_TEMPLATE_ID = "global";
+let templateCache: ReceiptPdfOptions = {};
+let templateLoadPromise: Promise<void> | null = null;
+
+function ensureTemplateLoaded(): Promise<void> {
+  if (!templateLoadPromise) {
+    templateLoadPromise = smartDb.getOne("ReceiptTemplate", RECEIPT_TEMPLATE_ID)
+      .then((row) => { if (row) templateCache = row as ReceiptPdfOptions; })
+      .catch(() => { /* keep defaults */ });
+  }
+  return templateLoadPromise;
+}
+ensureTemplateLoaded();
+
+/** Called by Finance Setup after a successful save so every open tab's
+ * cache reflects the new template without a full reload. */
+export function setReceiptTemplateCache(data: ReceiptPdfOptions): void {
+  templateCache = { ...templateCache, ...data };
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -26,7 +53,11 @@ function safeDate(value: string | Date, fmt = "dd MMM yyyy"): string {
   return Number.isNaN(d.getTime()) ? "-" : format(d, fmt);
 }
 
-export function buildInvoiceReceiptDoc(invoice: Invoice, options: ReceiptPdfOptions = {}): jsPDF {
+export function buildInvoiceReceiptDoc(invoice: Invoice, explicitOptions: ReceiptPdfOptions = {}): jsPDF {
+  // Explicit per-call options (e.g. a caller-supplied currency) win over the
+  // real saved template; the template fills in whatever the caller didn't
+  // pass, instead of every caller needing to know about it.
+  const options: ReceiptPdfOptions = { ...templateCache, ...explicitOptions };
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const currency = options.currency || "BHD";

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { CreditCard, Lock, CheckCircle2, Loader2, ArrowLeft, Building2, Smartphone, Wallet, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { createPaymentSession, GatewayNotConfiguredError } from "@/lib/paymentGateway";
+import { createPaymentSession, GatewayNotConfiguredError, getGatewayMethodsConfig } from "@/lib/paymentGateway";
 
 interface PaymentGatewayProps {
   open: boolean;
@@ -68,6 +68,15 @@ export const PaymentGateway = ({
   const [ibanBank, setIbanBank] = useState("");
 
   const formattedAmount = `${currency} ${amount.toLocaleString("en-US", { minimumFractionDigits: 3 })}`;
+
+  // Real gate on Finance Setup's "Payment Gateway Configuration" card —
+  // previously every method rendered unconditionally regardless of what an
+  // admin configured there.
+  const gatewayConfig = getGatewayMethodsConfig();
+  const showCard = gatewayConfig.enabled && gatewayConfig.enabledMethods.includes("Card");
+  const showBank = gatewayConfig.enabled && gatewayConfig.enabledMethods.includes("Bank Transfer");
+  const showApplePay = gatewayConfig.enabled && gatewayConfig.enabledMethods.includes("Apple Pay");
+  const noOnlineMethods = !gatewayConfig.enabled || (!showCard && !showBank && !showApplePay);
 
   function handleClose() {
     onOpenChange(false);
@@ -204,7 +213,16 @@ export const PaymentGateway = ({
           {step === "method" && (
             <div className="space-y-2.5">
 
+              {noOnlineMethods && !allowCashOption && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-center">
+                  <p className="text-xs text-amber-800 font-medium">
+                    Online payments are currently disabled by the school. Ask your admin to enable them in Finance Settings.
+                  </p>
+                </div>
+              )}
+
               {/* Card — real PayTabs Hosted Payment Page redirect */}
+              {showCard && (
               <button
                 onClick={() => handleSelectMethod("card")}
                 className="w-full text-left rounded-xl border-2 border-border bg-card hover:border-[#00704A]/60 hover:shadow-md hover:bg-[#00704A]/5 transition-all p-4 group"
@@ -234,8 +252,10 @@ export const PaymentGateway = ({
                   </svg>
                 </div>
               </button>
+              )}
 
               {/* Bank Transfer — manual declaration, confirmed by Finance */}
+              {showBank && (
               <button
                 onClick={() => handleSelectMethod("bank")}
                 className="w-full text-left rounded-xl border-2 border-border bg-card hover:border-[#00704A]/60 hover:shadow-md hover:bg-[#00704A]/5 transition-all p-4 group"
@@ -254,8 +274,10 @@ export const PaymentGateway = ({
                   </svg>
                 </div>
               </button>
+              )}
 
               {/* Apple Pay */}
+              {showApplePay && (
               <button
                 onClick={() => handleSelectMethod("apple_pay")}
                 className="w-full text-left rounded-xl border-2 border-border bg-black hover:border-white/30 hover:shadow-md transition-all p-4 group relative overflow-hidden"
@@ -279,6 +301,7 @@ export const PaymentGateway = ({
                   </svg>
                 </div>
               </button>
+              )}
 
               {/* Cash at School Counter */}
               {allowCashOption && (
@@ -302,10 +325,12 @@ export const PaymentGateway = ({
               )}
 
               {/* Security note */}
-              <div className="flex items-center justify-center gap-1.5 pt-1">
-                <Lock className="w-3 h-3 text-muted-foreground" />
-                <span className="text-[11px] text-muted-foreground">Card payments secured by PayTabs · PCI DSS Level 1</span>
-              </div>
+              {showCard && (
+                <div className="flex items-center justify-center gap-1.5 pt-1">
+                  <Lock className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[11px] text-muted-foreground">Card payments secured by PayTabs · PCI DSS Level 1</span>
+                </div>
+              )}
             </div>
           )}
 

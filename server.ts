@@ -1271,6 +1271,19 @@ async function startServer() {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 
+  // System Settings' "Clear Cache" button used to be pure theater (a toast
+  // with no backend call) sitting next to a genuinely real settings card.
+  // entityCache (declared above) is real in-memory server state that goes
+  // stale between writes from other processes/instances — this actually
+  // clears it, admin-gated the same way authorizeEntityAccess() is.
+  app.post("/api/admin/clear-cache", requireAuth, (req, res) => {
+    const auth = (req as express.Request & { auth: SessionAuth }).auth;
+    if (getRole(auth.role).full !== true) return res.status(403).json({ error: "Not authorized" });
+    const entriesCleared = entityCache.size;
+    entityCache.clear();
+    res.json({ status: "cleared", entriesCleared });
+  });
+
   // Generic Data API — MySQL2 with Caching
   app.get("/api/data/:entity", requireAuth, async (req, res) => {
     // req.params values type as string | string[] under some TS resolutions

@@ -88,6 +88,8 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
+import { RECEIPT_TEMPLATE_ID, setReceiptTemplateCache } from "@/lib/invoiceReceiptPdf";
+import { GATEWAY_CONFIG_ID, setGatewayMethodsConfigCache } from "@/lib/paymentGateway";
 import {
   LateFeePolicy,
   LateFeeTier,
@@ -435,8 +437,9 @@ const FinanceSetup = () => {
         setSettings(prev => ({ ...prev, ...financialSettings }));
       }
 
-      // Fetch Payment Gateway Config
-      const gwConfig = await smartDb.getOne<PaymentGatewayConfigState>("PaymentGatewayConfig", user.uid);
+      // Fetch Payment Gateway Config — school-wide, saved under the fixed
+      // global id (see paymentGateway.ts), not this admin's own uid.
+      const gwConfig = await smartDb.getOne<PaymentGatewayConfigState>("PaymentGatewayConfig", GATEWAY_CONFIG_ID);
       if (gwConfig) {
         setGatewayConfig(prev => ({ ...prev, ...gwConfig }));
       }
@@ -447,8 +450,9 @@ const FinanceSetup = () => {
         setTaxSettings(prev => ({ ...prev, ...taxCfg }));
       }
 
-      // Fetch Receipt Template
-      const receiptCfg = await smartDb.getOne<ReceiptTemplateState>("ReceiptTemplate", user.uid);
+      // Fetch Receipt Template — school-wide, saved under the fixed global
+      // id (see invoiceReceiptPdf.ts), not this admin's own uid.
+      const receiptCfg = await smartDb.getOne<ReceiptTemplateState>("ReceiptTemplate", RECEIPT_TEMPLATE_ID);
       if (receiptCfg) {
         setReceiptTemplate(prev => ({ ...prev, ...receiptCfg }));
       }
@@ -515,10 +519,14 @@ const FinanceSetup = () => {
 
     setIsSavingGateway(true);
     try {
+      // Saved under one fixed global id — every checkout dialog across the
+      // app (Fees Management, student/parent Fees, admissions) reads this
+      // same school-wide config, not a per-admin setting.
       await smartDb.create("PaymentGatewayConfig", {
         ...gatewayConfig,
         uid: user.uid,
-      }, user.uid);
+      }, GATEWAY_CONFIG_ID);
+      setGatewayMethodsConfigCache(gatewayConfig);
       toast.success("Payment gateway settings saved successfully!");
     } catch (error) {
       console.error("Error saving gateway settings:", error);
@@ -566,10 +574,14 @@ const FinanceSetup = () => {
 
     setIsSavingReceipt(true);
     try {
+      // Saved under one fixed global id, not the editing admin's own uid —
+      // this is a school-wide template every receipt generator (Finance,
+      // student portal, parent portal) reads back, not a per-admin setting.
       await smartDb.create("ReceiptTemplate", {
         ...receiptTemplate,
         uid: user.uid,
-      }, user.uid);
+      }, RECEIPT_TEMPLATE_ID);
+      setReceiptTemplateCache(receiptTemplate);
       toast.success("Receipt template saved successfully!");
     } catch (error) {
       console.error("Error saving receipt template:", error);

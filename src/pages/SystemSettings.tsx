@@ -4,9 +4,11 @@ import { isCentralAdmin } from '@/lib/roles';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Shield, Settings, Database, Activity, Terminal, CalendarDays, RotateCcw, Save } from 'lucide-react';
+import { Shield, Settings, Database, Terminal, CalendarDays, RotateCcw, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { smartDb } from '@/lib/localDb';
+import { AUDIT_LOGS_TABLE, AuditLogEntry } from '@/lib/auditLog';
 
 import {
   DEFAULT_TIMETABLE_RULES, loadTimetableRules, saveTimetableRules, type TimetableRules,
@@ -62,6 +64,47 @@ const SystemSettings: React.FC = () => {
     return () => { active = false; };
   }, []);
 
+  // ── Developer Logs — real recent activity from the same audit_logs table
+  // Audit Logs (src/pages/settings/AuditLogs.tsx) reads, not hardcoded lines.
+  const [recentLogs, setRecentLogs] = useState<AuditLogEntry[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    smartDb.getAll<AuditLogEntry>(AUDIT_LOGS_TABLE).then((rows) => {
+      if (!active) return;
+      setRecentLogs(
+        [...(rows || [])]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 8)
+      );
+    }).catch(() => { if (active) setRecentLogs([]); })
+      .finally(() => { if (active) setLogsLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  // ── Clear Cache — real server-side entityCache invalidation, not a toast.
+  const [clearingCache, setClearingCache] = useState(false);
+  async function clearCache() {
+    setClearingCache(true);
+    try {
+      // main.tsx's global fetch patch only auto-attaches the session token
+      // to "/api/data" URLs — this hits "/api/admin", so it's added here.
+      const token = sessionStorage.getItem('sd_token');
+      const res = await fetch("/api/admin/clear-cache", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      toast.success(`Server cache cleared (${data.entriesCleared} entit${data.entriesCleared === 1 ? "y" : "ies"})`);
+    } catch {
+      toast.error("Failed to clear server cache");
+    } finally {
+      setClearingCache(false);
+    }
+  }
+
   function setLimit(key: keyof TimetableRules, val: number) {
     setRules(prev => ({ ...prev, [key]: Math.max(0, Math.min(8, val)) }));
     setDirty(true);
@@ -98,9 +141,6 @@ const SystemSettings: React.FC = () => {
     );
   }
 
-  const handleMaintenance = () => toast.info("Maintenance mode triggered (Demo)");
-  const clearCache = () => toast.success("System cache cleared");
-
   return (
     <DashboardLayout>
       <div className="space-y-5">
@@ -115,13 +155,9 @@ const SystemSettings: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={clearCache}>
-              <Database className="h-4 w-4 mr-2" />
+            <Button variant="outline" onClick={clearCache} disabled={clearingCache}>
+              {clearingCache ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Database className="h-4 w-4 mr-2" />}
               Clear Cache
-            </Button>
-            <Button variant="destructive" onClick={handleMaintenance}>
-              <Activity className="h-4 w-4 mr-2" />
-              Maintenance Mode
             </Button>
           </div>
         </div>
@@ -242,16 +278,21 @@ const SystemSettings: React.FC = () => {
                 <Terminal className="h-5 w-5 text-primary" />
                 Developer Logs
               </CardTitle>
-              <CardDescription>View recent system events and errors.</CardDescription>
+              <CardDescription>Most recent entries from the real audit log.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-slate-950 rounded-xl p-4 font-mono text-xs text-slate-300 h-48 overflow-y-auto">
-                <p className="text-green-400">[INFO] System initialized successfully</p>
-                <p className="text-green-400">[INFO] User authentication verified</p>
-                <p className="text-blue-400">[INFO] Dashboard stats loaded</p>
-                <p className="text-green-400">[INFO] Database connection established</p>
-                <p className="text-green-400">[INFO] All modules loaded</p>
-                <p className="text-green-400">[INFO] System ready for operations</p>
+              <div className="bg-slate-950 rounded-xl p-4 font-mono text-xs text-slate-300 h-48 overflow-y-auto space-y-1">
+                {logsLoading ? (
+                  <p className="text-slate-500">Loading…</p>
+                ) : recentLogs.length === 0 ? (
+                  <p className="text-slate-500">No audit log entries yet.</p>
+                ) : (
+                  recentLogs.map((log) => (
+                    <p key={log.id} className={log.status === "error" ? "text-rose-400" : "text-green-400"}>
+                      [{log.status === "error" ? "ERROR" : "INFO"}] {new Date(log.timestamp).toLocaleTimeString()} — {log.user_name} {log.action} {log.entity}{log.entity_id ? ` (${log.entity_id})` : ""}
+                    </p>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -262,21 +303,17 @@ const SystemSettings: React.FC = () => {
                 <Settings className="h-5 w-5 text-primary" />
                 System Environment
               </CardTitle>
-              <CardDescription>Environment variables and build information.</CardDescription>
+              <CardDescription>Real build mode, reported by Vite at build time.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-secondary/30 border border-border">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Environment</p>
-                  <p className="text-sm font-bold">Production</p>
+                  <p className="text-sm font-bold">{import.meta.env.PROD ? "Production" : "Development"}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary/30 border border-border">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Version</p>
-                  <p className="text-sm font-bold">1.0.4-stable</p>
-                </div>
-                <div className="p-3 rounded-xl bg-secondary/30 border border-border">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Build</p>
-                  <p className="text-sm font-bold">{new Date().toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Mode</p>
+                  <p className="text-sm font-bold">{import.meta.env.MODE}</p>
                 </div>
               </div>
             </CardContent>

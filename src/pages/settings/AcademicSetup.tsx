@@ -504,6 +504,9 @@ const AcademicSetup = () => {
               <CardTitle className="text-lg font-bold text-slate-800">Academic Terms Registry</CardTitle>
               <Settings2 className="h-5 w-5 text-slate-400" />
             </CardHeader>
+            <p className="text-[11px] text-amber-600 bg-amber-50 border-b border-amber-100 px-4 py-2">
+              Reference only — no module reads a "current term" from here yet. Finance, Exams, and Attendance each compute their own dates independently.
+            </p>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -571,6 +574,9 @@ const AcademicSetup = () => {
               <CardTitle className="text-lg font-bold text-slate-800">Global Grading Scale</CardTitle>
               <Settings2 className="h-5 w-5 text-slate-400" />
             </CardHeader>
+            <p className="text-[11px] text-amber-600 bg-amber-50 border-b border-amber-100 px-4 py-2">
+              Reference only — not yet enforced. Report cards and the gradebook compute letter grades from a fixed A+/A/B+/B/C/D/F scale, not these bands.
+            </p>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
