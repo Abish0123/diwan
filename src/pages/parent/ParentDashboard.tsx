@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { RecentNotificationsCard } from "@/components/dashboard/RecentNotificationsCard";
 import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useCurriculum } from "@/hooks/useCurriculum";
@@ -13,7 +14,8 @@ import { useNavigate } from "react-router-dom";
 import {
   UserCheck, BookOpen, FileText, CreditCard, Award, Calendar,
   MessageSquare, TrendingUp, Clock, Users2,
-  MapPin, Megaphone, LayoutDashboard,
+  MapPin, Megaphone, LayoutDashboard, CalendarClock,
+  ShieldAlert, HeartPulse, Bus,
 } from "lucide-react";
 
 function tagColor(tag: string) {
@@ -45,6 +47,10 @@ export default function ParentDashboard() {
   const [pendingAssignments, setPendingAssignments] = useState<number | null>(null);
   const [gbSources, setGbSources] = useState<GradebookSources | null>(null);
   const [upcomingHomework, setUpcomingHomework] = useState<{ title: string; date: string }[]>([]);
+  const [nextPTM, setNextPTM] = useState<{ date: string; time?: string; status?: string } | null>(null);
+  const [latestBehaviour, setLatestBehaviour] = useState<{ type: string; category?: string; date: string } | null>(null);
+  const [latestHealthVisit, setLatestHealthVisit] = useState<{ reason?: string; date: string } | null>(null);
+  const [transportInfo, setTransportInfo] = useState<{ route?: string; vehicle?: string; stop?: string; status?: string } | null>(null);
 
   useEffect(() => {
     // Announcements live in the shared "Notice" table (same source as the
@@ -101,24 +107,101 @@ export default function ParentDashboard() {
       setAttendancePct(total > 0 ? Math.round((present / total) * 100) : null);
     }).catch(() => {});
 
-    smartDb.getAll("Homework").then((rows: any[]) => {
-      const mine = (rows || []).filter((hw: any) =>
-        canonGrade(hw.grade) === canonGrade(selected.grade) && (!hw.section || canonSection(hw.section) === canonSection(selected.section))
-      );
+    // Mirrors ParentAssignments.tsx's real merge exactly: Homework and
+    // TeacherAssignment ("Create Assignment") are two separate tables, and an
+    // assignment's real status for THIS child comes from their own
+    // AssignmentSubmission row, not the due date alone — otherwise anything
+    // published via Create Assignment (rather than legacy Homework) was
+    // invisible here even though /parent/assignments showed it correctly.
+    Promise.all([
+      smartDb.getAll("Homework").catch(() => []),
+      smartDb.getAll("TeacherAssignment").catch(() => []),
+      smartDb.getAll("AssignmentSubmission").catch(() => []),
+    ]).then(([hwRows, asgRows, subRows]) => {
       const now = new Date();
-      const pending = mine.filter((hw: any) => {
-        const status = (hw.status || "Pending").toLowerCase();
-        const due = hw.dueDate ? new Date(hw.dueDate) : null;
-        return status !== "graded" && status !== "submitted" && (!due || due >= now);
+      const wantG = canonGrade(selected.grade);
+      const wantS = canonSection(selected.section);
+      const mySubs = (subRows || []).filter((s: any) => String(s.studentId) === String(selected.id));
+
+      const hw = (hwRows || []).filter((h: any) =>
+        canonGrade(h.grade) === wantG && (!h.section || canonSection(h.section) === wantS)
+      ).map((h: any) => {
+        const status = (h.status || "Pending").toLowerCase();
+        const due = h.dueDate ? new Date(h.dueDate) : null;
+        const pending = status !== "graded" && status !== "submitted" && (!due || due >= now);
+        return { title: h.title || h.name || "Homework", date: h.dueDate, pending };
       });
-      setPendingAssignments(mine.length ? pending.length : null);
+
+      const asg = (asgRows || []).filter((a: any) =>
+        a.status === "Active" && canonGrade(a.grade) === wantG && (!a.section || canonSection(a.section) === wantS)
+      ).map((a: any) => {
+        const sub = mySubs.find((s: any) => String(s.assignmentId) === String(a.id));
+        const due = a.dueDate ? new Date(a.dueDate) : null;
+        const pending = !sub && (!due || due >= now);
+        return { title: a.title || "Assignment", date: a.dueDate, pending };
+      });
+
+      const merged = [...hw, ...asg];
+      setPendingAssignments(merged.length ? merged.filter(m => m.pending).length : null);
       setUpcomingHomework(
-        pending
-          .filter((hw: any) => hw.dueDate)
-          .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        merged
+          .filter(m => m.pending && m.date)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 3)
-          .map((hw: any) => ({ title: hw.title || hw.name || "Homework", date: hw.dueDate }))
+          .map(m => ({ title: m.title, date: m.date }))
       );
+    }).catch(() => {});
+
+    // Next PTM — mirrors ParentPTM.tsx's real studentId/name scoping; "next"
+    // means the earliest still-actionable session (excludes Completed/Cancelled).
+    smartDb.getAll("PTMSession").then((rows: any[]) => {
+      const mine = (rows || []).filter((s: any) => s.studentId === selected.id || s.student === selected.name);
+      const upcoming = mine
+        .filter((s: any) => s.date && !["Completed", "Cancelled"].includes(s.status))
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const next = upcoming[0];
+      setNextPTM(next ? { date: next.date, time: next.timeRange || next.nextSlot, status: next.status } : null);
+    }).catch(() => {});
+
+    // Most recent behaviour incident — same studentId/studentName/student
+    // scoping and date-descending sort as ParentBehavior.tsx.
+    smartDb.getAll("BehaviorIncident").then((rows: any[]) => {
+      const mine = (rows || []).filter((r: any) =>
+        r.studentId === selected.id || r.studentName === selected.name || r.student === selected.name
+      );
+      mine.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+      const latest = mine[0];
+      setLatestBehaviour(latest ? { type: latest.type, category: latest.category, date: latest.date } : null);
+    }).catch(() => {});
+
+    // Most recent nurse visit — same studentId scoping and date-descending
+    // sort as ParentHealth.tsx.
+    smartDb.getAll("NurseVisit").then((rows: any[]) => {
+      const mine = (rows || []).filter((r: any) => r.studentId === selected.id);
+      mine.sort((a: any, b: any) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+      const latest = mine[0];
+      setLatestHealthVisit(latest ? { reason: latest.reason || latest.complaint, date: latest.date } : null);
+    }).catch(() => {});
+
+    // Transport allocation — same studentId-first/name-fallback matching and
+    // route/vehicle join as ParentTransport.tsx.
+    const norm = (v: any) => String(v ?? "").trim().toLowerCase();
+    Promise.all([
+      smartDb.getAll("TransportRecord").catch(() => []),
+      smartDb.getAll("TransportRoute").catch(() => []),
+      smartDb.getAll("TransportVehicle").catch(() => []),
+    ]).then(([records, routes, vehicles]) => {
+      const allocation = (records || []).find((r: any) => r.studentId === selected.id)
+        || (records || []).find((r: any) => !r.studentId && norm(r.studentName) === norm(selected.name));
+      if (!allocation) { setTransportInfo(null); return; }
+      const route = (routes || []).find((r: any) => norm(r.name) === norm(allocation.route));
+      const vehicle = (vehicles || []).find((v: any) => norm(v.regNumber) === norm(allocation.vehicle) || v.id === allocation.vehicle);
+      setTransportInfo({
+        route: route?.name || allocation.route,
+        vehicle: vehicle?.regNumber,
+        stop: allocation.stopName,
+        status: allocation.status,
+      });
     }).catch(() => {});
   }, [selected]);
 
@@ -133,8 +216,14 @@ export default function ParentDashboard() {
 
   const upcomingExamRecords = useMemo(() => {
     if (!selected) return [];
+    // Matches ParentExams.tsx's real audience filter exactly:
+    // publishedToStudents (not the section-level `published`/`status`
+    // fields) is what actually gates parent/student visibility, including
+    // per-grade-plan overrides in examStore.ts. Using the wrong flag meant
+    // this tile could show an exam a parent shouldn't see yet, or hide one
+    // the real Exams page still lists as upcoming.
     return allExams
-      .filter(e => matchesSection(e, selected.grade || "", selected.section || "") && e.published && e.status === "Scheduled")
+      .filter(e => matchesSection(e, selected.grade || "", selected.section || "") && e.publishedToStudents !== false)
       .slice(0, 3)
       .map(e => ({ title: e.subject || e.name || "Exam", date: e.date || "" }));
   }, [allExams, selected]);
@@ -168,6 +257,9 @@ export default function ParentDashboard() {
     { label: "Messages",      icon: MessageSquare,href: "/communication/messages", color: "bg-slate-100 text-slate-700" },
     { label: "PTM Booking",   icon: Calendar,     href: "/parent/ptm",          color: "bg-indigo-100 text-indigo-700" },
     { label: "Transport",     icon: MapPin,       href: "/parent/transport",    color: "bg-teal-100 text-teal-700" },
+    { label: "Timetable",     icon: CalendarClock,href: "/parent/timetable",    color: "bg-sky-100 text-sky-700" },
+    { label: "Behaviour",     icon: ShieldAlert,  href: "/parent/behaviour",    color: "bg-orange-100 text-orange-700" },
+    { label: "Health",        icon: HeartPulse,   href: "/parent/health",       color: "bg-pink-100 text-pink-700" },
   ];
 
   if (loading) {
@@ -275,24 +367,83 @@ export default function ParentDashboard() {
           </div>
 
           {/* Upcoming — real exam dates + homework due dates */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-blue-500" /> Upcoming</h3>
-            </div>
-            <div className="space-y-3">
-              {upcomingEvents.map((e, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className={cn("px-2 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0", eventTypeColor(e.type))}>{e.type}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-800 truncate">{e.title}</p>
-                    <p className="text-[10px] text-slate-400">{e.date}</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-blue-500" /> Upcoming</h3>
+              </div>
+              <div className="space-y-3">
+                {upcomingEvents.map((e, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className={cn("px-2 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0", eventTypeColor(e.type))}>{e.type}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 truncate">{e.title}</p>
+                      <p className="text-[10px] text-slate-400">{e.date}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {upcomingEvents.length === 0 && (
-                <p className="text-sm text-slate-400 py-4 text-center">Nothing upcoming.</p>
-              )}
+                ))}
+                {upcomingEvents.length === 0 && (
+                  <p className="text-sm text-slate-400 py-4 text-center">Nothing upcoming.</p>
+                )}
+              </div>
             </div>
+
+            <RecentNotificationsCard />
+          </div>
+        </div>
+
+        {/* Family Snapshot — real PTM/Behaviour/Health/Transport summaries,
+            each computed with the exact same scoping the dedicated page uses. */}
+        <div>
+          <h3 className="font-black text-slate-900 mb-3">Family Snapshot</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <button onClick={() => navigate("/parent/ptm")}
+              className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:shadow-md hover:border-violet-200 transition group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-indigo-50 text-indigo-600"><Calendar className="w-4 h-4" /></div>
+              <p className="text-[11px] text-slate-400 font-medium mb-0.5">Next PTM</p>
+              {nextPTM ? (
+                <>
+                  <p className="text-sm font-bold text-slate-900">{nextPTM.date}{nextPTM.time ? ` · ${nextPTM.time}` : ""}</p>
+                  <p className="text-[11px] text-slate-400">{nextPTM.status || "Scheduled"}</p>
+                </>
+              ) : <p className="text-sm text-slate-400">No session booked</p>}
+            </button>
+
+            <button onClick={() => navigate("/parent/behaviour")}
+              className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:shadow-md hover:border-violet-200 transition group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-orange-50 text-orange-600"><ShieldAlert className="w-4 h-4" /></div>
+              <p className="text-[11px] text-slate-400 font-medium mb-0.5">Latest Behaviour</p>
+              {latestBehaviour ? (
+                <>
+                  <p className="text-sm font-bold text-slate-900">{latestBehaviour.type}{latestBehaviour.category ? ` · ${latestBehaviour.category}` : ""}</p>
+                  <p className="text-[11px] text-slate-400">{latestBehaviour.date}</p>
+                </>
+              ) : <p className="text-sm text-slate-400">No incidents</p>}
+            </button>
+
+            <button onClick={() => navigate("/parent/health")}
+              className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:shadow-md hover:border-violet-200 transition group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-pink-50 text-pink-600"><HeartPulse className="w-4 h-4" /></div>
+              <p className="text-[11px] text-slate-400 font-medium mb-0.5">Latest Health Visit</p>
+              {latestHealthVisit ? (
+                <>
+                  <p className="text-sm font-bold text-slate-900 truncate">{latestHealthVisit.reason || "Nurse visit"}</p>
+                  <p className="text-[11px] text-slate-400">{latestHealthVisit.date}</p>
+                </>
+              ) : <p className="text-sm text-slate-400">No visits recorded</p>}
+            </button>
+
+            <button onClick={() => navigate("/parent/transport")}
+              className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:shadow-md hover:border-violet-200 transition group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3 bg-teal-50 text-teal-600"><Bus className="w-4 h-4" /></div>
+              <p className="text-[11px] text-slate-400 font-medium mb-0.5">Transport</p>
+              {transportInfo ? (
+                <>
+                  <p className="text-sm font-bold text-slate-900 truncate">{transportInfo.route || "—"}{transportInfo.vehicle ? ` · ${transportInfo.vehicle}` : ""}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{transportInfo.stop || transportInfo.status || ""}</p>
+                </>
+              ) : <p className="text-sm text-slate-400">Not assigned</p>}
+            </button>
           </div>
         </div>
 
