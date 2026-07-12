@@ -81,9 +81,24 @@ function normName(s: string | undefined | null): string {
   return (s || "").toLowerCase().trim();
 }
 
+// "Show decimals in gradebook" from Teacher Settings — reads the same
+// sd_teacher_settings_<uid> blob TeacherSettings.tsx writes.
+function useGradebookDecimalsPref(uid: string): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`sd_teacher_settings_${uid || "default"}`);
+      setOn(!!(raw && JSON.parse(raw)?.gradebookDecimals));
+    } catch { setOn(false); }
+  }, [uid]);
+  return on;
+}
+
 export default function TeacherGradebook() {
   const { user } = useAuth();
   const { assignment } = useTeacherClass();
+  const showDecimals = useGradebookDecimalsPref((user as any)?.uid || (user as any)?.email || "default");
+  const fmtPct = (pct: number) => showDecimals ? pct.toFixed(1) : Math.round(pct).toString();
   const myName = user?.displayName || (assignment as any)?.teacherName || "";
   const homeroom = { grade: assignment.grade || "", section: (assignment.section || "").toUpperCase() };
   const { assignments, scopes } = useTeacherScopes(myName, homeroom);
@@ -508,7 +523,7 @@ export default function TeacherGradebook() {
             {/* KPI strip */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <KPI icon={Users} label="Students" value={String(classStudents.length)} sub={`${activeScope.grade} · ${displaySectionLabel}`} color="text-purple-600" bg="bg-violet-50" />
-              <KPI icon={TrendingUp} label="Class Average" value={graded.length ? `${classAvgPct.toFixed(1)}%` : "—"} sub={`${subject} · ${term}`} color="text-amber-600" bg="bg-amber-50" />
+              <KPI icon={TrendingUp} label="Class Average" value={graded.length ? `${fmtPct(classAvgPct)}%` : "—"} sub={`${subject} · ${term}`} color="text-amber-600" bg="bg-amber-50" />
               <KPI icon={CheckCircle2} label="Above 80%" value={String(above80)} sub={graded.length ? `${Math.round((above80 / graded.length) * 100)}% of graded` : "—"} color="text-emerald-600" bg="bg-emerald-50" />
               <KPI icon={AlertTriangle} label="Below 50%" value={String(below50)} sub={graded.length ? `${Math.round((below50 / graded.length) * 100)}% at risk` : "—"} color="text-red-500" bg="bg-red-50" />
             </div>
@@ -582,9 +597,9 @@ export default function TeacherGradebook() {
                             <td className="py-3 px-3 sticky left-0 bg-indigo-50/40"><span className="text-[10px] font-bold text-gray-400 uppercase">Avg</span></td>
                             <td className="py-3 pr-3 sticky left-10 bg-indigo-50/40"><span className="text-sm font-bold text-gray-900">Class Average</span></td>
                             {columns.map(c => (
-                              <td key={c.key} className="px-2 py-3 text-center"><p className="text-sm font-bold text-gray-900">{classAvgPerCol[c.key].toFixed(1)}</p></td>
+                              <td key={c.key} className="px-2 py-3 text-center"><p className="text-sm font-bold text-gray-900">{fmtPct(classAvgPerCol[c.key])}</p></td>
                             ))}
-                            <td className="px-2 py-3 text-center"><p className="text-sm font-bold text-gray-900">{Object.values(classAvgPerCol).reduce((a, b) => a + b, 0).toFixed(1)}</p></td>
+                            <td className="px-2 py-3 text-center"><p className="text-sm font-bold text-gray-900">{fmtPct(Object.values(classAvgPerCol).reduce((a, b) => a + b, 0))}</p></td>
                             <td className="px-2 py-3 text-center"><span className={cn("inline-flex text-xs font-bold rounded-md border px-2 py-0.5", gradeFromPct(classAvgPct).bg)}>{gradeFromPct(classAvgPct).letter}</span></td>
                           </tr>
                         )}
@@ -652,7 +667,7 @@ export default function TeacherGradebook() {
                               <p className="text-[10px] text-gray-400">Roll #{r.rollNo}</p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className={cn("text-xs font-bold", pctColor(r.pct))}>{r.pct.toFixed(1)}%</span>
+                              <span className={cn("text-xs font-bold", pctColor(r.pct))}>{fmtPct(r.pct)}%</span>
                               <span className={cn("text-[10px] font-bold rounded border px-1.5 py-0.5", gradeFromPct(r.pct).bg)}>{gradeFromPct(r.pct).letter}</span>
                             </div>
                           </div>

@@ -282,10 +282,17 @@ const ADMIN_ONLY_ENTITIES = new Set(["payroll", "users", "financial_settings", "
 // on email too keeps the same guarantee (a caller can only ever read the ONE
 // row that is provably theirs) while covering both identifiers the row could
 // legitimately be looked up by.
+// Fields a non-admin caller may set on their OWN users row via the self-write
+// carve-out below — e.g. Teacher Settings' Profile section. Deliberately does
+// NOT include role/assignedGrade/assignedSection/permissions/password/etc.,
+// so this can never become a self-privilege-escalation path; the PUT handler
+// strips anything outside this list before merging a self-write.
+const USER_SELF_WRITABLE_FIELDS = new Set(["displayName", "name", "phone"]);
+
 function authorizeEntityAccess(entity: string, auth: SessionAuth, id?: string, method: "read" | "write" = "read"): boolean {
   if (getRole(auth.role).full === true) return true;
   if (!ADMIN_ONLY_ENTITIES.has(entity)) return true;
-  if (entity === "users" && method === "read" && id) {
+  if (entity === "users" && id) {
     if (id === auth.uid) return true;
     if (auth.email && id.toLowerCase() === auth.email.toLowerCase()) return true;
   }
@@ -1730,9 +1737,17 @@ async function startServer() {
     const entity = String(req.params.entity);
     const routeId = String(req.params.id);
     const auth = (req as express.Request & { auth: SessionAuth }).auth;
-    if (!authorizeEntityAccess(entity, auth)) return res.status(403).json({ error: "Not authorized for this resource" });
+    if (!authorizeEntityAccess(entity, auth, routeId, "write")) return res.status(403).json({ error: "Not authorized for this resource" });
     if (!VALID_TABLE_NAME.test(entity)) return res.status(400).json({ error: "Invalid entity" });
-    const data = req.body;
+    let data = req.body;
+    // A non-admin caller only reaches this point for "users" via the self-
+    // write carve-out (routeId === their own uid/email) — restrict what they
+    // can change on their own row to a safe allowlist (see
+    // USER_SELF_WRITABLE_FIELDS) so this can never become a path to grant
+    // themselves a different role, class assignment, or permissions.
+    if (entity === "users" && getRole(auth.role).full !== true) {
+      data = Object.fromEntries(Object.entries(data).filter(([k]) => USER_SELF_WRITABLE_FIELDS.has(k)));
+    }
     if (entity === "users" && typeof data.password === "string" && data.password && !isHashedPassword(data.password)) {
       data.password = hashPassword(data.password);
     }

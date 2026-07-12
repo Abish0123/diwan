@@ -397,6 +397,25 @@ export function useNotifications() {
     toast(n.title, { description: n.message || undefined, duration: 6000 });
   }, []);
 
+  // Teacher Settings' per-category toggles (src/pages/teacher/TeacherSettings.tsx)
+  // gate the live popup only, never the store/badge — the notification still
+  // really happened and still counts as unread, this just decides whether it
+  // interrupts with a toast/OS notification. Only applies to the teacher
+  // portal (role "staff"); every other role is unaffected by this key.
+  const shouldPopup = useCallback((n: AppNotification): boolean => {
+    if (role !== "staff") return true;
+    try {
+      const raw = localStorage.getItem("sd_notification_prefs");
+      if (!raw) return true;
+      const p = JSON.parse(raw);
+      if (p.push === false) return false;
+      if (n.entity === "Attendance" && p.attendance === false) return false;
+      if (n.entity === "PTMSession" && p.ptm === false) return false;
+      if (n.type === "leave_status" && p.leave === false) return false;
+      return true;
+    } catch { return true; }
+  }, [role]);
+
   // Ingest a batch of raw notification objects into the store. Read state is
   // NOT computed here — it's derived live in flush() from readByMe/bootstrapCutoff,
   // so it stays correct even if this fires before the per-user read fetch resolves.
@@ -412,14 +431,14 @@ export function useNotifications() {
       // Only push a live popup for genuinely new events — catch-up polls (first
       // load, or a poll that's just re-syncing) must never re-alert for things
       // that already happened.
-      if (!isCatchup && bootstrapped.current) {
+      if (!isCatchup && bootstrapped.current && shouldPopup(notif)) {
         pushBrowserNotification(notif);
         toastNewNotification(notif);
       }
       changed = true;
     }
     if (changed) flush();
-  }, [isForMe, flush, pushBrowserNotification, toastNewNotification]);
+  }, [isForMe, flush, pushBrowserNotification, toastNewNotification, shouldPopup]);
 
   // ── Path 1: socket.io live events ────────────────────────────────────────
   useEffect(() => {

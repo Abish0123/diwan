@@ -299,9 +299,26 @@ const CodingEntry = () => {
 };
 
 // Role-aware home: teachers and students get their own portal, admins get Index
+const VALID_TEACHER_LANDING_PAGES = new Set([
+  "/teacher/dashboard", "/teacher/my-class", "/teacher/attendance",
+  "/teacher/assessments", "/teacher/exams",
+]);
+
 const HomeRouter = () => {
-  const { role } = useAuth();
-  if (role === "staff") return <Navigate to="/teacher/dashboard" replace />;
+  const { role, user } = useAuth();
+  if (role === "staff") {
+    // Real per-teacher preference from Settings ("Landing page") — falls
+    // back to the dashboard when unset/invalid rather than trusting an
+    // arbitrary stored string as a route.
+    let landing = "/teacher/dashboard";
+    try {
+      const uid = (user as any)?.uid || (user as any)?.email;
+      const raw = uid && localStorage.getItem(`sd_teacher_settings_${uid}`);
+      const stored = raw && JSON.parse(raw)?.landingPage;
+      if (stored && VALID_TEACHER_LANDING_PAGES.has(stored)) landing = stored;
+    } catch { /* ignore, use default */ }
+    return <Navigate to={landing} replace />;
+  }
   if (role === "student") return <Navigate to="/portals/student" replace />;
   if (role === "parent") return <Navigate to="/parent/dashboard" replace />;
   return <Index />;

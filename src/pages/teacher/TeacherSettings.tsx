@@ -1,17 +1,22 @@
 // Class Teacher portal — Settings.
-// Lets a class teacher manage their profile display, notification preferences,
-// class/teaching defaults, appearance and security. Preferences persist to
-// localStorage (per the app's client-only settings pattern) keyed by the user.
+// Name/phone write through to the real User record (smartDb "User"), the
+// same one useTeacherClass reads — so a change here actually propagates.
+// Notification category toggles are read by useNotifications.ts to gate
+// which categories actually toast/push. Everything else (sound, gradebook
+// decimals, landing page) persists to localStorage keyed by the user, per
+// the app's client-only settings pattern.
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { useTheme } from "@/contexts/ThemeContext";
+import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Settings, User, Bell, GraduationCap, Palette, Shield,
-  Mail, Phone, BookOpen, Save, Moon, Sun, Globe, KeyRound, LogOut, Smartphone, Volume2,
+  Mail, Phone, BookOpen, Save, Moon, Sun, Volume2,
 } from "lucide-react";
 import { playNotificationSound } from "@/hooks/useNotifications";
 
@@ -21,36 +26,24 @@ type SoundType = "chime" | "bell" | "beep" | "ping" | "ding-dong" | "none";
 
 interface Prefs {
   phone: string;
-  notifyEmail: boolean;
   notifyPush: boolean;
-  notifySubmissions: boolean;
   notifyAttendance: boolean;
   notifyPTM: boolean;
   notifyLeave: boolean;
   notifySound: SoundType;
-  attendanceView: "list" | "grid";
   gradebookDecimals: boolean;
-  autoPublishMarks: boolean;
   landingPage: string;
-  language: "en" | "ar";
-  twoFactor: boolean;
 }
 
 const DEFAULTS: Prefs = {
   phone: "",
-  notifyEmail: true,
   notifyPush: true,
-  notifySubmissions: true,
   notifyAttendance: true,
   notifyPTM: true,
-  notifyLeave: false,
+  notifyLeave: true,
   notifySound: "chime",
-  attendanceView: "list",
   gradebookDecimals: false,
-  autoPublishMarks: false,
   landingPage: "/teacher/dashboard",
-  language: "en",
-  twoFactor: false,
 };
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -90,8 +83,12 @@ export default function TeacherSettings() {
   const { user } = useAuth();
   const { assignment } = useTeacherClass();
   const { theme, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
   const uid = (user as any)?.uid || (user as any)?.email || "default";
+  const email = (user as any)?.email || "teacher@studentdiwan.edu.om";
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
+  const [name, setName] = useState((user as any)?.displayName || (user as any)?.name || assignment.teacherName || "");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     try {
@@ -100,21 +97,45 @@ export default function TeacherSettings() {
     } catch { /* ignore */ }
   }, [uid]);
 
+  // Real name/phone from the User record itself (not local-only) — the
+  // same record useTeacherClass reads, so a name change here actually
+  // propagates everywhere assignment.teacherName is used.
+  useEffect(() => {
+    if (!email) return;
+    let active = true;
+    smartDb.getOne("User", email).then((rec: any) => {
+      if (!active || !rec) return;
+      if (rec.displayName || rec.name) setName(rec.displayName || rec.name);
+      if (rec.phone) setPrefs(p => ({ ...p, phone: rec.phone }));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [email]);
+
   function set<K extends keyof Prefs>(k: K, v: Prefs[K]) { setPrefs(p => ({ ...p, [k]: v })); }
 
-  function save() {
+  async function save() {
+    setSaving(true);
     try {
       localStorage.setItem(LS_KEY(uid), JSON.stringify(prefs));
       // Persist sound selection globally so useNotifications can read it
       localStorage.setItem("sd_notification_sound", prefs.notifySound);
+      // Category/push toggles too, under a fixed key useNotifications reads
+      // directly (independent of the per-uid settings blob's shape).
+      localStorage.setItem("sd_notification_prefs", JSON.stringify({
+        push: prefs.notifyPush,
+        attendance: prefs.notifyAttendance, ptm: prefs.notifyPTM, leave: prefs.notifyLeave,
+      }));
+      // Real write to the User record — propagates to every page that reads
+      // the teacher's own name/phone (useTeacherClass and its ~25 callers).
+      await smartDb.update("User", email, { displayName: name, phone: prefs.phone });
+      await queryClient.invalidateQueries({ queryKey: ["teacher-user-record", email] });
       toast.success("Settings saved");
     } catch {
       toast.error("Could not save settings");
+    } finally {
+      setSaving(false);
     }
   }
-
-  const teacherName = (user as any)?.displayName || (user as any)?.name || assignment.teacherName;
-  const email = (user as any)?.email || "teacher@studentdiwan.edu.om";
 
   const nav = useMemo(() => ([
     { id: "profile", label: "Profile", Icon: User },
@@ -138,8 +159,8 @@ export default function TeacherSettings() {
               <p className="text-sm text-slate-400">{assignment.grade} · Section {assignment.section} — manage your preferences</p>
             </div>
           </div>
-          <button onClick={save} className="flex items-center gap-2 h-10 px-5 rounded-xl gradient-primary text-white text-sm font-bold shadow-lg shadow-primary/20">
-            <Save className="h-4 w-4" /> Save Changes
+          <button onClick={save} disabled={saving} className="flex items-center gap-2 h-10 px-5 rounded-xl gradient-primary text-white text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-60">
+            <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save Changes"}
           </button>
         </div>
 
@@ -162,18 +183,20 @@ export default function TeacherSettings() {
             <Section icon={User} title="Profile" desc="Your display details across the portal">
               <div className="flex items-center gap-4 mb-5">
                 <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center text-[#9810fa] font-black text-xl shrink-0">
-                  {teacherName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  {(name || "T").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-black text-slate-900">{teacherName}</p>
+                  <p className="font-black text-slate-900">{name}</p>
                   <p className="text-sm text-slate-400">Class Teacher · {assignment.subject}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">Full Name</label>
-                  <div className="flex items-center h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600">
-                    <User className="h-4 w-4 text-slate-400 mr-2" />{teacherName}
+                  <div className="relative">
+                    <User className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                    <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
+                      className="w-full h-11 pl-9 pr-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-[#9810fa] focus:ring-2 focus:ring-violet-100" />
                   </div>
                 </div>
                 <div>
@@ -201,11 +224,9 @@ export default function TeacherSettings() {
 
             {/* Notifications */}
             <Section icon={Bell} title="Notifications" desc="Choose what you get notified about">
-              <Row label="Email notifications" desc="Receive updates by email"><Toggle on={prefs.notifyEmail} onChange={v => set("notifyEmail", v)} /></Row>
-              <Row label="Push notifications" desc="In-app and browser alerts"><Toggle on={prefs.notifyPush} onChange={v => set("notifyPush", v)} /></Row>
-              <Row label="New submissions" desc="When students submit assignments/assessments"><Toggle on={prefs.notifySubmissions} onChange={v => set("notifySubmissions", v)} /></Row>
-              <Row label="Attendance alerts" desc="Daily reminders to mark attendance"><Toggle on={prefs.notifyAttendance} onChange={v => set("notifyAttendance", v)} /></Row>
-              <Row label="PTM reminders" desc="Parent-teacher meeting bookings"><Toggle on={prefs.notifyPTM} onChange={v => set("notifyPTM", v)} /></Row>
+              <Row label="Push notifications" desc="In-app toasts and browser alerts for every notification"><Toggle on={prefs.notifyPush} onChange={v => set("notifyPush", v)} /></Row>
+              <Row label="Attendance alerts" desc="Notifications about attendance submissions"><Toggle on={prefs.notifyAttendance} onChange={v => set("notifyAttendance", v)} /></Row>
+              <Row label="PTM notifications" desc="Parent-teacher meeting bookings, reschedules and reminders"><Toggle on={prefs.notifyPTM} onChange={v => set("notifyPTM", v)} /></Row>
               <Row label="Leave updates" desc="Status changes on your leave requests"><Toggle on={prefs.notifyLeave} onChange={v => set("notifyLeave", v)} /></Row>
               <Row label="Notification sound" desc="Alert tone played when a new notification arrives">
                 <div className="flex items-center gap-2">
@@ -229,16 +250,7 @@ export default function TeacherSettings() {
 
             {/* Class preferences */}
             <Section icon={GraduationCap} title="Class Preferences" desc="Defaults for your teaching workflow">
-              <Row label="Attendance view" desc="Default layout when marking attendance">
-                <div className="flex rounded-xl border border-slate-200 overflow-hidden">
-                  {(["list", "grid"] as const).map(v => (
-                    <button key={v} onClick={() => set("attendanceView", v)}
-                      className={cn("px-4 py-1.5 text-[12px] font-bold capitalize transition-colors", prefs.attendanceView === v ? "bg-[#9810fa] text-white" : "text-slate-500 hover:bg-slate-50")}>{v}</button>
-                  ))}
-                </div>
-              </Row>
               <Row label="Show decimals in gradebook" desc="Display marks like 87.5 instead of 88"><Toggle on={prefs.gradebookDecimals} onChange={v => set("gradebookDecimals", v)} /></Row>
-              <Row label="Auto-publish marks" desc="Release results to students as soon as you save"><Toggle on={prefs.autoPublishMarks} onChange={v => set("autoPublishMarks", v)} /></Row>
               <Row label="Landing page" desc="Where the portal opens after login">
                 <select value={prefs.landingPage} onChange={e => set("landingPage", e.target.value)}
                   className="h-9 px-3 rounded-xl border border-slate-200 text-[12px] font-semibold outline-none focus:border-[#9810fa] bg-white">
@@ -252,7 +264,7 @@ export default function TeacherSettings() {
             </Section>
 
             {/* Appearance */}
-            <Section icon={Palette} title="Appearance" desc="Theme and language">
+            <Section icon={Palette} title="Appearance" desc="Theme">
               <Row label="Theme" desc="Switch between light and dark mode">
                 <button onClick={toggleTheme}
                   className="flex items-center gap-2 h-9 px-4 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-700 hover:bg-slate-50">
@@ -260,36 +272,16 @@ export default function TeacherSettings() {
                   {theme === "dark" ? "Dark" : "Light"}
                 </button>
               </Row>
-              <Row label="Language" desc="Portal display language">
-                <div className="relative">
-                  <Globe className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <select value={prefs.language} onChange={e => set("language", e.target.value as Prefs["language"])}
-                    className="h-9 pl-9 pr-3 rounded-xl border border-slate-200 text-[12px] font-semibold outline-none focus:border-[#9810fa] bg-white">
-                    <option value="en">English</option>
-                    <option value="ar">العربية (Arabic)</option>
-                  </select>
-                </div>
-              </Row>
             </Section>
 
-            {/* Security */}
+            {/* Security — this app has no password-change flow or session
+                tracking to back a "change password"/"2FA"/"active sessions"
+                UI, so it isn't shown here rather than fabricating it. */}
             <Section icon={Shield} title="Security" desc="Protect your account">
-              <Row label="Change password" desc="Update your sign-in password">
-                <button onClick={() => toast.info("Open your password manager to change your password")}
-                  className="flex items-center gap-2 h-9 px-4 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-700 hover:bg-slate-50">
-                  <KeyRound className="h-4 w-4" /> Change
-                </button>
-              </Row>
-              <Row label="Two-factor authentication" desc="Add an extra layer of security at sign-in"><Toggle on={prefs.twoFactor} onChange={v => { set("twoFactor", v); toast.success(v ? "2FA enabled" : "2FA disabled"); }} /></Row>
-              <Row label="Active sessions" desc="This device · last active just now">
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600"><Smartphone className="h-4 w-4" /> 1 device</span>
-              </Row>
-              <Row label="Sign out everywhere" desc="End all other active sessions">
-                <button onClick={() => toast.success("Signed out of all other sessions")}
-                  className="flex items-center gap-2 h-9 px-4 rounded-xl border border-rose-200 text-[12px] font-bold text-rose-600 hover:bg-rose-50">
-                  <LogOut className="h-4 w-4" /> Sign Out All
-                </button>
-              </Row>
+              <p className="text-xs text-slate-400">
+                Password changes, two-factor authentication and session management aren't available yet in this portal.
+                Contact your school admin if you need help with account access.
+              </p>
             </Section>
 
             <div className="flex justify-end pb-6">
