@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudents } from '@/contexts/StudentContext';
+import { userRepository } from '@/repositories/UserRepository';
 import {
   User,
   Mail,
@@ -10,41 +12,80 @@ import {
   BookOpen,
   Lock,
   Bell,
-  Shield,
-  Eye,
-  Globe,
-  CreditCard,
   Smartphone,
   ChevronRight,
   CheckCircle,
   Settings,
   HelpCircle,
   ExternalLink,
-  Monitor,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { requestNotificationPermission } from '@/lib/pushNotifications';
 
+// Privacy/Theme/Language/Payment/App nav items were removed — this page
+// never had section-conditional rendering (every card below always
+// rendered regardless of `activeSection`), so those five items were dead
+// buttons that changed highlighted state but revealed nothing.
 const NAV_ITEMS = [
   { id: 'profile', label: 'Profile Settings', icon: User },
   { id: 'account', label: 'Account Settings', icon: Settings },
-  { id: 'security', label: 'Security Settings', icon: Shield },
   { id: 'notifications', label: 'Notification Settings', icon: Bell },
-  { id: 'privacy', label: 'Privacy Settings', icon: Eye },
-  { id: 'theme', label: 'Theme Settings', icon: Globe },
-  { id: 'language', label: 'Language Settings', icon: Globe, hasChevron: true },
-  { id: 'payment', label: 'Payment Settings', icon: CreditCard, hasChevron: true },
-  { id: 'app', label: 'App Preferences', icon: Smartphone },
 ];
 
 export default function StudentSettings() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { students } = useStudents();
   const [activeSection, setActiveSection] = useState('profile');
 
+  // Real per-account preferences, persisted on the user's own `users` row
+  // via the self-write carve-out (server.ts USER_SELF_WRITABLE_FIELDS) —
+  // same fix as ParentSettings.tsx. These used to be local-only useState,
+  // silently resetting to "on" on every reload.
   const [emailNotif, setEmailNotif] = useState(true);
   const [smsNotif, setSmsNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    userRepository.getOne(user.uid).then(row => {
+      if (!row) return;
+      if (typeof row.emailNotif === "boolean") setEmailNotif(row.emailNotif);
+      if (typeof row.smsNotif === "boolean") setSmsNotif(row.smsNotif);
+    }).catch(() => {});
+  }, [user?.uid]);
+
+  async function updateNotifPref(field: "emailNotif" | "smsNotif", value: boolean) {
+    if (!user?.uid) return;
+    try {
+      await userRepository.update(user.uid, { [field]: value } as any);
+    } catch {
+      toast.error("Failed to save preference");
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!user?.email || changingPassword) return;
+    setChangingPassword(true);
+    try {
+      const res = await fetch("/api/session/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Couldn't send the reset email — please try again.");
+        return;
+      }
+      toast.success(data.message || "If an account exists for that email, a reset link has been sent.");
+    } catch {
+      toast.error("Couldn't reach the server — please try again.");
+    } finally {
+      setChangingPassword(false);
+    }
+  }
 
   const student = useMemo(() => {
     if (!students?.length) return null;
@@ -301,75 +342,20 @@ export default function StudentSettings() {
                     <input
                       type="password"
                       readOnly
-                      defaultValue="password"
+                      value="••••••••"
+                      aria-label="Password (hidden)"
                       className="flex-1 px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
                     />
                     <button
-                      onClick={() =>
-                        toast.success('Password reset link sent to your registered email.')
-                      }
-                      className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                      className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors disabled:opacity-60"
                     >
                       <Lock className="w-4 h-4" />
-                      Change Password
+                      {changingPassword ? "Sending…" : "Change Password"}
                     </button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Security Settings */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <div className="mb-5">
-                <h2 className="text-base font-semibold text-gray-900">Security Settings</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Keep your account secure.</p>
-              </div>
-
-              <div className="space-y-3">
-                {/* Two-Factor Authentication */}
-                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <Shield className="w-5 h-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Two-Factor Authentication</p>
-                      <p className="text-xs text-gray-500">Add an extra layer of security</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
-                      <CheckCircle className="w-3 h-3" />
-                      Enabled
-                    </span>
-                    <button
-                      onClick={() => toast.info('Opening security settings…')}
-                      className="text-xs font-semibold text-purple-600 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-colors"
-                    >
-                      Manage
-                    </button>
-                  </div>
-                </div>
-
-                {/* Login Alerts */}
-                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <Bell className="w-5 h-5 text-purple-500" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Login Alerts</p>
-                      <p className="text-xs text-gray-500">Get notified of new sign-ins</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
-                      <CheckCircle className="w-3 h-3" />
-                      Enabled
-                    </span>
-                    <button
-                      onClick={() => toast.info('Opening security settings…')}
-                      className="text-xs font-semibold text-purple-600 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50 transition-colors"
-                    >
-                      Manage
-                    </button>
-                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">We'll email a reset link to {email}.</p>
                 </div>
               </div>
             </div>
@@ -391,7 +377,7 @@ export default function StudentSettings() {
                     <p className="text-sm font-medium text-gray-800">Email Notifications</p>
                   </div>
                   <button
-                    onClick={() => setEmailNotif((v) => !v)}
+                    onClick={() => { const v = !emailNotif; setEmailNotif(v); updateNotifPref("emailNotif", v); }}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       emailNotif ? 'bg-purple-600' : 'bg-gray-300'
                     }`}
@@ -411,7 +397,7 @@ export default function StudentSettings() {
                     <p className="text-sm font-medium text-gray-800">SMS Notifications</p>
                   </div>
                   <button
-                    onClick={() => setSmsNotif((v) => !v)}
+                    onClick={() => { const v = !smsNotif; setSmsNotif(v); updateNotifPref("smsNotif", v); }}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       smsNotif ? 'bg-purple-600' : 'bg-gray-300'
                     }`}
@@ -489,38 +475,11 @@ export default function StudentSettings() {
                 {[
                   {
                     label: 'Change Password',
-                    onClick: () => {
-                      setActiveSection('account');
-                      toast.info('Use the Change Password option in Account Settings.');
-                    },
+                    onClick: () => { setActiveSection('account'); handleChangePassword(); },
                   },
                   {
                     label: 'Notification Preferences',
-                    onClick: () => {
-                      setActiveSection('notifications');
-                      toast.info('Opening notification preferences…');
-                    },
-                  },
-                  {
-                    label: 'Privacy Preferences',
-                    onClick: () => {
-                      setActiveSection('privacy');
-                      toast.info('Opening privacy preferences…');
-                    },
-                  },
-                  {
-                    label: 'Theme Preferences',
-                    onClick: () => {
-                      setActiveSection('theme');
-                      toast.info('Opening theme preferences…');
-                    },
-                  },
-                  {
-                    label: 'Language Preferences',
-                    onClick: () => {
-                      setActiveSection('language');
-                      toast.info('Opening language preferences…');
-                    },
+                    onClick: () => setActiveSection('notifications'),
                   },
                 ].map((item) => (
                   <li key={item.label}>
@@ -536,40 +495,6 @@ export default function StudentSettings() {
               </ul>
             </div>
 
-            {/* Session Management */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <p className="text-sm font-semibold text-gray-800 mb-1">Session Management</p>
-              <p className="text-xs text-gray-500 mb-3">You are currently logged in.</p>
-
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 mb-3">
-                <div className="flex items-start gap-2 mb-2">
-                  <Monitor className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-800 leading-tight">
-                      Windows • Chrome
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-tight">
-                      Mumbai, India
-                    </p>
-                    <p className="text-xs text-gray-500 leading-tight">
-                      20 May 2026, 10:30 AM
-                    </p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  This Device
-                </span>
-              </div>
-
-              <button
-                onClick={() => toast.info('No other active sessions.')}
-                className="w-full py-2 text-xs font-semibold text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
-              >
-                View All Sessions
-              </button>
-            </div>
-
             {/* Help & Support */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
               <div className="flex items-center gap-2 mb-1">
@@ -582,16 +507,8 @@ export default function StudentSettings() {
               <ul className="space-y-2">
                 {[
                   {
-                    label: 'Visit Help Center',
-                    onClick: () => toast.info('Opening Help Center…'),
-                  },
-                  {
-                    label: 'Contact Support',
-                    onClick: () => toast.info('Connecting you to Support…'),
-                  },
-                  {
-                    label: 'Privacy Policy',
-                    onClick: () => toast.info('Opening Privacy Policy…'),
+                    label: 'Message School Office',
+                    onClick: () => navigate('/communication/messages'),
                   },
                 ].map((link) => (
                   <li key={link.label}>
