@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { StaticKpiCard } from "@/components/dashboard/StaticKpiCard";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
 import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
 import { StudentDistributionDonut } from "@/components/dashboard/StudentDistributionDonut";
@@ -115,18 +115,9 @@ const AdminIndex = () => {
             real, active scorecard of their own to complete. */}
         <MyAppraisalWidget />
 
-        {/* KPI Cards — same loading-skeleton treatment as /finance/statements'
-            KPI row (Array(N).fill(0).map(... animate-pulse h-32 ...)) while
-            the real overview data is still loading, instead of rendering
-            cards with stale/zeroed values for a flash. */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {overview.loading ? (
-            Array(5).fill(0).map((_, i) => (
-              <div key={i} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm animate-pulse h-32" />
-            ))
-          ) : (
-          <>
-          <StaticKpiCard
+          <KpiCard
             title="Total Students"
             value={totalStudents || 0}
             icon={Users}
@@ -134,10 +125,11 @@ const AdminIndex = () => {
             trendType="up"
             description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
+            index={0}
             trendSeries={cumulativeCountTrend(students as any, totalStudents || 0)}
             accentColor="#4f46e5"
           />
-          <StaticKpiCard
+          <KpiCard
             title="Attendance Today"
             value={`${overview.attendanceBreakdown.presentPct}%`}
             icon={UserCheck}
@@ -145,10 +137,11 @@ const AdminIndex = () => {
             trendType={overview.attendanceBreakdown.presentPct >= 90 ? "up" : "neutral"}
             description={overview.attendanceBreakdown.date ? `as of ${overview.attendanceBreakdown.date}` : "no data yet"}
             iconClassName="bg-emerald-50 text-emerald-600"
+            index={1}
             trendSeries={overview.attendanceTrend}
             accentColor="#10b981"
           />
-          <StaticKpiCard
+          <KpiCard
             title="Total Staff"
             value={staff.length || 0}
             icon={GraduationCap}
@@ -156,10 +149,11 @@ const AdminIndex = () => {
             trendType="up"
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
+            index={2}
             trendSeries={cumulativeCountTrend(staff as any, staff.length || 0)}
             accentColor="#9810fa"
           />
-          <StaticKpiCard
+          <KpiCard
             title={`Fee Collection (${currencySymbol})`}
             value={overview.feeOverview.collected}
             icon={DollarSign}
@@ -167,10 +161,11 @@ const AdminIndex = () => {
             trendType="up"
             description="this month"
             iconClassName="bg-blue-50 text-blue-600"
+            index={3}
             trendSeries={overview.feeTrend}
             accentColor="#3b82f6"
           />
-          <StaticKpiCard
+          <KpiCard
             title="Pending Tasks"
             value={overview.pendingTasksCount}
             icon={ClipboardList}
@@ -178,10 +173,9 @@ const AdminIndex = () => {
             trendType={overview.pendingTasksCount > 0 ? "down" : "up"}
             description="awaiting review"
             iconClassName="bg-rose-50 text-rose-600"
+            index={4}
             accentColor="#f43f5e"
           />
-          </>
-          )}
         </div>
 
         {/* Student Distribution / Attendance / Fees Row */}
