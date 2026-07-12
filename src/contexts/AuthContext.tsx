@@ -31,6 +31,12 @@ interface AuthContextType {
   login: () => Promise<boolean>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Reflects a freshly-saved photoURL into the cached session immediately
+   *  (e.g. after Teacher Settings uploads a new profile photo) — the local
+   *  session is restored from sessionStorage on every refresh rather than
+   *  re-fetched from the User record, so without this the header/sidebar
+   *  avatar would keep showing the old photo until the next full login. */
+  updateUserPhoto: (photoURL: string) => void;
 }
 
 const authContextDefault: AuthContextType = {
@@ -38,6 +44,7 @@ const authContextDefault: AuthContextType = {
   isMockSession: false, isImpersonating: false, canImpersonate: false,
   impersonateRole: () => {}, stopImpersonating: () => {},
   login: async () => false, loginWithEmail: async () => {}, logout: async () => {},
+  updateUserPhoto: () => {},
 };
 export const AuthContext = createContext<AuthContextType>(authContextDefault);
 
@@ -287,7 +294,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           uid: data.user.uid,
           email: data.user.email,
           displayName: data.user.displayName,
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.uid}`,
+          // Real uploaded photo (Teacher Settings) wins; only fall back to a
+          // generated placeholder when the account has never set one.
+          photoURL: data.user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.user.uid}`,
           emailVerified: true,
         } as User;
 
@@ -309,6 +318,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error(error instanceof Error ? error.message : 'Failed to login');
       throw error;
     }
+  }, []);
+
+  const updateUserPhoto = useCallback((photoURL: string) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, photoURL } as User;
+      try { sessionStorage.setItem('sd_user', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
   }, []);
 
   const logout = useCallback(async () => {
@@ -350,9 +368,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = useMemo(() => ({
     user, role, realRole, loading, isMockSession,
     isImpersonating, canImpersonate, impersonateRole, stopImpersonating,
-    login, loginWithEmail, logout,
+    login, loginWithEmail, logout, updateUserPhoto,
   }), [user, role, realRole, loading, isMockSession, isImpersonating, canImpersonate,
-      impersonateRole, stopImpersonating, login, loginWithEmail, logout]);
+      impersonateRole, stopImpersonating, login, loginWithEmail, logout, updateUserPhoto]);
 
   return (
     <AuthContext.Provider value={value}>

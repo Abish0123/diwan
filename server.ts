@@ -287,7 +287,7 @@ const ADMIN_ONLY_ENTITIES = new Set(["payroll", "users", "financial_settings", "
 // NOT include role/assignedGrade/assignedSection/permissions/password/etc.,
 // so this can never become a self-privilege-escalation path; the PUT handler
 // strips anything outside this list before merging a self-write.
-const USER_SELF_WRITABLE_FIELDS = new Set(["displayName", "name", "phone"]);
+const USER_SELF_WRITABLE_FIELDS = new Set(["displayName", "name", "phone", "photoURL"]);
 
 function authorizeEntityAccess(entity: string, auth: SessionAuth, id?: string, method: "read" | "write" = "read"): boolean {
   if (getRole(auth.role).full === true) return true;
@@ -2033,7 +2033,7 @@ async function startServer() {
         const userData = JSON.parse(user.data);
         const role = userData.role || "staff";
         res.json({
-          user: { uid: user.id, email: userData.email, displayName: userData.name || userData.displayName, role },
+          user: { uid: user.id, email: userData.email, displayName: userData.name || userData.displayName, role, photoURL: userData.photoURL || undefined },
           token: signSessionToken({ uid: user.id, email: userData.email || email, role, branchId: userData.branchId || undefined })
         });
       } else if (isDefaultAdmin) {

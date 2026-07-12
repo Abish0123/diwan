@@ -19,7 +19,11 @@
     "auditLogs": "سجلات المراجعة", "gradebook": "دفتر الدرجات", "reportCards": "بطاقات التقارير",
     "health": "السجلات الصحية", "alumni": "الخريجون", "behavior": "السلوك",
     "graduates": "المتخرجون", "coding": "تقييمات البرمجة", "plagiarism": "كشف الانتحال",
-    "parentPortal": "بوابة ولي الأمر", "studentPortal": "بوابة الطالب"
+    "parentPortal": "بوابة ولي الأمر", "studentPortal": "بوابة الطالب",
+    "myClasses": "صفوفي", "homework": "الواجبات المنزلية", "assessments": "التقييمات",
+    "studyMaterials": "المواد الدراسية", "flashCards": "البطاقات التعليمية",
+    "marksEntry": "إدخال الدرجات", "myInvigilations": "مراقبتي للامتحانات",
+    "ptmBooking": "حجز اجتماع أولياء الأمور", "projectReports": "تقارير المشاريع"
   },
   "common": {
     "search": "بحث", "filter": "تصفية", "export": "تصدير", "import": "استيراد",

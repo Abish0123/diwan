@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard, LayoutGrid, GraduationCap, Users, BookOpen,
   Calendar, UserCheck, UserPlus, Shield, Award,
@@ -43,6 +44,27 @@ import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { useTeacherScopes } from "@/hooks/useTeacherScopes";
 import { useExams, matchesSection } from "@/lib/examStore";
 
+// Maps a nav item's canonical English title (still used everywhere else —
+// React keys, badge-count comparisons, search matching) to its i18n key, so
+// switching language only changes what's DISPLAYED, never the identifiers
+// the rest of this file compares against. Titles with no entry here just
+// render in English, same as before.
+const NAV_TITLE_TO_KEY: Record<string, string> = {
+  "Dashboard": "nav.dashboard", "My Classes": "nav.myClasses", "Students": "nav.students",
+  "Attendance": "nav.attendance", "Behavior": "nav.behavior", "Timetable": "nav.timetable",
+  "Assignments": "nav.assignments", "Homework": "nav.homework", "Assessments": "nav.assessments",
+  "Gradebook": "nav.gradebook", "Study Materials": "nav.studyMaterials", "Flash Cards": "nav.flashCards",
+  "Marks Entry": "nav.marksEntry", "My Invigilations": "nav.myInvigilations",
+  "Messages": "nav.messages", "Announcements": "nav.announcements", "Notifications": "nav.notifications",
+  "PTM Booking": "nav.ptmBooking", "Coding Assessments": "nav.coding", "Analytics": "nav.analytics",
+  "Leave Management": "nav.leave", "Project Reports": "nav.projectReports", "Settings": "nav.settings",
+};
+
+function navLabel(t: (key: string, fallback?: string) => string, title: string): string {
+  const key = NAV_TITLE_TO_KEY[title];
+  return key ? t(key, title) : title;
+}
+
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query.trim()) return <>{text}</>;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -61,6 +83,8 @@ function HighlightText({ text, query }: { text: string; query: string }) {
 function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, messagesUnreadCount, marksAwaitingCount, searchQuery = '' }: { item: NavItem; collapsed: boolean; unreadCount?: number; pendingPaymentCount?: number; messagesUnreadCount?: number; marksAwaitingCount?: number; searchQuery?: string }) {
   const [open, setOpen] = useState(false);
   const dark = useSidebarDark();
+  const { t } = useTranslation();
+  const label = navLabel(t, item.title);
   const hasSubItems = item.subItems && item.subItems.length > 0;
   const badgeCount = item.title === "Notifications" ? unreadCount : item.title === "Fees" ? pendingPaymentCount : item.title === "Messages" ? messagesUnreadCount : item.title === "Marks Entry" ? marksAwaitingCount : undefined;
 
@@ -74,10 +98,10 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
   if (collapsed) {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild className="h-10 w-10 p-0 flex items-center justify-center relative" tooltip={item.title}>
+        <SidebarMenuButton asChild className="h-10 w-10 p-0 flex items-center justify-center relative" tooltip={label}>
           <NavLink
             to={item.url || (hasSubItems ? item.subItems![0].url : "#")}
-            aria-label={item.title}
+            aria-label={label}
             className={cn("flex items-center justify-center rounded-lg transition-all", baseLink)}
             activeClassName={dark ? "bg-white/10 text-white rounded-lg border-l-2 border-[#d12386]" : "bg-[#9810fa]/10 text-[#9810fa] rounded-lg border-l-2 border-[#9810fa]"}
           >
@@ -100,7 +124,7 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
           className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150 w-full", baseLink)}
         >
           <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-          <span><HighlightText text={item.title} query={searchQuery} /></span>
+          <span><HighlightText text={label} query={searchQuery} /></span>
           <ChevronDown className={cn("ml-auto h-3 w-3 transition-transform duration-200", open && "rotate-180")} aria-hidden="true" />
         </SidebarMenuButton>
         {open && (
@@ -131,7 +155,7 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
           activeClassName={activeLink}
         >
           <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-          <span><HighlightText text={item.title} query={searchQuery} /></span>
+          <span><HighlightText text={label} query={searchQuery} /></span>
           {badgeCount !== undefined && badgeCount > 0 && (
             <Badge variant="secondary" className="ml-auto h-5 px-1.5 bg-rose-500 text-white border-none text-[10px] font-bold">
               {badgeCount > 9 ? '9+' : badgeCount}

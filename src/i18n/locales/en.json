@@ -19,7 +19,11 @@
     "auditLogs": "Audit Logs", "gradebook": "Gradebook", "reportCards": "Report Cards",
     "health": "Health Records", "alumni": "Alumni", "behavior": "Behavior",
     "graduates": "Graduates", "coding": "Coding Assessments", "plagiarism": "Plagiarism Check",
-    "parentPortal": "Parent Portal", "studentPortal": "Student Portal"
+    "parentPortal": "Parent Portal", "studentPortal": "Student Portal",
+    "myClasses": "My Classes", "homework": "Homework", "assessments": "Assessments",
+    "studyMaterials": "Study Materials", "flashCards": "Flash Cards",
+    "marksEntry": "Marks Entry", "myInvigilations": "My Invigilations",
+    "ptmBooking": "PTM Booking", "projectReports": "Project Reports"
   },
   "common": {
     "search": "Search", "filter": "Filter", "export": "Export", "import": "Import",

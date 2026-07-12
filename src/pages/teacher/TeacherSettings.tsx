@@ -5,7 +5,7 @@
 // which categories actually toast/push. Everything else (sound, gradebook
 // decimals, landing page) persists to localStorage keyed by the user, per
 // the app's client-only settings pattern.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,9 +14,10 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   Settings, User, Bell, GraduationCap, Palette, Shield,
-  Mail, Phone, BookOpen, Save, Moon, Sun, Volume2,
+  Mail, Phone, BookOpen, Save, Moon, Sun, Volume2, Camera, Loader2,
 } from "lucide-react";
 import { playNotificationSound } from "@/hooks/useNotifications";
 
@@ -80,7 +81,7 @@ function Row({ label, desc, children }: { label: string; desc?: string; children
 }
 
 export default function TeacherSettings() {
-  const { user } = useAuth();
+  const { user, updateUserPhoto } = useAuth();
   const { assignment } = useTeacherClass();
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
@@ -88,7 +89,10 @@ export default function TeacherSettings() {
   const email = (user as any)?.email || "teacher@studentdiwan.edu.om";
   const [prefs, setPrefs] = useState<Prefs>(DEFAULTS);
   const [name, setName] = useState((user as any)?.displayName || (user as any)?.name || assignment.teacherName || "");
+  const [photoURL, setPhotoURL] = useState<string>((user as any)?.photoURL || "");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -97,9 +101,11 @@ export default function TeacherSettings() {
     } catch { /* ignore */ }
   }, [uid]);
 
-  // Real name/phone from the User record itself (not local-only) — the
+  // Real name/phone/photo from the User record itself (not local-only) — the
   // same record useTeacherClass reads, so a name change here actually
-  // propagates everywhere assignment.teacherName is used.
+  // propagates everywhere assignment.teacherName is used. Only trusts a
+  // *real* stored photoURL (i.e. one that isn't the generated dicebear
+  // placeholder AuthContext falls back to) — an uploaded photo always wins.
   useEffect(() => {
     if (!email) return;
     let active = true;
@@ -107,11 +113,47 @@ export default function TeacherSettings() {
       if (!active || !rec) return;
       if (rec.displayName || rec.name) setName(rec.displayName || rec.name);
       if (rec.phone) setPrefs(p => ({ ...p, phone: rec.phone }));
+      if (rec.photoURL) setPhotoURL(rec.photoURL);
     }).catch(() => {});
     return () => { active = false; };
   }, [email]);
 
   function set<K extends keyof Prefs>(k: K, v: Prefs[K]) { setPrefs(p => ({ ...p, [k]: v })); }
+
+  // Real upload: same FileReader → POST /api/uploads → stored-file-URL flow
+  // Documents.tsx already uses, not a base64 blob stuffed directly into the
+  // User record (which would bloat every fetch of it).
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please choose an image file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+    setUploadingPhoto(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, fileData: dataUrl }),
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      await smartDb.update("User", email, { photoURL: url });
+      setPhotoURL(url);
+      updateUserPhoto(url); // reflect immediately in the sidebar/header avatar
+      toast.success("Photo updated");
+    } catch {
+      toast.error("Could not upload photo");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -182,12 +224,29 @@ export default function TeacherSettings() {
             {/* Profile */}
             <Section icon={User} title="Profile" desc="Your display details across the portal">
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center text-[#9810fa] font-black text-xl shrink-0">
-                  {(name || "T").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  title="Change photo"
+                  className="relative w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center text-[#9810fa] font-black text-xl shrink-0 overflow-hidden group">
+                  {photoURL ? (
+                    <img src={photoURL} alt={name} className="w-full h-full object-cover" />
+                  ) : (
+                    (name || "T").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                  )}
+                  <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingPhoto ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
+                  </span>
+                </button>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                 <div>
                   <p className="font-black text-slate-900">{name}</p>
                   <p className="text-sm text-slate-400">Class Teacher · {assignment.subject}</p>
+                  <button type="button" onClick={() => photoInputRef.current?.click()} disabled={uploadingPhoto}
+                    className="text-[11px] font-semibold text-[#9810fa] hover:underline mt-0.5">
+                    {uploadingPhoto ? "Uploading…" : "Change photo"}
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -264,13 +323,16 @@ export default function TeacherSettings() {
             </Section>
 
             {/* Appearance */}
-            <Section icon={Palette} title="Appearance" desc="Theme">
+            <Section icon={Palette} title="Appearance" desc="Theme and language">
               <Row label="Theme" desc="Switch between light and dark mode">
                 <button onClick={toggleTheme}
                   className="flex items-center gap-2 h-9 px-4 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-700 hover:bg-slate-50">
                   {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                   {theme === "dark" ? "Dark" : "Light"}
                 </button>
+              </Row>
+              <Row label="Language" desc="Switches the sidebar and portal text — also flips layout to right-to-left for Arabic">
+                <LanguageSwitcher />
               </Row>
             </Section>
 
