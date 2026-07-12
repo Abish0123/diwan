@@ -6,6 +6,7 @@ import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { useMySubjects } from "@/hooks/useMySubjects";
 import { useAssignments } from "@/contexts/AssignmentContext";
 import { useNotices } from "@/contexts/NoticeContext";
+import { useLeave } from "@/contexts/LeaveContext";
 import { filterAnnouncementsForViewer } from "@/lib/announcementAudience";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
@@ -16,11 +17,25 @@ import { useTeacherCalendarEvents, TeacherCalendarEvent } from "@/hooks/useTeach
 import { useSweepProgress } from "@/hooks/useSweepProgress";
 import { CountUpNumber } from "@/components/dashboard/CountUpNumber";
 import { StaticKpiCard } from "@/components/dashboard/StaticKpiCard";
+import { useExams, examGrades } from "@/lib/examStore";
 import {
   Users, GraduationCap, ClipboardList, CheckCircle2, MessageSquare,
   CalendarCheck, FilePlus2, UploadCloud, ClipboardCheck, FileText,
   Clock, Bell, Check, ChevronLeft, ChevronRight, CalendarDays,
+  ShieldAlert, CalendarClock, BookOpenCheck, FolderCheck,
 } from "lucide-react";
+
+// Real weekday name (Mon-Fri only) — used to fetch/filter "today's" real
+// schedule; matches the SCHOOL_DAYS convention TeacherTimetable.tsx uses.
+const DAYS_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const ADMIN_TIME_SLOTS = ["08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 01:00"];
+function normName(s: string) {
+  return (s || "").toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.)\s*/i, "").trim();
+}
+function nameMatches(cellTeacher: string, myName: string): boolean {
+  if (!cellTeacher || !myName) return false;
+  return normName(cellTeacher) === normName(myName);
+}
 
 /* ── Shared primitives ── */
 
@@ -519,6 +534,64 @@ function QuickLinksRow({ links }: { links: QuickLink[] }) {
   );
 }
 
+/* ── Alerts & Reminders ── */
+
+interface AlertItem {
+  id: string;
+  icon: typeof ShieldAlert;
+  iconClassName: string;
+  title: string;
+  detail: string;
+  fn: () => void;
+}
+
+function AlertsRemindersCard({ alerts, loading, onViewAll }: { alerts: AlertItem[]; loading: boolean; onViewAll: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.85, duration: 0.4 }}
+      className="premium-card p-4"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5">
+          <ShieldAlert className="h-4 w-4 text-primary" /> Alerts &amp; Reminders
+        </h3>
+        <button onClick={onViewAll} className="text-xs text-primary font-semibold hover:underline">Behaviour Log</button>
+      </div>
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map(i => <div key={i} className="h-11 rounded-xl bg-muted/40 animate-pulse" />)}
+        </div>
+      ) : alerts.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-6">No alerts — everything's up to date.</p>
+      ) : (
+        <div className="space-y-2">
+          {alerts.map((a, i) => (
+            <motion.button
+              key={a.id}
+              type="button"
+              onClick={a.fn}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.9 + i * 0.06, duration: 0.3 }}
+              className="w-full flex items-center gap-3 rounded-xl border border-border p-2.5 text-left transition-shadow hover:shadow-md"
+            >
+              <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", a.iconClassName)}>
+                <a.icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground truncate">{a.title}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{a.detail}</p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 /* ── Page ── */
 
 export default function TeacherDashboard() {
@@ -573,45 +646,78 @@ export default function TeacherDashboard() {
     new Set(mySubjects.map(s => `${s.grade}-${s.section}`)).size,
     [mySubjects]);
 
-  /* Today's timetable with live status (unchanged wiring) */
+  /* Today's timetable — real published-timetable-v3 DB fetch, the same real
+     source TeacherTimetable.tsx now uses. Previously this read a stale,
+     client-only "sd_teacher_timetables" localStorage cache (with a
+     hardcoded "Mr. Rizwan Ahmed" fallback name) that could silently
+     disagree with what the real Timetable page showed. */
+  const [dbTeachers, setDbTeachers] = useState<Record<string, any> | undefined>(undefined);
+  const [dbGrid, setDbGrid] = useState<Record<string, any> | undefined>(undefined);
+  useEffect(() => {
+    fetch("/api/data/timetable_slots/published-timetable-v3")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data || data.error) return;
+        if (data.teacherJson) { try { setDbTeachers(JSON.parse(data.teacherJson)); } catch {} }
+        if (data.gridJson) { try { setDbGrid(JSON.parse(data.gridJson)); } catch {} }
+      })
+      .catch(() => {});
+  }, []);
+
   const timetable = useMemo(() => {
     const nowMins = today.getHours() * 60 + today.getMinutes();
     const parse = (label: string) => {
-      const m = label.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      const m = label.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
       if (!m) return { start: 0, end: 0 };
-      const mer = (m[5] || "AM").toUpperCase();
-      const to24 = (h: number) => (mer === "PM" && h !== 12 ? h + 12 : mer === "AM" && h === 12 ? 0 : h);
+      const to24 = (h: number) => (h < 8 ? h + 12 : h);
       const sh = to24(parseInt(m[1], 10));
       const eh = to24(parseInt(m[3], 10));
       return { start: sh * 60 + parseInt(m[2], 10), end: eh * 60 + parseInt(m[4], 10) };
     };
-    try {
-      const stored = localStorage.getItem("sd_teacher_timetables");
-      if (stored) {
-        const data = JSON.parse(stored);
-        const name = assignment.teacherName || "Mr. Rizwan Ahmed";
-        const teacherData = data[name];
-        if (teacherData && teacherData.schedule) {
-          const day = today.getDay();
-          const dayIdx = day === 0 ? 0 : day - 1;
-          const list: { period: number; subject: string; grade: string; time: string; status: "Completed" | "Current" | "Upcoming" }[] = [];
-          teacherData.schedule.forEach((row: any[], ri: number) => {
-            const slot = row[dayIdx];
-            if (slot) {
-              const timeRange = teacherData.times?.[ri] || "08:00 - 09:00";
-              const { start, end } = parse(timeRange);
-              let status: "Completed" | "Current" | "Upcoming" = "Upcoming";
-              if (nowMins >= end) status = "Completed";
-              else if (nowMins >= start && nowMins < end) status = "Current";
-              list.push({ period: ri + 1, subject: slot.subject, grade: `${slot.grade} - ${slot.section}`, time: timeRange, status });
-            }
-          });
-          if (list.length > 0) return list;
-        }
+    const statusFor = (time: string): "Completed" | "Current" | "Upcoming" => {
+      const { start, end } = parse(time);
+      if (nowMins >= end) return "Completed";
+      if (nowMins >= start && nowMins < end) return "Current";
+      return "Upcoming";
+    };
+    const dayIdx = today.getDay() === 0 ? -1 : today.getDay() - 1; // Mon=0..Fri=4, Sun=-1 (no school)
+    if (dayIdx < 0 || dayIdx > 4) return [];
+    const list: { period: number; subject: string; grade: string; time: string; status: "Completed" | "Current" | "Upcoming" }[] = [];
+    const myNorm = normName(assignment.teacherName);
+
+    // Source 1: compiled per-teacher schedule.
+    if (dbTeachers) {
+      const key = Object.keys(dbTeachers).find(k =>
+        k === assignment.teacherName || k.toLowerCase() === (assignment.teacherName || "").toLowerCase() || normName(k) === myNorm
+      );
+      if (key) {
+        const { schedule } = dbTeachers[key] || {};
+        (schedule || []).forEach((row: any[], ri: number) => {
+          const slot = row?.[dayIdx];
+          if (slot) {
+            const time = ADMIN_TIME_SLOTS[ri] || `Period ${ri + 1}`;
+            list.push({ period: ri + 1, subject: slot.subject, grade: `${slot.grade} - ${slot.section}`, time, status: statusFor(time) });
+          }
+        });
       }
-    } catch { /* ignore */ }
-    return [];
-  }, [today, assignment.teacherName]);
+    }
+    if (list.length > 0) return list;
+
+    // Source 2: scan the full class grid, matching by real teacher name.
+    if (dbGrid) {
+      Object.values(dbGrid).forEach((grid: any) => {
+        if (!Array.isArray(grid)) return;
+        grid.forEach((row: any[], ri: number) => {
+          const cell = row?.[dayIdx];
+          if (cell && nameMatches(cell.teacher, assignment.teacherName)) {
+            const time = ADMIN_TIME_SLOTS[ri] || `Period ${ri + 1}`;
+            list.push({ period: ri + 1, subject: cell.subject, grade: cell.grade || "", time, status: statusFor(time) });
+          }
+        });
+      });
+    }
+    return list.sort((a, b) => a.period - b.period);
+  }, [today, assignment.teacherName, dbTeachers, dbGrid]);
 
   /* Recent notices (unchanged wiring) */
   const recentNotices = useMemo(() =>
@@ -667,6 +773,88 @@ export default function TeacherDashboard() {
       .slice(0, 4);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignments, totalStudents]);
+
+  /* Alerts & Reminders — real Behaviour/Leave/Marks/Study-Materials signals,
+     each from the same store the dedicated module page for that data uses. */
+  const { leaves } = useLeave();
+  const exams = useExams();
+  const [negativeBehaviorCount, setNegativeBehaviorCount] = useState(0);
+  const [recentMaterialsCount, setRecentMaterialsCount] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const sevenDaysAgo = Date.now() - 7 * 86400000;
+    (async () => {
+      try {
+        const records = await smartDb.getAll("BehaviorRecord", undefined) as any[];
+        if (!active) return;
+        const count = (records || []).filter(r =>
+          String(r.grade) === String(assignment.grade) &&
+          r.section === assignment.section &&
+          r.type === "negative" &&
+          new Date(r.date).getTime() >= sevenDaysAgo
+        ).length;
+        setNegativeBehaviorCount(count);
+      } catch { /* ignore */ }
+      try {
+        const materials = await smartDb.getAll("StudyMaterial", user.uid) as any[];
+        if (!active) return;
+        const count = (materials || []).filter(m => new Date(m.createdAt).getTime() >= sevenDaysAgo).length;
+        setRecentMaterialsCount(count);
+      } catch { /* ignore */ }
+    })();
+    return () => { active = false; };
+  }, [user, assignment.grade, assignment.section]);
+
+  const pendingLeaveCount = useMemo(() =>
+    leaves.filter(l => l.status === "Pending").length,
+    [leaves]);
+
+  const marksPendingExams = useMemo(() => {
+    const myGrades = new Set(mySubjects.map(s => String(s.grade)));
+    return exams.filter(e =>
+      e.status === "Completed" && e.publishedToTeachers && !e.publishedToStudents &&
+      examGrades(e).some(g => myGrades.has(String(g)))
+    );
+  }, [exams, mySubjects]);
+
+  const alertsLoading = !user;
+  const alerts: AlertItem[] = useMemo(() => {
+    const items: AlertItem[] = [];
+    if (negativeBehaviorCount > 0) {
+      items.push({
+        id: "behavior", icon: ShieldAlert, iconClassName: "bg-rose-50 text-rose-600",
+        title: `${negativeBehaviorCount} behaviour flag${negativeBehaviorCount === 1 ? "" : "s"} this week`,
+        detail: `Logged for ${className}`,
+        fn: () => navigate("/teacher/behavior"),
+      });
+    }
+    if (pendingLeaveCount > 0) {
+      items.push({
+        id: "leave", icon: CalendarClock, iconClassName: "bg-amber-50 text-amber-600",
+        title: `${pendingLeaveCount} leave request${pendingLeaveCount === 1 ? "" : "s"} pending`,
+        detail: "Awaiting approval",
+        fn: () => navigate("/hr/leave"),
+      });
+    }
+    if (marksPendingExams.length > 0) {
+      items.push({
+        id: "marks", icon: BookOpenCheck, iconClassName: "bg-primary/10 text-primary",
+        title: `${marksPendingExams.length} exam${marksPendingExams.length === 1 ? "" : "s"} need marks entry`,
+        detail: marksPendingExams.slice(0, 2).map(e => e.name).join(", "),
+        fn: () => navigate("/teacher/exams"),
+      });
+    }
+    if (recentMaterialsCount > 0) {
+      items.push({
+        id: "materials", icon: FolderCheck, iconClassName: "bg-emerald-50 text-emerald-600",
+        title: `${recentMaterialsCount} material${recentMaterialsCount === 1 ? "" : "s"} uploaded this week`,
+        detail: "Study Materials",
+        fn: () => navigate("/teacher/study-materials"),
+      });
+    }
+    return items;
+  }, [negativeBehaviorCount, pendingLeaveCount, marksPendingExams, recentMaterialsCount, className, navigate]);
 
   const KPIS: KpiSpec[] = [
     {
@@ -739,6 +927,10 @@ export default function TeacherDashboard() {
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-5">
           <AnnouncementsCard notices={recentNotices} onViewAll={() => navigate("/communication/announcements")} />
           <UpcomingEventsCard events={upcomingEvents} loading={eventsLoading} onViewAll={() => navigate("/communication/calendar")} />
+        </div>
+
+        <div className="relative">
+          <AlertsRemindersCard alerts={alerts} loading={alertsLoading} onViewAll={() => navigate("/teacher/behavior")} />
         </div>
 
         <div className="relative">
