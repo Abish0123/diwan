@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
@@ -12,6 +13,12 @@ import {
   ChevronRight, FileText
 } from "lucide-react";
 
+// NOTE: title/desc/purpose here are plain English strings used as the
+// canonical data identity (persisted request rows are matched against
+// cert.title in smartDb, so this field cannot be swapped for a translation
+// key without breaking that matching logic). This module-level constant has
+// no hook access anyway. Display-time translation is applied at render via
+// a `student.certificates.certType.<id>.*` key keyed off `cert.id`.
 const CERT_TYPES = [
   { id: "enroll", title: "Enrollment Certificate", desc: "Official proof of active student registration and grade enrollment.", purpose: "Visa, bank, or insurance documentation" },
   { id: "conduct", title: "Conduct & Character Certificate", desc: "Attestation of behavioral compliance and moral standards.", purpose: "Transferring or high-school application" },
@@ -20,6 +27,7 @@ const CERT_TYPES = [
 ];
 
 export default function StudentCertificates() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const [selectedCert, setSelectedCert] = useState(CERT_TYPES[0]);
@@ -91,9 +99,9 @@ export default function StudentCertificates() {
         { id: row?.id || `R${createdAt}`, title: cert.title, date: payload.date, status: "Pending", code, createdAt },
         ...prev,
       ]);
-      toast.success(`Request logged for "${cert.title}". Verification is pending.`);
+      toast.success(t("student.certificates.toast.requestLogged", { title: t(`student.certificates.certType.${cert.id}.title`) }));
     } catch {
-      toast.error("Could not submit request. Please try again.");
+      toast.error(t("student.certificates.toast.requestFailed"));
     } finally {
       setRequestingId(null);
     }
@@ -112,72 +120,72 @@ export default function StudentCertificates() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                <Award className="h-5.5 w-5.5 text-purple-600" /> Digital Certificates Portal
+                <Award className="h-5.5 w-5.5 text-purple-600" /> {t("student.certificates.pageTitle")}
               </h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Generate official verified student credentials and clearance papers.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("student.certificates.pageSubtitle")}</p>
             </div>
 
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="h-9 text-xs gradient-primary border-none text-white rounded-xl shadow-md outline-none"
               onClick={handlePrint}
             >
-              <Printer className="h-4 w-4 mr-1.5" /> Print Preview Frame
+              <Printer className="h-4 w-4 me-1.5" /> {t("student.certificates.printPreviewButton")}
             </Button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-            
+
             {/* Left: Certificate choice panel (hidden on print) */}
             <div className="lg:col-span-2 space-y-6 print:hidden">
               <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 space-y-4 shadow-sm">
-                <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">Select Certificate Type</h3>
-                
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">{t("student.certificates.selectTypeHeading")}</h3>
+
                 <div className="space-y-2">
                   {CERT_TYPES.map(cert => (
                     <button
                       key={cert.id}
                       onClick={() => setSelectedCert(cert)}
                       className={cn(
-                        "w-full text-left p-4 rounded-2xl border text-xs font-bold transition-all outline-none flex items-center justify-between group",
-                        selectedCert.id === cert.id 
-                          ? "bg-violet-50/50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-900/30 text-slate-800 dark:text-white" 
+                        "w-full text-start p-4 rounded-2xl border text-xs font-bold transition-all outline-none flex items-center justify-between group",
+                        selectedCert.id === cert.id
+                          ? "bg-violet-50/50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-900/30 text-slate-800 dark:text-white"
                           : "bg-transparent border-slate-100 dark:border-slate-850 hover:bg-slate-50/50 dark:hover:bg-slate-850 text-slate-500 dark:text-slate-400"
                       )}
                     >
-                      <div className="min-w-0 pr-2">
-                        <p className="font-extrabold truncate text-sm">{cert.title}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 leading-relaxed font-semibold">{cert.purpose}</p>
+                      <div className="min-w-0 pe-2">
+                        <p className="font-extrabold truncate text-sm">{t(`student.certificates.certType.${cert.id}.title`)}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 leading-relaxed font-semibold">{t(`student.certificates.certType.${cert.id}.purpose`)}</p>
                       </div>
-                      <ChevronRight className="h-4.5 w-4.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-purple-600" />
+                      <ChevronRight className="h-4.5 w-4.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-purple-600 rtl:rotate-180" />
                     </button>
                   ))}
                 </div>
 
                 <div className="pt-4 border-t border-slate-50 dark:border-slate-800/20">
-                  <Button 
+                  <Button
                     className="w-full h-10 text-xs gradient-primary border-none text-white rounded-xl shadow-md outline-none"
                     disabled={requestingId === selectedCert.id}
                     onClick={() => handleRequest(selectedCert)}
                   >
-                    {requestingId === selectedCert.id ? "Processing..." : "Request Verification"}
+                    {requestingId === selectedCert.id ? t("student.certificates.processingLabel") : t("student.certificates.requestVerificationButton")}
                   </Button>
                 </div>
               </div>
 
               {/* Request log table */}
               <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 space-y-4 shadow-sm">
-                <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">Recent Requests</h3>
-                
+                <h3 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">{t("student.certificates.recentRequestsHeading")}</h3>
+
                 <div className="space-y-3">
                   {requests.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-4">No certificate requests yet.</p>
+                    <p className="text-xs text-slate-400 text-center py-4">{t("student.certificates.noRequestsEmptyState")}</p>
                   )}
                   {requests.map((req) => (
                     <div key={req.id} className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-850 rounded-xl border border-slate-100 dark:border-slate-800">
                       <div>
                         <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-xs leading-none">{req.title}</h4>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-semibold">Submitted: {req.date} · Code: {req.code}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-semibold">{t("student.certificates.submittedMeta", { date: req.date, code: req.code })}</p>
                       </div>
                       <Badge
                         className={cn(
@@ -198,7 +206,7 @@ export default function StudentCertificates() {
             {/* Right: Certificate visual preview Frame */}
             <div className="lg:col-span-3 bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 shadow-sm overflow-hidden flex flex-col items-center justify-center transition-colors print:border-none print:shadow-none print:p-0">
               
-              <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-5 print:hidden">Live Certificate Preview Frame</p>
+              <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-5 print:hidden">{t("student.certificates.livePreviewLabel")}</p>
               
               {/* Actual Document Frame Container */}
               <div 
@@ -213,11 +221,11 @@ export default function StudentCertificates() {
                 {!isCertApproved && (
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-rose-600/25 font-black uppercase tracking-[0.3em] text-2xl sm:text-4xl -rotate-[18deg] leading-none text-center select-none">
-                      Unofficial
-                      <span className="block text-sm sm:text-lg tracking-[0.2em] mt-1">Preview Only</span>
+                      {t("student.certificates.watermarkUnofficial")}
+                      <span className="block text-sm sm:text-lg tracking-[0.2em] mt-1">{t("student.certificates.watermarkPreviewOnly")}</span>
                     </span>
                     <span className="absolute bottom-3 text-[8px] font-bold uppercase tracking-wider text-rose-600/70 text-center px-4">
-                      Not valid without school attestation
+                      {t("student.certificates.watermarkNotValid")}
                     </span>
                   </div>
                 )}
@@ -227,39 +235,39 @@ export default function StudentCertificates() {
                   <div className="w-12 h-12 bg-amber-800 rounded-full flex items-center justify-center text-white mb-2">
                     <Award className="h-6 w-6" />
                   </div>
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-amber-900">STUDENT DIWAN GLOBAL</h3>
-                  <p className="text-[7px] font-semibold text-slate-400 tracking-wider uppercase mt-1">Institutional Attestation Department</p>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-amber-900">{t("student.certificates.institutionName")}</h3>
+                  <p className="text-[7px] font-semibold text-slate-400 tracking-wider uppercase mt-1">{t("student.certificates.attestationDeptLabel")}</p>
                 </div>
 
                 {/* Certificate main text body */}
                 <div className="space-y-3 w-full">
                   <h1 className="text-xl font-serif text-amber-900 tracking-wide font-black uppercase">
-                    {selectedCert.title}
+                    {t(`student.certificates.certType.${selectedCert.id}.title`)}
                   </h1>
                   <p className="text-[9px] font-medium italic text-slate-500 leading-normal">
                     {isCertApproved
-                      ? "This is to officially attest and verify that"
-                      : "This is a draft preview for"}
+                      ? t("student.certificates.attestIntroApproved")
+                      : t("student.certificates.attestIntroDraft")}
                   </p>
                   <p className="text-lg font-black font-serif text-slate-800 border-b border-slate-200 w-fit mx-auto px-6 pb-1">
-                    {s?.name || "Student Diwan Guest"}
+                    {s?.name || t("student.certificates.guestStudentName")}
                   </p>
                   <p className="text-[9px] text-slate-600 max-w-sm mx-auto leading-relaxed">
-                    is registered as an active student of <strong className="font-extrabold">Grade {s?.grade || "—"} · Section {s?.section || "—"}</strong> under Admission admission reference number <strong className="font-extrabold">{s?.id || "—"}</strong>. The student is verified as compliant with all behavioral and administrative rules.
+                    {t("student.certificates.registrationStatement", { grade: s?.grade || "—", section: s?.section || "—", admissionId: s?.id || "—" })}
                   </p>
                 </div>
 
                 {/* Signatures */}
                 <div className="flex justify-between items-end w-full px-6 pt-4 border-t border-slate-100">
-                  <div className="text-left">
+                  <div className="text-start">
                     <p className="text-[8px] font-bold text-slate-800">
                       {isCertApproved && approvedRequest?.approvedAt
                         ? new Date(approvedRequest.approvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
                         : "—"}
                     </p>
-                    <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">Date of Attestation</p>
+                    <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">{t("student.certificates.dateOfAttestationLabel")}</p>
                   </div>
-                  
+
                   {/* Official gold seal stamp — only for approved/issued certificates */}
                   {isCertApproved ? (
                     <div className="w-11 h-11 border border-dashed border-amber-800/30 rounded-full flex items-center justify-center opacity-65">
@@ -267,20 +275,20 @@ export default function StudentCertificates() {
                     </div>
                   ) : (
                     <div className="w-11 h-11 border border-dashed border-slate-300 rounded-full flex items-center justify-center">
-                      <span className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider text-center leading-tight">Seal<br/>Pending</span>
+                      <span className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider text-center leading-tight">{t("student.certificates.sealPendingLine1")}<br/>{t("student.certificates.sealPendingLine2")}</span>
                     </div>
                   )}
 
-                  <div className="text-right">
+                  <div className="text-end">
                     {isCertApproved ? (
                       <>
-                        <p className="text-[8px] font-serif font-black italic text-amber-900">Registrar Office</p>
-                        <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">Official Signature</p>
+                        <p className="text-[8px] font-serif font-black italic text-amber-900">{t("student.certificates.registrarOfficeLabel")}</p>
+                        <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">{t("student.certificates.officialSignatureLabel")}</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-[8px] font-serif font-black italic text-slate-400">Awaiting Attestation</p>
-                        <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">Not Yet Signed</p>
+                        <p className="text-[8px] font-serif font-black italic text-slate-400">{t("student.certificates.awaitingAttestationLabel")}</p>
+                        <p className="text-[6px] font-extrabold uppercase text-slate-400 tracking-wider">{t("student.certificates.notYetSignedLabel")}</p>
                       </>
                     )}
                   </div>
@@ -289,7 +297,7 @@ export default function StudentCertificates() {
 
               {/* Tips */}
               <div className="mt-5 text-[10px] text-slate-400 text-center flex items-center gap-1.5 print:hidden">
-                <FileText className="h-3.5 w-3.5" /> Verification code will update dynamically once approved.
+                <FileText className="h-3.5 w-3.5" /> {t("student.certificates.verificationCodeTip")}
               </div>
 
             </div>

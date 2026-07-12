@@ -19,6 +19,7 @@ import {
   ChevronRight, Users, Activity, Target, Shield, AlertCircle
 } from "lucide-react";
 import { FeedbackRequestWidget } from "@/components/dashboard/FeedbackRequestWidget";
+import { useTranslation } from "react-i18next";
 
 // Real "Today's Schedule" is derived from the same published admin timetable
 // (timetable_slots) the full Timetable page reads — see src/pages/student/Timetable.tsx.
@@ -116,6 +117,7 @@ function CircularProgress({ percent, size = 60, strokeWidth = 5, colorClass = "t
 
 export default function StudentPortal() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
 
@@ -258,7 +260,7 @@ export default function StudentPortal() {
   const subjectScores = useMemo(() => {
     const map: Record<string, { total: number; count: number; max: number }> = {};
     myAssessments.forEach((a: any) => {
-      const subj = a.subject || "General";
+      const subj = a.subject || t('student.dashboard.subjectGeneralFallback');
       const entries = a.entries || {};
       const marks = entries[student?.id] ?? (typeof entries === "object" ? Object.values(entries)[0] : null);
       if (marks !== null && marks !== undefined) {
@@ -284,7 +286,7 @@ export default function StudentPortal() {
   const displayGrades = subjectScores.slice(0, 5);
 
   const displayTasks = myAssignments.slice(0, 5).map((a: any) => ({
-    title: a.title, subject: a.subject || "General",
+    title: a.title, subject: a.subject || t('student.dashboard.subjectGeneralFallback'),
     due: a.dueDate ? new Date(a.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—",
     priority: a.priority || "Medium",
     submitted: !!getSubmission(a.id),
@@ -294,9 +296,9 @@ export default function StudentPortal() {
   // Students/All, and class-targeted ones only for their own grade/section.
   const visibleNotices = filterAnnouncementsForViewer(notices, "student", [{ grade, section }], student?.id ? [student.id] : []);
   const displayNotices = visibleNotices.slice(0, 3).map((n: any, i: number) => ({
-    title: n.title || n.subject || "Notice",
+    title: n.title || n.subject || t('student.dashboard.noticeFallbackTitle'),
     desc: n.content || n.body || n.description || "",
-    time: n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-GB") : `${i + 1} day${i ? "s" : ""} ago`,
+    time: n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-GB") : t('student.dashboard.daysAgo', { count: i + 1 }),
     icon: Megaphone,
     color: "bg-violet-50 text-purple-600 dark:bg-violet-950/20",
   }));
@@ -307,14 +309,14 @@ export default function StudentPortal() {
     const items: { date: Date; title: string; sub: string }[] = [];
     myExams.forEach((e: any) => {
       const d = e.date || e.startDate;
-      if (d) items.push({ date: new Date(d), title: e.name || e.title || e.subject || "Exam", sub: e.subject || "Exam" });
+      if (d) items.push({ date: new Date(d), title: e.name || e.title || e.subject || t('student.dashboard.examFallbackLabel'), sub: e.subject || t('student.dashboard.examFallbackLabel') });
     });
     myAssessments.forEach((a: any) => {
       const d = a.date || a.dueDate;
-      if (d) items.push({ date: new Date(d), title: a.title || a.name || a.subject || "Assessment", sub: a.subject || "Assessment" });
+      if (d) items.push({ date: new Date(d), title: a.title || a.name || a.subject || t('student.dashboard.assessmentFallbackLabel'), sub: a.subject || t('student.dashboard.assessmentFallbackLabel') });
     });
     myAssignments.forEach((a: any) => {
-      if (a.dueDate) items.push({ date: new Date(a.dueDate), title: a.title || "Assignment", sub: `${a.subject || "Assignment"} due` });
+      if (a.dueDate) items.push({ date: new Date(a.dueDate), title: a.title || t('student.dashboard.assignmentFallbackLabel'), sub: t('student.dashboard.assignmentDueLabel', { subject: a.subject || t('student.dashboard.assignmentFallbackLabel') }) });
     });
     const now = new Date(); now.setHours(0, 0, 0, 0);
     return items
@@ -344,15 +346,20 @@ export default function StudentPortal() {
     return null;
   }, [myAttRec, student]);
 
+  const todayAttendanceLabel = todayAttendanceStatus === "Present" ? t('student.dashboard.statusPresent')
+    : todayAttendanceStatus === "Absent" ? t('student.dashboard.statusAbsent')
+    : todayAttendanceStatus === "Late" ? t('student.dashboard.statusLate')
+    : "";
+
   const todayStr = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const QUICK_LINKS = [
-    { label: "Study Materials", icon: BookOpen,   color: "bg-violet-55/10 text-violet-700 dark:bg-violet-950/20 hover:scale-105", href: "/student/study-materials" },
-    { label: "Flash Cards",     icon: Brain,      color: "bg-amber-55/10 text-amber-700 dark:bg-amber-950/20 hover:scale-105",   href: "/student/flashcards" },
-    { label: "Live Classes",    icon: Video,      color: "bg-sky-55/10 text-sky-700 dark:bg-sky-950/20 hover:scale-105",       href: "/academics/live-classes" },
-    { label: "Library",         icon: Library,    color: "bg-emerald-55/10 text-emerald-700 dark:bg-emerald-950/20 hover:scale-105", href: "/student/library" },
-    { label: "Certificates",    icon: Award,      color: "bg-pink-55/10 text-pink-700 dark:bg-pink-950/20 hover:scale-105",     href: "/student/certificates" },
-    { label: "Fee Details",     icon: DollarSign, color: "bg-orange-55/10 text-orange-700 dark:bg-orange-950/20 hover:scale-105", href: "/student/profile" },
+    { label: t('student.dashboard.studyMaterialsLink'), icon: BookOpen,   color: "bg-violet-55/10 text-violet-700 dark:bg-violet-950/20 hover:scale-105", href: "/student/study-materials" },
+    { label: t('student.dashboard.flashCardsLink'),     icon: Brain,      color: "bg-amber-55/10 text-amber-700 dark:bg-amber-950/20 hover:scale-105",   href: "/student/flashcards" },
+    { label: t('student.dashboard.liveClassesLink'),    icon: Video,      color: "bg-sky-55/10 text-sky-700 dark:bg-sky-950/20 hover:scale-105",       href: "/academics/live-classes" },
+    { label: t('student.dashboard.libraryLink'),        icon: Library,    color: "bg-emerald-55/10 text-emerald-700 dark:bg-emerald-950/20 hover:scale-105", href: "/student/library" },
+    { label: t('student.dashboard.certificatesLink'),   icon: Award,      color: "bg-pink-55/10 text-pink-700 dark:bg-pink-950/20 hover:scale-105",     href: "/student/certificates" },
+    { label: t('student.dashboard.feeDetailsLink'),     icon: DollarSign, color: "bg-orange-55/10 text-orange-700 dark:bg-orange-950/20 hover:scale-105", href: "/student/profile" },
   ];
 
   return (
@@ -368,29 +375,29 @@ export default function StudentPortal() {
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 bg-gradient-to-r from-[#9810fa] via-[#a322a3] to-[#d12386] rounded-[24px] p-8 text-white shadow-xl shadow-[#9810fa]/15 relative overflow-hidden flex flex-col justify-between">
               {/* decorative visual glassmorphism blobs */}
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-xl" />
-              <div className="absolute -bottom-16 right-24 w-36 h-36 bg-white/10 rounded-full blur-lg" />
-              
+              <div className="absolute -top-12 -end-12 w-48 h-48 bg-white/10 rounded-full blur-xl" />
+              <div className="absolute -bottom-16 end-24 w-36 h-36 bg-white/10 rounded-full blur-lg" />
+
               <div>
                 <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-1.5">{todayStr}</p>
-                <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight">Hello, {firstName}! 👋</h1>
+                <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight">{t('student.dashboard.helloName', { name: firstName })}</h1>
                 <p className="text-white/85 text-sm mt-2 max-w-lg leading-relaxed">
-                  Welcome back to your dashboard. Your academics are on track! Check your schedule and achievements below.
+                  {t('student.dashboard.welcomeMessage')}
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 mt-6">
                 <span className="flex items-center gap-1.5 text-xs bg-white/15 px-3.5 py-2 rounded-xl font-bold backdrop-blur-md border border-white/10">
-                  <GraduationCap className="h-4 w-4 text-pink-200" /> {grade} · Section {section}
+                  <GraduationCap className="h-4 w-4 text-pink-200" /> {t('student.dashboard.gradeSectionLabel', { grade, section })}
                 </span>
                 {todayAttendanceStatus && (
                   <span className="flex items-center gap-1.5 text-xs bg-white/15 px-3.5 py-2 rounded-xl font-bold backdrop-blur-md border border-white/10">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-300 animate-pulse" /> Today: {todayAttendanceStatus}
+                    <CheckCircle2 className="h-4 w-4 text-emerald-300 animate-pulse" /> {t('student.dashboard.todayLabel', { status: todayAttendanceLabel })}
                   </span>
                 )}
                 {student?.studentId && (
                   <span className="text-xs bg-white/15 px-3.5 py-2 rounded-xl font-bold backdrop-blur-md border border-white/10">
-                    ID: {student.studentId}
+                    {t('student.dashboard.idLabel', { id: student.studentId })}
                   </span>
                 )}
               </div>
@@ -403,15 +410,15 @@ export default function StudentPortal() {
                   <Trophy className="h-6 w-6 text-amber-500" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Trophy Track</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Excellent progress this term!</p>
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t('student.dashboard.trophyTrackTitle')}</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('student.dashboard.trophyTrackSubtitle')}</p>
                 </div>
               </div>
-              
+
               <div className="mt-6 space-y-3">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-500 dark:text-slate-400">Term Progress</span>
-                  <span className="text-purple-600 dark:text-violet-400">{avgScore !== null ? `${avgScore}%` : "No data yet"}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{t('student.dashboard.termProgress')}</span>
+                  <span className="text-purple-600 dark:text-violet-400">{avgScore !== null ? `${avgScore}%` : t('student.dashboard.noDataYet')}</span>
                 </div>
                 <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
@@ -428,11 +435,11 @@ export default function StudentPortal() {
           {/* ── 2. PREMIUM STAT CARDS ────────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
-              { label: "Attendance", value: attendancePct !== null ? `${attendancePct}%` : "—", sub: "This Month", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/10", border: "hover:border-emerald-200 dark:hover:border-emerald-950" },
-              { label: "Pending Tasks", value: String(pendingCount), sub: "Due Soon", icon: FileText, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/10", border: "hover:border-blue-200 dark:hover:border-blue-950" },
-              { label: "Exams", value: String(upcomingExams), sub: "Scheduled", icon: BookOpen, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/10", border: "hover:border-orange-200 dark:hover:border-orange-950" },
-              { label: "Average Score", value: avgScore !== null ? `${avgScore}%` : "—", sub: "Grade average", icon: TrendingUp, color: "text-sky-500", bg: "bg-sky-50 dark:bg-sky-950/10", border: "hover:border-sky-200 dark:hover:border-sky-950" },
-              { label: "Achievements", value: String(myAchievements.length), sub: "Medals & Badges", icon: Award, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/10", border: "hover:border-rose-200 dark:hover:border-rose-950" }
+              { label: t('student.dashboard.statLabelAttendance'), value: attendancePct !== null ? `${attendancePct}%` : "—", sub: t('student.dashboard.statSubThisMonth'), icon: Activity, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/10", border: "hover:border-emerald-200 dark:hover:border-emerald-950" },
+              { label: t('student.dashboard.statLabelPendingTasks'), value: String(pendingCount), sub: t('student.dashboard.statSubDueSoon'), icon: FileText, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/10", border: "hover:border-blue-200 dark:hover:border-blue-950" },
+              { label: t('student.dashboard.statLabelExams'), value: String(upcomingExams), sub: t('student.dashboard.statSubScheduled'), icon: BookOpen, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/10", border: "hover:border-orange-200 dark:hover:border-orange-950" },
+              { label: t('student.dashboard.statLabelAverageScore'), value: avgScore !== null ? `${avgScore}%` : "—", sub: t('student.dashboard.statSubGradeAverage'), icon: TrendingUp, color: "text-sky-500", bg: "bg-sky-50 dark:bg-sky-950/10", border: "hover:border-sky-200 dark:hover:border-sky-950" },
+              { label: t('student.dashboard.statLabelAchievements'), value: String(myAchievements.length), sub: t('student.dashboard.statSubMedalsBadges'), icon: Award, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/10", border: "hover:border-rose-200 dark:hover:border-rose-950" }
             ].map((stat, i) => (
               <motion.div
                 whileHover={{ y: -4, scale: 1.01 }}
@@ -461,14 +468,14 @@ export default function StudentPortal() {
             {/* Timeline Scheduler (Today's Timetable) - 2 cols */}
             <div className="lg:col-span-2 bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 overflow-hidden flex flex-col justify-between transition-colors">
               <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800/20">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Today's Schedule</h3>
-                <Badge variant="secondary" className="text-[10px] bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Class Timetable</Badge>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t('student.dashboard.todaysScheduleTitle')}</h3>
+                <Badge variant="secondary" className="text-[10px] bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-400">{t('student.dashboard.classTimetableBadge')}</Badge>
               </div>
 
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20 flex-1">
                 {todayTimetable.length === 0 && (
                   <div className="px-6 py-10 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No published classes for today yet.
+                    {t('student.dashboard.noPublishedClasses')}
                   </div>
                 )}
                 {todayTimetable.map((slot) => {
@@ -482,7 +489,7 @@ export default function StudentPortal() {
                       )}
                     >
                       {isLive && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-600 rounded-r-md" />
+                        <div className="absolute start-0 top-0 bottom-0 w-1 bg-purple-600 rounded-e-md" />
                       )}
                       <div className={cn(
                         "w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0",
@@ -496,14 +503,14 @@ export default function StudentPortal() {
                           <p className="font-extrabold text-slate-800 dark:text-slate-200 text-sm truncate">{slot.subject.name}</p>
                           {isLive && (
                             <span className="flex items-center gap-1 text-[9px] font-bold text-purple-600 bg-violet-100 dark:bg-violet-950/50 dark:text-violet-400 px-2 py-0.5 rounded-full animate-pulse border border-violet-200 dark:border-violet-800">
-                              ● Ongoing
+                              ● {t('student.dashboard.ongoingLabel')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{slot.subject.teacher} · {slot.subject.room}</p>
                       </div>
 
-                      <div className="text-right flex-shrink-0">
+                      <div className="text-end flex-shrink-0">
                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{slot.start}</p>
                         <span className={cn(
                           "text-[9px] font-extrabold px-2 py-0.5 rounded-full mt-1 inline-block uppercase tracking-wider",
@@ -511,7 +518,9 @@ export default function StudentPortal() {
                           slot.status === "Current"   ? "bg-violet-100 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300" :
                                                         "bg-slate-50 text-slate-400 dark:bg-slate-800/40 dark:text-slate-500"
                         )}>
-                          {slot.status}
+                          {slot.status === "Completed" ? t('student.dashboard.statusCompleted') :
+                           slot.status === "Current" ? t('student.dashboard.statusCurrent') :
+                           t('student.dashboard.statusUpcoming')}
                         </span>
                       </div>
                     </div>
@@ -526,7 +535,7 @@ export default function StudentPortal() {
                   className="w-full text-purple-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/20 text-xs font-bold h-9 rounded-xl"
                   onClick={() => navigate("/student/timetable")}
                 >
-                  View Full Schedule <ChevronRight className="h-4 w-4 ml-1" />
+                  {t('student.dashboard.viewFullScheduleButton')} <ChevronRight className="h-4 w-4 me-1 rtl:rotate-180" />
                 </Button>
               </div>
             </div>
@@ -534,19 +543,19 @@ export default function StudentPortal() {
             {/* My Tasks Tracker - 2 cols */}
             <div className="lg:col-span-2 bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 overflow-hidden flex flex-col justify-between transition-colors">
               <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800/20">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Tasks & Homework</h3>
-                <button 
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t('student.dashboard.tasksHomeworkTitle')}</h3>
+                <button
                   onClick={() => navigate("/student/assignments")}
                   className="text-xs text-purple-600 dark:text-violet-400 font-bold hover:underline"
                 >
-                  View All
+                  {t('student.dashboard.viewAllButton')}
                 </button>
               </div>
 
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20 flex-1">
                 {displayTasks.length === 0 && (
                   <div className="px-6 py-10 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No assignments yet.
+                    {t('student.dashboard.noAssignmentsYet')}
                   </div>
                 )}
                 {displayTasks.map((task, i) => (
@@ -564,7 +573,7 @@ export default function StudentPortal() {
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{task.subject} · Due {task.due}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t('student.dashboard.taskDue', { subject: task.subject, due: task.due })}</p>
                     </div>
 
                     <Badge 
@@ -576,7 +585,9 @@ export default function StudentPortal() {
                                                      "bg-slate-50 text-slate-400 dark:bg-slate-800 dark:text-slate-400"
                       )}
                     >
-                      {task.priority}
+                      {task.priority === "High" ? t('student.dashboard.priorityHigh') :
+                       task.priority === "Medium" ? t('student.dashboard.priorityMedium') :
+                       task.priority === "Low" ? t('student.dashboard.priorityLow') : task.priority}
                     </Badge>
                   </div>
                 ))}
@@ -589,7 +600,7 @@ export default function StudentPortal() {
                   className="w-full text-purple-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/20 text-xs font-bold h-9 rounded-xl"
                   onClick={() => navigate("/student/assignments")}
                 >
-                  View All Assignments <ChevronRight className="h-4 w-4 ml-1" />
+                  {t('student.dashboard.viewAllAssignmentsButton')} <ChevronRight className="h-4 w-4 me-1 rtl:rotate-180" />
                 </Button>
               </div>
             </div>
@@ -597,19 +608,19 @@ export default function StudentPortal() {
             {/* Notice Board (Announcements) - 1 col */}
             <div className="lg:col-span-1 bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 overflow-hidden flex flex-col justify-between transition-colors">
               <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800/20">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Notices</h3>
-                <button 
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t('student.dashboard.noticesTitle')}</h3>
+                <button
                   onClick={() => navigate("/communication/announcements")}
                   className="text-xs text-purple-600 dark:text-violet-400 font-bold hover:underline"
                 >
-                  All
+                  {t('student.dashboard.noticesAllButton')}
                 </button>
               </div>
 
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20 flex-1">
                 {displayNotices.length === 0 && (
                   <div className="px-5 py-10 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No notices yet.
+                    {t('student.dashboard.noNoticesYet')}
                   </div>
                 )}
                 {displayNotices.map((n, i) => (
@@ -630,7 +641,7 @@ export default function StudentPortal() {
                   className="w-full text-purple-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/20 text-xs font-bold h-9 rounded-xl"
                   onClick={() => navigate("/communication/announcements")}
                 >
-                  Open Notices
+                  {t('student.dashboard.openNoticesButton')}
                 </Button>
               </div>
             </div>
@@ -638,12 +649,12 @@ export default function StudentPortal() {
 
           {/* ── 4. QUICK LINKS & ACADEMICS ROW ──────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+
             {/* Quick Links Menu */}
             <div className="bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 p-6 flex flex-col justify-between transition-colors">
               <div>
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">Quick Portals</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">Access essential modules instantly</p>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">{t('student.dashboard.quickPortalsTitle')}</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">{t('student.dashboard.quickPortalsSubtitle')}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -670,19 +681,19 @@ export default function StudentPortal() {
             {/* Performance Analytics (Grades) */}
             <div className="bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 overflow-hidden flex flex-col justify-between transition-colors">
               <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 dark:border-slate-800/20">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Course Grades</h3>
-                <button 
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t('student.dashboard.courseGradesTitle')}</h3>
+                <button
                   onClick={() => navigate("/student/gradebook")}
                   className="text-xs text-purple-600 dark:text-violet-400 font-bold hover:underline"
                 >
-                  Report Card
+                  {t('student.dashboard.reportCardButton')}
                 </button>
               </div>
 
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20 flex-1">
                 {displayGrades.length === 0 && (
                   <div className="px-6 py-10 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No graded assessments yet.
+                    {t('student.dashboard.noGradedAssessments')}
                   </div>
                 )}
                 {displayGrades.map((g, i) => (
@@ -712,7 +723,7 @@ export default function StudentPortal() {
                   className="w-full text-purple-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/20 text-xs font-bold h-9 rounded-xl"
                   onClick={() => navigate("/student/gradebook")}
                 >
-                  Gradebook
+                  {t('student.dashboard.gradebookButton')}
                 </Button>
               </div>
             </div>
@@ -720,14 +731,14 @@ export default function StudentPortal() {
             {/* Academic Growth Progress */}
             <div className="bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 p-6 flex flex-col justify-between transition-colors">
               <div>
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">Learning Path</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">Subject progress breakdown</p>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">{t('student.dashboard.learningPathTitle')}</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">{t('student.dashboard.learningPathSubtitle')}</p>
               </div>
 
               <div className="space-y-4 flex-1 flex flex-col justify-center">
                 {displayGrades.length === 0 && (
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500">
-                    No subject progress yet.
+                    {t('student.dashboard.noSubjectProgress')}
                   </div>
                 )}
                 {displayGrades.slice(0, 4).map((g, i) => (
@@ -757,14 +768,14 @@ export default function StudentPortal() {
             {/* Upcoming Events / Calendar */}
             <div className="bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 p-6 flex flex-col justify-between transition-colors">
               <div>
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">Calendar & Tests</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">Upcoming assessment deadlines</p>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base mb-1">{t('student.dashboard.calendarTestsTitle')}</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">{t('student.dashboard.calendarTestsSubtitle')}</p>
               </div>
 
               <div className="space-y-4">
                 {upcomingEvents.length === 0 && (
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500">
-                    No upcoming exams or deadlines.
+                    {t('student.dashboard.noUpcomingEvents')}
                   </div>
                 )}
                 {upcomingEvents.map((ev, i) => (
@@ -790,13 +801,13 @@ export default function StudentPortal() {
             <div className="bg-white dark:bg-[#16162A] rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/40 p-6 transition-colors">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-amber-500" /> Achievement Spotlight
+                  <Trophy className="h-5 w-5 text-amber-500" /> {t('student.dashboard.achievementSpotlightTitle')}
                 </h3>
-                <button 
+                <button
                   onClick={() => navigate("/student/achievements")}
                   className="text-xs text-purple-600 dark:text-violet-400 font-bold hover:underline"
                 >
-                  View Trophy Cabinet
+                  {t('student.dashboard.viewTrophyCabinetButton')}
                 </button>
               </div>
 
@@ -820,24 +831,24 @@ export default function StudentPortal() {
 
           {/* Inspirational banner */}
           <div className="bg-gradient-to-r from-[#9810fa] to-[#d12386] rounded-[24px] p-8 flex flex-col md:flex-row items-center justify-between shadow-xl shadow-[#9810fa]/15 relative overflow-hidden gap-6">
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-lg" />
-            <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-white/5 rounded-full blur-md" />
-            
+            <div className="absolute -top-12 -end-12 w-48 h-48 bg-white/5 rounded-full blur-lg" />
+            <div className="absolute bottom-0 start-1/4 w-32 h-32 bg-white/5 rounded-full blur-md" />
+
             <div className="flex items-center gap-4 relative">
               <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10 shrink-0">
                 <Zap className="h-6 w-6 text-yellow-300" />
               </div>
               <div>
-                <h2 className="font-extrabold text-white text-lg">Unleash Your Potential!</h2>
-                <p className="text-white/70 text-sm mt-1">Every small effort you make today builds a path toward a global future.</p>
+                <h2 className="font-extrabold text-white text-lg">{t('student.dashboard.unleashPotentialTitle')}</h2>
+                <p className="text-white/70 text-sm mt-1">{t('student.dashboard.unleashPotentialSubtitle')}</p>
               </div>
             </div>
 
-            <Button 
+            <Button
               className="bg-white text-violet-700 hover:bg-white/95 font-black text-sm px-6 h-11 rounded-2xl shrink-0 shadow-md border-none flex items-center gap-1.5 transition-transform hover:scale-102"
               onClick={() => navigate("/student/study-materials")}
             >
-              Access Study Materials <ArrowRight className="h-4 w-4" />
+              {t('student.dashboard.accessStudyMaterialsButton')} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </Button>
           </div>
 

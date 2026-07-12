@@ -4,6 +4,7 @@
 // here. Renders nothing when there's nothing pending, same convention as
 // MyAppraisalWidget.tsx.
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: Props) {
+  const { t } = useTranslation();
   const { targets, loading, refresh } = useMyFeedbackRequests({ role, uid, studentId, grade, section });
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<FeedbackTarget | null>(null);
@@ -53,7 +55,7 @@ export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: 
   async function handleSubmit() {
     if (!active || !activeTemplate || !uid || !studentId) return;
     const missing = activeTemplate.questions.some((q: FeedbackQuestion) => q.required && q.type === "rating" && !ratings[q.id]);
-    if (missing) { toast.error("Please answer every required question."); return; }
+    if (missing) { toast.error(t("shared.feedbackWidget.toastMissingRequired")); return; }
     setSubmitting(true);
     try {
       const answers = activeTemplate.questions.map((q: FeedbackQuestion) => ({
@@ -77,11 +79,11 @@ export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: 
         },
         active.submissionId
       );
-      toast.success(`Thanks — your feedback about ${active.teacherName} was submitted.`);
+      toast.success(t("shared.feedbackWidget.toastSubmitted", { teacherName: active.teacherName }));
       setActive(null);
       refresh();
     } catch {
-      toast.error("Couldn't submit your feedback — please try again.");
+      toast.error(t("shared.feedbackWidget.toastSubmitFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -98,14 +100,16 @@ export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: 
               <MessageSquareHeart className="h-5 w-5 text-fuchsia-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold">Teacher feedback pending</p>
+              <p className="text-sm font-semibold">{t("shared.feedbackWidget.pendingTitle")}</p>
               <p className="text-xs text-muted-foreground">
-                {targets.length} teacher{targets.length === 1 ? "" : "s"} waiting for your feedback — anonymous, takes under a minute each.
+                {targets.length === 1
+                  ? t("shared.feedbackWidget.pendingDescriptionOne")
+                  : t("shared.feedbackWidget.pendingDescriptionMany", { count: targets.length })}
               </p>
             </div>
           </div>
           <Button size="sm" className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white shrink-0" onClick={() => setOpen(true)}>
-            Give Feedback
+            {t("shared.feedbackWidget.giveFeedbackButton")}
           </Button>
         </CardContent>
       </Card>
@@ -114,32 +118,36 @@ export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: 
         <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
           {!active ? (
             <>
-              <DialogHeader><DialogTitle>Teacher Feedback</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("shared.feedbackWidget.dialogTitle")}</DialogTitle></DialogHeader>
               <div className="space-y-2 py-2">
-                {targets.map((t) => (
+                {targets.map((target) => (
                   <button
-                    key={t.submissionId}
-                    onClick={() => startTarget(t)}
-                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-left hover:border-fuchsia-300 hover:bg-fuchsia-50/50 transition-colors"
+                    key={target.submissionId}
+                    onClick={() => startTarget(target)}
+                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 text-start hover:border-fuchsia-300 hover:bg-fuchsia-50/50 transition-colors"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{t.teacherName}</p>
+                      <p className="text-sm font-semibold text-slate-800">{target.teacherName}</p>
                       <p className="text-xs text-slate-400">
-                        {t.templateKey === "student_class_teacher" ? "Class Teacher" : t.subject ? `Subject Teacher — ${t.subject}` : "Subject Teacher"}
+                        {target.templateKey === "student_class_teacher"
+                          ? t("shared.feedbackWidget.classTeacherLabel")
+                          : target.subject
+                          ? t("shared.feedbackWidget.subjectTeacherWithSubject", { subject: target.subject })
+                          : t("shared.feedbackWidget.subjectTeacherLabel")}
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-slate-300 shrink-0 rtl:rotate-180" />
                   </button>
                 ))}
               </div>
             </>
           ) : !activeTemplate ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">Loading form…</div>
+            <div className="py-10 text-center text-sm text-muted-foreground">{t("shared.feedbackWidget.loadingForm")}</div>
           ) : (
             <>
               <DialogHeader>
                 <DialogTitle>{active.teacherName}</DialogTitle>
-                <p className="text-xs text-slate-400">{activeTemplate.name} · your answers are anonymous</p>
+                <p className="text-xs text-slate-400">{activeTemplate.name} · {t("shared.feedbackWidget.anonymousNote")}</p>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 {activeTemplate.questions.map((q: FeedbackQuestion) => (
@@ -148,21 +156,21 @@ export function FeedbackRequestWidget({ role, uid, studentId, grade, section }: 
                     {q.type === "rating" ? (
                       <StarRatingInput value={ratings[q.id] || 0} onChange={(v) => setRatings((r) => ({ ...r, [q.id]: v }))} label={q.text} />
                     ) : (
-                      <Textarea value={texts[q.id] || ""} onChange={(e) => setTexts((t) => ({ ...t, [q.id]: e.target.value }))} rows={2} />
+                      <Textarea value={texts[q.id] || ""} onChange={(e) => setTexts((prev) => ({ ...prev, [q.id]: e.target.value }))} rows={2} />
                     )}
                   </div>
                 ))}
                 {activeTemplate.allowComments && (
                   <div className="space-y-1.5">
-                    <p className="text-sm font-medium text-slate-700">Additional comments (optional)</p>
-                    <Textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={3} placeholder="Anything else you'd like to share?" />
+                    <p className="text-sm font-medium text-slate-700">{t("shared.feedbackWidget.additionalCommentsLabel")}</p>
+                    <Textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={3} placeholder={t("shared.feedbackWidget.commentsPlaceholder")} />
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setActive(null)}>Back</Button>
+                <Button variant="outline" onClick={() => setActive(null)}>{t("shared.feedbackWidget.backButton")}</Button>
                 <Button onClick={handleSubmit} disabled={submitting} className="bg-fuchsia-600 hover:bg-fuchsia-700 text-white gap-1.5">
-                  {submitting ? "Submitting…" : <><CheckCircle2 className="h-4 w-4" /> Submit Feedback</>}
+                  {submitting ? t("shared.feedbackWidget.submittingLabel") : <><CheckCircle2 className="h-4 w-4" /> {t("shared.feedbackWidget.submitButton")}</>}
                 </Button>
               </DialogFooter>
             </>

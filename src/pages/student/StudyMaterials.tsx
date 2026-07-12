@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
@@ -74,6 +75,7 @@ type Screen =
 export default function StudentStudyMaterials() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   // Student's own profile (grade + section)
   const [studentProfile, setStudentProfile] = useState<any>(null);
@@ -149,10 +151,10 @@ export default function StudentStudyMaterials() {
     return materials.filter(m => m.subject === subject);
   }
   function chaptersForSubject(subject: string) {
-    return [...new Set(materialsForSubject(subject).map(m => m.chapter || "General"))].filter(Boolean);
+    return [...new Set(materialsForSubject(subject).map(m => m.chapter || t('student.studyMaterials.generalChapter')))].filter(Boolean);
   }
   function materialsForChapter(subject: string, chapter: string) {
-    return materialsForSubject(subject).filter(m => (m.chapter || "General") === chapter);
+    return materialsForSubject(subject).filter(m => (m.chapter || t('student.studyMaterials.generalChapter')) === chapter);
   }
 
   const matCountFor = (subject: string) => materialsForSubject(subject).length;
@@ -177,9 +179,9 @@ export default function StudentStudyMaterials() {
               <Library className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">Study Materials</h1>
+              <h1 className="text-xl font-bold text-slate-800">{t('student.studyMaterials.pageTitle')}</h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Browse your subject folders and access study resources shared by your teachers.
+                {t('student.studyMaterials.pageSubtitle')}
               </p>
             </div>
           </div>
@@ -187,10 +189,10 @@ export default function StudentStudyMaterials() {
           {/* KPI cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Total Resources", value: kpiTotal, icon: Library,  hex: "#7C3AED", light: "#F1ECFF" },
-              { label: "PDF Notes",       value: kpiPdf,   icon: FileText, hex: "#2563EB", light: "#DBEAFE" },
-              { label: "Videos",          value: kpiVideo, icon: Film,     hex: "#16A34A", light: "#DCFCE7" },
-              { label: "My Subjects",     value: kpiSubjects, icon: GraduationCap, hex: "#F59E0B", light: "#FEF3C7" },
+              { label: t('student.studyMaterials.kpiTotalResources'), value: kpiTotal, icon: Library,  hex: "#7C3AED", light: "#F1ECFF" },
+              { label: t('student.studyMaterials.kpiPdfNotes'),       value: kpiPdf,   icon: FileText, hex: "#2563EB", light: "#DBEAFE" },
+              { label: t('student.studyMaterials.kpiVideos'),          value: kpiVideo, icon: Film,     hex: "#16A34A", light: "#DCFCE7" },
+              { label: t('student.studyMaterials.kpiMySubjects'),     value: kpiSubjects, icon: GraduationCap, hex: "#F59E0B", light: "#FEF3C7" },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: k.light }}>
@@ -206,23 +208,23 @@ export default function StudentStudyMaterials() {
 
           {/* Search */}
           <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search subjects…"
-              className="w-full pl-9 pr-3 h-10 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('student.studyMaterials.searchSubjectsPlaceholder')}
+              className="w-full ps-9 pe-3 h-10 text-sm rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200" />
           </div>
 
           {/* Subject folder grid */}
           {allMaterials === null ? (
             <div className="flex-1 flex items-center justify-center py-16">
-              <p className="text-sm text-slate-400">Loading…</p>
+              <p className="text-sm text-slate-400">{t('student.studyMaterials.loading')}</p>
             </div>
           ) : classSubjects.length === 0 ? (
             <div className="border-2 border-dashed border-slate-200 rounded-2xl py-16 text-center flex-1">
               <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-50 flex items-center justify-center">
                 <FolderOpen className="h-7 w-7 text-slate-300" />
               </div>
-              <p className="font-bold text-slate-700 text-sm">No subjects assigned yet</p>
-              <p className="text-xs text-slate-400 mt-1">Your teacher hasn't set up subjects for your class yet.</p>
+              <p className="font-bold text-slate-700 text-sm">{t('student.studyMaterials.noSubjectsTitle')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('student.studyMaterials.noSubjectsSubtitle')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -242,10 +244,10 @@ export default function StudentStudyMaterials() {
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-slate-800 truncate group-hover:text-violet-700">{subject}</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          {cnt} material{cnt !== 1 ? "s" : ""} · {chCount} chapter{chCount !== 1 ? "s" : ""}
+                          {t('student.studyMaterials.materialsCount', { count: cnt })} · {t('student.studyMaterials.chaptersCount', { count: chCount })}
                         </p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-violet-500 flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-violet-500 flex-shrink-0 rtl:rotate-180" />
                     </div>
                     {/* Chapter preview pills */}
                     {chCount > 0 && (
@@ -253,14 +255,14 @@ export default function StudentStudyMaterials() {
                         {chaptersForSubject(subject).slice(0, 3).map(ch => (
                           <span key={ch} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium truncate max-w-[120px]">{ch}</span>
                         ))}
-                        {chCount > 3 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">+{chCount - 3} more</span>}
+                        {chCount > 3 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">{t('student.studyMaterials.moreCount', { count: chCount - 3 })}</span>}
                       </div>
                     )}
                   </button>
                 );
               })}
               {visible.length === 0 && (
-                <p className="col-span-full text-center text-slate-400 py-10 text-sm">No subjects match your search.</p>
+                <p className="col-span-full text-center text-slate-400 py-10 text-sm">{t('student.studyMaterials.noSubjectsMatchSearch')}</p>
               )}
             </div>
           )}
@@ -271,12 +273,12 @@ export default function StudentStudyMaterials() {
           {/* Subjects list */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-800">My Subjects</h3>
-              <button onClick={() => setQ("")} className="text-xs text-purple-600 font-medium hover:underline">View All</button>
+              <h3 className="text-sm font-bold text-slate-800">{t('student.studyMaterials.mySubjectsHeading')}</h3>
+              <button onClick={() => setQ("")} className="text-xs text-purple-600 font-medium hover:underline">{t('student.studyMaterials.viewAll')}</button>
             </div>
             <div className="flex flex-col gap-0.5">
               {classSubjects.length === 0 && (
-                <p className="text-xs text-slate-400 py-2">No subjects assigned to your class yet.</p>
+                <p className="text-xs text-slate-400 py-2">{t('student.studyMaterials.noSubjectsSidebar')}</p>
               )}
               {classSubjects.map((s, i) => {
                 const meta = subjMeta(s, i);
@@ -299,13 +301,13 @@ export default function StudentStudyMaterials() {
 
           {/* Request material */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <h3 className="text-sm font-bold text-slate-800 mb-1">Request Material</h3>
+            <h3 className="text-sm font-bold text-slate-800 mb-1">{t('student.studyMaterials.requestMaterialHeading')}</h3>
             <p className="text-xs text-slate-500 leading-relaxed mb-3">
-              Can't find what you need? Ask your teacher to upload it.
+              {t('student.studyMaterials.requestMaterialSubtitle')}
             </p>
             <button onClick={() => navigate("/communication/messages")}
               className="w-full flex items-center justify-center gap-1.5 h-9 text-xs font-semibold text-purple-600 border border-violet-200 rounded-lg hover:bg-violet-50 transition-colors">
-              <Upload className="h-3.5 w-3.5" /> Request Material
+              <Upload className="h-3.5 w-3.5" /> {t('student.studyMaterials.requestMaterialButton')}
             </button>
           </div>
         </div>
@@ -332,7 +334,7 @@ export default function StudentStudyMaterials() {
             </span>
             <div>
               <h1 className="text-xl font-bold text-slate-900">{subject}</h1>
-              <p className="text-xs text-slate-500">{mats.length} material{mats.length !== 1 ? "s" : ""} · {chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</p>
+              <p className="text-xs text-slate-500">{t('student.studyMaterials.materialsCount', { count: mats.length })} · {t('student.studyMaterials.chaptersCount', { count: chapters.length })}</p>
             </div>
           </div>
         </div>
@@ -342,8 +344,8 @@ export default function StudentStudyMaterials() {
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-50 flex items-center justify-center">
               <BookText className="h-7 w-7 text-slate-300" />
             </div>
-            <p className="font-bold text-slate-700 text-sm">No materials yet</p>
-            <p className="text-xs text-slate-400 mt-1">Your teacher hasn't uploaded anything for {subject} yet.</p>
+            <p className="font-bold text-slate-700 text-sm">{t('student.studyMaterials.noMaterialsYetTitle')}</p>
+            <p className="text-xs text-slate-400 mt-1">{t('student.studyMaterials.noMaterialsYetSubtitle', { subject })}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -360,9 +362,9 @@ export default function StudentStudyMaterials() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-slate-800 text-sm truncate group-hover:text-violet-700">{ch}</p>
-                      <p className="text-[11px] text-slate-400">{chMats.length} material{chMats.length !== 1 ? "s" : ""}</p>
+                      <p className="text-[11px] text-slate-400">{t('student.studyMaterials.materialsCount', { count: chMats.length })}</p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-violet-500 flex-shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-violet-500 flex-shrink-0 rtl:rotate-180" />
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {types.slice(0, 4).map(t => {
@@ -407,20 +409,20 @@ export default function StudentStudyMaterials() {
             </span>
             <div>
               <h1 className="text-base font-bold text-slate-900">{chapter}</h1>
-              <p className="text-[11px] text-slate-500">{subject} · {mats.length} material{mats.length !== 1 ? "s" : ""}</p>
+              <p className="text-[11px] text-slate-500">{subject} · {t('student.studyMaterials.materialsCount', { count: mats.length })}</p>
             </div>
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <input value={mq} onChange={e => setMq(e.target.value)} placeholder="Search materials…"
-              className="pl-8 pr-3 h-9 w-52 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input value={mq} onChange={e => setMq(e.target.value)} placeholder={t('student.studyMaterials.searchMaterialsPlaceholder')}
+              className="ps-8 pe-3 h-9 w-52 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200" />
           </div>
         </div>
 
         {/* Materials list */}
         {filtered.length === 0 ? (
           <div className="border-2 border-dashed border-slate-200 rounded-2xl py-12 text-center">
-            <p className="text-sm text-slate-400">No materials found{mq ? " for your search" : ""}.</p>
+            <p className="text-sm text-slate-400">{mq ? t('student.studyMaterials.noMaterialsFoundSearch') : t('student.studyMaterials.noMaterialsFound')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -457,13 +459,13 @@ export default function StudentStudyMaterials() {
                           {isLink && (
                             <a href={m.link} target="_blank" rel="noreferrer"
                               className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-teal-600 hover:bg-teal-50 hover:border-teal-200 transition-colors">
-                              <ExternalLink className="h-3.5 w-3.5" /> Open
+                              <ExternalLink className="h-3.5 w-3.5" /> {t('student.studyMaterials.openLink')}
                             </a>
                           )}
                           {m.link && (
                             <a href={m.link} download={m.title} target="_blank" rel="noreferrer"
                               className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-purple-600 hover:bg-violet-50 hover:border-violet-200 transition-colors">
-                              <Download className="h-3.5 w-3.5" /> Download
+                              <Download className="h-3.5 w-3.5" /> {t('student.studyMaterials.downloadLink')}
                             </a>
                           )}
                         </div>
@@ -486,11 +488,11 @@ export default function StudentStudyMaterials() {
         <div className="flex items-center gap-1.5 text-xs text-slate-400 px-5 py-3 bg-white border-b border-slate-100">
           <button onClick={() => setScreen({ view: "subjects" })}
             className={cn("hover:text-purple-600 font-medium transition-colors", screen.view === "subjects" && "text-purple-600 font-semibold")}>
-            Study Materials
+            {t('student.studyMaterials.pageTitle')}
           </button>
           {screen.view !== "subjects" && (
             <>
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3 w-3 rtl:rotate-180" />
               <button
                 onClick={() => screen.view === "materials" && setScreen({ view: "chapters", subject: (screen as any).subject, subjectIdx: (screen as any).subjectIdx })}
                 className={cn(
@@ -503,7 +505,7 @@ export default function StudentStudyMaterials() {
           )}
           {screen.view === "materials" && (
             <>
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3 w-3 rtl:rotate-180" />
               <span className="text-purple-600 font-semibold">{(screen as any).chapter}</span>
             </>
           )}

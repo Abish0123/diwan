@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 // ── Real data model ──────────────────────────────────────────────────────────
 // ChatThread   : the conversation itself, shared by every participant — a
@@ -105,10 +106,11 @@ function fmtBytes(n: number) {
 }
 
 const Messages = () => {
+  const { t } = useTranslation();
   const { user, role } = useAuth();
   const { notifications: liveNotifications, markRead: markNotificationRead } = useNotificationsContext();
   const myUid = user?.uid || "";
-  const myName = (user as any)?.displayName || (user as any)?.name || user?.email || "Me";
+  const myName = (user as any)?.displayName || (user as any)?.name || user?.email || t("shared.messages.meFallback");
   const myEmail = (user?.email || "").toLowerCase().trim();
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,7 +159,7 @@ const Messages = () => {
 
   const startVoiceRecording = async () => {
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      toast.error("Voice recording isn't supported in this browser.");
+      toast.error(t("shared.messages.voiceNotSupported"));
       return;
     }
     try {
@@ -177,7 +179,7 @@ const Messages = () => {
         });
       }, 1000);
     } catch {
-      toast.error("Microphone access was denied — allow it in your browser settings to record a voice note.");
+      toast.error(t("shared.messages.micAccessDenied"));
     }
   };
 
@@ -269,7 +271,7 @@ const Messages = () => {
     if (!incoming?.recipientEmail || loading) return;
     const target = contacts.find(c => c.email === incoming.recipientEmail!.toLowerCase());
     if (!target) {
-      toast.error(`${incoming.recipientName || "This person"} doesn't have a Student Diwan account yet — no message can be delivered.`);
+      toast.error(t("shared.messages.noAccountForRecipient", { name: incoming.recipientName || t("shared.messages.thisPerson") }));
       navigate(location.pathname, { replace: true });
       return;
     }
@@ -390,10 +392,10 @@ const Messages = () => {
   };
 
   const createGroup = async () => {
-    if (!groupName.trim()) { toast.error("Group name is required"); return; }
-    if (groupMembers.length === 0) { toast.error("Add at least one member"); return; }
+    if (!groupName.trim()) { toast.error(t("shared.messages.groupNameRequired")); return; }
+    if (groupMembers.length === 0) { toast.error(t("shared.messages.addAtLeastOneMember")); return; }
     if (!canMessageAny(role, groupMembers.map(m => m.role))) {
-      toast.error("You don't have permission to message one or more selected members.");
+      toast.error(t("shared.messages.noPermissionToMessageMembers"));
       return;
     }
     const id = `grp_${Date.now()}`;
@@ -410,7 +412,7 @@ const Messages = () => {
     selectThread(row);
     setNewGroupOpen(false);
     setGroupName(""); setGroupMembers([]); setGroupSearch("");
-    toast.success(`"${row.name}" group created`);
+    toast.success(t("shared.messages.groupCreated", { name: row.name }));
   };
 
   // ── Sending ────────────────────────────────────────────────────────────────
@@ -431,7 +433,7 @@ const Messages = () => {
     };
     setMessages(prev => [...prev, row]);
 
-    const preview = text || (voiceNote ? `🎤 Voice message (${voiceNote.durationSec}s)` : attachments?.length ? `📎 ${attachments[0].name}${attachments.length > 1 ? ` +${attachments.length - 1}` : ""}` : "");
+    const preview = text || (voiceNote ? t("shared.messages.voiceMessagePreview", { seconds: voiceNote.durationSec }) : attachments?.length ? t("shared.messages.attachmentPreview", { name: attachments[0].name, extra: attachments.length > 1 ? ` +${attachments.length - 1}` : "" }) : "");
     await smartDb.update("ChatThread", selectedThreadId, { lastMessage: preview, lastMessageAt: now, lastSenderUid: myUid });
     setThreads(prev => prev.map(t => t.id === selectedThreadId ? { ...t, lastMessage: preview, lastMessageAt: now, lastSenderUid: myUid } : t));
     await upsertThreadState(selectedThreadId, { lastReadAt: now });
@@ -444,7 +446,7 @@ const Messages = () => {
     await Promise.all(recipients.map(p => smartDb.create("Notification", {
       type: "chat_message",
       category: "general",
-      title: thread?.type === "group" ? `${myName} in ${thread.name}` : `New message from ${myName}`,
+      title: thread?.type === "group" ? t("shared.messages.groupMessageNotifTitle", { sender: myName, group: thread.name }) : t("shared.messages.directMessageNotifTitle", { sender: myName }),
       message: preview,
       recipientUid: p.uid,
       threadId: selectedThreadId,
@@ -471,7 +473,7 @@ const Messages = () => {
   const toggleArchive = async (t: ThreadRow) => {
     const archived = !myState(t.id)?.archived;
     await upsertThreadState(t.id, { archived });
-    toast.success(archived ? "Conversation archived" : "Conversation restored");
+    toast.success(archived ? t("shared.messages.conversationArchived") : t("shared.messages.conversationRestored"));
   };
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [selectedMessages.length]);
@@ -509,9 +511,9 @@ const Messages = () => {
   );
 
   const FILTERS: { key: FilterTab; label: string }[] = [
-    { key: "all", label: "All" }, { key: "unread", label: "Unread" }, { key: "groups", label: "Groups" },
-    { key: "parents", label: "Parents" }, { key: "teachers", label: "Teachers" }, { key: "students", label: "Students" },
-    { key: "starred", label: "Starred" }, { key: "archived", label: "Archived" },
+    { key: "all", label: t("shared.messages.filterAll") }, { key: "unread", label: t("shared.messages.filterUnread") }, { key: "groups", label: t("shared.messages.filterGroups") },
+    { key: "parents", label: t("shared.messages.filterParents") }, { key: "teachers", label: t("shared.messages.filterTeachers") }, { key: "students", label: t("shared.messages.filterStudents") },
+    { key: "starred", label: t("shared.messages.filterStarred") }, { key: "archived", label: t("shared.messages.filterArchived") },
   ];
 
   return (
@@ -521,19 +523,19 @@ const Messages = () => {
         <Card className="w-full md:w-80 flex flex-col premium-card overflow-hidden">
           <CardHeader className="p-4 border-b border-border shrink-0">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold tracking-tight">Messages</h2>
+              <h2 className="text-xl font-bold tracking-tight">{t("shared.messages.pageTitle")}</h2>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title="New group" onClick={() => setNewGroupOpen(true)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title={t("shared.messages.newGroupTitle")} onClick={() => setNewGroupOpen(true)}>
                   <Users className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title="New chat" onClick={() => setNewChatOpen(true)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title={t("shared.messages.newChatTitle")} onClick={() => setNewChatOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             <div className="relative mb-3">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search conversations..." className="pl-9 h-9 text-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+              <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder={t("shared.messages.searchConversationsPlaceholder")} className="ps-9 h-9 text-sm" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {FILTERS.map(f => (
@@ -546,19 +548,19 @@ const Messages = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-y-auto">
-            {loading && <div className="p-6 text-center text-sm text-muted-foreground">Loading conversations…</div>}
+            {loading && <div className="p-6 text-center text-sm text-muted-foreground">{t("shared.messages.loadingConversations")}</div>}
             {!loading && visibleThreads.length === 0 && (
               <div className="p-6 text-center text-sm text-muted-foreground space-y-2">
                 <MessageSquare className="h-8 w-8 mx-auto opacity-30" />
-                <p>{filter === "all" ? "No conversations yet." : "Nothing here."}</p>
-                {filter === "all" && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setNewChatOpen(true)}>Start a conversation</Button>}
+                <p>{filter === "all" ? t("shared.messages.noConversationsYet") : t("shared.messages.nothingHere")}</p>
+                {filter === "all" && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setNewChatOpen(true)}>{t("shared.messages.startAConversation")}</Button>}
               </div>
             )}
             <div className="divide-y divide-border">
               {visibleThreads.map(({ thread, unread, archived }) => (
                 <button key={thread.id} onClick={() => selectThread(thread)}
-                  className={cn("w-full flex items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50",
-                    selectedThreadId === thread.id && "bg-primary/5 border-r-2 border-primary")}>
+                  className={cn("w-full flex items-center gap-3 p-4 text-start transition-colors hover:bg-muted/50",
+                    selectedThreadId === thread.id && "bg-primary/5 border-e-2 border-primary")}>
                   <div className="relative">
                     <Avatar className="h-11 w-11 border border-border">
                       <AvatarFallback className={cn("font-bold text-xs", thread.type === "group" ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
@@ -572,7 +574,7 @@ const Messages = () => {
                       <span className="text-[10px] text-muted-foreground font-medium shrink-0">{fmtListTime(thread.lastMessageAt || thread.createdAt)}</span>
                     </div>
                     <p className={cn("text-xs truncate", unread ? "text-foreground font-semibold" : "text-muted-foreground")}>
-                      {thread.lastMessage || "No messages yet"}
+                      {thread.lastMessage || t("shared.messages.noMessagesYet")}
                     </p>
                   </div>
                   {archived && <Archive className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
@@ -583,11 +585,11 @@ const Messages = () => {
                 const t = threads.find(th => th.id === m.threadId);
                 if (!t) return null;
                 return (
-                  <button key={m.id} onClick={() => selectThread(t)} className="w-full flex items-start gap-3 p-4 text-left hover:bg-muted/50 transition-colors">
+                  <button key={m.id} onClick={() => selectThread(t)} className="w-full flex items-start gap-3 p-4 text-start hover:bg-muted/50 transition-colors">
                     <Star className="h-4 w-4 text-amber-500 fill-amber-500 mt-0.5 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-bold truncate">{displayName(t)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{m.text || `📎 ${m.attachments?.[0]?.name}`}</p>
+                      <p className="text-xs text-muted-foreground truncate">{m.text || t("shared.messages.attachmentIcon", { name: m.attachments?.[0]?.name })}</p>
                     </div>
                   </button>
                 );
@@ -611,13 +613,13 @@ const Messages = () => {
                     <h3 className="text-sm font-bold leading-none mb-1 truncate">{displayName(selectedThread)}</h3>
                     <p className="text-[10px] text-muted-foreground font-medium truncate">
                       {selectedThread.type === "group"
-                        ? `${selectedThread.participants.length} members`
+                        ? t("shared.messages.membersCount", { count: selectedThread.participants.length })
                         : getRole(selectedOther?.role).label}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title={myState(selectedThread.id)?.archived ? "Unarchive" : "Archive"} onClick={() => toggleArchive(selectedThread)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" title={myState(selectedThread.id)?.archived ? t("shared.messages.unarchiveTitle") : t("shared.messages.archiveTitle")} onClick={() => toggleArchive(selectedThread)}>
                     {myState(selectedThread.id)?.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   </Button>
                   <Button variant={showInfo ? "secondary" : "ghost"} size="icon" className="h-8 w-8 rounded-full" onClick={() => setShowInfo(v => !v)}>
@@ -635,8 +637,8 @@ const Messages = () => {
                           <User className="h-8 w-8" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold">No messages yet</p>
-                          <p className="text-xs">Start the conversation with {displayName(selectedThread)}</p>
+                          <p className="text-sm font-bold">{t("shared.messages.noMessagesYet")}</p>
+                          <p className="text-xs">{t("shared.messages.startTheConversationWith", { name: displayName(selectedThread) })}</p>
                         </div>
                       </div>
                     ) : (
@@ -691,7 +693,7 @@ const Messages = () => {
                                   </div>
                                   <button onClick={() => toggleStar(msg)}
                                     className={cn("absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-1 bg-card border border-border shadow-sm",
-                                      mine ? "-left-2" : "-right-2")}>
+                                      mine ? "-start-2" : "-end-2")}>
                                     <Star className={cn("h-3 w-3", starred ? "fill-amber-500 text-amber-500" : "text-muted-foreground")} />
                                   </button>
                                 </div>
@@ -707,8 +709,8 @@ const Messages = () => {
                   <div className="p-4 border-t border-border bg-card/50 shrink-0">
                     <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
                     {voicePreview ? (
-                      <div className="flex items-center gap-2 bg-muted/50 rounded-full pl-2 pr-1.5 py-1.5">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0 text-rose-500 hover:text-rose-600" title="Discard" onClick={discardVoicePreview}>
+                      <div className="flex items-center gap-2 bg-muted/50 rounded-full ps-2 pe-1.5 py-1.5">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0 text-rose-500 hover:text-rose-600" title={t("shared.messages.discardTitle")} onClick={discardVoicePreview}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                         <audio controls src={voicePreview.dataUrl} className="h-8 flex-1 min-w-0" />
@@ -718,24 +720,24 @@ const Messages = () => {
                         </Button>
                       </div>
                     ) : isRecording ? (
-                      <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-full pl-4 pr-1.5 py-1.5">
+                      <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-full ps-4 pe-1.5 py-1.5">
                         <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
                         <span className="text-sm font-semibold text-rose-700 tabular-nums flex-1">
-                          Recording… {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")}
+                          {t("shared.messages.recordingLabel", { time: `${Math.floor(recordSeconds / 60)}:${String(recordSeconds % 60).padStart(2, "0")}` })}
                         </span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0 text-rose-500 hover:text-rose-600" title="Cancel" onClick={cancelVoiceRecording}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0 text-rose-500 hover:text-rose-600" title={t("shared.messages.cancelTitle")} onClick={cancelVoiceRecording}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        <Button className="h-9 w-9 rounded-full bg-rose-500 hover:bg-rose-600 text-white shrink-0 p-0" title="Stop and preview" onClick={stopVoiceRecording}>
+                        <Button className="h-9 w-9 rounded-full bg-rose-500 hover:bg-rose-600 text-white shrink-0 p-0" title={t("shared.messages.stopAndPreviewTitle")} onClick={stopVoiceRecording}>
                           <Square className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0" title="Attach file" onClick={handleAttachClick}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full shrink-0" title={t("shared.messages.attachFileTitle")} onClick={handleAttachClick}>
                           <Paperclip className="h-4 w-4" />
                         </Button>
-                        <Input placeholder="Type a message..." className="h-10 flex-1 rounded-full bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                        <Input placeholder={t("shared.messages.typeAMessagePlaceholder")} className="h-10 flex-1 rounded-full bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/30"
                           value={messageInput} onChange={e => setMessageInput(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && sendMessage()} />
                         {messageInput.trim() ? (
@@ -744,7 +746,7 @@ const Messages = () => {
                             <Send className="h-4 w-4" />
                           </Button>
                         ) : (
-                          <Button className="h-10 w-10 rounded-full gradient-primary shadow-lg shadow-primary/20 shrink-0 p-0" title="Record voice message" onClick={startVoiceRecording}>
+                          <Button className="h-10 w-10 rounded-full gradient-primary shadow-lg shadow-primary/20 shrink-0 p-0" title={t("shared.messages.recordVoiceMessageTitle")} onClick={startVoiceRecording}>
                             <Mic className="h-4 w-4" />
                           </Button>
                         )}
@@ -755,9 +757,9 @@ const Messages = () => {
 
                 {/* Right info panel */}
                 {showInfo && (
-                  <div className="w-72 border-l border-border overflow-y-auto shrink-0 bg-card/30">
+                  <div className="w-72 border-s border-border overflow-y-auto shrink-0 bg-card/30">
                     <div className="p-4 border-b border-border flex items-center justify-between">
-                      <h4 className="text-sm font-bold">Details</h4>
+                      <h4 className="text-sm font-bold">{t("shared.messages.detailsTitle")}</h4>
                       <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowInfo(false)}><X className="h-3.5 w-3.5" /></Button>
                     </div>
 
@@ -771,9 +773,9 @@ const Messages = () => {
                       {selectedThread.type === "direct" && selectedOther && (
                         <>
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground mt-1">{getRole(selectedOther.role).label}</span>
-                          <div className="mt-3 w-full space-y-1.5 text-left">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mail className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{selectedOther.email || "Not on file"}</span></div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Phone className="h-3.5 w-3.5 shrink-0" /><span>{linkedStudent?.guardianPhone || linkedStudent?.fatherPhone || linkedStudent?.motherPhone || "Not on file"}</span></div>
+                          <div className="mt-3 w-full space-y-1.5 text-start">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mail className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{selectedOther.email || t("shared.messages.notOnFile")}</span></div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground"><Phone className="h-3.5 w-3.5 shrink-0" /><span>{linkedStudent?.guardianPhone || linkedStudent?.fatherPhone || linkedStudent?.motherPhone || t("shared.messages.notOnFile")}</span></div>
                           </div>
                         </>
                       )}
@@ -781,13 +783,13 @@ const Messages = () => {
 
                     {selectedThread.type === "group" && (
                       <div className="p-4 border-b border-border">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Members ({selectedThread.participants.length})</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">{t("shared.messages.membersHeading", { count: selectedThread.participants.length })}</p>
                         <div className="space-y-2">
                           {selectedThread.participants.map(p => (
                             <div key={p.uid} className="flex items-center gap-2">
                               <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px] bg-muted">{initials(p.name)}</AvatarFallback></Avatar>
                               <div className="min-w-0">
-                                <p className="text-xs font-semibold truncate">{p.name}{p.uid === myUid ? " (you)" : ""}</p>
+                                <p className="text-xs font-semibold truncate">{p.name}{p.uid === myUid ? ` ${t("shared.messages.youSuffix")}` : ""}</p>
                                 <p className="text-[10px] text-muted-foreground truncate">{getRole(p.role).label}</p>
                               </div>
                             </div>
@@ -799,16 +801,16 @@ const Messages = () => {
                     {linkedStudent && (
                       <div className="p-4 border-b border-border">
                         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <Bell className="h-3.5 w-3.5" /> Communication History — {linkedStudent.name}
+                          <Bell className="h-3.5 w-3.5" /> {t("shared.messages.communicationHistoryFor", { name: linkedStudent.name })}
                         </p>
                         {linkedAlerts.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">No recent alerts on file.</p>
+                          <p className="text-xs text-muted-foreground">{t("shared.messages.noRecentAlerts")}</p>
                         ) : (
                           <div className="space-y-2">
                             {linkedAlerts.map((n: any) => (
                               <div key={n.id} className="text-xs p-2 rounded-lg bg-muted/50">
                                 <p className="font-semibold truncate">{n.title || n.type}</p>
-                                <p className="text-muted-foreground text-[10px]">{n.category || "general"} · {fmtListTime(n.time)}</p>
+                                <p className="text-muted-foreground text-[10px]">{n.category || t("shared.messages.generalCategory")} · {fmtListTime(n.time)}</p>
                               </div>
                             ))}
                           </div>
@@ -817,9 +819,9 @@ const Messages = () => {
                     )}
 
                     <div className="p-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Shared Files ({sharedFiles.length})</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">{t("shared.messages.sharedFilesHeading", { count: sharedFiles.length })}</p>
                       {sharedFiles.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No files shared yet.</p>
+                        <p className="text-xs text-muted-foreground">{t("shared.messages.noFilesSharedYet")}</p>
                       ) : (
                         <div className="space-y-2">
                           {sharedFiles.map((f, i) => (
@@ -842,12 +844,12 @@ const Messages = () => {
                 <MessageSquare className="h-10 w-10" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Select a conversation</h3>
+                <h3 className="text-xl font-bold">{t("shared.messages.selectAConversation")}</h3>
                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  Choose a chat from the sidebar to start messaging with staff, parents, or students.
+                  {t("shared.messages.selectConversationHint")}
                 </p>
               </div>
-              <Button variant="outline" className="rounded-full" onClick={() => setNewChatOpen(true)}>Start New Chat</Button>
+              <Button variant="outline" className="rounded-full" onClick={() => setNewChatOpen(true)}>{t("shared.messages.startNewChat")}</Button>
             </div>
           )}
         </Card>
@@ -856,15 +858,15 @@ const Messages = () => {
       {/* New Direct Chat */}
       <Dialog open={newChatOpen} onOpenChange={setNewChatOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>New Conversation</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("shared.messages.newConversationTitle")}</DialogTitle></DialogHeader>
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search people..." className="pl-9 h-9" value={newChatSearch} onChange={e => setNewChatSearch(e.target.value)} autoFocus />
+            <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder={t("shared.messages.searchPeoplePlaceholder")} className="ps-9 h-9" value={newChatSearch} onChange={e => setNewChatSearch(e.target.value)} autoFocus />
           </div>
           <div className="max-h-72 overflow-y-auto -mx-2 px-2">
-            {newChatContacts.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">No matching contacts you're able to message.</p>}
+            {newChatContacts.length === 0 && <p className="text-xs text-muted-foreground text-center py-6">{t("shared.messages.noMatchingContacts")}</p>}
             {newChatContacts.map(c => (
-              <button key={c.uid} onClick={() => startDirectChat(c)} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors text-left">
+              <button key={c.uid} onClick={() => startDirectChat(c)} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors text-start">
                 <Avatar className="h-9 w-9"><AvatarFallback className="text-xs bg-primary/10 text-primary">{initials(c.name)}</AvatarFallback></Avatar>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate">{c.name}</p>
@@ -879,8 +881,8 @@ const Messages = () => {
       {/* New Group */}
       <Dialog open={newGroupOpen} onOpenChange={setNewGroupOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>New Group</DialogTitle></DialogHeader>
-          <Input placeholder="Group name (e.g. Grade 10 Teachers)" value={groupName} onChange={e => setGroupName(e.target.value)} className="mb-2" />
+          <DialogHeader><DialogTitle>{t("shared.messages.newGroupDialogTitle")}</DialogTitle></DialogHeader>
+          <Input placeholder={t("shared.messages.groupNamePlaceholder")} value={groupName} onChange={e => setGroupName(e.target.value)} className="mb-2" />
           {groupMembers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {groupMembers.map(m => (
@@ -892,12 +894,12 @@ const Messages = () => {
             </div>
           )}
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Add members..." className="pl-9 h-9" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} />
+            <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder={t("shared.messages.addMembersPlaceholder")} className="ps-9 h-9" value={groupSearch} onChange={e => setGroupSearch(e.target.value)} />
           </div>
           <div className="max-h-52 overflow-y-auto -mx-2 px-2">
             {groupPickContacts.map(c => (
-              <button key={c.uid} onClick={() => { setGroupMembers(prev => [...prev, c]); setGroupSearch(""); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors text-left">
+              <button key={c.uid} onClick={() => { setGroupMembers(prev => [...prev, c]); setGroupSearch(""); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/60 transition-colors text-start">
                 <Avatar className="h-8 w-8"><AvatarFallback className="text-xs bg-muted">{initials(c.name)}</AvatarFallback></Avatar>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate">{c.name}</p>
@@ -907,8 +909,8 @@ const Messages = () => {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewGroupOpen(false)}>Cancel</Button>
-            <Button onClick={createGroup}>Create Group</Button>
+            <Button variant="outline" onClick={() => setNewGroupOpen(false)}>{t("shared.messages.cancelButton")}</Button>
+            <Button onClick={createGroup}>{t("shared.messages.createGroupButton")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

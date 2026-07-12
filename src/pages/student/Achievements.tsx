@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Trophy, Calendar, Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 const ACCOMPLISHMENT_CATEGORIES = ["All", "Academic", "Sports", "Arts", "Extra-curricular"];
 
 export default function StudentAchievements() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -45,10 +47,10 @@ export default function StudentAchievements() {
   const listToRender = achievements.map((a: any) => ({
     id: a.id,
     title: a.title,
-    event: a.event || a.type || "School Event",
+    event: a.event || a.type || t("student.achievements.defaultEvent"),
     type: a.type || "Academic",
     position: a.position || a.award || "1st",
-    date: a.date ? new Date(a.date).toLocaleDateString("en-GB") : "Recently",
+    date: a.date ? new Date(a.date).toLocaleDateString("en-GB") : t("student.achievements.defaultDate"),
     desc: a.description || "",
     // Fields needed to generate the same real certificate the parent portal
     // can already download for this achievement (src/lib/certificateReports.ts).
@@ -66,7 +68,17 @@ export default function StudentAchievements() {
   const isNumericRank = (pos: string) => /^\d+(st|nd|rd|th)?$/i.test(String(pos).trim());
 
   const positionLabel = (pos: string, suffix: "Place" | "Position") =>
-    isNumericRank(pos) ? `${pos} ${suffix}` : pos;
+    isNumericRank(pos)
+      ? t(suffix === "Place" ? "student.achievements.positionPlace" : "student.achievements.positionPosition", { pos })
+      : pos;
+
+  const categoryLabels: Record<string, string> = {
+    All: t("student.achievements.categoryAll"),
+    Academic: t("student.achievements.categoryAcademic"),
+    Sports: t("student.achievements.categorySports"),
+    Arts: t("student.achievements.categoryArts"),
+    "Extra-curricular": t("student.achievements.categoryExtraCurricular"),
+  };
 
   const getTrophyColor = (pos: string) => {
     const p = pos.toLowerCase();
@@ -102,10 +114,10 @@ export default function StudentAchievements() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                <Trophy className="h-5.5 w-5.5 text-amber-500" /> Honors & Achievements
+                <Trophy className="h-5.5 w-5.5 text-amber-500" /> {t("student.achievements.pageTitle")}
               </h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Your personal digital trophy case. Check medals and certificates issued by instructors.
+                {t("student.achievements.pageSubtitle")}
               </p>
             </div>
 
@@ -122,7 +134,7 @@ export default function StudentAchievements() {
                       : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
                   )}
                 >
-                  {cat}
+                  {categoryLabels[cat] ?? cat}
                 </button>
               ))}
             </div>
@@ -132,8 +144,8 @@ export default function StudentAchievements() {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] text-slate-400 transition-colors shadow-sm">
               <Trophy className="h-12 w-12 mb-3 opacity-25" />
-              <p className="font-extrabold text-sm text-slate-800 dark:text-white">Cabinet Empty</p>
-              <p className="text-xs text-slate-400 mt-1">There are no medals listed under this filter.</p>
+              <p className="font-extrabold text-sm text-slate-800 dark:text-white">{t("student.achievements.emptyTitle")}</p>
+              <p className="text-xs text-slate-400 mt-1">{t("student.achievements.emptySubtitle")}</p>
             </div>
           ) : (
             <div className="space-y-12">
@@ -179,7 +191,7 @@ export default function StudentAchievements() {
                 </div>
 
                 {/* Decorative horizontal Shelf shelf board line */}
-                <div className="absolute -bottom-4 left-0 right-0 h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 rounded-full shadow-md pointer-events-none" />
+                <div className="absolute -bottom-4 start-0 end-0 h-2 bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 rounded-full shadow-md pointer-events-none" />
               </div>
             </div>
           )}
@@ -204,7 +216,7 @@ export default function StudentAchievements() {
                 >
                   <button 
                     onClick={() => setSelectedAccolade(null)} 
-                    className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="absolute top-4 end-4 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     <X className="h-4.5 w-4.5 text-slate-400" />
                   </button>
@@ -222,16 +234,16 @@ export default function StudentAchievements() {
                   </div>
 
                   <div className="bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/40 rounded-2xl p-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed w-full">
-                    {selectedAccolade.desc || <span className="italic text-slate-400">No description provided.</span>}
+                    {selectedAccolade.desc || <span className="italic text-slate-400">{t("student.achievements.noDescription")}</span>}
                   </div>
 
                   <div className="w-full pt-4 border-t border-slate-50 dark:border-slate-800/20 flex items-center justify-between text-[11px] font-bold text-slate-400">
-                    <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Date: {selectedAccolade.date}</span>
+                    <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {t("student.achievements.dateLabel", { date: selectedAccolade.date })}</span>
                     <button
-                      onClick={() => downloadCertificate(selectedAccolade, (student as any)?.name || "Student")}
+                      onClick={() => downloadCertificate(selectedAccolade, (student as any)?.name || t("student.achievements.defaultStudentName"))}
                       className="flex items-center gap-1 text-purple-600 dark:text-violet-400 hover:underline"
                     >
-                      <Download className="h-3.5 w-3.5" /> Download Certificate
+                      <Download className="h-3.5 w-3.5" /> {t("student.achievements.downloadCertificate")}
                     </button>
                   </div>
                 </motion.div>

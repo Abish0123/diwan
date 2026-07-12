@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +87,7 @@ interface Event {
 }
 
 export default function CommunicationCalendar() {
+  const { t } = useTranslation();
   const { user, role } = useAuth();
   const uid = user?.uid;
   const { students } = useStudents();
@@ -116,6 +118,35 @@ export default function CommunicationCalendar() {
   });
 
   const categories = ['Academic', 'Sports', 'Holidays', 'Exams', 'Meetings', 'Exhibition'];
+
+  // Display-only labels — the underlying category value (used for matching,
+  // color mapping and storage) stays the original English identifier.
+  const categoryLabels: Record<string, string> = {
+    Academic: t('shared.calendar.categoryAcademic'),
+    Sports: t('shared.calendar.categorySports'),
+    Holidays: t('shared.calendar.categoryHolidays'),
+    Exams: t('shared.calendar.categoryExams'),
+    Meetings: t('shared.calendar.categoryMeetings'),
+    Exhibition: t('shared.calendar.categoryExhibition'),
+  };
+
+  // Display-only labels for the audience values (data value stays English).
+  const audienceLabels: Record<string, string> = {
+    All: t('shared.calendar.audienceAll'),
+    Students: t('shared.calendar.audienceStudents'),
+    Staff: t('shared.calendar.audienceStaff'),
+    Parents: t('shared.calendar.audienceParents'),
+  };
+
+  const weekDayLabels = [
+    t('shared.calendar.daySun'),
+    t('shared.calendar.dayMon'),
+    t('shared.calendar.dayTue'),
+    t('shared.calendar.dayWed'),
+    t('shared.calendar.dayThu'),
+    t('shared.calendar.dayFri'),
+    t('shared.calendar.daySat'),
+  ];
 
   // Hydrate persisted events from the DB — unscoped (school-wide), not
   // filtered by the viewer's own uid. This used to be `smartDb.getAll(
@@ -261,7 +292,7 @@ export default function CommunicationCalendar() {
 
   const handleAddEvent = async () => {
     if (!newEvent.title || !newEvent.date) {
-      toast.error("Please fill in the required fields");
+      toast.error(t('shared.calendar.toastFillRequired'));
       return;
     }
 
@@ -300,16 +331,16 @@ export default function CommunicationCalendar() {
         targetAudience: "All",
         targetClass: "",
       });
-      toast.success("Event created successfully");
+      toast.success(t('shared.calendar.toastEventCreated'));
     } catch {
-      toast.error("Failed to create event");
+      toast.error(t('shared.calendar.toastCreateFailed'));
     }
   };
 
   const deleteEvent = async (id: string | number) => {
     setEvents(prev => prev.filter(e => e.id !== id));
     setSelectedEvent(null);
-    toast.success("Event deleted");
+    toast.success(t('shared.calendar.toastEventDeleted'));
     await smartDb.delete("CalendarEvent", String(id));
   };
 
@@ -335,7 +366,7 @@ export default function CommunicationCalendar() {
     const a = document.createElement("a");
     a.href = url; a.download = `${event.title.replace(/\s+/g, "_")}.ics`;
     a.click(); URL.revokeObjectURL(url);
-    toast.success("Calendar file downloaded — import it into your calendar app");
+    toast.success(t('shared.calendar.toastIcsDownloaded'));
   };
 
   return (
@@ -347,16 +378,16 @@ export default function CommunicationCalendar() {
               <CalendarIcon className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Communication Calendar</h1>
-              <p className="text-sm text-slate-400">Schedule and manage school events, meetings, and announcements.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('shared.calendar.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('shared.calendar.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative w-full md:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search events..." 
-                className="pl-9 h-9 text-xs"
+              <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('shared.calendar.searchPlaceholder')}
+                className="ps-9 h-9 text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -365,103 +396,103 @@ export default function CommunicationCalendar() {
               {canManage && (
                 <DialogTrigger asChild>
                   <Button className="gradient-primary h-9 text-xs font-bold">
-                    <Plus className="mr-2 h-4 w-4" /> Create Event
+                    <Plus className="me-2 h-4 w-4" /> {t('shared.calendar.createEventButton')}
                   </Button>
                 </DialogTrigger>
               )}
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Create New Event</DialogTitle>
+                  <DialogTitle>{t('shared.calendar.createEventDialogTitle')}</DialogTitle>
                   <DialogDescription>
-                    Fill in the details to add a new event to the school calendar.
+                    {t('shared.calendar.createEventDialogDescription')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="title" className="text-xs font-bold uppercase tracking-wider">Event Title</Label>
-                    <Input 
-                      id="title" 
-                      placeholder="e.g. Annual Sports Day" 
+                    <Label htmlFor="title" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.eventTitleLabel')}</Label>
+                    <Input
+                      id="title"
+                      placeholder={t('shared.calendar.eventTitlePlaceholder')}
                       value={newEvent.title}
                       onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider">Date</Label>
-                      <Input 
-                        id="date" 
-                        type="date" 
+                      <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.dateLabel')}</Label>
+                      <Input
+                        id="date"
+                        type="date"
                         value={newEvent.date}
                         onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="time" className="text-xs font-bold uppercase tracking-wider">Time</Label>
-                      <Input 
-                        id="time" 
-                        placeholder="09:00 AM" 
+                      <Label htmlFor="time" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.timeLabel')}</Label>
+                      <Input
+                        id="time"
+                        placeholder={t('shared.calendar.timePlaceholder')}
                         value={newEvent.time}
                         onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider">Location</Label>
-                    <Input 
-                      id="location" 
-                      placeholder="e.g. Main Auditorium" 
+                    <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.locationLabel')}</Label>
+                    <Input
+                      id="location"
+                      placeholder={t('shared.calendar.locationPlaceholder')}
                       value={newEvent.location}
                       onChange={(e) => setNewEvent({...newEvent, location: e.target.value})}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider">Category</Label>
-                    <Select 
-                      value={newEvent.category} 
+                    <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.categoryLabel')}</Label>
+                    <Select
+                      value={newEvent.category}
                       onValueChange={(value) => setNewEvent({...newEvent, category: value})}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t('shared.calendar.selectCategoryPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          <SelectItem key={cat} value={cat}>{categoryLabels[cat] || cat}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider">Description</Label>
+                    <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.descriptionLabel')}</Label>
                     <Input
                       id="description"
-                      placeholder="Brief description of the event"
+                      placeholder={t('shared.calendar.descriptionPlaceholder')}
                       value={newEvent.description}
                       onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="audience" className="text-xs font-bold uppercase tracking-wider">Visible To</Label>
+                      <Label htmlFor="audience" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.visibleToLabel')}</Label>
                       <Select
                         value={newEvent.targetAudience}
                         onValueChange={(value) => setNewEvent({...newEvent, targetAudience: value})}
                       >
                         <SelectTrigger id="audience">
-                          <SelectValue placeholder="Everyone" />
+                          <SelectValue placeholder={t('shared.calendar.everyonePlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {["All", "Students", "Staff", "Parents"].map(a => (
-                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                            <SelectItem key={a} value={a}>{audienceLabels[a] || a}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="targetClass" className="text-xs font-bold uppercase tracking-wider">Class (optional)</Label>
+                      <Label htmlFor="targetClass" className="text-xs font-bold uppercase tracking-wider">{t('shared.calendar.classOptionalLabel')}</Label>
                       <Input
                         id="targetClass"
-                        placeholder="e.g. Grade 5-B"
+                        placeholder={t('shared.calendar.classOptionalPlaceholder')}
                         value={newEvent.targetClass}
                         onChange={(e) => setNewEvent({...newEvent, targetClass: e.target.value})}
                       />
@@ -469,8 +500,8 @@ export default function CommunicationCalendar() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddEventOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddEvent} className="gradient-primary">Create Event</Button>
+                  <Button variant="outline" onClick={() => setIsAddEventOpen(false)}>{t('shared.calendar.cancelButton')}</Button>
+                  <Button onClick={handleAddEvent} className="gradient-primary">{t('shared.calendar.createEventButton')}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -483,53 +514,53 @@ export default function CommunicationCalendar() {
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-bold min-w-[140px]">
                   {view === "month" && format(currentMonth, "MMMM yyyy")}
-                  {view === "week" && `Week of ${format(startOfWeek(currentMonth), "MMM d")}`}
+                  {view === "week" && t('shared.calendar.weekOf', { date: format(startOfWeek(currentMonth), "MMM d") })}
                   {view === "day" && format(currentMonth, "MMM d, yyyy")}
                 </h2>
                 <div className="flex items-center gap-1">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={prev}>
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
                   </Button>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={next}>
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                   </Button>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase" onClick={goToToday}>Today</Button>
+                <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase" onClick={goToToday}>{t('shared.calendar.todayButton')}</Button>
                 <div className="flex items-center bg-muted rounded-lg p-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className={cn(
                       "h-6 text-[10px] font-bold uppercase px-2 transition-all",
                       view === "month" ? "bg-background shadow-sm" : "hover:bg-background/50"
                     )}
                     onClick={() => setView("month")}
                   >
-                    Month
+                    {t('shared.calendar.monthViewButton')}
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className={cn(
                       "h-6 text-[10px] font-bold uppercase px-2 transition-all",
                       view === "week" ? "bg-background shadow-sm" : "hover:bg-background/50"
                     )}
                     onClick={() => setView("week")}
                   >
-                    Week
+                    {t('shared.calendar.weekViewButton')}
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className={cn(
                       "h-6 text-[10px] font-bold uppercase px-2 transition-all",
                       view === "day" ? "bg-background shadow-sm" : "hover:bg-background/50"
                     )}
                     onClick={() => setView("day")}
                   >
-                    Day
+                    {t('shared.calendar.dayViewButton')}
                   </Button>
                 </div>
               </div>
@@ -538,8 +569,8 @@ export default function CommunicationCalendar() {
               {view === "month" && (
                 <>
                   <div className="grid grid-cols-7 border-b border-sidebar-border/50">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-r border-sidebar-border/50 last:border-r-0">
+                    {weekDayLabels.map((day, di) => (
+                      <div key={di} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-e border-sidebar-border/50 last:border-e-0">
                         {day}
                       </div>
                     ))}
@@ -551,7 +582,7 @@ export default function CommunicationCalendar() {
                       
                       return (
                         <div key={i} className={cn(
-                          "p-2 border-r border-b border-sidebar-border/50 last:border-r-0 relative group hover:bg-muted/30 transition-colors min-h-[100px]",
+                          "p-2 border-e border-b border-sidebar-border/50 last:border-e-0 relative group hover:bg-muted/30 transition-colors min-h-[100px]",
                           !isCurrentMonth && "bg-muted/10 text-muted-foreground/30"
                         )}>
                           <span className={cn(
@@ -566,7 +597,7 @@ export default function CommunicationCalendar() {
                                 key={event.id}
                                 onClick={() => setSelectedEvent(event)}
                                 className={cn(
-                                  "text-[9px] font-bold p-1 rounded border-l-2 truncate cursor-pointer hover:brightness-95 transition-all",
+                                  "text-[9px] font-bold p-1 rounded border-s-2 truncate cursor-pointer hover:brightness-95 transition-all",
                                   event.color.replace('bg-', 'bg-').replace('500', '500/10'),
                                   event.color.replace('bg-', 'text-'),
                                   event.color.replace('bg-', 'border-')
@@ -617,7 +648,7 @@ export default function CommunicationCalendar() {
                                 key={event.id}
                                 onClick={() => setSelectedEvent(event)}
                                 className={cn(
-                                  "p-3 rounded-xl border border-l-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-all",
+                                  "p-3 rounded-xl border border-s-4 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-all",
                                   event.color.replace('bg-', 'bg-').replace('500', '500/5'),
                                   event.color.replace('bg-', 'border-')
                                 )}
@@ -633,12 +664,12 @@ export default function CommunicationCalendar() {
                                     </span>
                                   </div>
                                 </div>
-                                <Badge variant="outline" className="text-[9px] font-bold uppercase">{event.category}</Badge>
+                                <Badge variant="outline" className="text-[9px] font-bold uppercase">{categoryLabels[event.category] || event.category}</Badge>
                               </div>
                             ))
                           ) : (
                             <div className="h-16 rounded-xl border border-dashed border-border flex items-center justify-center">
-                              <p className="text-[10px] font-medium text-muted-foreground italic">No events scheduled</p>
+                              <p className="text-[10px] font-medium text-muted-foreground italic">{t('shared.calendar.noEventsScheduled')}</p>
                             </div>
                           )}
                         </div>
@@ -656,13 +687,13 @@ export default function CommunicationCalendar() {
                       <p className="text-muted-foreground">{format(currentMonth, "MMMM d, yyyy")}</p>
                     </div>
                     {isToday(currentMonth) && (
-                      <Badge className="bg-primary/10 text-primary border-primary/20">Today</Badge>
+                      <Badge className="bg-primary/10 text-primary border-primary/20">{t('shared.calendar.todayBadge')}</Badge>
                     )}
                   </div>
-                  
+
                   {timetablePeriodsFor(currentMonth).length > 0 && (
                     <div className="mb-6">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Class Periods (from Timetable)</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">{t('shared.calendar.classPeriodsLabel')}</p>
                       <div className="space-y-2">
                         {timetablePeriodsFor(currentMonth).map((p, i) => (
                           <div key={i} className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-dashed border-primary/20 bg-primary/5">
@@ -671,7 +702,7 @@ export default function CommunicationCalendar() {
                               <span className="text-sm font-medium">{p.subject}</span>
                               <span className="text-[10px] text-muted-foreground">{p.classLabel}{p.room ? ` · ${p.room}` : ""}</span>
                             </div>
-                            <Badge variant="outline" className="text-[9px]">Timetable</Badge>
+                            <Badge variant="outline" className="text-[9px]">{t('shared.calendar.timetableBadge')}</Badge>
                           </div>
                         ))}
                       </div>
@@ -686,7 +717,7 @@ export default function CommunicationCalendar() {
                             key={event.id}
                             onClick={() => setSelectedEvent(event)}
                             className={cn(
-                              "p-4 rounded-2xl border border-l-8 flex items-center justify-between cursor-pointer hover:scale-[1.01] transition-all",
+                              "p-4 rounded-2xl border border-s-8 flex items-center justify-between cursor-pointer hover:scale-[1.01] transition-all",
                               event.color.replace('bg-', 'bg-').replace('500', '500/5'),
                               event.color.replace('bg-', 'border-')
                             )}
@@ -707,19 +738,19 @@ export default function CommunicationCalendar() {
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <Badge variant="outline" className="mb-2">{event.category}</Badge>
-                              <p className="text-[10px] text-muted-foreground font-medium">Click for details</p>
+                            <div className="text-end">
+                              <Badge variant="outline" className="mb-2">{categoryLabels[event.category] || event.category}</Badge>
+                              <p className="text-[10px] text-muted-foreground font-medium">{t('shared.calendar.clickForDetails')}</p>
                             </div>
                           </div>
                         ))
                     ) : (
                       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
                         <CalendarIcon className="h-12 w-12 mb-4" strokeWidth={1} />
-                        <p className="text-sm font-medium">No events scheduled for today</p>
+                        <p className="text-sm font-medium">{t('shared.calendar.noEventsScheduledToday')}</p>
                         {canManage && (
                           <Button variant="outline" size="sm" className="mt-4" onClick={() => setIsAddEventOpen(true)}>
-                            <Plus className="h-4 w-4 mr-2" /> Add Event
+                            <Plus className="h-4 w-4 me-2" /> {t('shared.calendar.addEventButton')}
                           </Button>
                         )}
                       </div>
@@ -733,7 +764,7 @@ export default function CommunicationCalendar() {
           <div className="space-y-6">
             <Card className="premium-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Upcoming Events</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{t('shared.calendar.upcomingEventsTitle')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {filteredEvents.length > 0 ? (
@@ -758,17 +789,17 @@ export default function CommunicationCalendar() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-muted-foreground text-center py-4 italic">No events found</p>
+                  <p className="text-xs text-muted-foreground text-center py-4 italic">{t('shared.calendar.noEventsFound')}</p>
                 )}
               </CardContent>
             </Card>
 
             <Card className="premium-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Quick Filters</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{t('shared.calendar.quickFiltersTitle')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div 
+                <div
                   className={cn(
                     "flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group",
                     selectedCategory === "All" && "bg-primary/5 border border-primary/20"
@@ -777,15 +808,15 @@ export default function CommunicationCalendar() {
                 >
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-slate-400" />
-                    <span className="text-xs font-bold group-hover:text-primary transition-colors">All Categories</span>
+                    <span className="text-xs font-bold group-hover:text-primary transition-colors">{t('shared.calendar.allCategoriesLabel')}</span>
                   </div>
                   <Badge variant="outline" className="text-[9px] font-bold border-none bg-muted/50">{visibleEvents.length}</Badge>
                 </div>
                 {categories.map(cat => {
                   const count = visibleEvents.filter(e => e.category === cat).length;
                   return (
-                    <div 
-                      key={cat} 
+                    <div
+                      key={cat}
                       className={cn(
                         "flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group",
                         selectedCategory === cat && "bg-primary/5 border border-primary/20"
@@ -798,10 +829,10 @@ export default function CommunicationCalendar() {
                           cat === 'Academic' ? 'bg-blue-500' :
                           cat === 'Sports' ? 'bg-emerald-500' :
                           cat === 'Holidays' ? 'bg-rose-500' :
-                          cat === 'Exams' ? 'bg-amber-500' : 
+                          cat === 'Exams' ? 'bg-amber-500' :
                           cat === 'Meetings' ? 'bg-purple-500' : 'bg-orange-500'
                         )} />
-                        <span className="text-xs font-bold group-hover:text-primary transition-colors">{cat}</span>
+                        <span className="text-xs font-bold group-hover:text-primary transition-colors">{categoryLabels[cat] || cat}</span>
                       </div>
                       <Badge variant="outline" className="text-[9px] font-bold border-none bg-muted/50">{count}</Badge>
                     </div>
@@ -825,26 +856,26 @@ export default function CommunicationCalendar() {
                 <div>
                   <DialogTitle className="text-xl font-bold">{selectedEvent?.title}</DialogTitle>
                   <DialogDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {selectedEvent?.category} • {selectedEvent?.date && format(parseISO(selectedEvent.date), "MMMM d, yyyy")}
+                    {selectedEvent?.category && (categoryLabels[selectedEvent.category] || selectedEvent.category)} • {selectedEvent?.date && format(parseISO(selectedEvent.date), "MMMM d, yyyy")}
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <p className="text-sm leading-relaxed text-foreground">
-                {selectedEvent?.description || "No description provided for this event."}
+                {selectedEvent?.description || t('shared.calendar.noDescriptionProvided')}
               </p>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Time
+                    <Clock className="h-3 w-3" /> {t('shared.calendar.timeLabel')}
                   </h4>
                   <p className="text-sm font-bold">{selectedEvent?.time}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-muted/50 border border-border/50">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> Location
+                    <MapPin className="h-3 w-3" /> {t('shared.calendar.locationLabel')}
                   </h4>
                   <p className="text-sm font-bold truncate">{selectedEvent?.location}</p>
                 </div>
@@ -853,16 +884,16 @@ export default function CommunicationCalendar() {
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-primary mb-2 flex items-center gap-2">
                   <Users className="h-3.5 w-3.5" />
-                  Attendees
+                  {t('shared.calendar.attendeesLabel')}
                 </h4>
                 {/* Real audience from the event's own targetAudience/targetClass —
                     same fields Announcements.tsx renders as badges — instead of a
                     static "open to all" line regardless of the actual scope. */}
                 <p className="text-xs text-muted-foreground">
                   {selectedEvent?.targetClass
-                    ? `${selectedEvent.targetClass} only`
-                    : `Open to ${(selectedEvent?.targetAudience || "All").toLowerCase()}`}
-                  . No registration required.
+                    ? t('shared.calendar.classOnly', { className: selectedEvent.targetClass })
+                    : t('shared.calendar.openToAudience', { audience: (audienceLabels[selectedEvent?.targetAudience || "All"] || selectedEvent?.targetAudience || "All").toLowerCase() })}
+                  {" "}{t('shared.calendar.noRegistrationRequired')}
                 </p>
               </div>
             </div>
@@ -874,14 +905,14 @@ export default function CommunicationCalendar() {
                   className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => selectedEvent && deleteEvent(selectedEvent.id)}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                  <Trash2 className="h-4 w-4 me-2" /> {t('shared.calendar.deleteButton')}
                 </Button>
               ) : (
                 <span />
               )}
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setSelectedEvent(null)}>Close</Button>
-                <Button className="gradient-primary" onClick={() => selectedEvent && downloadIcs(selectedEvent)}>Add to My Calendar</Button>
+                <Button variant="outline" onClick={() => setSelectedEvent(null)}>{t('shared.calendar.closeButton')}</Button>
+                <Button className="gradient-primary" onClick={() => selectedEvent && downloadIcs(selectedEvent)}>{t('shared.calendar.addToMyCalendarButton')}</Button>
               </div>
             </DialogFooter>
           </DialogContent>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ function invoiceToFeeRow(inv: Invoice): FeeRow {
 }
 
 export default function StudentFees() {
+  const { t } = useTranslation();
   const [year, setYear] = useState("2026-27");
   const { user } = useAuth();
   const { students } = useStudents();
@@ -90,7 +92,18 @@ export default function StudentFees() {
   const downloadReceipt = (invoice: Invoice) => {
     if (invoice.status !== "Paid") return;
     downloadInvoiceReceiptPdf(invoice);
-    toast.success("Receipt downloaded");
+    toast.success(t("student.fees.receiptDownloaded"));
+  };
+
+  const displayStatusLabel = (status: DisplayStatus) => {
+    switch (status) {
+      case "Paid": return t("student.fees.statusPaid");
+      case "Partial": return t("student.fees.statusPartial");
+      case "Overdue": return t("student.fees.statusOverdue");
+      case "Upcoming": return t("student.fees.statusUpcoming");
+      case "Cancelled": return t("student.fees.statusCancelled");
+      default: return t("student.fees.statusUpcoming");
+    }
   };
 
   // Resolve the logged-in student the same way Profile.tsx does.
@@ -140,7 +153,7 @@ export default function StudentFees() {
     // a student self-paying one of these invoices shouldn't leave the lead stuck.
     if (newStatus === "Paid") await advanceLeadOnFeeInvoicePaid(paidInvoice, paymentMethod);
     downloadInvoiceReceiptPdf(paidInvoice);
-    toast.success("Payment received — receipt downloaded");
+    toast.success(t("student.fees.paymentReceivedReceiptDownloaded"));
     setInvoices((prev) => prev.map((i) => (i.id === invoice.id ? paidInvoice : i)));
   }
 
@@ -157,7 +170,11 @@ export default function StudentFees() {
       try {
         const tx = await getPaymentTransaction(orderId);
         if (tx.status !== "A") {
-          toast.error(`Payment ${tx.status === "pending" ? "was not completed" : `failed (status: ${tx.status})`} — nothing was charged.`);
+          toast.error(
+            tx.status === "pending"
+              ? t("student.fees.paymentNotCompleted")
+              : t("student.fees.paymentFailedStatus", { status: tx.status })
+          );
           sessionStorage.removeItem(`fee_pending_${orderId}`);
           return;
         }
@@ -166,7 +183,7 @@ export default function StudentFees() {
         sessionStorage.removeItem(`fee_pending_${orderId}`);
       } catch (err) {
         console.error("Failed to verify payment:", err);
-        toast.error("Could not verify payment status — please contact Finance if you were charged.");
+        toast.error(t("student.fees.paymentVerifyError"));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,7 +192,7 @@ export default function StudentFees() {
   const payNow = async (invoice?: Invoice) => {
     const target = invoice || invoices.find((i) => getInvoiceDisplayStatus(i) !== "Paid" && getInvoiceDisplayStatus(i) !== "Upcoming");
     if (!target) {
-      toast.info("No pending fees to pay right now.");
+      toast.info(t("student.fees.noPendingFees"));
       return;
     }
     setPayingInvoiceId(target.id);
@@ -198,10 +215,10 @@ export default function StudentFees() {
       window.location.href = redirectUrl;
     } catch (error) {
       if (error instanceof GatewayNotConfiguredError) {
-        toast.error("Online payment isn't connected yet. Ask your admin to configure a payment gateway in Finance Settings.");
+        toast.error(t("student.fees.gatewayNotConfigured"));
       } else {
         console.error("Payment failed:", error);
-        toast.error("Payment failed — please try again");
+        toast.error(t("student.fees.paymentFailedRetry"));
       }
     } finally {
       setPayingInvoiceId(null);
@@ -250,10 +267,10 @@ export default function StudentFees() {
   // Each KPI action jumps to the real section that actually answers it,
   // instead of a toast that just echoed the label back with no real action.
   const KPIS = [
-    { label: "Total Fees",   value: bhd(summary.total),   action: "View Breakup",  bg: "bg-purple-50",  ic: "text-purple-600",  iconBg: "bg-purple-100",  icon: Wallet, fn: () => scrollTo(feeDetailsRef) },
-    { label: "Paid Fees",    value: bhd(summary.paid),    action: "View Payments", bg: "bg-amber-50",   ic: "text-amber-600",   iconBg: "bg-amber-100",   icon: CreditCard, fn: () => scrollTo(paymentHistoryRef) },
-    { label: "Pending Fees", value: bhd(summary.pending), action: "Due Soon",      bg: "bg-emerald-50", ic: "text-emerald-600", iconBg: "bg-emerald-100", icon: Package, fn: () => scrollTo(upcomingDuesRef) },
-    { label: "Overdue Fees", value: bhd(summary.overdue), action: "Overdue",       bg: "bg-rose-50",    ic: "text-rose-600",    iconBg: "bg-rose-100",    icon: AlertCircle, fn: () => scrollTo(feeDetailsRef) },
+    { label: t("student.fees.totalFees"),   value: bhd(summary.total),   action: t("student.fees.viewBreakup"),  bg: "bg-purple-50",  ic: "text-purple-600",  iconBg: "bg-purple-100",  icon: Wallet, fn: () => scrollTo(feeDetailsRef) },
+    { label: t("student.fees.paidFees"),    value: bhd(summary.paid),    action: t("student.fees.viewPayments"), bg: "bg-amber-50",   ic: "text-amber-600",   iconBg: "bg-amber-100",   icon: CreditCard, fn: () => scrollTo(paymentHistoryRef) },
+    { label: t("student.fees.pendingFees"), value: bhd(summary.pending), action: t("student.fees.dueSoon"),      bg: "bg-emerald-50", ic: "text-emerald-600", iconBg: "bg-emerald-100", icon: Package, fn: () => scrollTo(upcomingDuesRef) },
+    { label: t("student.fees.overdueFees"), value: bhd(summary.overdue), action: t("student.fees.overdue"),       bg: "bg-rose-50",    ic: "text-rose-600",    iconBg: "bg-rose-100",    icon: AlertCircle, fn: () => scrollTo(feeDetailsRef) },
   ];
 
   const allUpcomingDues = feeRows
@@ -274,15 +291,15 @@ export default function StudentFees() {
     const paidRows = feeRows.filter((r) => r.status === "Paid");
     const latest = paidRows[paidRows.length - 1];
     if (!latest) {
-      toast.info("No paid invoices yet to generate a receipt for.");
+      toast.info(t("student.fees.noPaidInvoices"));
       return;
     }
     downloadReceipt(latest.invoice);
   };
 
   const quickActions = [
-    { label: "Make a Payment",       icon: Wallet,    ic: "text-purple-600",  fn: () => payNow() },
-    { label: "Download Fee Receipt", icon: Download,  ic: "text-purple-600",    fn: downloadLatestReceipt },
+    { label: t("student.fees.makeAPayment"),       icon: Wallet,    ic: "text-purple-600",  fn: () => payNow() },
+    { label: t("student.fees.downloadFeeReceipt"), icon: Download,  ic: "text-purple-600",    fn: downloadLatestReceipt },
   ];
 
   return (
@@ -296,12 +313,12 @@ export default function StudentFees() {
               <Wallet className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Fees</h1>
-              <p className="text-sm text-slate-400 mt-0.5">Track your fee status, payments and download receipts.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("student.fees.pageTitle")}</h1>
+              <p className="text-sm text-slate-400 mt-0.5">{t("student.fees.pageSubtitle")}</p>
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Academic Year</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("student.fees.academicYear")}</label>
             <select value={year} onChange={(e) => setYear(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-purple-200">
               <option>2026-27</option>
@@ -339,10 +356,10 @@ export default function StudentFees() {
             {/* Fee Details table */}
             <div ref={feeDetailsRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900 text-sm">Fee Details</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.fees.feeDetails")}</h3>
                 {loaded && !hasReal && (
                   <span className="text-[11px] font-medium text-slate-400">
-                    Sample data — no invoices on record yet.
+                    {t("student.fees.sampleDataNotice")}
                   </span>
                 )}
               </div>
@@ -350,13 +367,13 @@ export default function StudentFees() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Fee Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Due Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Total Amount</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Paid Amount</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Pending Amount</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">Action</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.feeType")}</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.dueDate")}</th>
+                      <th className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t("student.fees.totalAmount")}</th>
+                      <th className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t("student.fees.paidAmount")}</th>
+                      <th className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t("student.fees.pendingAmount")}</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{t("student.fees.status")}</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{t("student.fees.action")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -364,12 +381,12 @@ export default function StudentFees() {
                       <tr key={`${r.type}-${idx}`} className="hover:bg-slate-50/40 transition-colors">
                         <td className="px-4 py-3 font-semibold text-slate-900">{r.type}</td>
                         <td className="px-4 py-3 text-slate-500">{r.dueDate}</td>
-                        <td className="px-4 py-3 text-right text-slate-700 font-medium">{bhd(r.total)}</td>
-                        <td className="px-4 py-3 text-right text-emerald-600 font-medium">{bhd(r.paid)}</td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-700">{bhd(r.pending)}</td>
+                        <td className="px-4 py-3 text-end text-slate-700 font-medium">{bhd(r.total)}</td>
+                        <td className="px-4 py-3 text-end text-emerald-600 font-medium">{bhd(r.paid)}</td>
+                        <td className="px-4 py-3 text-end font-medium text-slate-700">{bhd(r.pending)}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap", statusBadge(r.displayStatus))}>
-                            {r.displayStatus}
+                            {displayStatusLabel(r.displayStatus)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -377,12 +394,12 @@ export default function StudentFees() {
                             {r.status === "Paid" ? (
                               <button onClick={() => downloadReceipt(r.invoice)}
                                 className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                                Receipt
+                                {t("student.fees.receipt")}
                               </button>
                             ) : (
                               <button onClick={() => payNow(r.invoice)} disabled={payingInvoiceId === r.invoice.id}
                                 className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors disabled:opacity-60">
-                                {payingInvoiceId === r.invoice.id ? "Redirecting…" : "Pay Now"}
+                                {payingInvoiceId === r.invoice.id ? t("student.fees.redirecting") : t("student.fees.payNow")}
                               </button>
                             )}
                             {r.status === "Paid" && (
@@ -399,26 +416,26 @@ export default function StudentFees() {
                 </table>
               </div>
               <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/40">
-                <p className="text-xs text-slate-500">Showing 1 to {feeRows.length} of {feeRows.length} items</p>
+                <p className="text-xs text-slate-500">{t("student.fees.showingItems", { count: feeRows.length, total: feeRows.length })}</p>
               </div>
             </div>
 
             {/* Payment History table */}
             <div ref={paymentHistoryRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900 text-sm">Payment History</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.fees.paymentHistory")}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Payment ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Description</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Payment Method</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Amount</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">Receipt</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.date")}</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.paymentId")}</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.description")}</th>
+                      <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500">{t("student.fees.paymentMethod")}</th>
+                      <th className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t("student.fees.amount")}</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{t("student.fees.status")}</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500">{t("student.fees.receipt")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -428,9 +445,9 @@ export default function StudentFees() {
                         <td className="px-4 py-3 font-mono text-xs text-slate-700">—</td>
                         <td className="px-4 py-3 font-medium text-slate-900">{r.type}</td>
                         <td className="px-4 py-3 text-slate-600">—</td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-900">{bhd(r.paid)}</td>
+                        <td className="px-4 py-3 text-end font-semibold text-slate-900">{bhd(r.paid)}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700">Success</span>
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700">{t("student.fees.success")}</span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center">
@@ -443,7 +460,7 @@ export default function StudentFees() {
                       </tr>
                     ))}
                     {feeRows.filter(r => r.status === "Paid").length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-400">No payment history yet</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-400">{t("student.fees.noPaymentHistory")}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -457,17 +474,17 @@ export default function StudentFees() {
             {/* Upcoming Dues */}
             <div ref={upcomingDuesRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Upcoming Dues</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.fees.upcomingDues")}</h3>
                 {allUpcomingDues.length > 4 && (
                   <button onClick={() => setShowAllDues((v) => !v)}
                     className="text-xs text-purple-600 font-semibold hover:underline">
-                    {showAllDues ? "Show Less" : "View All"}
+                    {showAllDues ? t("student.fees.showLess") : t("student.fees.viewAll")}
                   </button>
                 )}
               </div>
               <div className="space-y-3">
                 {upcomingDues.length === 0 && (
-                  <p className="text-xs text-slate-400 py-2">No upcoming dues.</p>
+                  <p className="text-xs text-slate-400 py-2">{t("student.fees.noUpcomingDues")}</p>
                 )}
                 {upcomingDues.map((d, i) => (
                   <div key={`${d.type}-${i}`} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">
@@ -476,13 +493,13 @@ export default function StudentFees() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-800 truncate">{d.type}</p>
-                      <p className="text-[10px] text-slate-400">Due {d.due}</p>
+                      <p className="text-[10px] text-slate-400">{t("student.fees.dueOn", { date: d.due })}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-end flex-shrink-0">
                       <p className="text-xs font-bold text-slate-900">{bhd(d.amount)}</p>
                       <button onClick={() => payNow(d.invoice)} disabled={payingInvoiceId === d.invoice.id}
                         className="mt-1 h-6 px-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold transition-colors disabled:opacity-60">
-                        {payingInvoiceId === d.invoice.id ? "…" : "Pay Now"}
+                        {payingInvoiceId === d.invoice.id ? t("student.fees.ellipsis") : t("student.fees.payNow")}
                       </button>
                     </div>
                   </div>
@@ -492,7 +509,7 @@ export default function StudentFees() {
 
             {/* Fee Summary donut */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Fee Summary</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.fees.feeSummary")}</h3>
               <div className="flex items-center gap-4">
                 <div className="relative flex-shrink-0">
                   <svg width="100" height="100" viewBox="0 0 100 100">
@@ -510,14 +527,14 @@ export default function StudentFees() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-sm font-bold text-slate-900 leading-none">{bhd(summary.total)}</span>
-                    <span className="text-[9px] text-slate-400 mt-0.5">Total</span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">{t("student.fees.total")}</span>
                   </div>
                 </div>
                 <div className="space-y-2.5 flex-1">
                   {[
-                    { label: "Paid",    value: summary.paid,    dot: "bg-emerald-500" },
-                    { label: "Pending", value: summary.pending, dot: "bg-amber-500" },
-                    { label: "Overdue", value: summary.overdue, dot: "bg-rose-500" },
+                    { label: t("student.fees.summaryPaid"),    value: summary.paid,    dot: "bg-emerald-500" },
+                    { label: t("student.fees.summaryPending"), value: summary.pending, dot: "bg-amber-500" },
+                    { label: t("student.fees.summaryOverdue"), value: summary.overdue, dot: "bg-rose-500" },
                   ].map((l) => (
                     <div key={l.label} className="flex items-center gap-2">
                       <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", l.dot)} />
@@ -531,14 +548,14 @@ export default function StudentFees() {
 
             {/* Quick Actions */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Quick Actions</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.fees.quickActions")}</h3>
               <div className="space-y-1">
                 {quickActions.map((a, i) => (
                   <button key={i} onClick={a.fn}
                     className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors group">
                     <a.icon className={cn("h-4 w-4", a.ic)} />
-                    <span className="text-xs font-medium text-slate-700 flex-1 text-left">{a.label}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500" />
+                    <span className="text-xs font-medium text-slate-700 flex-1 text-start">{a.label}</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 rtl:rotate-180" />
                   </button>
                 ))}
               </div>
@@ -547,13 +564,13 @@ export default function StudentFees() {
             {/* Important Notes */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-slate-400" /> Important Notes
+                <FileText className="h-4 w-4 text-slate-400" /> {t("student.fees.importantNotes")}
               </h3>
               <ul className="space-y-2">
                 {[
-                  "Late payment may attract fine as per school policy.",
-                  "Please ensure timely payment to avoid service interruption.",
-                  "For any queries, contact the accounts office.",
+                  t("student.fees.noteLatePayment"),
+                  t("student.fees.noteTimelyPayment"),
+                  t("student.fees.noteContactAccounts"),
                 ].map((note) => (
                   <li key={note} className="flex items-start gap-2 text-xs text-slate-500 leading-snug">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />

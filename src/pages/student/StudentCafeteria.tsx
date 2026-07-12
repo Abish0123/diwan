@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,13 +45,26 @@ const badgeColors: Record<string, string> = {
 };
 
 const paymentOptions = [
-  { id: "QR Code", label: "QR Code", icon: QrCode, hint: "Scan with any banking app" },
-  { id: "Apple Pay", label: "Apple Pay", icon: Smartphone, hint: "Pay with Face ID / Touch ID" },
-  { id: "NFC Tap", label: "NFC Tap", icon: Nfc, hint: "Tap your card or phone" },
-  { id: "Card", label: "Card", icon: CreditCard, hint: "Debit / Credit card" },
+  { id: "QR Code", labelKey: "student.cafeteria.payment.qrCode", icon: QrCode, hintKey: "student.cafeteria.payment.qrCodeHint" },
+  { id: "Apple Pay", labelKey: "student.cafeteria.payment.applePay", icon: Smartphone, hintKey: "student.cafeteria.payment.applePayHint" },
+  { id: "NFC Tap", labelKey: "student.cafeteria.payment.nfcTap", icon: Nfc, hintKey: "student.cafeteria.payment.nfcTapHint" },
+  { id: "Card", labelKey: "student.cafeteria.payment.card", icon: CreditCard, hintKey: "student.cafeteria.payment.cardHint" },
 ];
 
+const categoryLabelKeys: Record<string, string> = {
+  Breakfast: "student.cafeteria.category.breakfast",
+  Lunch: "student.cafeteria.category.lunch",
+  Snacks: "student.cafeteria.category.snacks",
+};
+
+const badgeLabelKeys: Record<string, string> = {
+  Halal: "student.cafeteria.badge.halal",
+  Vegetarian: "student.cafeteria.badge.vegetarian",
+  "Nut-free": "student.cafeteria.badge.nutFree",
+};
+
 export default function StudentCafeteria() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   // Students don't have their own FinancialSettings record — read the
@@ -114,7 +128,11 @@ export default function StudentCafeteria() {
         const tx = await getPaymentTransaction(orderId);
         const success = tx.status === "A"; // PayTabs: "A" = Authorized (paid)
         if (!success) {
-          toast.error(`Payment ${tx.status === "pending" ? "was not completed" : `failed (status: ${tx.status})`} — nothing was charged.`);
+          toast.error(
+            tx.status === "pending"
+              ? t("student.cafeteria.paymentNotCompleted")
+              : t("student.cafeteria.paymentFailedStatus", { status: tx.status })
+          );
           sessionStorage.removeItem(`cafeteria_pending_${orderId}`);
           return;
         }
@@ -122,7 +140,7 @@ export default function StudentCafeteria() {
         sessionStorage.removeItem(`cafeteria_pending_${orderId}`);
       } catch (err) {
         console.error("Failed to verify payment:", err);
-        toast.error("Could not verify payment status — please contact the cafeteria if you were charged.");
+        toast.error(t("student.cafeteria.paymentVerifyError"));
       }
     })();
   }, []);
@@ -160,7 +178,7 @@ export default function StudentCafeteria() {
       if (existing) return prev.map((l) => (l.item.id === item.id ? { ...l, qty: l.qty + 1 } : l));
       return [...prev, { item, qty: 1 }];
     });
-    toast.success(`${item.name} added to cart`);
+    toast.success(t("student.cafeteria.addedToCart", { name: item.name }));
   }
 
   function changeQty(itemId: string, delta: number) {
@@ -244,10 +262,10 @@ export default function StudentCafeteria() {
       window.location.href = redirectUrl;
     } catch (error) {
       if (error instanceof GatewayNotConfiguredError) {
-        setGatewayError("Online payment isn't connected yet. Ask your admin to configure a payment gateway in Finance Settings.");
+        setGatewayError(t("student.cafeteria.gatewayNotConfigured"));
       } else {
         console.error("Payment failed:", error);
-        toast.error("Payment failed — please try again");
+        toast.error(t("student.cafeteria.paymentFailedRetry"));
       }
       setIsPaying(false);
     }
@@ -270,15 +288,15 @@ export default function StudentCafeteria() {
               <Utensils className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Cafeteria</h1>
-              <p className="text-sm text-gray-500 mt-1">Order today's meals and pay instantly</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t("student.cafeteria.pageTitle")}</h1>
+              <p className="text-sm text-gray-500 mt-1">{t("student.cafeteria.pageSubtitle")}</p>
             </div>
           </div>
           <Button className="gap-2 relative" onClick={() => setCartOpen(true)}>
             <ShoppingCart className="h-4 w-4" />
-            Cart
+            {t("student.cafeteria.cart")}
             {cartCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px]">
+              <Badge className="absolute -top-2 -end-2 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px]">
                 {cartCount}
               </Badge>
             )}
@@ -287,19 +305,19 @@ export default function StudentCafeteria() {
 
         {loading ? (
           <div className="flex items-center justify-center py-24 text-gray-400">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading menu…
+            <Loader2 className="h-6 w-6 animate-spin me-2" /> {t("student.cafeteria.loadingMenu")}
           </div>
         ) : menuItems.length === 0 ? (
           <Card className="border shadow-sm">
             <CardContent className="py-16 text-center text-gray-400">
-              No menu items are available right now. Please check back later.
+              {t("student.cafeteria.noMenuItems")}
             </CardContent>
           </Card>
         ) : (
           sections.map((section) =>
             section.items.length === 0 ? null : (
               <div key={section.label} className="space-y-3">
-                <h2 className="text-lg font-semibold text-gray-800">{section.label}</h2>
+                <h2 className="text-lg font-semibold text-gray-800">{t(categoryLabelKeys[section.label] || section.label)}</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {section.items.map((item) => (
                     <Card key={item.id} className="border shadow-sm overflow-hidden">
@@ -317,14 +335,14 @@ export default function StudentCafeteria() {
                         <div className="flex flex-wrap gap-1">
                           {item.badges.map((b) => (
                             <span key={b} className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full", badgeColors[b])}>
-                              {b}
+                              {badgeLabelKeys[b] ? t(badgeLabelKeys[b]) : b}
                             </span>
                           ))}
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-blue-700">{currency} {item.price}</span>
                           <Button size="sm" className="h-7 text-xs gap-1" onClick={() => addToCart(item)}>
-                            <Plus className="h-3 w-3" /> Add
+                            <Plus className="h-3 w-3" /> {t("student.cafeteria.add")}
                           </Button>
                         </div>
                       </CardContent>
@@ -342,11 +360,11 @@ export default function StudentCafeteria() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" /> Your Cart
+              <ShoppingCart className="h-5 w-5" /> {t("student.cafeteria.yourCart")}
             </DialogTitle>
           </DialogHeader>
           {cart.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-10">Your cart is empty</p>
+            <p className="text-sm text-gray-400 text-center py-10">{t("student.cafeteria.cartEmpty")}</p>
           ) : (
             <div className="space-y-3">
               <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -361,7 +379,7 @@ export default function StudentCafeteria() {
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => changeQty(line.item.id, 1)}>
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <span className="w-16 text-right font-semibold">{currency} {(line.item.price * line.qty).toFixed(2)}</span>
+                      <span className="w-16 text-end font-semibold">{currency} {(line.item.price * line.qty).toFixed(2)}</span>
                       <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={() => removeItem(line.item.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -370,15 +388,15 @@ export default function StudentCafeteria() {
                 ))}
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="font-semibold">Total</span>
+                <span className="font-semibold">{t("student.cafeteria.total")}</span>
                 <span className="font-black text-lg text-primary">{currency} {cartTotal.toFixed(2)}</span>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCartOpen(false)}>Keep Browsing</Button>
+            <Button variant="outline" onClick={() => setCartOpen(false)}>{t("student.cafeteria.keepBrowsing")}</Button>
             <Button disabled={cart.length === 0} onClick={() => { setCartOpen(false); setCheckoutOpen(true); }}>
-              Proceed to Payment
+              {t("student.cafeteria.proceedToPayment")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -390,20 +408,20 @@ export default function StudentCafeteria() {
           {paidBill ? (
             <div className="py-6 text-center space-y-3">
               <CheckCircle2 className="h-14 w-14 text-emerald-500 mx-auto" />
-              <h3 className="text-lg font-bold text-gray-900">Payment Successful</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t("student.cafeteria.paymentSuccessful")}</h3>
               <p className="text-sm text-gray-500">
-                Bill <span className="font-mono">{paidBill.billNumber}</span> for {currency} {paidBill.total.toFixed(2)} — your receipt has downloaded automatically.
+                {t("student.cafeteria.billReceiptDownloaded", { billNumber: paidBill.billNumber, amount: `${currency} ${paidBill.total.toFixed(2)}` })}
               </p>
-              <Button className="w-full mt-2" onClick={closeCheckout}>Done</Button>
+              <Button className="w-full mt-2" onClick={closeCheckout}>{t("student.cafeteria.done")}</Button>
             </div>
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>Choose Payment Method</DialogTitle>
+                <DialogTitle>{t("student.cafeteria.choosePaymentMethod")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-gray-600">Amount Due</span>
+                  <span className="text-gray-600">{t("student.cafeteria.amountDue")}</span>
                   <span className="font-black text-lg text-primary">{currency} {cartTotal.toFixed(2)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -418,8 +436,8 @@ export default function StudentCafeteria() {
                       )}
                     >
                       <opt.icon className={cn("h-5 w-5", selectedPayment === opt.id ? "text-primary" : "text-gray-500")} />
-                      <span className="text-xs font-semibold text-gray-800">{opt.label}</span>
-                      <span className="text-[10px] text-gray-400 leading-tight">{opt.hint}</span>
+                      <span className="text-xs font-semibold text-gray-800">{t(opt.labelKey)}</span>
+                      <span className="text-[10px] text-gray-400 leading-tight">{t(opt.hintKey)}</span>
                     </button>
                   ))}
                 </div>
@@ -429,31 +447,31 @@ export default function StudentCafeteria() {
                     <div className="h-32 w-32 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
                       <QrCode className="h-16 w-16 text-gray-300" />
                     </div>
-                    <p className="text-[11px] text-gray-400">Scan with your banking app to pay</p>
+                    <p className="text-[11px] text-gray-400">{t("student.cafeteria.scanToPay")}</p>
                   </div>
                 )}
 
                 {gatewayError && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left">
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-start">
                     <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-800">{gatewayError}</p>
                   </div>
                 )}
 
                 <p className="text-[10px] text-gray-400 text-center">
-                  You'll be securely redirected to complete payment. Card, Apple Pay, and QR are all handled on the same checkout page.
+                  {t("student.cafeteria.secureRedirectNotice")}
                 </p>
               </div>
               <DialogFooter className="flex-col gap-2 sm:flex-col">
                 <Button className="w-full gap-2" disabled={isPaying} onClick={handlePay}>
                   {isPaying ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to secure checkout…</>
+                    <><Loader2 className="h-4 w-4 animate-spin" /> {t("student.cafeteria.redirectingToCheckout")}</>
                   ) : (
-                    <>Pay {currency} {cartTotal.toFixed(2)}</>
+                    <>{t("student.cafeteria.payAmount", { amount: `${currency} ${cartTotal.toFixed(2)}` })}</>
                   )}
                 </Button>
                 <Button variant="ghost" className="w-full" onClick={closeCheckout} disabled={isPaying}>
-                  Cancel
+                  {t("student.cafeteria.cancel")}
                 </Button>
               </DialogFooter>
             </>

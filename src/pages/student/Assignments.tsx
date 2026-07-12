@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
@@ -96,26 +97,27 @@ function fmtSize(bytes: number) {
 // previously fetched and typed but never rendered anywhere on this page, so
 // a student had no way to open a file their teacher had genuinely attached.
 function TeacherResources({ assignment }: { assignment: Assignment }) {
+  const { t } = useTranslation();
   const files = assignment.attachments || [];
   const links = assignment.links || [];
   if (files.length === 0 && links.length === 0) return null;
   return (
     <div className="bg-slate-50 rounded-xl p-3 space-y-2">
       <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-        <Paperclip className="h-3.5 w-3.5" /> Attached by your teacher
+        <Paperclip className="h-3.5 w-3.5" /> {t('student.assignments.attachedByTeacher')}
       </p>
       {files.map((f, i) => (
         f.url ? (
           <a key={i} href={f.url} download={f.name}
             className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs hover:border-purple-300 hover:bg-purple-50 transition-colors group">
             <span className="text-slate-700 truncate flex-1 font-medium">{f.name}</span>
-            <span className="text-slate-400 mr-2">{fmtSize(f.size)}</span>
+            <span className="text-slate-400 me-2">{fmtSize(f.size)}</span>
             <Download className="h-3.5 w-3.5 text-slate-400 group-hover:text-purple-600 shrink-0" />
           </a>
         ) : (
           <div key={i} className="flex items-center justify-between bg-white border border-dashed border-slate-200 rounded-lg px-3 py-2 text-xs">
             <span className="text-slate-500 truncate flex-1">{f.name}</span>
-            <span className="text-slate-400">File unavailable</span>
+            <span className="text-slate-400">{t('student.assignments.fileUnavailable')}</span>
           </div>
         )
       ))}
@@ -131,6 +133,7 @@ function TeacherResources({ assignment }: { assignment: Assignment }) {
 }
 
 export default function StudentAssignments() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { students } = useStudents();
@@ -212,14 +215,14 @@ export default function StudentAssignments() {
         status: "submitted",
       };
       await smartDb.create("AssignmentSubmission", sub as any, id);
-      toast.success("Assignment submitted successfully!");
+      toast.success(t('student.assignments.submitSuccess'));
       setSelectedAssignment(null);
       setSubmitText(""); setSubmitFiles([]);
       // Refresh submissions
       const newSubs = await smartDb.getAll("AssignmentSubmission", undefined);
       setSubmissions((newSubs || []).filter((s: any) => s.studentId === uid));
     } catch {
-      toast.error("Failed to submit. Please try again.");
+      toast.error(t('student.assignments.submitFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -309,7 +312,7 @@ export default function StudentAssignments() {
         const v = subjectVisual(r.subject);
         return {
           title: r.title, type: r.type,
-          date: r.dueDate ? fmtDue(r.dueDate) : "—", time: "11:59 PM",
+          date: r.dueDate ? fmtDue(r.dueDate) : "—", time: t('student.assignments.defaultDueTime'),
           bg: v.bg, ic: v.ic, icon: v.icon,
         };
       });
@@ -318,32 +321,32 @@ export default function StudentAssignments() {
   }, [hasRealData, upcomingRows]);
 
   const TAB_EMPTY: Record<Tab, string> = {
-    all: "No assignments yet.",
-    upcoming: "Nothing upcoming — you're all caught up!",
-    submitted: "No submitted assignments awaiting grades.",
-    graded: "No graded assignments yet.",
+    all: t('student.assignments.emptyAll'),
+    upcoming: t('student.assignments.emptyUpcoming'),
+    submitted: t('student.assignments.emptySubmitted'),
+    graded: t('student.assignments.emptyGraded'),
   };
 
   const KPIS = [
-    { value: counts.total, label: "Total Assignments", sub: "All Subjects", bg: "bg-purple-50", chip: "bg-purple-100", ic: "text-purple-600", icon: FileText },
-    { value: counts.upcoming, label: "Upcoming", sub: "Due Soon", bg: "bg-amber-50", chip: "bg-amber-100", ic: "text-amber-600", icon: Clock },
-    { value: counts.submitted, label: "Submitted", sub: "Completed", bg: "bg-emerald-50", chip: "bg-emerald-100", ic: "text-emerald-600", icon: CheckCircle2 },
-    { value: counts.graded, label: "Graded", sub: "Reviewed", bg: "bg-rose-50", chip: "bg-rose-100", ic: "text-rose-600", icon: Star },
+    { value: counts.total, label: t('student.assignments.totalAssignments'), sub: t('student.assignments.allSubjects'), bg: "bg-purple-50", chip: "bg-purple-100", ic: "text-purple-600", icon: FileText },
+    { value: counts.upcoming, label: t('student.assignments.upcoming'), sub: t('student.assignments.dueSoon'), bg: "bg-amber-50", chip: "bg-amber-100", ic: "text-amber-600", icon: Clock },
+    { value: counts.submitted, label: t('student.assignments.submitted'), sub: t('student.assignments.completed'), bg: "bg-emerald-50", chip: "bg-emerald-100", ic: "text-emerald-600", icon: CheckCircle2 },
+    { value: counts.graded, label: t('student.assignments.graded'), sub: t('student.assignments.reviewed'), bg: "bg-rose-50", chip: "bg-rose-100", ic: "text-rose-600", icon: Star },
   ];
 
   const TABS: { k: Tab; label: string }[] = [
-    { k: "all", label: "All Assignments" },
-    { k: "upcoming", label: "Upcoming" },
-    { k: "submitted", label: "Submitted" },
-    { k: "graded", label: "Graded" },
+    { k: "all", label: t('student.assignments.allAssignments') },
+    { k: "upcoming", label: t('student.assignments.upcoming') },
+    { k: "submitted", label: t('student.assignments.submitted') },
+    { k: "graded", label: t('student.assignments.graded') },
   ];
 
   // ── Donut (Tasks Summary) ─────────────────────────────────────────────
   const donutSegs = [
-    { label: "Upcoming", value: counts.upcoming, color: "#3b82f6" },
-    { label: "Submitted", value: counts.submitted, color: "#10b981" },
-    { label: "Graded", value: counts.graded, color: "#8b5cf6" },
-    { label: "Overdue", value: counts.overdue, color: "#f43f5e" },
+    { label: t('student.assignments.upcoming'), value: counts.upcoming, color: "#3b82f6" },
+    { label: t('student.assignments.submitted'), value: counts.submitted, color: "#10b981" },
+    { label: t('student.assignments.graded'), value: counts.graded, color: "#8b5cf6" },
+    { label: t('student.assignments.overdue'), value: counts.overdue, color: "#f43f5e" },
   ];
   const donutTotal = donutSegs.reduce((s, x) => s + x.value, 0) || 1;
   const R = 40, C = 2 * Math.PI * R;
@@ -390,8 +393,8 @@ export default function StudentAssignments() {
               <FileText className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">My Assignments</h1>
-              <p className="text-sm text-slate-400">Stay organized and never miss an assignment.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('student.assignments.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('student.assignments.pageSubtitle')}</p>
             </div>
           </div>
         </div>
@@ -433,7 +436,7 @@ export default function StudentAssignments() {
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h2 className="font-bold text-slate-900 text-base">{TABS.find(t => t.k === tab)?.label}</h2>
-                <button onClick={() => setTab("all")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <button onClick={() => setTab("all")} className="text-xs text-purple-600 font-semibold hover:underline">{t('student.assignments.viewAll')}</button>
               </div>
               <div className="divide-y divide-slate-50">
                 {tabRows.length === 0 && (
@@ -453,19 +456,19 @@ export default function StudentAssignments() {
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700">{row.type}</span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{row.chapter}</span>
                           {((row.attachments?.length || 0) + (row.links?.length || 0)) > 0 && (
-                            <span title="Has attachments" className="flex items-center text-slate-400"><Paperclip className="h-3 w-3" /></span>
+                            <span title={t('student.assignments.hasAttachments')} className="flex items-center text-slate-400"><Paperclip className="h-3 w-3" /></span>
                           )}
                         </div>
                       </div>
-                      <div className="hidden sm:block text-right flex-shrink-0">
+                      <div className="hidden sm:block text-end flex-shrink-0">
                         {row.submitted ? (
                           <>
-                            <p className="text-xs font-semibold text-slate-700">Submitted{row.submittedDate ? `: ${row.submittedDate}` : ""}</p>
-                            <p className="text-[11px] text-slate-400">{row.graded ? `Grade ${row.grade}` : "Awaiting grade"}</p>
+                            <p className="text-xs font-semibold text-slate-700">{row.submittedDate ? t('student.assignments.submittedOnLabel', { date: row.submittedDate }) : t('student.assignments.submitted')}</p>
+                            <p className="text-[11px] text-slate-400">{row.graded ? t('student.assignments.gradeValue', { grade: row.grade }) : t('student.assignments.awaitingGrade')}</p>
                           </>
                         ) : (
                           <>
-                            <p className="text-xs font-semibold text-slate-700">Due{row.dueDate ? `: ${fmtDue(row.dueDate)}` : ""}</p>
+                            <p className="text-xs font-semibold text-slate-700">{row.dueDate ? t('student.assignments.dueOnLabel', { date: fmtDue(row.dueDate) }) : t('student.assignments.due')}</p>
                             <p className="text-[11px] text-slate-400">{row.weekday}</p>
                           </>
                         )}
@@ -476,16 +479,16 @@ export default function StudentAssignments() {
                           : row.submitted ? "bg-emerald-100 text-emerald-700"
                           : row.status === "overdue" ? "bg-rose-100 text-rose-700"
                           : row.status === "due" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700")}>
-                        {row.resubmissionRequested ? "⚠ Resubmit Required"
-                          : row.graded ? "Graded"
-                          : row.submitted ? "Submitted"
-                          : row.status === "overdue" ? "Overdue"
-                          : row.status === "due" ? "Due Soon" : "Upcoming"}
+                        {row.resubmissionRequested ? t('student.assignments.resubmitRequired')
+                          : row.graded ? t('student.assignments.graded')
+                          : row.submitted ? t('student.assignments.submitted')
+                          : row.status === "overdue" ? t('student.assignments.overdue')
+                          : row.status === "due" ? t('student.assignments.dueSoon') : t('student.assignments.upcoming')}
                       </span>
                       <button
                         onClick={() => { setSelectedAssignment(row as any); setSubmitText(""); setSubmitFiles([]); }}
                         className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-purple-50 hover:text-purple-600 transition-colors flex-shrink-0">
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4 rtl:rotate-180" />
                       </button>
                     </div>
                   );
@@ -494,17 +497,17 @@ export default function StudentAssignments() {
               <div className="px-5 py-4 border-t border-slate-100 flex justify-center">
                 <button onClick={() => setTab("all")}
                   className="h-9 px-5 rounded-lg border border-purple-200 text-sm font-semibold text-purple-600 hover:bg-purple-50 transition-colors">
-                  View All Assignments
+                  {t('student.assignments.viewAllAssignments')}
                 </button>
               </div>
             </div>
 
             {/* Recently Submitted */}
             <div>
-              <h2 className="font-bold text-slate-900 text-base mb-3">Recently Submitted</h2>
+              <h2 className="font-bold text-slate-900 text-base mb-3">{t('student.assignments.recentlySubmitted')}</h2>
               {recentRows.length === 0 ? (
                 <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-8 text-center text-sm text-slate-400">
-                  Nothing submitted yet.
+                  {t('student.assignments.nothingSubmittedYet')}
                 </div>
               ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -519,12 +522,12 @@ export default function StudentAssignments() {
                         </div>
                         <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
                           graded ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700")}>
-                          {graded ? `Graded ${r.grade ?? ""}`.trim() : "Submitted"}
+                          {graded ? t('student.assignments.gradedValue', { grade: r.grade ?? "" }) : t('student.assignments.submitted')}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{r.subject}</p>
                       <p className="font-bold text-slate-900 text-sm leading-snug mt-0.5">{r.title}</p>
-                      {r.submittedDate && <p className="text-[11px] text-slate-400 mt-2">Submitted on {r.submittedDate}</p>}
+                      {r.submittedDate && <p className="text-[11px] text-slate-400 mt-2">{t('student.assignments.submittedOnLabel', { date: r.submittedDate })}</p>}
                     </div>
                   );
                 })}
@@ -539,19 +542,19 @@ export default function StudentAssignments() {
             {/* Calendar */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Calendar</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t('student.assignments.calendar')}</h3>
                 <div className="flex items-center gap-1">
                   <button onClick={() => shiftMonth(-1)} className="w-6 h-6 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                   </button>
                   <button onClick={() => shiftMonth(1)} className="w-6 h-6 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                   </button>
                 </div>
               </div>
               <p className="text-center text-xs font-semibold text-slate-700 mb-2">{calLabel}</p>
               <div className="grid grid-cols-7 gap-1 mb-1">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+                {[t('student.assignments.daySun'), t('student.assignments.dayMon'), t('student.assignments.dayTue'), t('student.assignments.dayWed'), t('student.assignments.dayThu'), t('student.assignments.dayFri'), t('student.assignments.daySat')].map(d => (
                   <div key={d} className="text-center text-[9px] font-bold text-slate-400 py-1">{d}</div>
                 ))}
               </div>
@@ -571,16 +574,16 @@ export default function StudentAssignments() {
                 })}
               </div>
               <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-slate-50 text-[9px] text-slate-500">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-600" /> Today</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" /> Due Date</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-600" /> {t('student.assignments.today')}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" /> {t('student.assignments.dueDate')}</span>
               </div>
             </div>
 
             {/* Tasks Summary donut */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Tasks Summary</h3>
-                <button onClick={() => setTab("all")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <h3 className="font-bold text-slate-900 text-sm">{t('student.assignments.tasksSummary')}</h3>
+                <button onClick={() => setTab("all")} className="text-xs text-purple-600 font-semibold hover:underline">{t('student.assignments.viewAll')}</button>
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative flex-shrink-0">
@@ -599,7 +602,7 @@ export default function StudentAssignments() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-lg font-bold text-slate-900">{counts.total}</span>
-                    <span className="text-[9px] text-slate-400 leading-none">Total</span>
+                    <span className="text-[9px] text-slate-400 leading-none">{t('student.assignments.total')}</span>
                   </div>
                 </div>
                 <div className="space-y-1.5 flex-1">
@@ -619,7 +622,7 @@ export default function StudentAssignments() {
             {/* What's Next? */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
-                <CalendarDays className="h-4 w-4 text-purple-600" /> What's Next?
+                <CalendarDays className="h-4 w-4 text-purple-600" /> {t('student.assignments.whatsNext')}
               </h3>
               <div className="space-y-3">
                 {whatsNext.map((w, i) => (
@@ -640,14 +643,14 @@ export default function StudentAssignments() {
             {/* Need Help? */}
             <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-2 flex items-center gap-1.5">
-                <HelpCircle className="h-4 w-4 text-purple-600" /> Need Help?
+                <HelpCircle className="h-4 w-4 text-purple-600" /> {t('student.assignments.needHelp')}
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                If you have any questions about assignments, deadlines or submissions, contact your teacher.
+                {t('student.assignments.needHelpText')}
               </p>
               <button onClick={() => navigate("/communication/messages")}
                 className="mt-3 w-full h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
-                <MessageSquare className="h-4 w-4" /> Message Teacher
+                <MessageSquare className="h-4 w-4" /> {t('student.assignments.messageTeacher')}
               </button>
             </div>
 
@@ -663,7 +666,7 @@ export default function StudentAssignments() {
               <div>
                 <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">{selectedAssignment.subject}</p>
                 <h3 className="text-lg font-bold text-slate-900 mt-0.5">{selectedAssignment.title}</h3>
-                <p className="text-sm text-slate-400">Due: {selectedAssignment.dueDate ? fmtDue(selectedAssignment.dueDate) : "—"} · {selectedAssignment.totalMarks || 0} marks</p>
+                <p className="text-sm text-slate-400">{t('student.assignments.dueMarksLabel', { date: selectedAssignment.dueDate ? fmtDue(selectedAssignment.dueDate) : "—", marks: selectedAssignment.totalMarks || 0 })}</p>
               </div>
               <button onClick={() => setSelectedAssignment(null)} className="p-1.5 rounded-lg hover:bg-slate-100 mt-1">
                 <X className="h-4 w-4 text-slate-400"/>
@@ -682,11 +685,11 @@ export default function StudentAssignments() {
                           <Send className="h-5 w-5 text-orange-600"/>
                         </div>
                         <div>
-                          <h4 className="font-bold text-orange-900">Resubmission Required</h4>
-                          <p className="text-sm text-orange-700 mt-0.5">Your teacher has requested you to resubmit this assignment.</p>
+                          <h4 className="font-bold text-orange-900">{t('student.assignments.resubmissionRequiredTitle')}</h4>
+                          <p className="text-sm text-orange-700 mt-0.5">{t('student.assignments.resubmissionRequiredText')}</p>
                           {(sub as any).resubmissionNote && (
                             <div className="mt-2 bg-white border border-orange-200 rounded-xl p-3">
-                              <p className="text-xs font-semibold text-orange-600 mb-1">Teacher's Note</p>
+                              <p className="text-xs font-semibold text-orange-600 mb-1">{t('student.assignments.teachersNote')}</p>
                               <p className="text-sm text-slate-700">{(sub as any).resubmissionNote}</p>
                             </div>
                           )}
@@ -696,24 +699,24 @@ export default function StudentAssignments() {
                     <div className="px-6 py-5 space-y-4">
                       {(selectedAssignment as any).instructions && (
                         <div className="bg-slate-50 rounded-xl p-3">
-                          <p className="text-xs font-semibold text-slate-500 mb-1">Instructions</p>
+                          <p className="text-xs font-semibold text-slate-500 mb-1">{t('student.assignments.instructions')}</p>
                           <div className="text-sm text-slate-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{__html: (selectedAssignment as any).instructions}}/>
                         </div>
                       )}
                       <TeacherResources assignment={selectedAssignment} />
                       <div>
-                        <label className="text-sm font-semibold text-slate-700 block mb-1.5">Your Updated Response</label>
+                        <label className="text-sm font-semibold text-slate-700 block mb-1.5">{t('student.assignments.yourUpdatedResponse')}</label>
                         <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} rows={5}
-                          placeholder="Write your updated answer here..."
+                          placeholder={t('student.assignments.updatedAnswerPlaceholder')}
                           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"/>
                       </div>
                       <div>
-                        <label className="text-sm font-semibold text-slate-700 block mb-1.5">Attach Files <span className="text-slate-400 font-normal">(Optional)</span></label>
+                        <label className="text-sm font-semibold text-slate-700 block mb-1.5">{t('student.assignments.attachFiles')} <span className="text-slate-400 font-normal">({t('student.assignments.optional')})</span></label>
                         <div onClick={() => submitFileRef.current?.click()} onDragOver={e => e.preventDefault()}
                           onDrop={e => { e.preventDefault(); Array.from(e.dataTransfer.files).forEach(f => { const r=new FileReader(); r.onload=ev=>setSubmitFiles(p=>[...p,{name:f.name,size:f.size,url:ev.target?.result as string}]); r.readAsDataURL(f); }); }}
                           className="border-2 border-dashed border-orange-200 rounded-xl p-5 text-center cursor-pointer hover:bg-orange-50 transition-colors">
                           <UploadCloud className="h-6 w-6 text-orange-400 mx-auto mb-1.5"/>
-                          <p className="text-sm text-slate-500">Click to upload or drag &amp; drop</p>
+                          <p className="text-sm text-slate-500">{t('student.assignments.clickToUpload')}</p>
                         </div>
                         <input type="file" ref={submitFileRef} multiple onChange={handleSubmitFileChange} className="hidden"/>
                         {submitFiles.length > 0 && (
@@ -721,7 +724,7 @@ export default function StudentAssignments() {
                             {submitFiles.map((f, i) => (
                               <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-xs">
                                 <span className="text-slate-600 truncate flex-1">{f.name}</span>
-                                <button onClick={() => setSubmitFiles(p => p.filter((_,j) => j !== i))} className="ml-2 text-slate-400 hover:text-rose-500">✕</button>
+                                <button onClick={() => setSubmitFiles(p => p.filter((_,j) => j !== i))} className="ms-2 text-slate-400 hover:text-rose-500">✕</button>
                               </div>
                             ))}
                           </div>
@@ -729,10 +732,10 @@ export default function StudentAssignments() {
                       </div>
                     </div>
                     <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-                      <button onClick={() => setSelectedAssignment(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                      <button onClick={() => setSelectedAssignment(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">{t('student.assignments.cancel')}</button>
                       <button onClick={handleSubmit} disabled={isSubmitting || (!submitText.trim() && submitFiles.length === 0)}
                         className="h-10 px-5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold disabled:opacity-60 flex items-center gap-1.5">
-                        {isSubmitting ? "Submitting..." : (<><Send className="h-3.5 w-3.5"/> Resubmit Assignment</>)}
+                        {isSubmitting ? t('student.assignments.submitting') : (<><Send className="h-3.5 w-3.5"/> {t('student.assignments.resubmitAssignment')}</>)}
                       </button>
                     </div>
                   </>
@@ -745,24 +748,24 @@ export default function StudentAssignments() {
                     <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
                       <CheckCircle2 className="h-7 w-7 text-emerald-600"/>
                     </div>
-                    <h4 className="font-bold text-slate-900 mb-1">Already Submitted</h4>
-                    <p className="text-sm text-slate-400">You submitted this assignment on {new Date(sub.submittedAt).toLocaleDateString("en-GB", {day:"numeric",month:"long",year:"numeric"})}</p>
+                    <h4 className="font-bold text-slate-900 mb-1">{t('student.assignments.alreadySubmittedTitle')}</h4>
+                    <p className="text-sm text-slate-400">{t('student.assignments.submittedOnDateText', { date: new Date(sub.submittedAt).toLocaleDateString("en-GB", {day:"numeric",month:"long",year:"numeric"}) })}</p>
                     {sub.marks !== undefined && (
                       <div className="mt-4 inline-flex items-center gap-2 bg-emerald-50 px-4 py-2.5 rounded-xl">
                         <Star className="h-4 w-4 text-emerald-600"/>
-                        <span className="text-emerald-700 font-bold text-sm">Score: {sub.marks} / {selectedAssignment.totalMarks}</span>
+                        <span className="text-emerald-700 font-bold text-sm">{t('student.assignments.scoreLabel', { marks: sub.marks, total: selectedAssignment.totalMarks })}</span>
                       </div>
                     )}
                     {sub.feedback && (
-                      <div className="mt-3 bg-blue-50 rounded-xl p-3 text-left">
-                        <p className="text-xs font-semibold text-purple-600 mb-1">Teacher Feedback</p>
+                      <div className="mt-3 bg-blue-50 rounded-xl p-3 text-start">
+                        <p className="text-xs font-semibold text-purple-600 mb-1">{t('student.assignments.teacherFeedback')}</p>
                         <p className="text-sm text-slate-700">{sub.feedback}</p>
                       </div>
                     )}
-                    <div className="mt-3 text-left">
+                    <div className="mt-3 text-start">
                       <TeacherResources assignment={selectedAssignment} />
                     </div>
-                    <button onClick={() => setSelectedAssignment(null)} className="mt-4 h-10 px-6 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">Close</button>
+                    <button onClick={() => setSelectedAssignment(null)} className="mt-4 h-10 px-6 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">{t('student.assignments.close')}</button>
                   </div>
                 );
               }
@@ -772,27 +775,27 @@ export default function StudentAssignments() {
                 <div className="px-6 py-5 space-y-4">
                   {(selectedAssignment as any).instructions && (
                     <div className="bg-slate-50 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-slate-500 mb-1">Instructions</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">{t('student.assignments.instructions')}</p>
                       <div className="text-sm text-slate-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{__html: (selectedAssignment as any).instructions}}/>
                     </div>
                   )}
                   <TeacherResources assignment={selectedAssignment} />
                   <div>
-                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">Your Answer / Response</label>
+                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">{t('student.assignments.yourAnswerResponse')}</label>
                     <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} rows={5}
-                      placeholder="Write your answer here..."
+                      placeholder={t('student.assignments.answerPlaceholder')}
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"/>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">Attach Files <span className="text-slate-400 font-normal">(Optional)</span></label>
+                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">{t('student.assignments.attachFiles')} <span className="text-slate-400 font-normal">({t('student.assignments.optional')})</span></label>
                     <div
                       onClick={() => submitFileRef.current?.click()}
                       onDragOver={e => e.preventDefault()}
                       onDrop={e => { e.preventDefault(); Array.from(e.dataTransfer.files).forEach(f => { const r=new FileReader(); r.onload=ev=>setSubmitFiles(p=>[...p,{name:f.name,size:f.size,url:ev.target?.result as string}]); r.readAsDataURL(f); }); }}
                       className="border-2 border-dashed border-purple-200 rounded-xl p-5 text-center cursor-pointer hover:bg-purple-50 transition-colors">
                       <UploadCloud className="h-6 w-6 text-purple-400 mx-auto mb-1.5"/>
-                      <p className="text-sm text-slate-500">Click to upload or drag &amp; drop</p>
-                      <p className="text-xs text-slate-400 mt-0.5">PDF, DOC, JPG, PNG (max 50MB)</p>
+                      <p className="text-sm text-slate-500">{t('student.assignments.clickToUpload')}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{t('student.assignments.fileTypesHint')}</p>
                     </div>
                     <input type="file" ref={submitFileRef} multiple onChange={handleSubmitFileChange} className="hidden"/>
                     {submitFiles.length > 0 && (
@@ -800,7 +803,7 @@ export default function StudentAssignments() {
                         {submitFiles.map((f, i) => (
                           <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-xs">
                             <span className="text-slate-600 truncate flex-1">{f.name}</span>
-                            <button onClick={() => setSubmitFiles(p => p.filter((_,j) => j !== i))} className="ml-2 text-slate-400 hover:text-rose-500">✕</button>
+                            <button onClick={() => setSubmitFiles(p => p.filter((_,j) => j !== i))} className="ms-2 text-slate-400 hover:text-rose-500">✕</button>
                           </div>
                         ))}
                       </div>
@@ -808,10 +811,10 @@ export default function StudentAssignments() {
                   </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-                  <button onClick={() => setSelectedAssignment(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                  <button onClick={() => setSelectedAssignment(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">{t('student.assignments.cancel')}</button>
                   <button onClick={handleSubmit} disabled={isSubmitting || (!submitText.trim() && submitFiles.length === 0)}
                     className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-60 flex items-center gap-1.5">
-                    {isSubmitting ? "Submitting..." : (<><Send className="h-3.5 w-3.5"/> Submit Assignment</>)}
+                    {isSubmitting ? t('student.assignments.submitting') : (<><Send className="h-3.5 w-3.5"/> {t('student.assignments.submitAssignment')}</>)}
                   </button>
                 </div>
               </>

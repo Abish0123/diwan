@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
@@ -79,6 +80,14 @@ const BUILTIN: Record<string, { q: string; a: string }[]> = {
 
 const SUBJECTS = Object.keys(BUILTIN);
 
+const SUBJECT_LABEL_KEYS: Record<string, string> = {
+  Mathematics: "student.flashcards.subjects.mathematics",
+  English: "student.flashcards.subjects.english",
+  Science: "student.flashcards.subjects.science",
+  Arabic: "student.flashcards.subjects.arabic",
+  Social: "student.flashcards.subjects.social",
+};
+
 function sectionLetter(cls: { name?: string; section?: string }): string {
   return cls.section || cls.name?.match(/[- ]([A-Z])$/)?.[1] || "";
 }
@@ -86,6 +95,7 @@ function sectionLetter(cls: { name?: string; section?: string }): string {
 interface StudyCard { q: string; a: string }
 
 export default function StudentFlashCards() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   // Real teacher decks — same normalized store (name/title, front/back
@@ -162,16 +172,16 @@ export default function StudentFlashCards() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <button onClick={() => setStudyMode(false)} className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors">
-              <ChevronLeft className="h-4 w-4" /> Back to sets
+              <ChevronLeft className="h-4 w-4 rtl:rotate-180" /> {t('student.flashcards.backToSets')}
             </button>
-            <Badge className="bg-violet-100 text-violet-700 border-none text-xs">{selectedSubject}</Badge>
+            <Badge className="bg-violet-100 text-violet-700 border-none text-xs">{selectedSubject && (SUBJECT_LABEL_KEYS[selectedSubject] ? t(SUBJECT_LABEL_KEYS[selectedSubject]) : selectedSubject)}</Badge>
           </div>
 
           {/* Progress */}
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
               <span>{idx + 1} / {cards.length}</span>
-              <span>{progress}% complete</span>
+              <span>{t('student.flashcards.percentComplete', { percent: progress })}</span>
             </div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
@@ -188,13 +198,13 @@ export default function StudentFlashCards() {
             style={{ perspective: "1000px" }}
           >
             <p className={cn("text-[11px] font-bold uppercase tracking-widest mb-4", flipped ? "text-violet-200" : "text-slate-400")}>
-              {flipped ? "Answer" : "Question — tap to reveal"}
+              {flipped ? t('student.flashcards.answer') : t('student.flashcards.questionTapToReveal')}
             </p>
             <p className={cn("text-xl font-bold leading-relaxed", flipped ? "text-white" : "text-slate-900")}>
               {flipped ? card.a : card.q}
             </p>
             {!flipped && (
-              <p className="text-xs text-slate-300 mt-6">Tap card to see answer</p>
+              <p className="text-xs text-slate-300 mt-6">{t('student.flashcards.tapCardToSeeAnswer')}</p>
             )}
           </div>
 
@@ -203,11 +213,11 @@ export default function StudentFlashCards() {
             <div className="flex gap-3">
               <Button onClick={() => mark(false)} variant="outline"
                 className="flex-1 h-12 border-rose-200 text-rose-600 hover:bg-rose-50 font-bold">
-                <XCircle className="h-4 w-4 mr-2" /> Still Learning
+                <XCircle className="h-4 w-4 me-2" /> {t('student.flashcards.stillLearning')}
               </Button>
               <Button onClick={() => mark(true)}
                 className="flex-1 h-12 bg-emerald-500 hover:bg-emerald-600 border-none text-white font-bold">
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Got It!
+                <CheckCircle2 className="h-4 w-4 me-2" /> {t('student.flashcards.gotIt')}
               </Button>
             </div>
           )}
@@ -215,10 +225,10 @@ export default function StudentFlashCards() {
           {/* Score chips */}
           <div className="flex justify-center gap-4 text-xs">
             <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl font-bold">
-              <CheckCircle2 className="h-3.5 w-3.5" /> {known.size} Known
+              <CheckCircle2 className="h-3.5 w-3.5" /> {t('student.flashcards.knownCount', { count: known.size })}
             </span>
             <span className="flex items-center gap-1.5 bg-rose-50 text-rose-600 px-3 py-1.5 rounded-xl font-bold">
-              <XCircle className="h-3.5 w-3.5" /> {unknown.size} Learning
+              <XCircle className="h-3.5 w-3.5" /> {t('student.flashcards.learningCount', { count: unknown.size })}
             </span>
           </div>
         </div>
@@ -236,23 +246,23 @@ export default function StudentFlashCards() {
             <Trophy className="h-10 w-10 text-purple-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900">Session Complete!</h2>
-            <p className="text-slate-500 mt-1">{selectedSubject} · {cards.length} cards</p>
+            <h2 className="text-2xl font-black text-slate-900">{t('student.flashcards.sessionComplete')}</h2>
+            <p className="text-slate-500 mt-1">{selectedSubject && (SUBJECT_LABEL_KEYS[selectedSubject] ? t(SUBJECT_LABEL_KEYS[selectedSubject]) : selectedSubject)} · {t('student.flashcards.cardsCount', { count: cards.length })}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-2xl p-6">
             <p className="text-4xl font-black text-purple-600">{pct}%</p>
-            <p className="text-sm text-slate-500 mt-1">Correct</p>
+            <p className="text-sm text-slate-500 mt-1">{t('student.flashcards.correct')}</p>
             <div className="flex justify-center gap-6 mt-4 text-sm">
-              <span className="text-emerald-600 font-bold">✓ {known.size} known</span>
-              <span className="text-rose-600 font-bold">✗ {unknown.size} to review</span>
+              <span className="text-emerald-600 font-bold">✓ {t('student.flashcards.knownCount', { count: known.size })}</span>
+              <span className="text-rose-600 font-bold">✗ {t('student.flashcards.toReviewCount', { count: unknown.size })}</span>
             </div>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => startStudy(selectedSubject!, cards)}>
-              <RotateCcw className="h-4 w-4 mr-1.5" /> Retry All
+              <RotateCcw className="h-4 w-4 me-1.5" /> {t('student.flashcards.retryAll')}
             </Button>
             <Button className="flex-1 gradient-primary border-none" onClick={() => { setCards([]); setKnown(new Set()); setUnknown(new Set()); }}>
-              Back to Sets
+              {t('student.flashcards.backToSets')}
             </Button>
           </div>
         </div>
@@ -265,19 +275,19 @@ export default function StudentFlashCards() {
       <div className="space-y-5 pb-12 max-w-3xl mx-auto">
         <div>
           <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" /> Flash Cards
+            <Brain className="h-5 w-5 text-purple-600" /> {t('student.flashcards.pageTitle')}
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Study your subjects with interactive flash cards</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('student.flashcards.pageSubtitle')}</p>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search subjects…" className="pl-9" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder={t('student.flashcards.searchSubjectsPlaceholder')} className="ps-9" />
         </div>
 
         {/* Built-in subject sets */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Subject Sets</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">{t('student.flashcards.subjectSets')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredSubjects.map(subject => {
               const deck = BUILTIN[subject];
@@ -293,16 +303,16 @@ export default function StudentFlashCards() {
                 <button
                   key={subject}
                   onClick={() => startStudy(subject)}
-                  className={cn("text-left p-5 rounded-2xl border-2 hover:shadow-md transition-all group", cls)}
+                  className={cn("text-start p-5 rounded-2xl border-2 hover:shadow-md transition-all group", cls)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <BookOpen className="h-6 w-6 opacity-70 group-hover:scale-110 transition-transform" />
                     <Zap className="h-4 w-4 opacity-40" />
                   </div>
-                  <p className="font-bold text-sm">{subject}</p>
-                  <p className="text-[11px] opacity-60 mt-0.5">{deck.length} cards</p>
+                  <p className="font-bold text-sm">{SUBJECT_LABEL_KEYS[subject] ? t(SUBJECT_LABEL_KEYS[subject]) : subject}</p>
+                  <p className="text-[11px] opacity-60 mt-0.5">{t('student.flashcards.cardsCount', { count: deck.length })}</p>
                   <div className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold opacity-70 group-hover:opacity-100 transition-opacity">
-                    Study now <ChevronRight className="h-3 w-3" />
+                    {t('student.flashcards.studyNow')} <ChevronRight className="h-3 w-3 rtl:rotate-180" />
                   </div>
                 </button>
               );
@@ -313,15 +323,15 @@ export default function StudentFlashCards() {
         {/* Teacher-uploaded sets */}
         {dbSets.length > 0 && (
           <div>
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">From Your Teacher</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">{t('student.flashcards.fromYourTeacher')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {dbSets.map(set => (
                 <button key={set.id} onClick={() => startStudy(set.subject || set.title, set.cards?.map((c: any) => ({ q: c.front || c.q, a: c.back || c.a })))}
-                  className="text-left p-5 rounded-2xl border-2 bg-purple-50 border-purple-100 text-purple-700 hover:shadow-md transition-all group">
+                  className="text-start p-5 rounded-2xl border-2 bg-purple-50 border-purple-100 text-purple-700 hover:shadow-md transition-all group">
                   <p className="font-bold text-sm">{set.title}</p>
-                  <p className="text-[11px] opacity-60 mt-0.5">{set.subject} · {Array.isArray(set.cards) ? set.cards.length : 0} cards</p>
+                  <p className="text-[11px] opacity-60 mt-0.5">{set.subject} · {t('student.flashcards.cardsCount', { count: Array.isArray(set.cards) ? set.cards.length : 0 })}</p>
                   <div className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold opacity-70 group-hover:opacity-100 transition-opacity">
-                    Study now <ChevronRight className="h-3 w-3" />
+                    {t('student.flashcards.studyNow')} <ChevronRight className="h-3 w-3 rtl:rotate-180" />
                   </div>
                 </button>
               ))}

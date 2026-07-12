@@ -7,6 +7,7 @@ import { getAllAttempts } from "@/lib/assessmentAttempts";
 import { publishDueScheduledAssessments } from "@/lib/classPublishNotify";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   Clock, BookOpen, CheckCircle2, AlertCircle, ChevronRight, ChevronLeft,
   Play, Flag, Send, Trophy, Star, TrendingUp, Brain, RotateCcw,
@@ -94,6 +95,7 @@ function AssessmentList({
   const [sortBy, setSortBy] = useState<"date" | "title" | "marks">("date");
   const [page, setPage] = useState(1);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const { t } = useTranslation();
   const PER_PAGE = 6;
 
   const now = new Date();
@@ -186,8 +188,16 @@ function AssessmentList({
       .slice(0, 3),
     [enriched, attempts]);
 
-  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const DAY_NAMES = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const MONTH_NAMES = [
+    t("student.assessments.monthJan"), t("student.assessments.monthFeb"), t("student.assessments.monthMar"),
+    t("student.assessments.monthApr"), t("student.assessments.monthMay"), t("student.assessments.monthJun"),
+    t("student.assessments.monthJul"), t("student.assessments.monthAug"), t("student.assessments.monthSep"),
+    t("student.assessments.monthOct"), t("student.assessments.monthNov"), t("student.assessments.monthDec"),
+  ];
+  const DAY_NAMES = [
+    t("student.assessments.daySu"), t("student.assessments.dayMo"), t("student.assessments.dayTu"),
+    t("student.assessments.dayWe"), t("student.assessments.dayTh"), t("student.assessments.dayFr"), t("student.assessments.daySa"),
+  ];
 
   function dotColor(type: string) {
     if (type === "Completed") return "bg-emerald-500";
@@ -196,10 +206,10 @@ function AssessmentList({
   }
 
   function performanceGradeLabel(pct: number) {
-    if (pct >= 85) return { label: "Excellent", color: "text-emerald-600 bg-emerald-50" };
-    if (pct >= 70) return { label: "Good", color: "text-purple-600 bg-blue-50" };
-    if (pct >= 50) return { label: "Average", color: "text-amber-600 bg-amber-50" };
-    return { label: "Needs Work", color: "text-red-600 bg-red-50" };
+    if (pct >= 85) return { label: t("student.assessments.perfExcellent"), color: "text-emerald-600 bg-emerald-50" };
+    if (pct >= 70) return { label: t("student.assessments.perfGood"), color: "text-purple-600 bg-blue-50" };
+    if (pct >= 50) return { label: t("student.assessments.perfAverage"), color: "text-amber-600 bg-amber-50" };
+    return { label: t("student.assessments.perfNeedsWork"), color: "text-red-600 bg-red-50" };
   }
 
   // Donut chart SVG helper
@@ -228,23 +238,23 @@ function AssessmentList({
       <div className="bg-white border-b border-slate-200 px-6 py-5">
         <div className="max-w-[1400px] mx-auto flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-black text-slate-900">Assessments</h1>
-            <p className="text-sm text-slate-500 mt-0.5">View all tests, quizzes, exams and assessments.</p>
+            <h1 className="text-xl font-black text-slate-900">{t("student.assessments.pageTitle")}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{t("student.assessments.pageSubtitle")}</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setShowGuidelines(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-              <Shield className="w-4 h-4" /> Assessment Guidelines
+              <Shield className="w-4 h-4" /> {t("student.assessments.assessmentGuidelines")}
             </button>
             <button
               onClick={() => {
                 const u = enriched.find(a => !a.submitted && !a.overdue);
                 if (u) onStart(u);
-                else toast.info("No upcoming assessments available.");
+                else toast.info(t("student.assessments.noUpcomingAvailable"));
               }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-sm font-bold shadow-sm hover:bg-[#6D28D9] transition-colors">
-              <Play className="w-4 h-4 fill-white" /> Take Online Test
+              <Play className="w-4 h-4 fill-white" /> {t("student.assessments.takeOnlineTest")}
             </button>
           </div>
         </div>
@@ -259,7 +269,7 @@ function AssessmentList({
             </div>
             <div>
               <p className="text-lg font-black text-blue-700">{stats.upcoming}</p>
-              <p className="text-xs text-blue-500 font-medium">Upcoming Tests</p>
+              <p className="text-xs text-blue-500 font-medium">{t("student.assessments.upcomingTests")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
@@ -268,7 +278,7 @@ function AssessmentList({
             </div>
             <div>
               <p className="text-lg font-black text-emerald-700">{stats.completed}</p>
-              <p className="text-xs text-emerald-500 font-medium">Completed Assessments</p>
+              <p className="text-xs text-emerald-500 font-medium">{t("student.assessments.completedAssessments")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 rounded-xl bg-violet-50 border border-violet-100">
@@ -277,7 +287,7 @@ function AssessmentList({
             </div>
             <div>
               <p className="text-lg font-black text-violet-700">{stats.avgScore != null ? `${stats.avgScore}%` : "—"}</p>
-              <p className="text-xs text-violet-500 font-medium">Average Score</p>
+              <p className="text-xs text-violet-500 font-medium">{t("student.assessments.averageScore")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
@@ -286,7 +296,7 @@ function AssessmentList({
             </div>
             <div>
               <p className="text-lg font-black text-amber-700">{stats.highestScore ? `${stats.highestScore.pct}%` : "—"}</p>
-              <p className="text-xs text-amber-500 font-medium">Highest Score{stats.highestScore ? ` In ${stats.highestScore.subject}` : ""}</p>
+              <p className="text-xs text-amber-500 font-medium">{stats.highestScore ? t("student.assessments.highestScoreInSubject", { subject: stats.highestScore.subject }) : t("student.assessments.highestScore")}</p>
             </div>
           </div>
         </div>
@@ -300,15 +310,20 @@ function AssessmentList({
           <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
             {/* Underline tabs */}
             <div className="flex gap-0 border-b border-slate-200">
-              {(["All","Upcoming","Completed","Overdue"] as const).map(t => {
-                const key = t.toLowerCase() as "all" | "upcoming" | "completed" | "overdue";
+              {([
+                { label: "All", key: "all" as const, i18n: "tabAll" },
+                { label: "Upcoming", key: "upcoming" as const, i18n: "tabUpcoming" },
+                { label: "Completed", key: "completed" as const, i18n: "tabCompleted" },
+                { label: "Overdue", key: "overdue" as const, i18n: "tabOverdue" },
+              ]).map(tabItem => {
+                const key = tabItem.key;
                 return (
-                  <button key={t} onClick={() => { setTab(key); setPage(1); }}
+                  <button key={key} onClick={() => { setTab(key); setPage(1); }}
                     className={cn("px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px",
                       tab === key
                         ? "border-[#7C3AED] text-[#7C3AED]"
                         : "border-transparent text-slate-500 hover:text-slate-700")}>
-                    {t}
+                    {t(`student.assessments.${tabItem.i18n}`)}
                   </button>
                 );
               })}
@@ -316,23 +331,23 @@ function AssessmentList({
             {/* Filter dropdowns */}
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Filter className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <Filter className="absolute start-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                 <select value={filterSubject} onChange={e => { setFilterSubject(e.target.value); setPage(1); }}
-                  className="pl-8 pr-8 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-violet-400 bg-white text-slate-700 appearance-none cursor-pointer">
-                  <option value="">All Subjects</option>
+                  className="ps-8 pe-8 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-violet-400 bg-white text-slate-700 appearance-none cursor-pointer">
+                  <option value="">{t("student.assessments.allSubjects")}</option>
                   {subjects.map(s => <option key={s}>{s}</option>)}
                 </select>
-                <ChevronDown className="absolute right-2.5 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute end-2.5 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               </div>
               <div className="relative">
-                <SortAsc className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <SortAsc className="absolute start-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                 <select value={sortBy} onChange={e => setSortBy(e.target.value as "date" | "title" | "marks")}
-                  className="pl-8 pr-8 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-violet-400 bg-white text-slate-700 appearance-none cursor-pointer">
-                  <option value="date">Sort by: Due Date</option>
-                  <option value="title">Sort by: Title</option>
-                  <option value="marks">Sort by: Marks</option>
+                  className="ps-8 pe-8 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-violet-400 bg-white text-slate-700 appearance-none cursor-pointer">
+                  <option value="date">{t("student.assessments.sortByDueDate")}</option>
+                  <option value="title">{t("student.assessments.sortByTitle")}</option>
+                  <option value="marks">{t("student.assessments.sortByMarks")}</option>
                 </select>
-                <ChevronDown className="absolute right-2.5 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                <ChevronDown className="absolute end-2.5 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -341,18 +356,18 @@ function AssessmentList({
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Header row */}
             <div className="grid grid-cols-[2.5fr_1fr_1.2fr_0.8fr_1fr_1.1fr] text-[11px] font-bold uppercase tracking-wider text-slate-400 px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-              <span>Assessment</span>
-              <span>Subject</span>
-              <span>Due Date</span>
-              <span>Total Marks</span>
-              <span>Status</span>
-              <span className="text-right">Action</span>
+              <span>{t("student.assessments.colAssessment")}</span>
+              <span>{t("student.assessments.colSubject")}</span>
+              <span>{t("student.assessments.colDueDate")}</span>
+              <span>{t("student.assessments.colTotalMarks")}</span>
+              <span>{t("student.assessments.colStatus")}</span>
+              <span className="text-end">{t("student.assessments.colAction")}</span>
             </div>
 
             {paginated.length === 0 ? (
               <div className="py-16 text-center">
                 <BookOpen className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 font-medium">No assessments found</p>
+                <p className="text-slate-400 font-medium">{t("student.assessments.noAssessmentsFound")}</p>
               </div>
             ) : paginated.map((a) => {
               const attempt = attempts[a.id];
@@ -379,7 +394,7 @@ function AssessmentList({
                     <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <div>
                       <p className="text-xs font-semibold text-slate-700">{dueDate.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</p>
-                      <p className="text-[11px] text-slate-400">11:59 PM</p>
+                      <p className="text-[11px] text-slate-400">{t("student.assessments.dueTime")}</p>
                     </div>
                   </div>
                   {/* Total Marks */}
@@ -389,7 +404,7 @@ function AssessmentList({
                     a.submitted ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                     a.overdue ? "bg-red-50 text-red-600 border-red-200" :
                     "bg-blue-50 text-blue-700 border-blue-200")}>
-                    {a.displayStatus}
+                    {a.displayStatus === "Completed" ? t("student.assessments.statusCompleted") : a.displayStatus === "Overdue" ? t("student.assessments.statusOverdue") : t("student.assessments.statusUpcoming")}
                   </span>
                   {/* Action */}
                   <div className="flex justify-end">
@@ -397,21 +412,21 @@ function AssessmentList({
                       (a as any).resultsReleased || (a as any).resultVisibility === "immediate" || !(a as any).resultVisibility ? (
                         <button onClick={() => onViewResult(a)}
                           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                          <Eye className="w-3.5 h-3.5" /> View Result
+                          <Eye className="w-3.5 h-3.5" /> {t("student.assessments.viewResult")}
                         </button>
                       ) : (
                         <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-xs font-semibold border border-amber-200">
-                          Results Pending
+                          {t("student.assessments.resultsPending")}
                         </span>
                       )
                     ) : a.overdue ? (
                       <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-xs font-semibold cursor-not-allowed">
-                        Closed
+                        {t("student.assessments.closed")}
                       </span>
                     ) : (
                       <button onClick={() => onStart(a)}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#7C3AED] text-white text-xs font-bold shadow-sm hover:bg-[#6D28D9] transition-colors">
-                        <Play className="w-3 h-3 fill-white" /> Start Test
+                        <Play className="w-3 h-3 fill-white" /> {t("student.assessments.startTest")}
                       </button>
                     )}
                   </div>
@@ -423,12 +438,16 @@ function AssessmentList({
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
             <span>
-              Showing {filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1} to {Math.min(page * PER_PAGE, filtered.length)} of {filtered.length} assessments
+              {t("student.assessments.showingRange", {
+                from: filtered.length === 0 ? 0 : (page - 1) * PER_PAGE + 1,
+                to: Math.min(page * PER_PAGE, filtered.length),
+                total: filtered.length,
+              })}
             </span>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                 className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
@@ -439,7 +458,7 @@ function AssessmentList({
               ))}
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
                 className="w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4 rtl:rotate-180" />
               </button>
             </div>
           </div>
@@ -448,7 +467,7 @@ function AssessmentList({
           {recentCompleted.length > 0 && (
             <div className="mt-8">
               <h2 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-500" /> Recent Results
+                <Trophy className="w-4 h-4 text-amber-500" /> {t("student.assessments.recentResults")}
               </h2>
               <div className="grid grid-cols-3 gap-4">
                 {recentCompleted.map(a => {
@@ -488,7 +507,7 @@ function AssessmentList({
           {/* Assessment Calendar */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-violet-500" /> Assessment Calendar
+              <Calendar className="w-4 h-4 text-violet-500" /> {t("student.assessments.assessmentCalendar")}
             </h3>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-600">{MONTH_NAMES[calMonth]} {calYear}</span>
@@ -521,9 +540,9 @@ function AssessmentList({
             </div>
             {/* Legend */}
             <div className="flex items-center gap-3 mt-3 text-[10px] text-slate-500">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />Upcoming</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Done</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Overdue</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />{t("student.assessments.legendUpcoming")}</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />{t("student.assessments.legendDone")}</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />{t("student.assessments.legendOverdue")}</span>
             </div>
           </div>
 
@@ -531,7 +550,7 @@ function AssessmentList({
           {upcomingList.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
               <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-500" /> Upcoming Assessments
+                <Clock className="w-4 h-4 text-blue-500" /> {t("student.assessments.upcomingAssessments")}
               </h3>
               <div className="space-y-2.5">
                 {upcomingList.map(a => {
@@ -556,29 +575,29 @@ function AssessmentList({
           {/* Performance Overview */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <h3 className="text-sm font-black text-slate-800 mb-3 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-violet-500" /> Performance Overview
+              <BarChart3 className="w-4 h-4 text-violet-500" /> {t("student.assessments.performanceOverview")}
             </h3>
             <div className="flex flex-col items-center">
               {stats.avgScore != null ? (
                 <DonutChart pct={stats.avgScore} />
               ) : (
                 <div className="w-24 h-24 rounded-full border-4 border-slate-100 flex items-center justify-center">
-                  <span className="text-slate-300 text-xs font-bold">No data</span>
+                  <span className="text-slate-300 text-xs font-bold">{t("student.assessments.noData")}</span>
                 </div>
               )}
-              <p className="text-xs text-slate-500 mt-2 font-medium">Average Score</p>
+              <p className="text-xs text-slate-500 mt-2 font-medium">{t("student.assessments.averageScore")}</p>
             </div>
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-emerald-500" />Improvement</span>
+                <span className="text-slate-500 flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5 text-emerald-500" />{t("student.assessments.improvement")}</span>
                 <span className="font-bold text-emerald-600">+{stats.avgScore != null ? Math.max(0, stats.avgScore - 50) : 0}%</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />Assessments</span>
+                <span className="text-slate-500 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />{t("student.assessments.assessmentsLabel")}</span>
                 <span className="font-bold text-slate-700">{stats.totalAttempts}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500 flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-violet-500" />Subjects</span>
+                <span className="text-slate-500 flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-violet-500" />{t("student.assessments.subjectsLabel")}</span>
                 <span className="font-bold text-slate-700">{stats.totalSubjects}</span>
               </div>
             </div>
@@ -593,21 +612,21 @@ function AssessmentList({
             <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-purple-600" />
-                <h3 className="text-lg font-bold text-slate-900">Assessment Guidelines</h3>
+                <h3 className="text-lg font-bold text-slate-900">{t("student.assessments.assessmentGuidelines")}</h3>
               </div>
               <button onClick={() => setShowGuidelines(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
                 <X className="h-4 w-4 text-slate-400" />
               </button>
             </div>
             <ul className="px-6 py-5 space-y-3 text-sm text-slate-700">
-              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Start the assessment before its scheduled window closes — once time runs out, it auto-submits with whatever has been answered.</li>
-              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Stay on this tab for the full duration — leaving or refreshing may end your attempt early.</li>
-              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Flag questions you want to revisit and review them before submitting.</li>
-              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Each assessment can only be attempted once — there is no retake unless your teacher reopens it.</li>
-              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Results appear here once your teacher releases them — an "Upcoming" or "Overdue" status does not mean your score is hidden on purpose.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{t("student.assessments.guideline1")}</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{t("student.assessments.guideline2")}</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{t("student.assessments.guideline3")}</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{t("student.assessments.guideline4")}</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{t("student.assessments.guideline5")}</li>
             </ul>
             <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
-              <button onClick={() => setShowGuidelines(false)} className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold">Got it</button>
+              <button onClick={() => setShowGuidelines(false)} className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold">{t("student.assessments.gotIt")}</button>
             </div>
           </div>
         </div>
@@ -619,22 +638,23 @@ function AssessmentList({
 // ─── Screen 2: Instructions ───────────────────────────────────────────────────
 function Instructions({ assessment, onBack, onStart }: { assessment: Assessment; onBack: () => void; onStart: () => void }) {
   const [confirmed, setConfirmed] = useState(false);
+  const { t } = useTranslation();
   const RULES = [
-    { icon: Timer, text: "Timer starts immediately when you begin the test." },
-    { icon: RefreshCw, text: "No retakes allowed — you only get one attempt." },
-    { icon: Shield, text: "Auto-save is enabled every 15 seconds." },
-    { icon: Clock, text: "Test auto-submits when the timer reaches zero." },
-    { icon: Wifi, text: "Ensure a stable internet connection throughout." },
-    { icon: Copy, text: "Copy/paste and tab switching are restricted." },
-    { icon: Maximize2, text: "Full-screen mode is recommended." },
-    { icon: Eye, text: "All interactions are monitored and logged." },
+    { icon: Timer, text: t("student.assessments.ruleTimerStarts") },
+    { icon: RefreshCw, text: t("student.assessments.ruleNoRetakes") },
+    { icon: Shield, text: t("student.assessments.ruleAutoSave") },
+    { icon: Clock, text: t("student.assessments.ruleAutoSubmit") },
+    { icon: Wifi, text: t("student.assessments.ruleStableInternet") },
+    { icon: Copy, text: t("student.assessments.ruleNoCopyPaste") },
+    { icon: Maximize2, text: t("student.assessments.ruleFullScreen") },
+    { icon: Eye, text: t("student.assessments.ruleMonitored") },
   ];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30 flex items-start justify-center pt-10 px-6">
       <div className="w-full max-w-2xl">
         {/* Back */}
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 font-medium transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Back to Assessments
+          <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {t("student.assessments.backToAssessments")}
         </button>
 
         {/* Header card */}
@@ -649,10 +669,10 @@ function Instructions({ assessment, onBack, onStart }: { assessment: Assessment;
           </div>
           <div className="grid grid-cols-4 gap-3 mt-5">
             {[
-              { label: "Duration", value: `${assessment.duration} min` },
-              { label: "Questions", value: String(assessment.questions?.length ?? 0) },
-              { label: "Total Marks", value: String(assessment.totalMarks) },
-              { label: "Passing", value: String(assessment.passingMarks) },
+              { label: t("student.assessments.duration"), value: t("student.assessments.durationMinutes", { count: assessment.duration }) },
+              { label: t("student.assessments.questions"), value: String(assessment.questions?.length ?? 0) },
+              { label: t("student.assessments.colTotalMarks"), value: String(assessment.totalMarks) },
+              { label: t("student.assessments.passing"), value: String(assessment.passingMarks) },
             ].map(s => (
               <div key={s.label} className="bg-white/15 rounded-xl p-3 text-center">
                 <p className="text-[10px] text-violet-200 uppercase tracking-wider font-semibold">{s.label}</p>
@@ -661,14 +681,14 @@ function Instructions({ assessment, onBack, onStart }: { assessment: Assessment;
             ))}
           </div>
           {assessment.teacher && (
-            <p className="mt-4 text-xs text-violet-200"><span className="font-semibold">Teacher:</span> {assessment.teacher}</p>
+            <p className="mt-4 text-xs text-violet-200"><span className="font-semibold">{t("student.assessments.teacherLabel")}</span> {assessment.teacher}</p>
           )}
         </div>
 
         {/* Instructions */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
           <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-            <Info className="w-4 h-4 text-violet-500" /> Read Before You Begin
+            <Info className="w-4 h-4 text-violet-500" /> {t("student.assessments.readBeforeBegin")}
           </h2>
           <div className="space-y-3">
             {RULES.map((r, i) => (
@@ -688,19 +708,19 @@ function Instructions({ assessment, onBack, onStart }: { assessment: Assessment;
             <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
               className="mt-0.5 w-4 h-4 accent-purple-600 cursor-pointer" />
             <span className="text-sm text-amber-800 font-medium leading-relaxed">
-              I have read all instructions, I understand the rules, and I am ready to begin. I confirm I will not use any unauthorized resources.
+              {t("student.assessments.confirmReadInstructions")}
             </span>
           </label>
         </div>
 
         <div className="flex gap-3">
           <button onClick={onBack} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition-colors text-sm">
-            Cancel
+            {t("student.assessments.cancel")}
           </button>
           <button onClick={onStart} disabled={!confirmed}
             className={cn("flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all",
               confirmed ? "bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white shadow-md hover:shadow-lg hover:opacity-90" : "bg-slate-100 text-slate-300 cursor-not-allowed")}>
-            <Play className="w-4 h-4 fill-white" /> Start Assessment
+            <Play className="w-4 h-4 fill-white" /> {t("student.assessments.startAssessment")}
           </button>
         </div>
       </div>
@@ -722,16 +742,17 @@ function TestEnvironment({
   onReview: () => void;
   onBack?: () => void;
 }) {
+  const { t } = useTranslation();
   const questions = assessment.questions ?? [];
   const q = questions[currentQ];
   if (!q) return (
     <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-[9999]">
       <div className="text-center space-y-4">
-        <p className="text-slate-500 text-lg font-semibold">No questions available for this assessment.</p>
-        <p className="text-slate-400 text-sm">Please contact your teacher or admin.</p>
+        <p className="text-slate-500 text-lg font-semibold">{t("student.assessments.noQuestionsAvailable")}</p>
+        <p className="text-slate-400 text-sm">{t("student.assessments.contactTeacherOrAdmin")}</p>
         {onBack && (
           <button onClick={onBack} className="mt-4 px-6 py-2 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors">
-            Back to Assessments
+            {t("student.assessments.backToAssessments")}
           </button>
         )}
       </div>
@@ -763,9 +784,9 @@ function TestEnvironment({
         </div>
         {/* Progress */}
         <div className="hidden md:flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-white text-xs font-semibold">{pct}% complete</p>
-            <p className="text-violet-200 text-xs">Q {currentQ + 1}/{questions.length}</p>
+          <div className="text-end">
+            <p className="text-white text-xs font-semibold">{t("student.assessments.percentComplete", { pct })}</p>
+            <p className="text-violet-200 text-xs">{t("student.assessments.questionShort", { current: currentQ + 1, total: questions.length })}</p>
           </div>
           <div className="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
             <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -781,10 +802,10 @@ function TestEnvironment({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-lg">{q.type}</span>
-                <span className="text-xs text-slate-400 font-medium">{q.marks} mark{q.marks !== 1 ? "s" : ""}</span>
-                {q.isImportant && <span className="flex items-center gap-1 text-xs text-amber-600 font-bold"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />Important</span>}
+                <span className="text-xs text-slate-400 font-medium">{t("student.assessments.marksCount", { count: q.marks })}</span>
+                {q.isImportant && <span className="flex items-center gap-1 text-xs text-amber-600 font-bold"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{t("student.assessments.important")}</span>}
               </div>
-              <span className="text-xs text-slate-400 font-semibold">Question {currentQ + 1} of {questions.length}</span>
+              <span className="text-xs text-slate-400 font-semibold">{t("student.assessments.questionXOfY", { current: currentQ + 1, total: questions.length })}</span>
             </div>
 
             {/* Question card */}
@@ -794,7 +815,7 @@ function TestEnvironment({
               {/* Diagram */}
               {q.type === "Diagram Based" && q.diagramDescription && (
                 <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 mb-4 text-sm text-violet-800 leading-relaxed">
-                  <p className="font-bold text-violet-700 mb-1 flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> Diagram Instructions</p>
+                  <p className="font-bold text-violet-700 mb-1 flex items-center gap-1.5"><Info className="w-3.5 h-3.5" /> {t("student.assessments.diagramInstructions")}</p>
                   {q.diagramDescription}
                 </div>
               )}
@@ -804,7 +825,7 @@ function TestEnvironment({
                 <div className="space-y-2.5">
                   {q.options.map(opt => (
                     <button key={opt.id} onClick={() => onAnswer(q.id, opt.id)}
-                      className={cn("w-full flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all font-medium text-sm",
+                      className={cn("w-full flex items-center gap-3 p-4 rounded-xl border-2 text-start transition-all font-medium text-sm",
                         answers[q.id] === opt.id ? "border-violet-500 bg-violet-50 text-violet-900" : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/50 text-slate-700")}>
                       <span className={cn("w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-black shrink-0",
                         answers[q.id] === opt.id ? "border-violet-500 bg-violet-500 text-white" : "border-slate-300 text-slate-400")}>
@@ -823,7 +844,7 @@ function TestEnvironment({
                     <button key={v} onClick={() => onAnswer(q.id, v)}
                       className={cn("flex-1 py-4 rounded-xl border-2 font-bold text-sm transition-all",
                         answers[q.id] === v ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 bg-white hover:border-violet-300 text-slate-600")}>
-                      {v === "True" ? "✓ True" : "✗ False"}
+                      {v === "True" ? `✓ ${t("student.assessments.trueOption")}` : `✗ ${t("student.assessments.falseOption")}`}
                     </button>
                   ))}
                 </div>
@@ -832,14 +853,14 @@ function TestEnvironment({
               {/* Short Answer / Fill in the Blank */}
               {(q.type === "Short Answer" || q.type === "Fill in the Blank") && (
                 <input value={answers[q.id] || ""} onChange={e => onAnswer(q.id, e.target.value)}
-                  placeholder={q.type === "Fill in the Blank" ? "Type the missing word or phrase…" : "Type your answer…"}
+                  placeholder={q.type === "Fill in the Blank" ? t("student.assessments.placeholderFillBlank") : t("student.assessments.placeholderShortAnswer")}
                   className="w-full h-12 px-4 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all" />
               )}
 
               {/* Long Answer / Essay / Diagram Based */}
               {(q.type === "Long Answer" || q.type === "Essay" || q.type === "Diagram Based") && (
                 <textarea value={answers[q.id] || ""} onChange={e => onAnswer(q.id, e.target.value)}
-                  placeholder={q.type === "Diagram Based" ? "Describe your diagram or answer here…" : "Write your detailed answer…"}
+                  placeholder={q.type === "Diagram Based" ? t("student.assessments.placeholderDiagramAnswer") : t("student.assessments.placeholderLongAnswer")}
                   rows={6}
                   className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none transition-all" />
               )}
@@ -847,9 +868,9 @@ function TestEnvironment({
               {/* Match the Following */}
               {q.type === "Match the Following" && (
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-400 font-medium mb-2">Type matching answers for each item</p>
+                  <p className="text-xs text-slate-400 font-medium mb-2">{t("student.assessments.typeMatchingAnswers")}</p>
                   <textarea value={answers[q.id] || ""} onChange={e => onAnswer(q.id, e.target.value)}
-                    placeholder="Format: A-1, B-3, C-2, D-4 (or describe your matches)"
+                    placeholder={t("student.assessments.placeholderMatchFormat")}
                     rows={3}
                     className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none transition-all" />
                 </div>
@@ -860,23 +881,23 @@ function TestEnvironment({
             <div className="flex items-center justify-between">
               <button onClick={onPrev} disabled={currentQ === 0}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
-                <ChevronLeft className="w-4 h-4" /> Previous
+                <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {t("student.assessments.previous")}
               </button>
               <div className="flex items-center gap-2">
                 <button onClick={() => onFlag(q.id)}
                   className={cn("flex items-center gap-1.5 px-4 py-2 rounded-xl border text-sm font-semibold transition-all",
                     flagged.has(q.id) ? "bg-amber-50 border-amber-300 text-amber-700" : "border-slate-200 text-slate-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700")}>
-                  <Flag className="w-3.5 h-3.5" /> {flagged.has(q.id) ? "Flagged" : "Flag"}
+                  <Flag className="w-3.5 h-3.5" /> {flagged.has(q.id) ? t("student.assessments.flagged") : t("student.assessments.flag")}
                 </button>
                 {currentQ === questions.length - 1 ? (
                   <button onClick={onReview}
                     className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white text-sm font-bold shadow-sm hover:shadow-md transition-all">
-                    Review & Submit <ChevronRight className="w-4 h-4" />
+                    {t("student.assessments.reviewAndSubmit")} <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                 ) : (
                   <button onClick={onNext}
                     className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white text-sm font-bold shadow-sm hover:shadow-md transition-all">
-                    Next <ChevronRight className="w-4 h-4" />
+                    {t("student.assessments.next")} <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                 )}
               </div>
@@ -885,8 +906,8 @@ function TestEnvironment({
         </div>
 
         {/* Right Sidebar: Navigator */}
-        <div className="w-64 bg-white border-l border-slate-200 p-4 overflow-y-auto shrink-0 hidden md:block">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Question Navigator</h3>
+        <div className="w-64 bg-white border-s border-slate-200 p-4 overflow-y-auto shrink-0 hidden md:block">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">{t("student.assessments.questionNavigator")}</h3>
           <div className="grid grid-cols-5 gap-1.5 mb-4">
             {questions.map((qs, i) => {
               const st = qStatus(qs.id);
@@ -905,9 +926,9 @@ function TestEnvironment({
           {/* Legend */}
           <div className="space-y-1.5 text-xs">
             {[
-              { color: "bg-emerald-500", label: "Answered", count: answered },
-              { color: "bg-amber-400", label: "Review Later", count: reviewLater },
-              { color: "bg-slate-200", label: "Not Answered", count: questions.length - answered - reviewLater },
+              { color: "bg-emerald-500", label: t("student.assessments.answered"), count: answered },
+              { color: "bg-amber-400", label: t("student.assessments.reviewLater"), count: reviewLater },
+              { color: "bg-slate-200", label: t("student.assessments.notAnswered"), count: questions.length - answered - reviewLater },
             ].map(l => (
               <div key={l.label} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -921,12 +942,12 @@ function TestEnvironment({
           <div className="mt-4 border-t border-slate-100 pt-4">
             <button onClick={onReview}
               className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white text-xs font-bold shadow-sm hover:shadow-md transition-all">
-              Review & Submit
+              {t("student.assessments.reviewAndSubmit")}
             </button>
           </div>
           {/* Auto-save notice */}
           <p className="mt-3 text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
-            <Shield className="w-3 h-3" /> Auto-saving every 15s
+            <Shield className="w-3 h-3" /> {t("student.assessments.autoSavingEvery15s")}
           </p>
         </div>
       </div>
@@ -946,18 +967,19 @@ function ReviewScreen({
   const review = questions.filter(q => flagged.has(q.id)).length;
   const unanswered = questions.length - answered;
   const [showConfirm, setShowConfirm] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="fixed inset-0 bg-slate-50 overflow-y-auto" style={{ zIndex: 9999 }}>
       <div className="max-w-2xl mx-auto px-6 py-8">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-5">
-          <h2 className="text-lg font-black text-slate-900 mb-1">Review Your Answers</h2>
+          <h2 className="text-lg font-black text-slate-900 mb-1">{t("student.assessments.reviewYourAnswers")}</h2>
           <p className="text-sm text-slate-500">{assessment.title}</p>
           <div className="grid grid-cols-3 gap-3 mt-5">
             {[
-              { label: "Answered", value: answered, color: "bg-emerald-50 border-emerald-200", v: "text-emerald-700", ic: CheckCircle2, ic2: "text-emerald-500" },
-              { label: "Review Later", value: review, color: "bg-amber-50 border-amber-200", v: "text-amber-700", ic: Flag, ic2: "text-amber-500" },
-              { label: "Not Answered", value: unanswered, color: "bg-slate-50 border-slate-200", v: "text-slate-600", ic: AlertCircle, ic2: "text-slate-400" },
+              { label: t("student.assessments.answered"), value: answered, color: "bg-emerald-50 border-emerald-200", v: "text-emerald-700", ic: CheckCircle2, ic2: "text-emerald-500" },
+              { label: t("student.assessments.reviewLater"), value: review, color: "bg-amber-50 border-amber-200", v: "text-amber-700", ic: Flag, ic2: "text-amber-500" },
+              { label: t("student.assessments.notAnswered"), value: unanswered, color: "bg-slate-50 border-slate-200", v: "text-slate-600", ic: AlertCircle, ic2: "text-slate-400" },
             ].map(s => (
               <div key={s.label} className={cn("rounded-xl border p-4 text-center", s.color)}>
                 <s.ic className={cn("w-5 h-5 mx-auto mb-1", s.ic2)} />
@@ -970,13 +992,14 @@ function ReviewScreen({
 
         {/* Question grid */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-5">
-          <h3 className="text-sm font-black text-slate-700 mb-4">Click any question to go back and change your answer</h3>
+          <h3 className="text-sm font-black text-slate-700 mb-4">{t("student.assessments.clickQuestionToChange")}</h3>
           <div className="grid grid-cols-8 gap-2">
             {questions.map((q, i) => {
               const st = flagged.has(q.id) ? "review" : answers[q.id] ? "answered" : "unanswered";
+              const stLabel = st === "answered" ? t("student.assessments.answered") : st === "review" ? t("student.assessments.reviewLater") : t("student.assessments.notAnswered");
               return (
                 <button key={q.id} onClick={() => { onBack(); onJump(i); }}
-                  title={`Q${i + 1}: ${st}`}
+                  title={t("student.assessments.questionTooltip", { number: i + 1, status: stLabel })}
                   className={cn("aspect-square rounded-lg text-xs font-black flex items-center justify-center border transition-all hover:scale-110",
                     st === "answered" ? "bg-emerald-500 text-white border-emerald-500" :
                     st === "review" ? "bg-amber-400 text-white border-amber-400" :
@@ -987,7 +1010,7 @@ function ReviewScreen({
             })}
           </div>
           <div className="flex items-center gap-4 mt-4 text-xs">
-            {[{ color: "bg-emerald-500", label: "Answered" }, { color: "bg-amber-400", label: "Review Later" }, { color: "bg-slate-200", label: "Not Answered" }].map(l => (
+            {[{ color: "bg-emerald-500", label: t("student.assessments.answered") }, { color: "bg-amber-400", label: t("student.assessments.reviewLater") }, { color: "bg-slate-200", label: t("student.assessments.notAnswered") }].map(l => (
               <div key={l.label} className="flex items-center gap-1.5">
                 <span className={cn("w-3 h-3 rounded-sm", l.color)} />
                 <span className="text-slate-600 font-medium">{l.label}</span>
@@ -1000,19 +1023,19 @@ function ReviewScreen({
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-amber-800">You have {unanswered} unanswered question{unanswered > 1 ? "s" : ""}</p>
-              <p className="text-xs text-amber-600 mt-0.5">You can still go back and answer them before submitting.</p>
+              <p className="text-sm font-bold text-amber-800">{t("student.assessments.unansweredCount", { count: unanswered })}</p>
+              <p className="text-xs text-amber-600 mt-0.5">{t("student.assessments.canStillAnswer")}</p>
             </div>
           </div>
         )}
 
         <div className="flex gap-3">
           <button onClick={onBack} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-            <ChevronLeft className="w-4 h-4" /> Back to Test
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {t("student.assessments.backToTest")}
           </button>
           <button onClick={() => setShowConfirm(true)}
             className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white font-bold text-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2">
-            <Send className="w-4 h-4" /> Submit Assessment
+            <Send className="w-4 h-4" /> {t("student.assessments.submitAssessment")}
           </button>
         </div>
       </div>
@@ -1024,12 +1047,12 @@ function ReviewScreen({
             <div className="w-12 h-12 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Send className="w-6 h-6 text-purple-600" />
             </div>
-            <h3 className="text-lg font-black text-slate-900 text-center mb-2">Submit Assessment?</h3>
-            <p className="text-sm text-slate-500 text-center mb-1">You answered <strong className="text-slate-700">{answered}</strong> of <strong className="text-slate-700">{questions.length}</strong> questions.</p>
-            <p className="text-xs text-red-500 text-center font-medium mb-6">Once submitted, answers cannot be changed.</p>
+            <h3 className="text-lg font-black text-slate-900 text-center mb-2">{t("student.assessments.submitAssessmentQuestion")}</h3>
+            <p className="text-sm text-slate-500 text-center mb-1">{t("student.assessments.youAnsweredOfQuestions", { answered, total: questions.length })}</p>
+            <p className="text-xs text-red-500 text-center font-medium mb-6">{t("student.assessments.onceSubmittedWarning")}</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50">Cancel</button>
-              <button onClick={onSubmit} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white font-bold text-sm shadow-sm hover:shadow-md">Confirm Submit</button>
+              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50">{t("student.assessments.cancel")}</button>
+              <button onClick={onSubmit} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white font-bold text-sm shadow-sm hover:shadow-md">{t("student.assessments.confirmSubmit")}</button>
             </div>
           </div>
         </div>
@@ -1041,51 +1064,52 @@ function ReviewScreen({
 // ─── Screen 5: Success ────────────────────────────────────────────────────────
 function SuccessScreen({ assessment, submittedAt, onBack, onViewResult }: { assessment: Assessment; submittedAt: string; onBack: () => void; onViewResult: () => void }) {
   const resultsAvailable = assessment.resultsReleased || assessment.resultVisibility === "immediate" || !assessment.resultVisibility;
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-violet-50 to-white flex items-center justify-center px-6" style={{ zIndex: 9999 }}>
       <div className="max-w-md w-full text-center">
         <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-200">
           <CheckCheck className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-2xl font-black text-slate-900 mb-2">Assessment Submitted!</h1>
-        <p className="text-slate-500 mb-6">Your responses have been recorded successfully.</p>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 text-left space-y-3">
+        <h1 className="text-2xl font-black text-slate-900 mb-2">{t("student.assessments.assessmentSubmitted")}</h1>
+        <p className="text-slate-500 mb-6">{t("student.assessments.responsesRecorded")}</p>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6 text-start space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500 font-medium">Assessment</span>
+            <span className="text-slate-500 font-medium">{t("student.assessments.colAssessment")}</span>
             <span className="font-bold text-slate-800">{assessment.title}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500 font-medium">Subject</span>
+            <span className="text-slate-500 font-medium">{t("student.assessments.colSubject")}</span>
             <span className="font-bold text-slate-800">{assessment.subject}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500 font-medium">Submitted At</span>
+            <span className="text-slate-500 font-medium">{t("student.assessments.submittedAt")}</span>
             <span className="font-bold text-slate-800">{new Date(submittedAt).toLocaleString("en-US", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500 font-medium">Questions Attempted</span>
+            <span className="text-slate-500 font-medium">{t("student.assessments.questionsAttempted")}</span>
             <span className="font-bold text-slate-800">{assessment.questions?.length ?? 0}</span>
           </div>
         </div>
         {resultsAvailable ? (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 text-sm text-emerald-700 flex items-start gap-2">
             <CheckCheck className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Your score has been calculated. View your results now!</span>
+            <span>{t("student.assessments.scoreCalculated")}</span>
           </div>
         ) : (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-sm text-amber-700 flex items-start gap-2">
             <Info className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>Results will be published by your teacher. You'll be notified when they are available.</span>
+            <span>{t("student.assessments.resultsWillBePublished")}</span>
           </div>
         )}
         <div className="flex flex-col gap-2">
           {resultsAvailable && (
             <button onClick={onViewResult} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white font-bold text-sm shadow-sm hover:shadow-md transition-all">
-              View My Results
+              {t("student.assessments.viewMyResults")}
             </button>
           )}
           <button onClick={onBack} className={cn("w-full py-3 rounded-xl font-bold text-sm transition-all", resultsAvailable ? "border border-slate-200 text-slate-700 hover:bg-slate-50" : "bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] text-white shadow-sm hover:shadow-md")}>
-            Back to Assessments
+            {t("student.assessments.backToAssessments")}
           </button>
         </div>
       </div>
@@ -1095,6 +1119,7 @@ function SuccessScreen({ assessment, submittedAt, onBack, onViewResult }: { asse
 
 // ─── Screen 6: Results ────────────────────────────────────────────────────────
 function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment; attempt: Attempt; onBack: () => void }) {
+  const { t } = useTranslation();
   const score = attempt.score ?? 0;
   const pct = Math.round((score / assessment.totalMarks) * 100);
   const passed = score >= assessment.passingMarks;
@@ -1119,23 +1144,23 @@ function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment
       <div className="bg-gradient-to-r from-[#6D28D9] to-[#8B5CF6] px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <button onClick={onBack} className="flex items-center gap-1.5 text-violet-200 hover:text-white text-sm mb-4 font-medium">
-            <ChevronLeft className="w-4 h-4" /> Back
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {t("student.assessments.back")}
           </button>
           <div className="flex items-start gap-6">
             {/* Score circle */}
             <div className="text-center bg-white/15 rounded-2xl p-5 shrink-0">
-              <p className="text-[10px] text-violet-200 uppercase tracking-wider font-semibold mb-1">Score</p>
+              <p className="text-[10px] text-violet-200 uppercase tracking-wider font-semibold mb-1">{t("student.assessments.score")}</p>
               <p className="text-4xl font-black text-white">{score}<span className="text-xl text-violet-200">/{assessment.totalMarks}</span></p>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-3">
               {[
-                { label: "Percentage", value: `${pct}%`, sub: pct >= 50 ? "Passing" : "Below Passing" },
-                { label: "Grade", value: grade.g, sub: passed ? "PASS" : "FAIL" },
-                { label: "Status", value: passed ? "PASS" : "FAIL", sub: `Passing: ${assessment.passingMarks}` },
+                { label: t("student.assessments.percentage"), value: `${pct}%`, sub: pct >= 50 ? t("student.assessments.passing") : t("student.assessments.belowPassing"), isPass: false, isFail: false },
+                { label: t("student.assessments.grade"), value: grade.g, sub: passed ? t("student.assessments.pass") : t("student.assessments.fail"), isPass: false, isFail: false },
+                { label: t("student.assessments.status"), value: passed ? t("student.assessments.pass") : t("student.assessments.fail"), sub: t("student.assessments.passingColon", { marks: assessment.passingMarks }), isPass: passed, isFail: !passed },
               ].map(s => (
                 <div key={s.label} className="bg-white/15 rounded-2xl p-4 text-center">
                   <p className="text-[10px] text-violet-200 uppercase tracking-wider font-semibold">{s.label}</p>
-                  <p className={cn("text-3xl font-black mt-1", s.value === "PASS" ? "text-emerald-300" : s.value === "FAIL" ? "text-red-300" : "text-white")}>{s.value}</p>
+                  <p className={cn("text-3xl font-black mt-1", s.isPass ? "text-emerald-300" : s.isFail ? "text-red-300" : "text-white")}>{s.value}</p>
                   <p className="text-[10px] text-violet-200 mt-1">{s.sub}</p>
                 </div>
               ))}
@@ -1147,16 +1172,16 @@ function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment
       <div className="max-w-4xl mx-auto px-6 py-6 grid grid-cols-3 gap-5">
         {/* Performance by type */}
         <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-violet-500" /> Performance by Question Type</h3>
+          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-violet-500" /> {t("student.assessments.performanceByQuestionType")}</h3>
           <div className="space-y-3">
-            {topicPerf.map(t => (
-              <div key={t.label}>
+            {topicPerf.map(tp => (
+              <div key={tp.label}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="font-semibold text-slate-700">{t.label}</span>
-                  <span className="font-black text-slate-800">{t.pct}%</span>
+                  <span className="font-semibold text-slate-700">{tp.label}</span>
+                  <span className="font-black text-slate-800">{tp.pct}%</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${t.pct}%`, background: t.pct >= 70 ? "#10b981" : t.pct >= 50 ? "#f59e0b" : "#ef4444" }} />
+                  <div className="h-full rounded-full transition-all" style={{ width: `${tp.pct}%`, background: tp.pct >= 70 ? "#10b981" : tp.pct >= 50 ? "#f59e0b" : "#ef4444" }} />
                 </div>
               </div>
             ))}
@@ -1166,12 +1191,12 @@ function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment
         {/* Summary */}
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /> Summary</h3>
+            <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /> {t("student.assessments.summary")}</h3>
             {[
-              { label: "Total Questions", value: assessment.questions?.length ?? 0 },
-              { label: "Attempted", value: Object.values(attempt.answers ?? {}).filter(Boolean).length },
-              { label: "Total Marks", value: assessment.totalMarks },
-              { label: "Score", value: score },
+              { label: t("student.assessments.totalQuestions"), value: assessment.questions?.length ?? 0 },
+              { label: t("student.assessments.attempted"), value: Object.values(attempt.answers ?? {}).filter(Boolean).length },
+              { label: t("student.assessments.colTotalMarks"), value: assessment.totalMarks },
+              { label: t("student.assessments.score"), value: score },
             ].map(s => (
               <div key={s.label} className="flex justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
                 <span className="text-slate-500">{s.label}</span>
@@ -1181,16 +1206,16 @@ function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment
           </div>
           <div className={cn("rounded-2xl border p-4 text-center", passed ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
             {passed ? <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" /> : <XCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />}
-            <p className={cn("font-black text-lg", passed ? "text-emerald-700" : "text-red-600")}>{passed ? "Congratulations!" : "Keep Trying"}</p>
-            <p className={cn("text-xs mt-1", passed ? "text-emerald-600" : "text-red-500")}>{passed ? "You passed this assessment." : `You need ${assessment.passingMarks - score} more marks to pass.`}</p>
+            <p className={cn("font-black text-lg", passed ? "text-emerald-700" : "text-red-600")}>{passed ? t("student.assessments.congratulations") : t("student.assessments.keepTrying")}</p>
+            <p className={cn("text-xs mt-1", passed ? "text-emerald-600" : "text-red-500")}>{passed ? t("student.assessments.youPassedAssessment") : t("student.assessments.needMoreMarksToPass", { marks: assessment.passingMarks - score })}</p>
           </div>
         </div>
 
         {/* Teacher feedback placeholder */}
         <div className="col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Lightbulb className="w-4 h-4 text-amber-500" /> Teacher Feedback</h3>
+          <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Lightbulb className="w-4 h-4 text-amber-500" /> {t("student.assessments.teacherFeedback")}</h3>
           <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-500 italic text-center">
-            Feedback from {assessment.teacher || "your teacher"} will appear here once the assessment is reviewed.
+            {t("student.assessments.feedbackFromTeacher", { teacher: assessment.teacher || t("student.assessments.yourTeacher") })}
           </div>
         </div>
       </div>
@@ -1200,60 +1225,64 @@ function ResultsScreen({ assessment, attempt, onBack }: { assessment: Assessment
 
 // ─── Screen 7: AI Recommendations ────────────────────────────────────────────
 function AIInsights({ assessment, attempt, onBack }: { assessment: Assessment; attempt: Attempt; onBack: () => void }) {
+  const { t } = useTranslation();
   const score = attempt.score ?? 0;
   const pct = Math.round((score / assessment.totalMarks) * 100);
   const weak = pct < 60;
+  const revisionPlan = pct >= 80 ? t("student.assessments.revisionPlanExcellent") :
+    pct >= 60 ? t("student.assessments.revisionPlanSolid") :
+    t("student.assessments.revisionPlanIntensive");
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30">
       <div className="max-w-3xl mx-auto px-6 py-8">
         <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm mb-6 font-medium">
-          <ChevronLeft className="w-4 h-4" /> Back to Results
+          <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {t("student.assessments.backToResults")}
         </button>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
             <Brain className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900">AI Learning Recommendations</h1>
-            <p className="text-sm text-slate-500">Personalized improvement plan based on your performance</p>
+            <h1 className="text-xl font-black text-slate-900">{t("student.assessments.aiLearningRecommendations")}</h1>
+            <p className="text-sm text-slate-500">{t("student.assessments.personalizedPlan")}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-black text-emerald-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Strong Areas</h3>
+            <h3 className="text-sm font-black text-emerald-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4" /> {t("student.assessments.strongAreas")}</h3>
             <div className="space-y-2">
               {pct >= 70 ? (
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl text-sm text-emerald-700 font-medium">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" /> {assessment.subject} — Good performance
+                  <CheckCircle2 className="w-4 h-4 shrink-0" /> {t("student.assessments.subjectGoodPerformance", { subject: assessment.subject })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic">Complete more assessments to identify strengths.</p>
+                <p className="text-sm text-slate-400 italic">{t("student.assessments.completeMoreToIdentify")}</p>
               )}
             </div>
           </div>
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-sm font-black text-red-600 mb-3 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Areas to Improve</h3>
+            <h3 className="text-sm font-black text-red-600 mb-3 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {t("student.assessments.areasToImprove")}</h3>
             <div className="space-y-2">
               {weak ? (
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-sm text-red-600 font-medium">
-                  <AlertCircle className="w-4 h-4 shrink-0" /> {assessment.subject} — Needs revision
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {t("student.assessments.subjectNeedsRevision", { subject: assessment.subject })}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic">You scored above 60% — keep it up!</p>
+                <p className="text-sm text-slate-400 italic">{t("student.assessments.scoredAbove60")}</p>
               )}
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-4">
-          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-violet-500" /> Recommended Actions</h3>
+          <h3 className="text-sm font-black text-slate-900 mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-violet-500" /> {t("student.assessments.recommendedActions")}</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { icon: BookMarked, label: "Review Study Materials", desc: `Revisit ${assessment.chapter || assessment.subject} notes`, color: "bg-blue-50 border-blue-200 text-blue-700" },
-              { icon: RotateCcw, label: "Practice Questions", desc: "Try similar question types for more practice", color: "bg-violet-50 border-violet-200 text-violet-700" },
-              { icon: Users, label: "Join Study Group", desc: "Collaborate with classmates on weak topics", color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-              { icon: Brain, label: "Use Flashcards", desc: "Quick revision with AI-generated flashcards", color: "bg-amber-50 border-amber-200 text-amber-700" },
+              { icon: BookMarked, label: t("student.assessments.reviewStudyMaterials"), desc: t("student.assessments.revisitChapterNotes", { chapter: assessment.chapter || assessment.subject }), color: "bg-blue-50 border-blue-200 text-blue-700" },
+              { icon: RotateCcw, label: t("student.assessments.practiceQuestions"), desc: t("student.assessments.trySimilarQuestionTypes"), color: "bg-violet-50 border-violet-200 text-violet-700" },
+              { icon: Users, label: t("student.assessments.joinStudyGroup"), desc: t("student.assessments.collaborateOnWeakTopics"), color: "bg-emerald-50 border-emerald-200 text-emerald-700" },
+              { icon: Brain, label: t("student.assessments.useFlashcards"), desc: t("student.assessments.quickRevisionFlashcards"), color: "bg-amber-50 border-amber-200 text-amber-700" },
             ].map(a => (
               <div key={a.label} className={cn("rounded-xl border p-4 cursor-pointer hover:shadow-sm transition-all", a.color)}>
                 <a.icon className="w-5 h-5 mb-2" />
@@ -1267,13 +1296,10 @@ function AIInsights({ assessment, attempt, onBack }: { assessment: Assessment; a
         <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl p-5 text-white">
           <div className="flex items-center gap-3 mb-3">
             <Brain className="w-5 h-5" />
-            <h3 className="font-black">AI Revision Plan</h3>
+            <h3 className="font-black">{t("student.assessments.aiRevisionPlan")}</h3>
           </div>
           <p className="text-violet-200 text-sm leading-relaxed">
-            Based on your score of <strong className="text-white">{pct}%</strong> in <strong className="text-white">{assessment.title}</strong>,
-            {pct >= 80 ? " you're performing excellently! Focus on maintaining your consistency and attempting advanced practice questions." :
-             pct >= 60 ? " you have a solid foundation. Revisit the topics where you lost marks and practice with similar questions." :
-             " we recommend intensive revision of the core concepts in this chapter. Start with your study materials, then attempt practice questions progressively."}
+            {t("student.assessments.basedOnScorePrefix", { pct, title: assessment.title })} {revisionPlan}
           </p>
         </div>
       </div>
@@ -1283,6 +1309,7 @@ function AIInsights({ assessment, attempt, onBack }: { assessment: Assessment; a
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function StudentAssessments() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const student = useMemo(() => students.find(s => s.email === user?.email || s.name === user?.displayName), [students, user]);
@@ -1376,7 +1403,7 @@ export default function StudentAssessments() {
   // Security: tab-switch detection
   useEffect(() => {
     if (screen !== "test") return;
-    const onBlur = () => toast.warning("Tab switch detected. This has been logged.", { duration: 4000 });
+    const onBlur = () => toast.warning(t("student.assessments.tabSwitchDetected"), { duration: 4000 });
     window.addEventListener("blur", onBlur);
     return () => window.removeEventListener("blur", onBlur);
   }, [screen]);
@@ -1394,7 +1421,7 @@ export default function StudentAssessments() {
   // Copy-paste restriction during test
   useEffect(() => {
     if (screen !== "test") return;
-    const block = (e: ClipboardEvent) => { e.preventDefault(); toast.warning("Copy/paste is disabled during the assessment."); };
+    const block = (e: ClipboardEvent) => { e.preventDefault(); toast.warning(t("student.assessments.copyPasteDisabled")); };
     document.addEventListener("copy", block);
     document.addEventListener("paste", block);
     return () => { document.removeEventListener("copy", block); document.removeEventListener("paste", block); };
@@ -1403,7 +1430,7 @@ export default function StudentAssessments() {
   async function handleStartTest() {
     if (!selected || !student) return;
     if (!selected.questions?.length) {
-      toast.error("This assessment has no questions. Please contact your teacher.");
+      toast.error(t("student.assessments.noQuestionsContactTeacher"));
       return;
     }
     submittedRef.current = false;
@@ -1432,7 +1459,7 @@ export default function StudentAssessments() {
     if (submittedRef.current) return;
     submittedRef.current = true;
     clearTimers();
-    toast.info("Time's up! Your assessment has been auto-submitted.");
+    toast.info(t("student.assessments.timesUpAutoSubmitted"));
     handleSubmit();
   }, [currentAttempt, answers, flagged, selected]);
 

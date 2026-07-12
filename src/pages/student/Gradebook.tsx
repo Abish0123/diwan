@@ -13,6 +13,7 @@ import { getAllAttempts } from "@/lib/assessmentAttempts";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   BarChart3, BookOpen, CalendarDays, Download, ChevronDown,
   Languages, Calculator, FlaskConical, Globe2, Type,
@@ -47,6 +48,7 @@ const DEFAULT_META = { color: "bg-slate-50", ic: "text-slate-600", icon: BookOpe
 type Tab = "overview" | "subject" | "assessments" | "history";
 
 export default function StudentGradebook() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const { curriculum } = useCurriculum();
@@ -56,8 +58,9 @@ export default function StudentGradebook() {
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
   const year = "2026-27";
-  const term = "Term 1";
-  const [viewBy, setViewBy] = useState("All Subjects");
+  const term = t("student.gradebook.term1");
+  const ALL_SUBJECTS = "All Subjects";
+  const [viewBy, setViewBy] = useState(ALL_SUBJECTS);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const student = useMemo(() => {
@@ -193,7 +196,7 @@ export default function StudentGradebook() {
     [subjects],
   );
 
-  const visibleSubjects = viewBy === "All Subjects" ? subjects : subjects.filter(s => s.subject === viewBy);
+  const visibleSubjects = viewBy === ALL_SUBJECTS ? subjects : subjects.filter(s => s.subject === viewBy);
 
   // Count subjects where the engine computed a nonzero total (from exams + assignments + assessments).
   const subjectsGraded = useMemo(() => subjects.filter(s => s.total > 0).length, [subjects]);
@@ -201,38 +204,38 @@ export default function StudentGradebook() {
   const KPIS = [
     {
       icon: BarChart3, bg: "bg-purple-50", tint: "bg-purple-100", ic: "text-purple-600",
-      label: "Overall Average", value: `${gpaStr} / 4.00`,
+      label: t("student.gradebook.kpiOverallAverage"), value: `${gpaStr} / 4.00`,
       pill: overallGrade.g, pillCls: "bg-purple-100 text-purple-700",
-      note: isDemo ? "Sample data — no grades recorded yet" : `Grade ${overallGrade.g} · ${overallPct.toFixed(1)}%`,
+      note: isDemo ? t("student.gradebook.kpiNoteSampleData") : t("student.gradebook.kpiNoteGradePct", { grade: overallGrade.g, pct: overallPct.toFixed(1) }),
     },
     {
       icon: BookOpen, bg: "bg-emerald-50", tint: "bg-emerald-100", ic: "text-emerald-600",
-      label: "Subjects Graded", value: isDemo ? "0" : String(subjectsGraded),
-      pill: isDemo ? "None yet" : "Assessed", pillCls: "bg-emerald-100 text-emerald-700",
-      note: "Subjects with recorded marks",
+      label: t("student.gradebook.kpiSubjectsGraded"), value: isDemo ? "0" : String(subjectsGraded),
+      pill: isDemo ? t("student.gradebook.pillNoneYet") : t("student.gradebook.pillAssessed"), pillCls: "bg-emerald-100 text-emerald-700",
+      note: t("student.gradebook.kpiNoteSubjectsWithMarks"),
     },
     {
       icon: BookOpen, bg: "bg-blue-50", tint: "bg-blue-100", ic: "text-purple-600",
-      label: "Subjects", value: String(subjects.length),
-      pill: isDemo ? "Sample" : "All Active", pillCls: "bg-blue-100 text-blue-700",
-      note: isDemo ? "Illustrative subjects" : "Enrolled this term",
+      label: t("student.gradebook.kpiSubjects"), value: String(subjects.length),
+      pill: isDemo ? t("student.gradebook.pillSample") : t("student.gradebook.pillAllActive"), pillCls: "bg-blue-100 text-blue-700",
+      note: isDemo ? t("student.gradebook.kpiNoteIllustrativeSubjects") : t("student.gradebook.kpiNoteEnrolledTerm"),
     },
     {
       icon: CalendarDays, bg: "bg-amber-50", tint: "bg-amber-100", ic: "text-amber-600",
-      label: "Attendance",
+      label: t("student.gradebook.kpiAttendance"),
       value: attendanceStat.total > 0 ? `${attendanceStat.pct}%` : "—",
-      pill: attendanceStat.total > 0 ? (attendanceStat.pct >= 75 ? "On track" : "Below 75%") : "No records",
+      pill: attendanceStat.total > 0 ? (attendanceStat.pct >= 75 ? t("student.gradebook.pillOnTrack") : t("student.gradebook.pillBelow75")) : t("student.gradebook.pillNoRecords"),
       pillCls: "bg-amber-100 text-amber-700",
-      note: attendanceStat.total > 0 ? `${attendanceStat.total} sessions logged` : "No attendance recorded",
+      note: attendanceStat.total > 0 ? t("student.gradebook.noteSessionsLogged", { count: attendanceStat.total }) : t("student.gradebook.noteNoAttendance"),
     },
   ];
 
   const GRADE_LEGEND = [
-    { label: "90 and above (A+)", dot: "#10b981" },
-    { label: "80-89% (A)",        dot: "#3b82f6" },
-    { label: "70-79% (B)",        dot: "#f59e0b" },
-    { label: "60-69% (C)",        dot: "#f97316" },
-    { label: "Below 60% (D)",     dot: "#ef4444" },
+    { label: t("student.gradebook.legendAPlus"), dot: "#10b981" },
+    { label: t("student.gradebook.legendA"),      dot: "#3b82f6" },
+    { label: t("student.gradebook.legendB"),      dot: "#f59e0b" },
+    { label: t("student.gradebook.legendC"),      dot: "#f97316" },
+    { label: t("student.gradebook.legendD"),      dot: "#ef4444" },
   ];
 
   /* ---- donut (Performance Summary) ---- */
@@ -251,10 +254,10 @@ export default function StudentGradebook() {
   // toast-only stub with no file behind it.
   const downloadReport = () => {
     if (!subjects.length) {
-      toast.error("No graded subjects to download yet.");
+      toast.error(t("student.gradebook.toastNoSubjectsToDownload"));
       return;
     }
-    const header = ["Subject", ...columns.map(c => `${c.name} (${c.weight}%)`), "Total (%)", "Grade"];
+    const header = [t("student.gradebook.colSubject"), ...columns.map(c => `${c.name} (${c.weight}%)`), t("student.gradebook.csvTotalPct"), t("student.gradebook.colGrade")];
     const rows = subjects.map(s => [
       s.subject,
       ...s.components.map(c => c.hasData ? `${Math.round((c.obtainedPct / 100) * c.weight * 10) / 10}/${c.weight}` : "—"),
@@ -273,7 +276,7 @@ export default function StudentGradebook() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast.success("Gradebook report downloaded.");
+    toast.success(t("student.gradebook.toastReportDownloaded"));
   };
 
   return (
@@ -287,8 +290,8 @@ export default function StudentGradebook() {
               <BarChart3 className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Academic Gradebook</h1>
-              <p className="text-sm text-slate-400">Track your academic performance across all subjects.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("student.gradebook.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("student.gradebook.pageSubtitle")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -302,7 +305,7 @@ export default function StudentGradebook() {
             </span>
             <button onClick={downloadReport}
               className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Download className="h-4 w-4 text-slate-500" /> Download Report
+              <Download className="h-4 w-4 text-slate-500" /> {t("student.gradebook.downloadReport")}
             </button>
           </div>
         </div>
@@ -310,15 +313,15 @@ export default function StudentGradebook() {
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-slate-100">
           {([
-            { k: "overview",    label: "Overview" },
-            { k: "subject",     label: "Subject Wise" },
-            { k: "assessments", label: "Assessments" },
-            { k: "history",     label: "Grade History" },
-          ] as const).map(t => (
-            <button key={t.k} onClick={() => setTab(t.k)}
+            { k: "overview",    label: t("student.gradebook.tabOverview") },
+            { k: "subject",     label: t("student.gradebook.tabSubjectWise") },
+            { k: "assessments", label: t("student.gradebook.tabAssessments") },
+            { k: "history",     label: t("student.gradebook.tabGradeHistory") },
+          ] as const).map(tb => (
+            <button key={tb.k} onClick={() => setTab(tb.k)}
               className={cn("px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
-                tab === t.k ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
-              {t.label}
+                tab === tb.k ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
+              {tb.label}
             </button>
           ))}
         </div>
@@ -327,7 +330,7 @@ export default function StudentGradebook() {
         {isDemo && (
           <div className="flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5">
             <Info className="h-3.5 w-3.5 flex-shrink-0" />
-            No graded assessments have been recorded for you yet. The subjects below are sample data shown for illustration only — they are not your actual grades.
+            {t("student.gradebook.demoNotice")}
           </div>
         )}
 
@@ -357,13 +360,13 @@ export default function StudentGradebook() {
             {/* LEFT: Subjects Performance table */}
             <div className="lg:col-span-3 bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-slate-100">
-                <h3 className="font-bold text-slate-900 text-base">Subjects Performance</h3>
+                <h3 className="font-bold text-slate-900 text-base">{t("student.gradebook.subjectsPerformanceTitle")}</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-medium">View By:</span>
+                  <span className="text-xs text-slate-400 font-medium">{t("student.gradebook.viewByLabel")}</span>
                   <select value={viewBy} onChange={e => setViewBy(e.target.value)}
                     className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none">
-                    <option>All Subjects</option>
-                    {subjects.map(s => <option key={s.subject}>{s.subject}</option>)}
+                    <option value={ALL_SUBJECTS}>{t("student.gradebook.allSubjectsOption")}</option>
+                    {subjects.map(s => <option key={s.subject} value={s.subject}>{s.subject}</option>)}
                   </select>
                 </div>
               </div>
@@ -372,12 +375,12 @@ export default function StudentGradebook() {
                 <table className="w-full text-sm min-w-[820px]">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                      <th className="px-5 py-3 text-left">Subject</th>
+                      <th className="px-5 py-3 text-start">{t("student.gradebook.colSubject")}</th>
                       {columns.map(c => (
                         <th key={c.name} className="px-3 py-3 text-center">{c.name}<br /><span className="font-normal text-slate-400">({c.weight}%)</span></th>
                       ))}
-                      <th className="px-3 py-3 text-center">Total<br /><span className="font-normal text-slate-400">(100%)</span></th>
-                      <th className="px-3 py-3 text-center">Grade</th>
+                      <th className="px-3 py-3 text-center">{t("student.gradebook.colTotal")}<br /><span className="font-normal text-slate-400">{t("student.gradebook.colTotalWeightSuffix")}</span></th>
+                      <th className="px-3 py-3 text-center">{t("student.gradebook.colGrade")}</th>
                       <th className="px-3 py-3 w-8"></th>
                     </tr>
                   </thead>
@@ -403,7 +406,7 @@ export default function StudentGradebook() {
                                   <p className={cn("text-[11px] font-bold", c.obtainedPct >= 90 ? "text-emerald-600" : c.obtainedPct >= 80 ? "text-purple-600" : "text-amber-600")}>{Math.round(c.obtainedPct)}%</p>
                                 </>
                               ) : (
-                                <span className="text-[11px] text-slate-300 font-medium" title={c.source === "pending" ? "No automated source" : "Not marked yet"}>—</span>
+                                <span className="text-[11px] text-slate-300 font-medium" title={c.source === "pending" ? t("student.gradebook.titleNoAutomatedSource") : t("student.gradebook.titleNotMarkedYet")}>—</span>
                               )}
                             </td>
                           ))}
@@ -413,7 +416,7 @@ export default function StudentGradebook() {
                           </td>
                           <td className="px-3 py-3.5 text-center">
                             <button
-                              onClick={() => { setExpanded(isOpen ? null : s.subject); toast.info(`${s.subject} · Total ${s.total}% (Grade ${gr.g})`); }}
+                              onClick={() => { setExpanded(isOpen ? null : s.subject); toast.info(t("student.gradebook.toastSubjectTotal", { subject: s.subject, total: s.total, grade: gr.g })); }}
                               className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-purple-50 hover:text-purple-600 transition-colors">
                               <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
                             </button>
@@ -441,7 +444,7 @@ export default function StudentGradebook() {
 
               {/* Performance Summary donut */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
-                <h3 className="font-bold text-slate-900 text-sm mb-3">Performance Summary</h3>
+                <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.gradebook.performanceSummaryTitle")}</h3>
                 <div className="flex justify-center">
                   <div className="relative">
                     <svg width="120" height="120" viewBox="0 0 120 120">
@@ -459,7 +462,7 @@ export default function StudentGradebook() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-lg font-bold text-slate-900 leading-none">{gpaStr}</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">GPA</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">{t("student.gradebook.gpaLabel")}</span>
                     </div>
                   </div>
                 </div>
@@ -473,7 +476,7 @@ export default function StudentGradebook() {
                   ))}
                 </div>
                 <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Total Subjects</span>
+                  <span className="text-slate-400">{t("student.gradebook.totalSubjectsLabel")}</span>
                   <span className="font-bold text-slate-900">{subjects.length}</span>
                 </div>
               </div>
@@ -482,9 +485,9 @@ export default function StudentGradebook() {
               <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-emerald-500" /> Subject Strength
+                    <TrendingUp className="h-4 w-4 text-emerald-500" /> {t("student.gradebook.subjectStrengthTitle")}
                   </h3>
-                  <button onClick={() => toast.info("All subject strengths")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                  <button onClick={() => toast.info(t("student.gradebook.toastAllSubjectStrengths"))} className="text-xs text-purple-600 font-semibold hover:underline">{t("student.gradebook.viewAllBtn")}</button>
                 </div>
                 <div className="space-y-3">
                   {strengths.map(s => (
@@ -504,7 +507,7 @@ export default function StudentGradebook() {
               {/* Needs Improvement */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
                 <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
-                  <TrendingDown className="h-4 w-4 text-amber-500" /> Needs Improvement
+                  <TrendingDown className="h-4 w-4 text-amber-500" /> {t("student.gradebook.needsImprovementTitle")}
                 </h3>
                 <div className="space-y-3">
                   {needsWork.map((s, idx) => (
@@ -524,10 +527,10 @@ export default function StudentGradebook() {
               {/* Recently Updated */}
               <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
                 <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-purple-500" /> Recently Updated
+                  <Clock className="h-4 w-4 text-purple-500" /> {t("student.gradebook.recentlyUpdatedTitle")}
                 </h3>
                 {myResults.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-4">No assessments recorded yet</p>
+                  <p className="text-sm text-slate-400 text-center py-4">{t("student.gradebook.noAssessmentsRecorded")}</p>
                 ) : (
                   <div className="space-y-2.5">
                     {myResults.slice(0, 3).map((r, i) => {
@@ -538,8 +541,8 @@ export default function StudentGradebook() {
                             <meta.icon className={cn("h-4 w-4", meta.ic)} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-slate-800">{r.subject} — {r.type || "Assessment"}</p>
-                            <p className="text-[10px] text-slate-400">{r.date ? `Updated on ${new Date(r.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : "Date not set"}</p>
+                            <p className="text-xs font-semibold text-slate-800">{r.subject} — {r.type || t("student.gradebook.assessmentFallback")}</p>
+                            <p className="text-[10px] text-slate-400">{r.date ? t("student.gradebook.updatedOn", { date: new Date(r.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) }) : t("student.gradebook.dateNotSet")}</p>
                           </div>
                         </div>
                       );
@@ -556,18 +559,18 @@ export default function StudentGradebook() {
         {tab === "assessments" && (
           <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900 text-base">Assessment Breakdown</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Weighted marks across all subjects for {term}, {year}.</p>
+              <h3 className="font-bold text-slate-900 text-base">{t("student.gradebook.assessmentBreakdownTitle")}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t("student.gradebook.assessmentBreakdownSubtitle", { term, year })}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-semibold text-slate-500">
-                    <th className="px-5 py-3 text-left">Subject</th>
+                    <th className="px-5 py-3 text-start">{t("student.gradebook.colSubject")}</th>
                     {columns.map(c => (
                       <th key={c.name} className="px-3 py-3 text-center">{c.name}<br /><span className="font-normal text-slate-400">({c.weight})</span></th>
                     ))}
-                    <th className="px-3 py-3 text-center">Total</th>
+                    <th className="px-3 py-3 text-center">{t("student.gradebook.colTotal")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -591,20 +594,20 @@ export default function StudentGradebook() {
         {/* GRADE HISTORY tab */}
         {tab === "history" && (
           <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6">
-            <h3 className="font-bold text-slate-900 text-base mb-1">Grade History</h3>
-            <p className="text-xs text-slate-400 mb-5">Term-by-term GPA progression for {year}.</p>
+            <h3 className="font-bold text-slate-900 text-base mb-1">{t("student.gradebook.gradeHistoryTitle")}</h3>
+            <p className="text-xs text-slate-400 mb-5">{t("student.gradebook.gradeHistorySubtitle", { year })}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { term: "Term 1", gpa: gpaStr, note: "Current term", cls: "bg-purple-50 text-purple-700" },
-                { term: "Term 2", gpa: "—", note: "Upcoming", cls: "bg-slate-50 text-slate-500" },
-                { term: "Final",  gpa: "—", note: "Upcoming", cls: "bg-slate-50 text-slate-500" },
-              ].map(t => (
-                <div key={t.term} className="rounded-xl border border-slate-100 p-4">
+                { term: t("student.gradebook.term1"), gpa: gpaStr, note: t("student.gradebook.currentTerm"), cls: "bg-purple-50 text-purple-700" },
+                { term: t("student.gradebook.term2"), gpa: "—", note: t("student.gradebook.upcoming"), cls: "bg-slate-50 text-slate-500" },
+                { term: t("student.gradebook.finalTerm"),  gpa: "—", note: t("student.gradebook.upcoming"), cls: "bg-slate-50 text-slate-500" },
+              ].map(ht => (
+                <div key={ht.term} className="rounded-xl border border-slate-100 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-700">{t.term}</p>
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", t.cls)}>{t.note}</span>
+                    <p className="text-sm font-semibold text-slate-700">{ht.term}</p>
+                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ht.cls)}>{ht.note}</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">{t.gpa}<span className="text-sm text-slate-400 font-medium"> / 4.00</span></p>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">{ht.gpa}<span className="text-sm text-slate-400 font-medium"> / 4.00</span></p>
                 </div>
               ))}
             </div>
@@ -614,7 +617,7 @@ export default function StudentGradebook() {
         {/* Footer note */}
         <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
           <Info className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-          Grades are auto-calculated from your Assignment, Assessment and Exam marks, weighted per the {curriculum.shortName} curriculum. Marks cannot be entered directly here.
+          {t("student.gradebook.footerNote", { curriculum: curriculum.shortName })}
         </div>
 
       </div>

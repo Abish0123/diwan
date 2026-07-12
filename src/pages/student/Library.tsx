@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, type RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
@@ -78,6 +79,16 @@ const TABS = [
 ] as const;
 type Tab = typeof TABS[number];
 
+const TAB_LABEL_KEYS: Record<Tab, string> = {
+  "All Books": "student.library.tabAllBooks",
+  "Borrowed": "student.library.tabBorrowed",
+  "Reserved": "student.library.tabReserved",
+  "E-Books": "student.library.tabEBooks",
+  "Reading History": "student.library.tabReadingHistory",
+  "Recommended": "student.library.tabRecommended",
+  "New Arrivals": "student.library.tabNewArrivals",
+};
+
 const AVAIL_BADGE: Record<Availability, string> = {
   Available: "bg-emerald-50 text-emerald-600",
   Borrowed:  "bg-blue-50 text-purple-600",
@@ -89,6 +100,7 @@ const PER_PAGE = 8;
 /* -------------------------------- component ------------------------------- */
 
 export default function StudentLibrary() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
 
@@ -176,9 +188,9 @@ export default function StudentLibrary() {
      legacy single status field on the title itself. */
   const catalogue = useMemo<CatalogueRow[]>(() => books.map((b: any) => ({
     id: b.id,
-    title: b.title || "Untitled",
-    author: b.author || "Unknown",
-    category: b.category || "General",
+    title: b.title || t("student.library.untitled"),
+    author: b.author || t("student.library.unknownAuthor"),
+    category: b.category || t("student.library.generalCategory"),
     language: b.language || "English",
     format: (b.type === "E-Book" || b.type === "Digital" ? "E-Book" : "Hardcover") as Format,
     availability: (availableCountOf(b.id) > 0 ? "Available" : "Borrowed") as Availability,
@@ -212,10 +224,10 @@ export default function StudentLibrary() {
   }).length;
 
   const KPIS = [
-    { label: "Books Borrowed", value: kBorrowed, icon: BookCopy,   bg: "bg-purple-50",  ring: "bg-purple-100",  ic: "text-purple-600",  tab: "Borrowed" as Tab },
-    { label: "Books Reserved", value: kReserved, icon: BookMarked, bg: "bg-amber-50",   ring: "bg-amber-100",   ic: "text-amber-600",   tab: "Reserved" as Tab },
-    { label: "Books Read",     value: kRead,     icon: BookOpen,   bg: "bg-emerald-50", ring: "bg-emerald-100", ic: "text-emerald-600", tab: "Reading History" as Tab },
-    { label: "Overdue Books",  value: kOverdue,  icon: AlertCircle,bg: "bg-rose-50",    ring: "bg-rose-100",    ic: "text-rose-600",    tab: "Borrowed" as Tab },
+    { label: t("student.library.kpiBooksBorrowed"), value: kBorrowed, icon: BookCopy,   bg: "bg-purple-50",  ring: "bg-purple-100",  ic: "text-purple-600",  tab: "Borrowed" as Tab },
+    { label: t("student.library.kpiBooksReserved"), value: kReserved, icon: BookMarked, bg: "bg-amber-50",   ring: "bg-amber-100",   ic: "text-amber-600",   tab: "Reserved" as Tab },
+    { label: t("student.library.kpiBooksRead"),     value: kRead,     icon: BookOpen,   bg: "bg-emerald-50", ring: "bg-emerald-100", ic: "text-emerald-600", tab: "Reading History" as Tab },
+    { label: t("student.library.kpiOverdueBooks"),  value: kOverdue,  icon: AlertCircle,bg: "bg-rose-50",    ring: "bg-rose-100",    ic: "text-rose-600",    tab: "Borrowed" as Tab },
   ];
 
   /* titles the student has actually read (from real borrow history) */
@@ -262,16 +274,16 @@ export default function StudentLibrary() {
   const resetFilters = () => {
     setCategory("All Categories"); setLanguage("All Languages");
     setAvailability("All Availability"); setFormat("All Formats");
-    setQ(""); setPage(1); toast.success("Filters reset");
+    setQ(""); setPage(1); toast.success(t("student.library.toastFiltersReset"));
   };
 
   /* header buttons — each jumps to (and focuses) the real control that does
      the thing, instead of a toast that just echoed the label back. */
   const HEADER_ACTIONS = [
-    { label: "Search Books",      icon: Search,    fn: () => focusAndScroll(searchInputRef.current) },
-    { label: "Browse Categories", icon: FolderTree,fn: () => focusAndScroll(categorySelectRef.current) },
-    { label: "My Borrowed Books", icon: BookCopy,  fn: () => { setTab("Borrowed"); setPage(1); } },
-    { label: "Reading History",   icon: History,   fn: () => { setTab("Reading History"); setPage(1); } },
+    { label: t("student.library.actionSearchBooks"),      icon: Search,    fn: () => focusAndScroll(searchInputRef.current) },
+    { label: t("student.library.actionBrowseCategories"), icon: FolderTree,fn: () => focusAndScroll(categorySelectRef.current) },
+    { label: t("student.library.actionMyBorrowedBooks"),  icon: BookCopy,  fn: () => { setTab("Borrowed"); setPage(1); } },
+    { label: t("student.library.actionReadingHistory"),   icon: History,   fn: () => { setTab("Reading History"); setPage(1); } },
   ];
 
   /* My Borrowed Books — real active borrows from smartDb */
@@ -285,9 +297,9 @@ export default function StudentLibrary() {
     const hasUnpaidFine = unpaidFines.some(f => f.loanId === b.id);
     return {
       loanId: b.id,
-      title: b.bookTitle || "Untitled",
+      title: b.bookTitle || t("student.library.untitled"),
       due: fmtDue(b.dueDate),
-      status: overdue ? "Overdue" : "Active",
+      status: overdue ? t("student.library.statusOverdue") : t("student.library.statusActive"),
       overdue,
       renewed: !!b.renewed,
       hasUnpaidFine,
@@ -300,19 +312,19 @@ export default function StudentLibrary() {
     loans.forEach(l => {
       const issued = parseDate(l.issueDate);
       if (issued) events.push({
-        text: `Borrowed ${l.bookTitle || "a book"}`, date: issued.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        text: t("student.library.activityBorrowed", { title: l.bookTitle || t("student.library.aBook") }), date: issued.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
         ts: issued.getTime(), icon: BookCopy, bg: "bg-purple-50", ic: "text-purple-600",
       });
       const returned = parseDate(l.returnedAt);
       if (returned) events.push({
-        text: `Returned ${l.bookTitle || "a book"}`, date: returned.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        text: t("student.library.activityReturned", { title: l.bookTitle || t("student.library.aBook") }), date: returned.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
         ts: returned.getTime(), icon: Undo2, bg: "bg-blue-50", ic: "text-purple-600",
       });
     });
     reservations.forEach(r => {
       const requested = parseDate(r.requestedAt);
       if (requested) events.push({
-        text: `Reserved ${r.bookTitle || "a book"}`, date: requested.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+        text: t("student.library.activityReserved", { title: r.bookTitle || t("student.library.aBook") }), date: requested.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
         ts: requested.getTime(), icon: BookMarked, bg: "bg-amber-50", ic: "text-amber-600",
       });
     });
@@ -322,9 +334,9 @@ export default function StudentLibrary() {
   /* reservation actions */
   const requestHold = async (b: CatalogueRow) => {
     const s = student as any;
-    if (!s) { toast.error("Could not identify your student profile"); return; }
+    if (!s) { toast.error(t("student.library.toastNoStudentProfile")); return; }
     const already = reservations.find(r => r.bookId === b.id && (r.status === "waiting" || r.status === "ready"));
-    if (already) { toast.error(`You already have a ${already.status} reservation for "${b.title}"`); return; }
+    if (already) { toast.error(t("student.library.toastAlreadyReserved", { status: already.status, title: b.title })); return; }
     setBusyBookId(b.id);
     try {
       // account for all students' current waiting reservations for this book, not just this student's
@@ -341,10 +353,10 @@ export default function StudentLibrary() {
         status: "waiting",
         position: waitingForBook + 1,
       }, id);
-      toast.success(`Hold requested for "${b.title}"`);
+      toast.success(t("student.library.toastHoldRequested", { title: b.title }));
       load();
     } catch {
-      toast.error("Could not place a hold. Please try again.");
+      toast.error(t("student.library.toastHoldFailed"));
     } finally {
       setBusyBookId(null);
     }
@@ -353,18 +365,18 @@ export default function StudentLibrary() {
   const cancelReservation = async (r: ReservationRow) => {
     try {
       await smartDb.update("LibraryReservation", r.id, { status: "cancelled" });
-      toast.success(`Reservation for "${r.bookTitle}" cancelled`);
+      toast.success(t("student.library.toastReservationCancelled", { title: r.bookTitle }));
       load();
     } catch {
-      toast.error("Could not cancel the reservation");
+      toast.error(t("student.library.toastCancelFailed"));
     }
   };
 
   /* renewal action */
   const renewLoan = async (loan: typeof myBorrowed[number]) => {
-    if (loan.renewed) { toast.error("This book has already been renewed once"); return; }
+    if (loan.renewed) { toast.error(t("student.library.toastAlreadyRenewedOnce")); return; }
     if (loan.overdue) {
-      toast.error(loan.hasUnpaidFine ? "Return or pay the fine first" : "Return or pay the fine first");
+      toast.error(t("student.library.toastReturnOrPayFine"));
       return;
     }
     setBusyLoanId(loan.loanId);
@@ -374,20 +386,20 @@ export default function StudentLibrary() {
       const newDue = new Date(base);
       newDue.setDate(newDue.getDate() + 7);
       await smartDb.update("library_loans", loan.loanId, { dueDate: newDue.toISOString(), renewed: true });
-      toast.success(`"${loan.title}" renewed — new due date ${fmtDue(newDue.toISOString())}`);
+      toast.success(t("student.library.toastRenewed", { title: loan.title, date: fmtDue(newDue.toISOString()) }));
       load();
     } catch {
-      toast.error("Could not renew this book");
+      toast.error(t("student.library.toastRenewFailed"));
     } finally {
       setBusyLoanId(null);
     }
   };
 
   const rules = [
-    "You can borrow up to 2 books at a time.",
-    "Books can be borrowed for 14 days.",
-    "Late return will attract fine as per school policy.",
-    "Take care of books. Do not damage or mark.",
+    t("student.library.rule1"),
+    t("student.library.rule2"),
+    t("student.library.rule3"),
+    t("student.library.rule4"),
   ];
 
   return (
@@ -401,8 +413,8 @@ export default function StudentLibrary() {
               <LibraryIcon className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">My Library</h1>
-              <p className="text-sm text-slate-400">Explore, borrow, reserve and read your favorite books.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("student.library.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("student.library.pageSubtitle")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -428,7 +440,7 @@ export default function StudentLibrary() {
               <p className="text-sm font-semibold text-slate-700 mt-4">{k.label}</p>
               <button onClick={() => { setTab(k.tab); setPage(1); focusAndScroll(tableRef.current); }}
                 className="text-xs font-semibold text-purple-600 hover:underline mt-1 inline-flex items-center gap-1">
-                View Details <ArrowRight className="h-3 w-3" />
+                {t("student.library.viewDetails")} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
               </button>
             </div>
           ))}
@@ -437,11 +449,11 @@ export default function StudentLibrary() {
         {/* Tabs */}
         <div className="border-b border-slate-100 overflow-x-auto">
           <div className="flex items-center gap-1 min-w-max">
-            {TABS.map(t => (
-              <button key={t} onClick={() => { setTab(t); setPage(1); }}
+            {TABS.map(tItem => (
+              <button key={tItem} onClick={() => { setTab(tItem); setPage(1); }}
                 className={cn("px-3.5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap",
-                  tab === t ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
-                {t}
+                  tab === tItem ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
+                {t(TAB_LABEL_KEYS[tItem])}
               </button>
             ))}
           </div>
@@ -450,10 +462,10 @@ export default function StudentLibrary() {
         {/* Filter row */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input ref={searchInputRef} value={q} onChange={e => { setQ(e.target.value); setPage(1); }}
-              placeholder="Search by title, author, ISBN..."
-              className="w-full pl-9 pr-3 h-9 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+              placeholder={t("student.library.searchPlaceholder")}
+              className="w-full ps-9 pe-3 h-9 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
           </div>
           {[
             { value: category,     set: setCategory,     opts: CATEGORIES,   ref: categorySelectRef },
@@ -468,7 +480,7 @@ export default function StudentLibrary() {
           ))}
           <button onClick={resetFilters}
             className="flex items-center gap-2 h-9 px-4 rounded-lg border border-purple-200 text-sm font-semibold text-purple-600 hover:bg-purple-50">
-            <Filter className="h-4 w-4" /> Filters
+            <Filter className="h-4 w-4" /> {t("student.library.filtersButton")}
           </button>
         </div>
 
@@ -481,14 +493,18 @@ export default function StudentLibrary() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100">
-                    {["Title", "Author", "Category", "Language", "Format", "Availability", "Info"].map((h, i) => (
-                      <th key={h} className={cn("px-4 py-3 text-xs font-semibold text-slate-500", i === 6 ? "text-center" : "text-left")}>{h}</th>
+                    {[
+                      t("student.library.colTitle"), t("student.library.colAuthor"), t("student.library.colCategory"),
+                      t("student.library.colLanguage"), t("student.library.colFormat"), t("student.library.colAvailability"),
+                      t("student.library.colInfo"),
+                    ].map((h, i) => (
+                      <th key={h} className={cn("px-4 py-3 text-xs font-semibold text-slate-500", i === 6 ? "text-center" : "text-start")}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {pageRows.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">No books match the current filters.</td></tr>
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-400">{t("student.library.noBooksMatch")}</td></tr>
                   )}
                   {pageRows.map(b => {
                     const myLoan = activeBorrows.find((l) => l.bookId === b.id);
@@ -515,26 +531,26 @@ export default function StudentLibrary() {
                           <div>
                             <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-md",
                               overdue ? "bg-rose-50 text-rose-600" : AVAIL_BADGE[b.availability])}>
-                              {isMine ? (overdue ? "Yours — Overdue" : "Borrowed by you") : b.availability}
+                              {isMine ? (overdue ? t("student.library.yoursOverdue") : t("student.library.borrowedByYou")) : b.availability}
                             </span>
                             {isMine && myDue && (
-                              <p className={cn("text-[10px] mt-1", overdue ? "text-rose-500" : "text-slate-400")}>Due: {fmtDue(myDue)}</p>
+                              <p className={cn("text-[10px] mt-1", overdue ? "text-rose-500" : "text-slate-400")}>{t("student.library.dueLabel", { date: fmtDue(myDue) })}</p>
                             )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           {b.availability === "Available" ? (
-                            <span className="text-[11px] text-slate-400">Ask the librarian to issue</span>
+                            <span className="text-[11px] text-slate-400">{t("student.library.askLibrarian")}</span>
                           ) : isMine ? (
-                            <span className="text-[11px] text-slate-400">Return at the library desk</span>
+                            <span className="text-[11px] text-slate-400">{t("student.library.returnAtDesk")}</span>
                           ) : myReservedBookIds.has(b.id) ? (
-                            <span className="text-[11px] font-semibold text-amber-600">On hold</span>
+                            <span className="text-[11px] font-semibold text-amber-600">{t("student.library.onHold")}</span>
                           ) : (
                             <button
                               onClick={() => requestHold(b)}
                               disabled={busyBookId === b.id}
                               className="text-[11px] font-semibold text-purple-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed">
-                              {busyBookId === b.id ? "Requesting…" : "Request Hold"}
+                              {busyBookId === b.id ? t("student.library.requesting") : t("student.library.requestHold")}
                             </button>
                           )}
                         </td>
@@ -547,11 +563,11 @@ export default function StudentLibrary() {
 
             {/* pagination */}
             <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/40">
-              <p className="text-xs text-slate-500">Showing {showingFrom} to {showingTo} of {totalCount} books</p>
+              <p className="text-xs text-slate-500">{t("student.library.showingRange", { from: showingFrom, to: showingTo, total: totalCount })}</p>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
                   className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 text-slate-500">
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                   <button key={p} onClick={() => setPage(p)}
@@ -562,7 +578,7 @@ export default function StudentLibrary() {
                 ))}
                 <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
                   className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 disabled:opacity-40 text-slate-500">
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                 </button>
               </div>
             </div>
@@ -573,10 +589,10 @@ export default function StudentLibrary() {
 
             {/* My Borrowed Books */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">My Borrowed Books</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.library.sidebarMyBorrowedBooks")}</h3>
               {myBorrowed.length === 0 ? (
                 <p className="text-xs text-slate-400 py-4 text-center">
-                  You have no borrowed books right now. Borrow a title to see it here.
+                  {t("student.library.noBorrowedBooks")}
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -584,22 +600,22 @@ export default function StudentLibrary() {
                     <div key={b.loanId} className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-50 last:border-0 last:pb-0">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-700 leading-tight">{b.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Due: {b.due}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{t("student.library.dueLabel", { date: b.due })}</p>
                         <span className={cn("inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-md",
-                          b.status === "Overdue" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600")}>
+                          b.status === t("student.library.statusOverdue") ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600")}>
                           {b.status}
                         </span>
                       </div>
                       <button
                         onClick={() => renewLoan(b)}
                         disabled={b.renewed || b.overdue || busyLoanId === b.loanId}
-                        title={b.renewed ? "Already renewed" : b.overdue ? "Return or pay the fine first" : "Extend due date by 7 days"}
+                        title={b.renewed ? t("student.library.tooltipAlreadyRenewed") : b.overdue ? t("student.library.tooltipReturnOrPayFine") : t("student.library.tooltipExtendDueDate")}
                         className={cn("flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap flex-shrink-0 transition-colors",
                           (b.renewed || b.overdue)
                             ? "border-slate-200 text-slate-300 cursor-not-allowed"
                             : "border-purple-200 text-purple-600 hover:bg-purple-50")}>
                         <RefreshCw className="h-3 w-3" />
-                        {busyLoanId === b.loanId ? "Renewing…" : b.renewed ? "Already renewed" : "Renew"}
+                        {busyLoanId === b.loanId ? t("student.library.renewing") : b.renewed ? t("student.library.alreadyRenewed") : t("student.library.renew")}
                       </button>
                     </div>
                   ))}
@@ -610,20 +626,20 @@ export default function StudentLibrary() {
             {/* Fines Owed */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-slate-400" /> Fines Owed
+                <Wallet className="h-4 w-4 text-slate-400" /> {t("student.library.finesOwed")}
               </h3>
               <p className={cn("text-2xl font-bold", finesOwed > 0 ? "text-rose-600" : "text-emerald-600")}>
                 AED {finesOwed.toFixed(2)}
               </p>
               {unpaidFines.length === 0 ? (
-                <p className="text-xs text-slate-400 mt-2">No outstanding fines. You're all clear.</p>
+                <p className="text-xs text-slate-400 mt-2">{t("student.library.noOutstandingFines")}</p>
               ) : (
                 <div className="mt-3 space-y-2">
                   {unpaidFines.map(f => (
                     <div key={f.id} className="flex items-center justify-between text-xs">
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-700 truncate">{f.bookTitle}</p>
-                        <p className="text-[10px] text-slate-400">{f.daysOverdue} day{f.daysOverdue === 1 ? "" : "s"} overdue</p>
+                        <p className="text-[10px] text-slate-400">{f.daysOverdue === 1 ? t("student.library.daysOverdueOne", { count: f.daysOverdue }) : t("student.library.daysOverdueOther", { count: f.daysOverdue })}</p>
                       </div>
                       <span className="text-xs font-bold text-rose-600 flex-shrink-0">AED {Number(f.amount).toFixed(2)}</span>
                     </div>
@@ -634,10 +650,10 @@ export default function StudentLibrary() {
 
             {/* Reservation Queue */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Reservation Queue</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.library.reservationQueue")}</h3>
               {myReservations.length === 0 ? (
                 <p className="text-xs text-slate-400 py-4 text-center">
-                  You have no active holds. Request a hold on a book that's fully borrowed to see it here.
+                  {t("student.library.noActiveHolds")}
                 </p>
               ) : (
                 <div className="space-y-2.5">
@@ -647,17 +663,17 @@ export default function StudentLibrary() {
                         <p className="text-xs font-semibold text-slate-700 leading-tight">{r.bookTitle}</p>
                         {r.status === "ready" ? (
                           <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600">
-                            <PartyPopper className="h-3 w-3" /> Ready for pickup!
+                            <PartyPopper className="h-3 w-3" /> {t("student.library.readyForPickup")}
                           </span>
                         ) : (
-                          <p className="text-[10px] text-slate-400 mt-0.5">Position #{r.position} in queue</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{t("student.library.positionInQueue", { position: r.position })}</p>
                         )}
                       </div>
                       {r.status === "waiting" && (
                         <button
                           onClick={() => cancelReservation(r)}
                           className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 flex-shrink-0">
-                          <XCircle className="h-3 w-3" /> Cancel
+                          <XCircle className="h-3 w-3" /> {t("student.library.cancel")}
                         </button>
                       )}
                     </div>
@@ -668,9 +684,9 @@ export default function StudentLibrary() {
 
             {/* Recent Activity */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Recent Activity</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.library.recentActivity")}</h3>
               {activity.length === 0 ? (
-                <p className="text-xs text-slate-400 py-4 text-center">No activity yet.</p>
+                <p className="text-xs text-slate-400 py-4 text-center">{t("student.library.noActivityYet")}</p>
               ) : (
                 <div className="space-y-3">
                   {activity.map((a, i) => (
@@ -690,7 +706,7 @@ export default function StudentLibrary() {
 
             {/* Library Rules */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Library Rules</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("student.library.libraryRules")}</h3>
               <ul className="space-y-2">
                 {rules.map((r, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-slate-600">

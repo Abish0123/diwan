@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,7 @@ function Pill({ tone, children }: { tone: "green" | "blue" | "red" | "amber"; ch
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function StudentTransport() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { students } = useStudents();
@@ -63,8 +65,8 @@ export default function StudentTransport() {
         (user?.displayName && s.name === user.displayName)
     ) || students[0];
 
-  const studentName = student?.name ?? user?.displayName ?? "Student";
-  const gradeLabel = `Grade ${student?.grade ?? "—"} - ${student?.section ?? "—"}`;
+  const studentName = student?.name ?? user?.displayName ?? t("student.transport.studentFallback");
+  const gradeLabel = t("student.transport.gradeSectionLabel", { grade: student?.grade ?? "—", section: student?.section ?? "—" });
 
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("daily");
   const [allocs, setAllocs] = useState<Alloc[]>([]);
@@ -122,9 +124,9 @@ export default function StudentTransport() {
               <Bus className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Transport</h1>
+              <h1 className="text-2xl font-bold text-slate-800">{t("student.transport.pageTitle")}</h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Track your bus, route details and transport updates.
+                {t("student.transport.pageSubtitle")}
               </p>
             </div>
           </div>
@@ -132,15 +134,15 @@ export default function StudentTransport() {
           {!allocation ? (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
               <Bus className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <p className="font-bold text-slate-700">Not enrolled in school transport</p>
+              <p className="font-bold text-slate-700">{t("student.transport.notEnrolledTitle")}</p>
               <p className="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
-                You don't have a transport allocation on record yet. Contact the transport office to enrol.
+                {t("student.transport.notEnrolledBody")}
               </p>
               <button
                 onClick={() => navigate("/communication/messages")}
                 className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
               >
-                <Phone className="w-3.5 h-3.5" /> Contact Transport Office
+                <Phone className="w-3.5 h-3.5" /> {t("student.transport.contactTransportOffice")}
               </button>
             </div>
           ) : (
@@ -154,7 +156,7 @@ export default function StudentTransport() {
                       <Bus className="w-5 h-5 text-purple-600" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Bus Number</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.transport.busNumber")}</p>
                       <p className="text-base font-bold text-slate-800 truncate">{vehicle?.regNumber ?? "—"}</p>
                     </div>
                   </div>
@@ -167,7 +169,7 @@ export default function StudentTransport() {
                       <MapPin className="w-5 h-5 text-green-600" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Route / Stop</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.transport.routeStop")}</p>
                       <p className="text-base font-bold text-slate-800 truncate">{allocation.route || "—"}</p>
                     </div>
                   </div>
@@ -180,7 +182,7 @@ export default function StudentTransport() {
                       <User className="w-5 h-5 text-amber-600" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">My Stop</p>
+                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">{t("student.transport.myStop")}</p>
                       <p className="text-base font-bold text-slate-800 truncate">{allocation.stopName || "—"}</p>
                     </div>
                   </div>
@@ -196,7 +198,7 @@ export default function StudentTransport() {
                       <User className="w-5 h-5 text-rose-600" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-rose-700 uppercase tracking-wide">Drop Stop</p>
+                      <p className="text-xs font-semibold text-rose-700 uppercase tracking-wide">{t("student.transport.dropStop")}</p>
                       <p className="text-base font-bold text-slate-800 truncate">{stops[stops.length - 1]?.name ?? "—"}</p>
                     </div>
                   </div>
@@ -211,15 +213,15 @@ export default function StudentTransport() {
                 {/* Today's Trip */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                    <h3 className="text-sm font-bold text-slate-800">Route Stops</h3>
-                    <Pill tone="blue">{stops.length} stop{stops.length !== 1 ? "s" : ""}</Pill>
+                    <h3 className="text-sm font-bold text-slate-800">{t("student.transport.routeStops")}</h3>
+                    <Pill tone="blue">{t("student.transport.stopCount", { count: stops.length })}</Pill>
                   </div>
                   <div className="px-5 py-4">
                     {stops.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-6">No stops configured for this route yet.</p>
+                      <p className="text-sm text-slate-400 text-center py-6">{t("student.transport.noStopsConfigured")}</p>
                     ) : (
                       <div className="relative">
-                        <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-slate-100" />
+                        <div className="absolute start-[7px] top-2 bottom-2 w-0.5 bg-slate-100" />
                         <div className="flex flex-col gap-5">
                           {stops.map((s, i) => {
                             const isMine = s.name === allocation.stopName;
@@ -233,11 +235,11 @@ export default function StudentTransport() {
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-semibold text-slate-800">{s.name}</p>
-                                  <p className="text-xs text-slate-400">{s.address || (i === 0 ? "Pickup Point" : i === stops.length - 1 ? "Drop Point" : "Route Stop")}</p>
+                                  <p className="text-xs text-slate-400">{s.address || (i === 0 ? t("student.transport.pickupPoint") : i === stops.length - 1 ? t("student.transport.dropPoint") : t("student.transport.routeStopSingle"))}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                   <span className="text-xs font-medium text-slate-600">{s.time || "—"}</span>
-                                  {isMine && <Pill tone="amber">My Stop</Pill>}
+                                  {isMine && <Pill tone="amber">{t("student.transport.myStop")}</Pill>}
                                 </div>
                               </div>
                             );
@@ -252,20 +254,20 @@ export default function StudentTransport() {
                     of a fabricated map position/ETA. */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                    <h3 className="text-sm font-bold text-slate-800">Live Bus Tracking</h3>
+                    <h3 className="text-sm font-bold text-slate-800">{t("student.transport.liveBusTracking")}</h3>
                   </div>
                   <div className="px-5 py-4 flex-1 flex flex-col items-center justify-center text-center gap-3">
                     <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center">
                       <Navigation className="h-6 w-6 text-purple-500" />
                     </div>
                     <p className="text-sm text-slate-500 max-w-[220px]">
-                      See your bus's real-time GPS location on the live tracking map.
+                      {t("student.transport.liveTrackingDescription")}
                     </p>
                     <button
                       onClick={() => navigate("/transport/gps")}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
                     >
-                      <CircleDot className="w-3.5 h-3.5" /> Open Live Tracking
+                      <CircleDot className="w-3.5 h-3.5" /> {t("student.transport.openLiveTracking")}
                     </button>
                   </div>
                 </div>
@@ -274,7 +276,7 @@ export default function StudentTransport() {
               {/* Transport Schedule */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                 <div className="px-5 pt-4">
-                  <h3 className="text-sm font-bold text-slate-800 mb-3">Transport Schedule</h3>
+                  <h3 className="text-sm font-bold text-slate-800 mb-3">{t("student.transport.transportSchedule")}</h3>
                   <div className="flex border-b border-slate-100">
                     <button
                       onClick={() => setScheduleTab("daily")}
@@ -284,7 +286,7 @@ export default function StudentTransport() {
                           : "border-transparent text-slate-500 hover:text-slate-700"
                       }`}
                     >
-                      Daily Schedule
+                      {t("student.transport.dailySchedule")}
                     </button>
                     <button
                       onClick={() => setScheduleTab("route")}
@@ -294,21 +296,21 @@ export default function StudentTransport() {
                           : "border-transparent text-slate-500 hover:text-slate-700"
                       }`}
                     >
-                      Full Route Details
+                      {t("student.transport.fullRouteDetails")}
                     </button>
                   </div>
                 </div>
 
                 <div className="overflow-x-auto">
                   {stops.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-8">No stops configured for this route yet.</p>
+                    <p className="text-sm text-slate-400 text-center py-8">{t("student.transport.noStopsConfigured")}</p>
                   ) : scheduleTab === "daily" ? (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Stop Name</th>
-                          <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Time</th>
-                          <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">My Stop</th>
+                          <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">{t("student.transport.stopName")}</th>
+                          <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("student.transport.time")}</th>
+                          <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("student.transport.myStop")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -318,7 +320,7 @@ export default function StudentTransport() {
                             <td className="px-4 py-3.5 text-slate-600">{s.time || "—"}</td>
                             <td className="px-4 py-3.5">
                               {s.name === allocation.stopName ? (
-                                <Pill tone="green"><CheckCircle className="w-3 h-3" /> Yes</Pill>
+                                <Pill tone="green"><CheckCircle className="w-3 h-3" /> {t("student.transport.yes")}</Pill>
                               ) : (
                                 <span className="text-slate-300">—</span>
                               )}
@@ -331,8 +333,8 @@ export default function StudentTransport() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100">
-                          <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Stop Name</th>
-                          <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Address</th>
+                          <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">{t("student.transport.stopName")}</th>
+                          <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("student.transport.address")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -348,7 +350,7 @@ export default function StudentTransport() {
                 </div>
                 {route?.distance && (
                   <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
-                    Total route distance: <span className="font-semibold text-slate-700">{route.distance}</span>
+                    {t("student.transport.totalRouteDistance")} <span className="font-semibold text-slate-700">{route.distance}</span>
                   </div>
                 )}
               </div>
@@ -361,10 +363,10 @@ export default function StudentTransport() {
           <div className="w-80 flex-shrink-0 flex flex-col gap-4">
             {/* Transport Card */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Transport Card</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-3">{t("student.transport.transportCard")}</h3>
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#9810fa] to-[#d12386] p-4 text-white">
                 {/* watermark bus */}
-                <svg className="absolute -right-2 -bottom-2 opacity-20" width="120" height="90" viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg className="absolute -end-2 -bottom-2 opacity-20" width="120" height="90" viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="14" y="20" width="86" height="46" rx="8" fill="white" />
                   <rect x="22" y="28" width="20" height="16" rx="3" fill="#9810fa" />
                   <rect x="48" y="28" width="20" height="16" rx="3" fill="#9810fa" />
@@ -383,11 +385,11 @@ export default function StudentTransport() {
                 </div>
                 <div className="relative grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-white/70">Bus Number</p>
+                    <p className="text-[10px] uppercase tracking-wide text-white/70">{t("student.transport.busNumber")}</p>
                     <p className="text-xs font-semibold">{vehicle?.regNumber ?? "—"}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-white/70">Route</p>
+                    <p className="text-[10px] uppercase tracking-wide text-white/70">{t("student.transport.route")}</p>
                     <p className="text-xs font-semibold">{allocation.route || "—"}</p>
                   </div>
                 </div>
@@ -396,15 +398,15 @@ export default function StudentTransport() {
 
             {/* Transport Details */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Transport Details</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-3">{t("student.transport.transportDetails")}</h3>
               <div className="flex flex-col divide-y divide-slate-100">
                 {[
-                  { icon: Truck, label: "Transport Type", value: allocation.mode || "Bus" },
-                  { icon: Navigation, label: "Route Name", value: allocation.route || "—" },
-                  { icon: Bus, label: "Bus Number", value: vehicle?.regNumber ?? "—" },
-                  { icon: User, label: "Driver Name", value: vehicle?.driver || "Unassigned" },
-                  { icon: Phone, label: "Driver Contact", value: driverStaff?.phone || "—" },
-                  { icon: User, label: "Bus Helper", value: vehicle?.helper || "—" },
+                  { icon: Truck, label: t("student.transport.transportType"), value: allocation.mode || t("student.transport.busFallback") },
+                  { icon: Navigation, label: t("student.transport.routeName"), value: allocation.route || "—" },
+                  { icon: Bus, label: t("student.transport.busNumber"), value: vehicle?.regNumber ?? "—" },
+                  { icon: User, label: t("student.transport.driverName"), value: vehicle?.driver || t("student.transport.unassigned") },
+                  { icon: Phone, label: t("student.transport.driverContact"), value: driverStaff?.phone || "—" },
+                  { icon: User, label: t("student.transport.busHelper"), value: vehicle?.helper || "—" },
                 ].map((row) => {
                   const Icon = row.icon;
                   return (
@@ -413,7 +415,7 @@ export default function StudentTransport() {
                         <Icon className="w-4 h-4 text-purple-500" />
                         {row.label}
                       </span>
-                      <span className="text-xs font-semibold text-slate-800 text-right">{row.value}</span>
+                      <span className="text-xs font-semibold text-slate-800 text-end">{row.value}</span>
                     </div>
                   );
                 })}
@@ -425,37 +427,37 @@ export default function StudentTransport() {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-amber-500" /> Notifications
+                  <Bell className="w-4 h-4 text-amber-500" /> {t("student.transport.notifications")}
                 </h3>
                 <button
                   className="text-xs text-purple-600 font-medium hover:underline"
                   onClick={() => navigate("/student/notifications")}
                 >
-                  View All
+                  {t("student.transport.viewAll")}
                 </button>
               </div>
               <p className="text-xs text-slate-500">
-                Route changes, delays and other transport updates appear in your Notifications inbox.
+                {t("student.transport.notificationsTeaser")}
               </p>
             </div>
 
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Quick Actions</h3>
+              <h3 className="text-sm font-bold text-slate-800 mb-3">{t("student.transport.quickActions")}</h3>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => navigate("/transport/gps")}
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-green-50 hover:border-green-200 transition-colors group"
                 >
                   <Navigation className="w-5 h-5 text-green-500 group-hover:text-green-700" />
-                  <span className="text-xs font-medium text-slate-600 group-hover:text-green-700 text-center leading-tight">Track Bus</span>
+                  <span className="text-xs font-medium text-slate-600 group-hover:text-green-700 text-center leading-tight">{t("student.transport.trackBus")}</span>
                 </button>
                 <button
                   onClick={() => navigate("/communication/messages")}
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-rose-50 hover:border-rose-200 transition-colors group"
                 >
                   <AlertCircle className="w-5 h-5 text-rose-500 group-hover:text-rose-700" />
-                  <span className="text-xs font-medium text-slate-600 group-hover:text-rose-700 text-center leading-tight">Report an Issue</span>
+                  <span className="text-xs font-medium text-slate-600 group-hover:text-rose-700 text-center leading-tight">{t("student.transport.reportIssue")}</span>
                 </button>
               </div>
             </div>
@@ -463,18 +465,18 @@ export default function StudentTransport() {
             {/* Need Help? */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
               <h3 className="text-sm font-bold text-slate-800 mb-1.5 flex items-center gap-2">
-                <Map className="w-4 h-4 text-purple-500" /> Need Help?
+                <Map className="w-4 h-4 text-purple-500" /> {t("student.transport.needHelp")}
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                If you have any transport related queries, contact the transport office.
+                {t("student.transport.needHelpBody")}
               </p>
               <button
                 onClick={() => navigate("/communication/messages")}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded-lg transition-colors"
               >
                 <Phone className="w-3.5 h-3.5" />
-                Contact Transport Office
-                <ChevronRight className="w-3.5 h-3.5" />
+                {t("student.transport.contactTransportOffice")}
+                <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
               </button>
             </div>
           </div>

@@ -14,6 +14,7 @@ import {
   LogIn, LogOut, Download, Eye, Trash2, CircleAlert,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,19 +34,36 @@ interface DayRecord {
 }
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTH_KEYS = ["monthJanuary","monthFebruary","monthMarch","monthApril","monthMay","monthJune","monthJuly","monthAugust","monthSeptember","monthOctober","monthNovember","monthDecember"];
+const WEEKDAY_KEYS = ["weekdaySun","weekdayMon","weekdayTue","weekdayWed","weekdayThu","weekdayFri","weekdaySat"];
 // Leave types a student may request — all members of the shared LeaveType union so
 // requests persist into the same `leave_requests` store the admin approval queue reads.
 const LEAVE_TYPES: LeaveTypeT[] = ["Sick Leave","Family Emergency","Medical Appointment","Personal Leave","Other"];
+// Display-only i18n keys for the leave type dropdown — the underlying value persisted
+// to `leave_requests` (and read by the admin approval queue) stays the English enum.
+const LEAVE_TYPE_LABEL_KEYS: Record<string, string> = {
+  "Sick Leave": "leaveTypeSick",
+  "Family Emergency": "leaveTypeFamilyEmergency",
+  "Medical Appointment": "leaveTypeMedicalAppointment",
+  "Personal Leave": "leaveTypePersonal",
+  "Other": "leaveTypeOther",
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function statusMeta(s: AttStatus | null, isWeekend = false) {
-  if (s === "P") return { label:"Present",   dot:"bg-emerald-500", badge:"bg-emerald-50 text-emerald-700 border-emerald-200", cell:"bg-emerald-500 text-white" };
-  if (s === "A") return { label:"Absent",    dot:"bg-rose-500",    badge:"bg-rose-50 text-rose-700 border-rose-200",         cell:"bg-rose-500 text-white" };
-  if (s === "L") return { label:"Late",      dot:"bg-amber-500",   badge:"bg-amber-50 text-amber-700 border-amber-200",      cell:"bg-amber-500 text-white" };
-  if (s === "H") return { label:"Half-Day",  dot:"bg-blue-400",    badge:"bg-blue-50 text-blue-700 border-blue-200",         cell:"bg-blue-400 text-white" };
-  if (isWeekend) return { label:"Weekend",   dot:"bg-slate-200",   badge:"bg-slate-50 text-slate-400 border-slate-200",      cell:"bg-slate-100 text-slate-400" };
-  return           { label:"No Record", dot:"bg-slate-100",   badge:"bg-slate-50 text-slate-400 border-slate-100",      cell:"bg-white text-slate-300 border border-slate-100" };
+// `t` is optional so this stays callable from contexts without hook access; callers
+// that render UI should always pass their component's `t` for proper localization.
+function statusMeta(s: AttStatus | null, isWeekend = false, t?: (k: string) => string) {
+  const tr = t || ((k: string) => ({
+    "student.attendance.present":"Present","student.attendance.absent":"Absent","student.attendance.late":"Late",
+    "student.attendance.halfDay":"Half-Day","student.attendance.weekend":"Weekend","student.attendance.noRecord":"No Record",
+  } as Record<string,string>)[k] || k);
+  if (s === "P") return { label:tr("student.attendance.present"),   dot:"bg-emerald-500", badge:"bg-emerald-50 text-emerald-700 border-emerald-200", cell:"bg-emerald-500 text-white" };
+  if (s === "A") return { label:tr("student.attendance.absent"),    dot:"bg-rose-500",    badge:"bg-rose-50 text-rose-700 border-rose-200",         cell:"bg-rose-500 text-white" };
+  if (s === "L") return { label:tr("student.attendance.late"),      dot:"bg-amber-500",   badge:"bg-amber-50 text-amber-700 border-amber-200",      cell:"bg-amber-500 text-white" };
+  if (s === "H") return { label:tr("student.attendance.halfDay"),  dot:"bg-blue-400",    badge:"bg-blue-50 text-blue-700 border-blue-200",         cell:"bg-blue-400 text-white" };
+  if (isWeekend) return { label:tr("student.attendance.weekend"),   dot:"bg-slate-200",   badge:"bg-slate-50 text-slate-400 border-slate-200",      cell:"bg-slate-100 text-slate-400" };
+  return           { label:tr("student.attendance.noRecord"), dot:"bg-slate-100",   badge:"bg-slate-50 text-slate-400 border-slate-100",      cell:"bg-white text-slate-300 border border-slate-100" };
 }
 
 function leaveStatusMeta(s: string) {
@@ -66,6 +84,7 @@ function recordRFID(rec?: DayRecord): RFIDLog[] {
 // ─── CircularProgress ─────────────────────────────────────────────────────────
 
 function CircularProgress({ percent }: { percent: number }) {
+  const { t } = useTranslation();
   const r = 46; const c = r * 2 * Math.PI;
   const color = percent >= 75 ? "#10b981" : percent >= 60 ? "#f59e0b" : "#ef4444";
   return (
@@ -78,7 +97,7 @@ function CircularProgress({ percent }: { percent: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-2xl font-black text-slate-900" style={{ color }}>{percent}%</span>
-        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Rate</span>
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{t("student.attendance.rateLabel")}</span>
       </div>
     </div>
   );
@@ -112,6 +131,7 @@ function downloadAttendanceReport(records: DayRecord[], student: any) {
 }
 
 function RecordsTab({ records, student }: { records: DayRecord[]; student: any }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
@@ -121,17 +141,17 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
       {/* Download banner */}
       <div className="flex items-center justify-between bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3">
         <div className="flex items-center gap-2 text-violet-700 text-sm font-semibold">
-          <FileText className="w-4 h-4" /> Attendance Records — {student?.name || "Student"}
+          <FileText className="w-4 h-4" /> {t("student.attendance.recordsHeader", { name: student?.name || t("student.attendance.studentFallback") })}
         </div>
         <button onClick={() => downloadAttendanceReport(records, student)}
           className="flex items-center gap-1.5 text-xs text-purple-600 font-semibold hover:underline">
-          <Download className="w-3.5 h-3.5" /> Download Report
+          <Download className="w-3.5 h-3.5" /> {t("student.attendance.downloadReport")}
         </button>
       </div>
 
       {sorted.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
-          No attendance records yet. Your daily presence will appear here once marked by the teacher.
+          {t("student.attendance.noRecordsYet")}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -139,12 +159,12 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50 text-xs text-slate-500 font-semibold uppercase tracking-wide">
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-left">RFID Entry</th>
-                  <th className="px-4 py-3 text-left">RFID Exit</th>
-                  <th className="px-4 py-3 text-left">Remarks</th>
-                  <th className="px-4 py-3 text-center">Details</th>
+                  <th className="px-4 py-3 text-start">{t("student.attendance.colDate")}</th>
+                  <th className="px-4 py-3 text-center">{t("student.attendance.colStatus")}</th>
+                  <th className="px-4 py-3 text-start">{t("student.attendance.colRfidEntry")}</th>
+                  <th className="px-4 py-3 text-start">{t("student.attendance.colRfidExit")}</th>
+                  <th className="px-4 py-3 text-start">{t("student.attendance.colRemarks")}</th>
+                  <th className="px-4 py-3 text-center">{t("student.attendance.colDetails")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -152,7 +172,7 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
                   const rfid = recordRFID(r);
                   const entry = rfid.find(l => l.type === "Entry");
                   const exit  = rfid.find(l => l.type === "Exit");
-                  const meta  = statusMeta(r.status);
+                  const meta  = statusMeta(r.status, false, t);
                   const dateObj = new Date(r.date);
                   return (
                     <>
@@ -194,21 +214,21 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
                           <td colSpan={6} className="px-6 py-4 bg-violet-50/50 border-b border-violet-100">
                             <div className="flex flex-wrap gap-6 text-xs">
                               <div>
-                                <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">RFID Logs</p>
-                                {rfid.length === 0 ? <p className="text-slate-400">No RFID data available</p> : rfid.map((l, i) => (
+                                <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">{t("student.attendance.rfidLogs")}</p>
+                                {rfid.length === 0 ? <p className="text-slate-400">{t("student.attendance.noRfidData")}</p> : rfid.map((l, i) => (
                                   <div key={i} className={cn("flex items-center gap-2 mb-1", l.type === "Entry" ? "text-emerald-600" : "text-rose-500")}>
                                     {l.type === "Entry" ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
-                                    <span className="font-semibold">{l.type}</span> · {l.time} · {l.gate}
+                                    <span className="font-semibold">{l.type === "Entry" ? t("student.attendance.entryLabel") : t("student.attendance.exitLabel")}</span> · {l.time} · {l.gate}
                                   </div>
                                 ))}
                               </div>
                               <div>
-                                <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">Teacher Remarks</p>
-                                <p className="text-slate-500">{r.remarks || "No remarks from teacher."}</p>
+                                <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">{t("student.attendance.teacherRemarks")}</p>
+                                <p className="text-slate-500">{r.remarks || t("student.attendance.noRemarksFromTeacher")}</p>
                               </div>
                               {entry && exit && (
                                 <div>
-                                  <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">Duration</p>
+                                  <p className="font-bold text-slate-600 mb-1 uppercase tracking-wide text-[10px]">{t("student.attendance.duration")}</p>
                                   <p className="text-slate-500">
                                     {entry.time} → {exit.time}
                                   </p>
@@ -233,6 +253,7 @@ function RecordsTab({ records, student }: { records: DayRecord[]; student: any }
 // ─── Tab: Monthly Calendar ────────────────────────────────────────────────────
 
 function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }) {
+  const { t } = useTranslation();
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() };
   });
@@ -280,10 +301,10 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
       {/* Header with stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label:"Present",   value:monthStats.p,    color:"text-emerald-600 bg-emerald-50" },
-          { label:"Absent",    value:monthStats.a,    color:"text-rose-600 bg-rose-50" },
-          { label:"Late",      value:monthStats.l,    color:"text-amber-600 bg-amber-50" },
-          { label:"Half-Day",  value:monthStats.h,    color:"text-purple-600 bg-blue-50" },
+          { label:t("student.attendance.present"),   value:monthStats.p,    color:"text-emerald-600 bg-emerald-50" },
+          { label:t("student.attendance.absent"),    value:monthStats.a,    color:"text-rose-600 bg-rose-50" },
+          { label:t("student.attendance.late"),      value:monthStats.l,    color:"text-amber-600 bg-amber-50" },
+          { label:t("student.attendance.halfDay"),  value:monthStats.h,    color:"text-purple-600 bg-blue-50" },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
             <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-black", k.color)}>
@@ -303,10 +324,10 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
           : "bg-rose-50 border-rose-200 text-rose-700")}>
         {eligibility ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
         <div>
-          <span className="font-black">{monthStats.pct}% attendance</span> this month —{" "}
+          <span className="font-black">{t("student.attendance.attendancePercent", { pct: monthStats.pct })}</span> {t("student.attendance.thisMonthSuffix")}{" "}
           {eligibility
-            ? "Eligibility requirement met (≥ 75%)"
-            : "Below 75% school eligibility requirement. Risk of losing exam eligibility."}
+            ? t("student.attendance.eligibilityMet")
+            : t("student.attendance.eligibilityNotMet")}
         </div>
       </div>
 
@@ -315,25 +336,25 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-violet-500" />
-            <h3 className="font-bold text-slate-900">Monthly Attendance Calendar</h3>
+            <h3 className="font-bold text-slate-900">{t("student.attendance.monthlyCalendarTitle")}</h3>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => shiftMonth(-1)} className="p-1.5 rounded-lg hover:bg-slate-100 border border-slate-200 transition">
-              <ChevronLeft className="w-4 h-4 text-slate-500" />
+              <ChevronLeft className="w-4 h-4 text-slate-500 rtl:rotate-180" />
             </button>
             <span className="text-sm font-bold text-slate-800 min-w-[140px] text-center">
-              {MONTHS[viewMonth.month]} {viewMonth.year}
+              {t(`student.attendance.${MONTH_KEYS[viewMonth.month]}`)} {viewMonth.year}
             </span>
             <button onClick={() => shiftMonth(1)} className="p-1.5 rounded-lg hover:bg-slate-100 border border-slate-200 transition">
-              <ChevronRight className="w-4 h-4 text-slate-500" />
+              <ChevronRight className="w-4 h-4 text-slate-500 rtl:rotate-180" />
             </button>
           </div>
         </div>
         <div className="p-5">
           {/* Day-of-week headers */}
           <div className="grid grid-cols-7 mb-2">
-            {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-              <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase py-1">{d}</div>
+            {WEEKDAY_KEYS.map(d => (
+              <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase py-1">{t(`student.attendance.${d}`)}</div>
             ))}
           </div>
           {/* Calendar grid */}
@@ -341,7 +362,7 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
             {/* Offset for first day */}
             {Array.from({ length: firstDay }, (_, i) => <div key={`off-${i}`} />)}
             {calendarDays.map(d => {
-              const meta = statusMeta(d.status, d.isWeekend);
+              const meta = statusMeta(d.status, d.isWeekend, t);
               return (
                 <motion.button key={d.date} whileHover={{ scale: 1.05 }}
                   onClick={() => setSelectedDay(selectedDay?.date === d.date ? null : d as any)}
@@ -357,7 +378,7 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
 
           {/* Legend */}
           <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-slate-100">
-            {[["P","bg-emerald-500","Present"],["A","bg-rose-500","Absent"],["L","bg-amber-500","Late"],["H","bg-blue-400","Half-Day"]].map(([k,c,l]) => (
+            {[["P","bg-emerald-500",t("student.attendance.present")],["A","bg-rose-500",t("student.attendance.absent")],["L","bg-amber-500",t("student.attendance.late")],["H","bg-blue-400",t("student.attendance.halfDay")]].map(([k,c,l]) => (
               <div key={k} className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
                 <div className={cn("w-3 h-3 rounded-md",c)} />{l}
               </div>
@@ -375,13 +396,13 @@ function MonthlyTab({ records, student }: { records: DayRecord[]; student: any }
                       {new Date(selectedDay.date).toLocaleDateString("en-US",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
                     </p>
                     <p className="font-bold text-slate-900">
-                      {statusMeta(selectedDay.status, (selectedDay as any).isWeekend).label}
+                      {statusMeta(selectedDay.status, (selectedDay as any).isWeekend, t).label}
                     </p>
-                    {selectedDay.remarks && <p className="text-xs text-slate-500 mt-1">Remark: {selectedDay.remarks}</p>}
+                    {selectedDay.remarks && <p className="text-xs text-slate-500 mt-1">{t("student.attendance.remarkPrefix", { remark: selectedDay.remarks })}</p>}
                   </div>
                   <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border",
-                    statusMeta(selectedDay.status).badge)}>
-                    {statusMeta(selectedDay.status).label}
+                    statusMeta(selectedDay.status, false, t).badge)}>
+                    {statusMeta(selectedDay.status, false, t).label}
                   </span>
                 </div>
               </motion.div>
@@ -401,6 +422,7 @@ function dayCount(from: string, to: string) {
 }
 
 function LeaveTab({ student }: { student: any }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { leaves: allLeaves, loading, applyForLeave, updateLeaveStatus } = useLeave();
   const [showForm, setShowForm] = useState(false);
@@ -419,11 +441,11 @@ function LeaveTab({ student }: { student: any }) {
 
   const handleSubmit = async () => {
     if (!form.fromDate || !form.toDate || !form.reason) {
-      toast.error("Please fill in all required fields");
+      toast.error(t("student.attendance.fillRequiredFields"));
       return;
     }
     const days = dayCount(form.fromDate, form.toDate);
-    if (days <= 0) { toast.error("End date must be on or after start date"); return; }
+    if (days <= 0) { toast.error(t("student.attendance.endDateAfterStart")); return; }
     setSubmitting(true);
     try {
       await applyForLeave({
@@ -453,13 +475,13 @@ function LeaveTab({ student }: { student: any }) {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label:"Pending",  value:pending,                          color:"text-amber-600 bg-amber-50" },
-          { label:"Approved", value:approved,                         color:"text-emerald-600 bg-emerald-50" },
-          { label:"Total",    value:leaves.filter(l=>l.status!=="Cancelled").length, color:"text-purple-600 bg-violet-50" },
+          { label:t("student.attendance.pendingLeaves"),  value:pending,                          color:"text-amber-600 bg-amber-50" },
+          { label:t("student.attendance.approvedLeaves"), value:approved,                         color:"text-emerald-600 bg-emerald-50" },
+          { label:t("student.attendance.totalLeaves"),    value:leaves.filter(l=>l.status!=="Cancelled").length, color:"text-purple-600 bg-violet-50" },
         ].map(k => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
             <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base font-black", k.color)}>{k.value}</div>
-            <p className="text-xs font-semibold text-slate-500">{k.label} Leaves</p>
+            <p className="text-xs font-semibold text-slate-500">{k.label}</p>
           </div>
         ))}
       </div>
@@ -469,7 +491,7 @@ function LeaveTab({ student }: { student: any }) {
         <div className="flex justify-end">
           <button onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-violet-700 transition">
-            <Send className="w-4 h-4" /> Apply for Leave
+            <Send className="w-4 h-4" /> {t("student.attendance.applyForLeave")}
           </button>
         </div>
       )}
@@ -480,37 +502,37 @@ function LeaveTab({ student }: { student: any }) {
           <motion.div initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
             className="bg-white rounded-2xl border border-violet-200 overflow-hidden">
             <div className="px-5 py-4 bg-gradient-to-r from-purple-600 to-purple-600 flex items-center justify-between">
-              <h3 className="text-white font-bold">Apply for Leave</h3>
+              <h3 className="text-white font-bold">{t("student.attendance.applyForLeave")}</h3>
               <button onClick={() => setShowForm(false)} className="text-white/70 hover:text-white"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">From Date <span className="text-rose-500">*</span></label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">{t("student.attendance.fromDate")} <span className="text-rose-500">*</span></label>
                   <input type="date" value={form.fromDate} onChange={e=>setForm(f=>({...f,fromDate:e.target.value}))}
                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">To Date <span className="text-rose-500">*</span></label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">{t("student.attendance.toDate")} <span className="text-rose-500">*</span></label>
                   <input type="date" value={form.toDate} onChange={e=>setForm(f=>({...f,toDate:e.target.value}))}
                     className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Leave Type <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t("student.attendance.leaveType")} <span className="text-rose-500">*</span></label>
                 <select value={form.leaveType} onChange={e=>setForm(f=>({...f,leaveType:e.target.value as LeaveType}))}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
-                  {LEAVE_TYPES.map(t=><option key={t}>{t}</option>)}
+                  {LEAVE_TYPES.map(lt=><option key={lt} value={lt}>{t(`student.attendance.${LEAVE_TYPE_LABEL_KEYS[lt]}`)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Reason <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t("student.attendance.reason")} <span className="text-rose-500">*</span></label>
                 <textarea rows={3} value={form.reason} onChange={e=>setForm(f=>({...f,reason:e.target.value}))}
-                  placeholder="Describe the reason for leave…"
+                  placeholder={t("student.attendance.reasonPlaceholder")}
                   className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Supporting Document (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">{t("student.attendance.supportingDocument")}</label>
                 <div onClick={() => fileRef.current?.click()}
                   className={cn("border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition",
                     form.docFile ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:border-violet-300")}>
@@ -524,7 +546,7 @@ function LeaveTab({ student }: { student: any }) {
                     </div>
                   ) : (
                     <div className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
-                      <Upload className="w-4 h-4" /> Click to upload medical certificate or document
+                      <Upload className="w-4 h-4" /> {t("student.attendance.clickToUploadDoc")}
                     </div>
                   )}
                 </div>
@@ -532,11 +554,11 @@ function LeaveTab({ student }: { student: any }) {
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setShowForm(false)}
                   className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 font-semibold">
-                  Cancel
+                  {t("student.attendance.cancel")}
                 </button>
                 <button onClick={handleSubmit} disabled={submitting}
                   className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700 transition disabled:opacity-60 flex items-center justify-center gap-2">
-                  {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "Submit Request"}
+                  {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t("student.attendance.submitRequest")}
                 </button>
               </div>
             </div>
@@ -547,19 +569,19 @@ function LeaveTab({ student }: { student: any }) {
       {/* Leave history */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-          <h3 className="font-bold text-slate-800">Leave History</h3>
+          <h3 className="font-bold text-slate-800">{t("student.attendance.leaveHistory")}</h3>
         </div>
         <div className="divide-y divide-slate-100">
           {loading && (
             <div className="py-12 flex justify-center"><div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>
           )}
           {!loading && leaves.length === 0 && (
-            <div className="py-12 text-center text-slate-400">No leave requests yet. Use “Apply for Leave” above to submit one.</div>
+            <div className="py-12 text-center text-slate-400">{t("student.attendance.noLeaveRequestsYet")}</div>
           )}
           {!loading && leaves.map(l => {
             const meta = leaveStatusMeta(l.status);
             const d = l.days || dayCount(l.startDate, l.endDate);
-            const days = d === 1 ? "1 day" : `${d} days`;
+            const days = d === 1 ? t("student.attendance.oneDay") : t("student.attendance.nDays", { count: d });
             return (
               <div key={l.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -575,7 +597,7 @@ function LeaveTab({ student }: { student: any }) {
                     <p className="text-xs text-slate-600">{l.reason}</p>
                     {l.approverRemark && (
                       <p className="text-xs text-purple-600 mt-1.5 italic">
-                        Teacher: "{l.approverRemark}"
+                        {t("student.attendance.teacherRemark", { remark: l.approverRemark })}
                       </p>
                     )}
                     {l.docFile && (
@@ -583,7 +605,7 @@ function LeaveTab({ student }: { student: any }) {
                         <FileText className="w-3 h-3" /> {l.docFile}
                       </p>
                     )}
-                    {l.appliedOn && <p className="text-[10px] text-slate-400 mt-1">Applied on {l.appliedOn}</p>}
+                    {l.appliedOn && <p className="text-[10px] text-slate-400 mt-1">{t("student.attendance.appliedOn", { date: l.appliedOn })}</p>}
                   </div>
                   <div className="flex flex-col gap-1 flex-shrink-0">
                     {l.status === "Pending" && (
@@ -599,13 +621,13 @@ function LeaveTab({ student }: { student: any }) {
 
       {/* Workflow info */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-        <p className="text-xs font-bold text-blue-800 mb-2">Leave Approval Workflow</p>
+        <p className="text-xs font-bold text-blue-800 mb-2">{t("student.attendance.leaveWorkflowTitle")}</p>
         <div className="flex items-center gap-2 flex-wrap text-xs text-blue-700">
-          {["You (Student)","→","Class Teacher","→","Principal (if extended)","→","Attendance Updated"].map((s,i)=>(
+          {[t("student.attendance.workflowStudent"),"→",t("student.attendance.workflowClassTeacher"),"→",t("student.attendance.workflowPrincipal"),"→",t("student.attendance.workflowAttendanceUpdated")].map((s,i)=>(
             <span key={i} className={s==="→" ? "text-blue-400" : "font-semibold bg-blue-100 px-2 py-0.5 rounded-lg"}>{s}</span>
           ))}
         </div>
-        <p className="text-[11px] text-purple-600 mt-2">Approved leaves are automatically reflected in your attendance record. You and your parent will be notified.</p>
+        <p className="text-[11px] text-purple-600 mt-2">{t("student.attendance.leaveWorkflowNote")}</p>
       </div>
     </div>
   );
@@ -616,6 +638,7 @@ function LeaveTab({ student }: { student: any }) {
 type Tab = "records" | "monthly" | "leave";
 
 export default function StudentAttendance() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const [tab, setTab] = useState<Tab>("monthly");
@@ -677,21 +700,21 @@ export default function StudentAttendance() {
               <CircularProgress percent={stats.pct} />
             )}
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-black text-slate-900 mb-0.5">Attendance Overview</h2>
+              <h2 className="text-xl font-black text-slate-900 mb-0.5">{t("student.attendance.overviewTitle")}</h2>
               <p className="text-xs text-slate-500 mb-2">
                 {loaded && stats.total === 0
-                  ? "No attendance records yet. Your logs appear here once your teacher marks daily attendance."
-                  : "Track your physical presence, RFID logs and leave requests."}
+                  ? t("student.attendance.noRecordsHero")
+                  : t("student.attendance.trackDesc")}
               </p>
               {stats.total > 0 && stats.pct < 75 && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-xl">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Below 75% threshold — exam eligibility at risk
+                  <AlertTriangle className="w-3.5 h-3.5" /> {t("student.attendance.below75Threshold")}
                 </span>
               )}
               <div className={cn("flex items-center gap-1.5 text-xs font-semibold mt-2",
                 isLive ? "text-emerald-600" : "text-amber-600")}>
                 {isLive ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                {isLive ? `Live data — ${records.length} days recorded` : "Sample data — no records from DB yet"}
+                {isLive ? t("student.attendance.liveDataDays", { count: records.length }) : t("student.attendance.sampleDataNote")}
               </div>
             </div>
           </div>
@@ -700,13 +723,13 @@ export default function StudentAttendance() {
               <div>
                 <p className="font-black text-sm">{(student as any).name}</p>
                 <p className="text-white/60 text-xs mt-1">
-                  {[(student as any).grade && `Grade ${(student as any).grade}`,
-                    (student as any).section && `Section ${(student as any).section}`].filter(Boolean).join(" · ")}
+                  {[(student as any).grade && t("student.attendance.gradeLabel", { grade: (student as any).grade }),
+                    (student as any).section && t("student.attendance.sectionLabel", { section: (student as any).section })].filter(Boolean).join(" · ")}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-white/15">
-                <div><p className="text-lg font-black">{stats.total}</p><p className="text-[10px] text-white/50 font-semibold">Total Days</p></div>
-                <div><p className="text-lg font-black">{stats.p}</p><p className="text-[10px] text-white/50 font-semibold">Present</p></div>
+                <div><p className="text-lg font-black">{stats.total}</p><p className="text-[10px] text-white/50 font-semibold">{t("student.attendance.totalDays")}</p></div>
+                <div><p className="text-lg font-black">{stats.p}</p><p className="text-[10px] text-white/50 font-semibold">{t("student.attendance.present")}</p></div>
               </div>
             </div>
           )}
@@ -715,10 +738,10 @@ export default function StudentAttendance() {
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label:"Days Present",  value:stats.p,     icon:CheckCircle2, color:"text-emerald-600 bg-emerald-50" },
-            { label:"Days Absent",   value:stats.a,     icon:XCircle,      color:"text-rose-600 bg-rose-50" },
-            { label:"Late Arrivals", value:stats.l,     icon:Clock,        color:"text-amber-600 bg-amber-50" },
-            { label:"Total Sessions",value:stats.total, icon:TrendingUp,   color:"text-purple-600 bg-violet-50" },
+            { label:t("student.attendance.daysPresent"),  value:stats.p,     icon:CheckCircle2, color:"text-emerald-600 bg-emerald-50" },
+            { label:t("student.attendance.daysAbsent"),   value:stats.a,     icon:XCircle,      color:"text-rose-600 bg-rose-50" },
+            { label:t("student.attendance.lateArrivals"), value:stats.l,     icon:Clock,        color:"text-amber-600 bg-amber-50" },
+            { label:t("student.attendance.totalSessions"),value:stats.total, icon:TrendingUp,   color:"text-purple-600 bg-violet-50" },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
               <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0", k.color)}>
@@ -736,14 +759,14 @@ export default function StudentAttendance() {
         <div>
           <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-5">
             {([
-              { id:"monthly" as Tab,  label:"Monthly Calendar" },
-              { id:"records" as Tab,  label:"Attendance Records" },
-              { id:"leave"   as Tab,  label:"Leave Requests" },
-            ] as const).map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
+              { id:"monthly" as Tab,  label:t("student.attendance.tabMonthlyCalendar") },
+              { id:"records" as Tab,  label:t("student.attendance.tabAttendanceRecords") },
+              { id:"leave"   as Tab,  label:t("student.attendance.tabLeaveRequests") },
+            ] as const).map(tb => (
+              <button key={tb.id} onClick={() => setTab(tb.id)}
                 className={cn("px-4 py-2 rounded-lg text-sm font-semibold transition",
-                  tab === t.id ? "bg-white text-violet-700 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
-                {t.label}
+                  tab === tb.id ? "bg-white text-violet-700 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+                {tb.label}
               </button>
             ))}
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
@@ -28,6 +29,7 @@ function gradeFromPct(p: number) {
 }
 
 export default function StudentReportCards() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const { curriculum } = useCurriculum();
@@ -123,17 +125,17 @@ export default function StudentReportCards() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-purple-600" /> Report Card
+              <FileCheck className="h-5 w-5 text-purple-600" /> {t('student.reportCards.pageTitle')}
               {published ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Published · {published.term}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{t('student.reportCards.publishedBadge', { term: published.term })}</span>
               ) : subjectResults.length > 0 ? (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Provisional</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{t('student.reportCards.provisionalBadge')}</span>
               ) : null}
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{published ? `${published.year} · Issued by ${published.teacherName}` : "Academic Year 2025–2026"}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{published ? t('student.reportCards.issuedBy', { year: published.year, teacher: published.teacherName }) : t('student.reportCards.academicYearDefault')}</p>
           </div>
           <Button variant="outline" onClick={handleDownload} disabled={subjectResults.length === 0} className="h-9 text-xs font-semibold">
-            <Download className="h-4 w-4 mr-1.5" /> Download PDF
+            <Download className="h-4 w-4 me-1.5" /> {t('student.reportCards.downloadPdf')}
           </Button>
         </div>
 
@@ -146,14 +148,14 @@ export default function StudentReportCards() {
             <div className="flex-1">
               <p className="font-bold text-slate-900">{s.name}</p>
               <div className="flex flex-wrap gap-2 mt-1">
-                <span className="text-[11px] text-slate-500">Grade {s.grade} · Section {s.section}</span>
-                {s.rollNumber && <span className="text-[11px] text-slate-500">Roll #{s.rollNumber}</span>}
+                <span className="text-[11px] text-slate-500">{t('student.reportCards.gradeSection', { grade: s.grade, section: s.section })}</span>
+                {s.rollNumber && <span className="text-[11px] text-slate-500">{t('student.reportCards.rollNumber', { roll: s.rollNumber })}</span>}
               </div>
             </div>
             {overallGrade && (
               <div className="text-center flex-shrink-0">
                 <Badge className={cn("text-lg font-black px-4 py-1.5 border-none", overallGrade.c)}>{overallGrade.g}</Badge>
-                <p className="text-[11px] text-slate-400 mt-1">Overall</p>
+                <p className="text-[11px] text-slate-400 mt-1">{t('student.reportCards.overallLabel')}</p>
               </div>
             )}
           </div>
@@ -163,17 +165,17 @@ export default function StudentReportCards() {
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
             <p className="text-2xl font-black text-slate-900">{overall !== null ? `${overall}%` : "—"}</p>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3" />Academic</p>
+            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3" />{t('student.reportCards.academicStat')}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
             <p className={cn("text-2xl font-black", attendancePct !== null && attendancePct < 75 ? "text-rose-600" : "text-slate-900")}>
               {attendancePct !== null ? `${attendancePct}%` : "—"}
             </p>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><UserCheck className="h-3 w-3" />Attendance</p>
+            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><UserCheck className="h-3 w-3" />{t('student.reportCards.attendanceStat')}</p>
           </div>
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
             <p className="text-2xl font-black text-slate-900">{subjectResults.length}</p>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><BookOpen className="h-3 w-3" />Subjects</p>
+            <p className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1"><BookOpen className="h-3 w-3" />{t('student.reportCards.subjectsStat')}</p>
           </div>
         </div>
 
@@ -182,15 +184,15 @@ export default function StudentReportCards() {
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
               <Award className="h-4 w-4 text-purple-600" />
-              <h3 className="font-bold text-sm text-slate-800">Subject Performance</h3>
+              <h3 className="font-bold text-sm text-slate-800">{t('student.reportCards.subjectPerformance')}</h3>
             </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Subject</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Marks</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">%</th>
-                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Grade</th>
+                  <th className="text-start px-5 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('student.reportCards.colSubject')}</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('student.reportCards.colMarks')}</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('student.reportCards.colPercent')}</th>
+                  <th className="text-center px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('student.reportCards.colGrade')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -220,23 +222,23 @@ export default function StudentReportCards() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-2xl text-slate-400">
             <FileCheck className="h-10 w-10 mb-3 opacity-30" />
-            <p className="font-semibold text-sm">No report data available yet</p>
+            <p className="font-semibold text-sm">{t('student.reportCards.noDataYet')}</p>
           </div>
         )}
 
         {/* Class teacher remark (only on a published report card) */}
         {published && published.classTeacherRemark && (
           <div className="bg-white border border-slate-200 rounded-2xl p-5">
-            <h4 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-1.5"><UserCheck className="h-4 w-4 text-purple-600" /> Class Teacher's Remark</h4>
-            <p className="text-sm text-slate-600 italic">"{published.classTeacherRemark}"</p>
+            <h4 className="font-bold text-slate-900 mb-2 text-sm flex items-center gap-1.5"><UserCheck className="h-4 w-4 text-purple-600" /> {t('student.reportCards.classTeacherRemarkTitle')}</h4>
+            <p className="text-sm text-slate-600 italic">{t('student.reportCards.quotedRemark', { remark: published.classTeacherRemark })}</p>
           </div>
         )}
 
         <div className="flex items-center gap-2 text-[11px] text-slate-400 px-1">
           <Info className="h-3.5 w-3.5 flex-shrink-0" />
           {published
-            ? `Official report card published by ${published.teacherName} after approval. Subjects combine Assignment, Assessment and Exam marks, weighted per the ${curriculum.shortName} curriculum.`
-            : `Provisional — generated live from the gradebook (Assignment + Assessment + Exam marks, weighted per the ${curriculum.shortName} curriculum). Final grades appear once the school publishes the report card.`}
+            ? t('student.reportCards.footerPublished', { teacher: published.teacherName, curriculum: curriculum.shortName })
+            : t('student.reportCards.footerProvisional', { curriculum: curriculum.shortName })}
         </div>
       </div>
     </DashboardLayout>

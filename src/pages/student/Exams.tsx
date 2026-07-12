@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ClipboardList, Calendar, TrendingUp, Award, MapPin, Play } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 function gradeFromPct(p: number) {
   if (p >= 90) return { g: "A+", c: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-none" };
@@ -35,6 +36,7 @@ function fmtDate(iso: string) {
 }
 
 export default function StudentExams() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const location = useLocation();
@@ -125,10 +127,10 @@ export default function StudentExams() {
     if (!nextExamPaper) return null;
     const diff = nextExamPaper.date.getTime() - new Date().getTime();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    if (days <= 0) return "Today!";
-    if (days === 1) return "Tomorrow!";
-    return `in ${days} days`;
-  }, [nextExamPaper]);
+    if (days <= 0) return t("student.exams.today");
+    if (days === 1) return t("student.exams.tomorrow");
+    return t("student.exams.inDays", { days });
+  }, [nextExamPaper, t]);
 
   // Offline exam results from the shared marks store, for published exams.
   const offlineResults = useMemo(() => {
@@ -176,17 +178,17 @@ export default function StudentExams() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                <ClipboardList className="h-5.5 w-5.5 text-purple-600" /> Exams &amp; Evaluations
+                <ClipboardList className="h-5.5 w-5.5 text-purple-600" /> {t("student.exams.pageTitle")}
               </h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Check scheduled term exams, hall &amp; seat allocations, and terminal marksheets.</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("student.exams.pageSubtitle")}</p>
             </div>
 
             <div className="flex gap-1 bg-white dark:bg-[#16162A] rounded-xl p-1 border border-slate-100 dark:border-slate-800/40 w-fit shadow-sm">
-              {(["schedule", "results"] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)}
+              {(["schedule", "results"] as const).map(tb => (
+                <button key={tb} onClick={() => setTab(tb)}
                   className={cn("px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all outline-none",
-                    tab === t ? "bg-[#9810fa] text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white")}>
-                  {t === "schedule" ? "Exam Schedules" : "My Results"}
+                    tab === tb ? "bg-[#9810fa] text-white shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white")}>
+                  {tb === "schedule" ? t("student.exams.tabSchedule") : t("student.exams.tabResults")}
                 </button>
               ))}
             </div>
@@ -195,20 +197,20 @@ export default function StudentExams() {
           {/* Countdown Widget */}
           {tab === "schedule" && nextExamPaper && (
             <div className="bg-gradient-to-r from-[#9810fa] via-[#a322a3] to-[#d12386] rounded-[24px] p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl shadow-purple-600/10 relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-lg" />
+              <div className="absolute -top-12 -end-12 w-32 h-32 bg-white/10 rounded-full blur-lg" />
               <div className="flex items-center gap-4 relative shrink-0">
                 <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/15">
                   <Play className="h-5 w-5 text-yellow-300 fill-yellow-300" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-extrabold text-white/70 uppercase tracking-widest leading-none">Upcoming Exam</p>
+                  <p className="text-[10px] font-extrabold text-white/70 uppercase tracking-widest leading-none">{t("student.exams.upcomingExam")}</p>
                   <h4 className="font-extrabold mt-2 text-sm">{nextExamPaper.subject} — {nextExamPaper.title}</h4>
-                  <p className="text-xs text-white/70 mt-1">Starts {nextExamPaper.time}{nextExamPaper.room ? ` · Room ${nextExamPaper.room}` : ""}</p>
+                  <p className="text-xs text-white/70 mt-1">{t("student.exams.startsAt", { time: nextExamPaper.time })}{nextExamPaper.room ? t("student.exams.roomSuffix", { room: nextExamPaper.room }) : ""}</p>
                 </div>
               </div>
               <div className="bg-white/15 px-5 py-3 rounded-2xl border border-white/10 text-center shrink-0">
                 <span className="text-xl font-black block leading-none">{countdownText}</span>
-                <span className="text-[9px] font-extrabold text-white/70 tracking-widest mt-1 block uppercase">Time left</span>
+                <span className="text-[9px] font-extrabold text-white/70 tracking-widest mt-1 block uppercase">{t("student.exams.timeLeft")}</span>
               </div>
             </div>
           )}
@@ -219,8 +221,8 @@ export default function StudentExams() {
               {scheduleExams.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] text-slate-400 transition-colors shadow-sm">
                   <Calendar className="h-12 w-12 mb-3 opacity-25" />
-                  <p className="font-extrabold text-sm text-slate-800 dark:text-white">No Upcoming Exams</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No exam papers have been published to your profile yet.</p>
+                  <p className="font-extrabold text-sm text-slate-800 dark:text-white">{t("student.exams.noUpcomingTitle")}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("student.exams.noUpcomingDesc")}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -244,24 +246,24 @@ export default function StudentExams() {
               {myResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] text-slate-400 transition-colors shadow-sm">
                   <Award className="h-12 w-12 mb-3 opacity-25" />
-                  <p className="font-extrabold text-sm text-slate-800 dark:text-white">No Results Recorded</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Term exam evaluations are currently pending publication.</p>
+                  <p className="font-extrabold text-sm text-slate-800 dark:text-white">{t("student.exams.noResultsTitle")}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("student.exams.noResultsDesc")}</p>
                 </div>
               ) : (
                 <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] overflow-hidden transition-colors shadow-sm">
                   <div className="px-6 py-5 border-b border-slate-50 dark:border-slate-800/20 flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-purple-600" />
-                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Subject-wise Performance</h3>
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{t("student.exams.subjectPerformance")}</h3>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm min-w-[500px]">
                       <thead>
                         <tr className="bg-slate-50 dark:bg-slate-800/20 border-b border-slate-100 dark:border-slate-800/30">
-                          <th className="text-left px-6 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Exam / Subject</th>
-                          <th className="text-center px-4 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Marks</th>
-                          <th className="text-center px-4 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Percentage</th>
-                          <th className="text-center px-6 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Grade</th>
+                          <th className="text-start px-6 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("student.exams.colExamSubject")}</th>
+                          <th className="text-center px-4 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("student.exams.colMarks")}</th>
+                          <th className="text-center px-4 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("student.exams.colPercentage")}</th>
+                          <th className="text-center px-6 py-4 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("student.exams.colGrade")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/20">

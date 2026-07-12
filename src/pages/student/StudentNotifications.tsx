@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNotificationsContext } from "@/contexts/NotificationsContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,12 +68,21 @@ function formatTime(time: string): string {
 }
 
 export default function StudentNotifications() {
+  const { t } = useTranslation();
   const { notifications, unreadCount, markAllRead, markRead } = useNotificationsContext();
   const { role } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<CategoryTab>("All");
   const [marking, setMarking] = useState(false);
   const [search, setSearch] = useState("");
+
+  const tabLabels: Record<CategoryTab, string> = {
+    All: t("student.notifications.tabAll"),
+    Assignments: t("student.notifications.tabAssignments"),
+    Exams: t("student.notifications.tabExams"),
+    Attendance: t("student.notifications.tabAttendance"),
+    Announcements: t("student.notifications.tabAnnouncements"),
+  };
 
   const loading = !notifications;
 
@@ -110,9 +120,9 @@ export default function StudentNotifications() {
               <Bell className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Notifications</h1>
+              <h1 className="text-2xl font-bold text-slate-800">{t("student.notifications.pageTitle")}</h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                Student Portal · Your alerts and updates
+                {t("student.notifications.pageSubtitle")}
               </p>
             </div>
           </div>
@@ -122,9 +132,9 @@ export default function StudentNotifications() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-[#9810fa] text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
           >
             <CheckCheck className="w-4 h-4" />
-            {marking ? "Marking…" : "Mark all read"}
+            {marking ? t("student.notifications.marking") : t("student.notifications.markAllRead")}
             {unreadCount > 0 && (
-              <span className="ml-1 bg-white text-[#9810fa] text-xs font-bold rounded-full px-1.5 py-0.5 leading-none">
+              <span className="ms-1 bg-white text-[#9810fa] text-xs font-bold rounded-full px-1.5 py-0.5 leading-none">
                 {unreadCount}
               </span>
             )}
@@ -133,12 +143,12 @@ export default function StudentNotifications() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notifications…"
-            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
+            placeholder={t("student.notifications.searchPlaceholder")}
+            className="w-full h-10 ps-9 pe-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
           />
         </div>
 
@@ -154,7 +164,7 @@ export default function StudentNotifications() {
                   : "bg-white text-slate-600 border border-slate-200 hover:border-purple-300 hover:text-purple-700"
               }`}
             >
-              {tab}
+              {tabLabels[tab]}
             </button>
           ))}
         </div>
@@ -180,11 +190,11 @@ export default function StudentNotifications() {
             <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mb-4">
               <Bell className="w-7 h-7 text-purple-400" />
             </div>
-            <p className="text-slate-600 font-medium">No notifications yet</p>
+            <p className="text-slate-600 font-medium">{t("student.notifications.emptyTitle")}</p>
             <p className="text-slate-400 text-sm mt-1">
               {activeTab === "All"
-                ? "You're all caught up!"
-                : `No ${activeTab.toLowerCase()} notifications.`}
+                ? t("student.notifications.emptyAll")
+                : t("student.notifications.emptyCategory", { category: tabLabels[activeTab] })}
             </p>
           </div>
         ) : (
@@ -203,7 +213,7 @@ export default function StudentNotifications() {
                 >
                   {/* Unread dot */}
                   {isUnread && (
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span className="absolute start-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-purple-600" />
                   )}
 
                   {/* Icon */}
@@ -218,7 +228,7 @@ export default function StudentNotifications() {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0 pl-1">
+                  <div className="flex-1 min-w-0 ps-1">
                     <p
                       className={`text-sm leading-snug ${
                         isUnread

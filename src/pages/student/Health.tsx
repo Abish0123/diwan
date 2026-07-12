@@ -11,8 +11,10 @@ import {
   User, Check, ChevronRight
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 function InfoRow({ label, value, icon: Icon, highlight }: { label: string; value?: string | null; icon?: any; highlight?: string }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between py-3.5 border-b border-slate-50 dark:border-slate-800/20 last:border-none">
       <div className="flex items-center gap-3">
@@ -23,14 +25,15 @@ function InfoRow({ label, value, icon: Icon, highlight }: { label: string; value
         )}
         <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{label}</span>
       </div>
-      <span className={cn("text-xs font-black text-right max-w-[200px] truncate", highlight || "text-slate-800 dark:text-slate-200")}>
-        {value || "Not recorded"}
+      <span className={cn("text-xs font-black text-end max-w-[200px] truncate", highlight || "text-slate-800 dark:text-slate-200")}>
+        {value || t('student.health.notRecorded')}
       </span>
     </div>
   );
 }
 
 export default function StudentHealth() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const [healthRecord, setHealthRecord] = useState<any>(null);
@@ -78,29 +81,29 @@ export default function StudentHealth() {
           {/* Header */}
           <div>
             <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <Heart className="h-5.5 w-5.5 text-rose-500 fill-rose-500/20" /> Medical & Health Records
+              <Heart className="h-5.5 w-5.5 text-rose-500 fill-rose-500/20" /> {t('student.health.pageTitle')}
             </h2>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Official clinic files, vaccination logs, and emergency contact registry.</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('student.health.pageSubtitle')}</p>
           </div>
 
           {/* Top Info Banner */}
           {s && (
             <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm transition-colors">
-              <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="flex items-center gap-4 text-center sm:text-start">
                 <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/20 flex items-center justify-center text-rose-500 text-xl font-black shrink-0 shadow-inner">
                   {s.name?.charAt(0)?.toUpperCase()}
                 </div>
                 <div>
                   <h3 className="font-extrabold text-slate-900 dark:text-white text-base leading-none">{s.name}</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-semibold">Grade {s.grade} · Section {s.section}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-semibold">{t('student.health.gradeSection', { grade: s.grade, section: s.section })}</p>
                 </div>
               </div>
 
               {bloodGroup && (
                 <div className="flex items-center gap-2 bg-rose-500 text-white px-5 py-3 rounded-2xl shrink-0 shadow-md shadow-rose-500/10">
                   <Droplets className="h-5 w-5 fill-white" />
-                  <div className="text-left">
-                    <span className="text-[9px] font-black uppercase tracking-wider block opacity-75 leading-none">Blood Type</span>
+                  <div className="text-start">
+                    <span className="text-[9px] font-black uppercase tracking-wider block opacity-75 leading-none">{t('student.health.bloodType')}</span>
                     <span className="text-sm font-black mt-1.5 block leading-none">{bloodGroup}</span>
                   </div>
                 </div>
@@ -115,9 +118,9 @@ export default function StudentHealth() {
                 <ShieldAlert className="h-5 w-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="font-extrabold text-amber-800 dark:text-amber-400 text-sm leading-tight">Critical Medical Advisory</h4>
-                {allergies && <p className="text-xs text-amber-700 dark:text-amber-300">Allergies: <span className="font-extrabold">{allergies}</span></p>}
-                {conditions && <p className="text-xs text-amber-700 dark:text-amber-300">Chronic Conditions: <span className="font-extrabold">{conditions}</span></p>}
+                <h4 className="font-extrabold text-amber-800 dark:text-amber-400 text-sm leading-tight">{t('student.health.criticalAdvisory')}</h4>
+                {allergies && <p className="text-xs text-amber-700 dark:text-amber-300">{t('student.health.allergiesLabel')}: <span className="font-extrabold">{allergies}</span></p>}
+                {conditions && <p className="text-xs text-amber-700 dark:text-amber-300">{t('student.health.chronicConditionsLabel')}: <span className="font-extrabold">{conditions}</span></p>}
               </div>
             </div>
           )}
@@ -127,14 +130,14 @@ export default function StudentHealth() {
             <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-800/20">
                 <Activity className="h-4.5 w-4.5 text-purple-600" />
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">Vital Information</h3>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">{t('student.health.vitalInformation')}</h3>
               </div>
-              
+
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20">
-                <InfoRow label="Blood Group" value={bloodGroup} icon={Droplets} highlight="text-rose-600 dark:text-rose-400 font-black text-sm" />
-                <InfoRow label="Known Allergies" value={allergies} icon={ShieldAlert} highlight={allergies ? "text-amber-600 dark:text-amber-400 font-bold" : undefined} />
-                <InfoRow label="Chronic Diseases" value={conditions} icon={Heart} />
-                <InfoRow label="Current Prescription" value={medications} icon={FileText} />
+                <InfoRow label={t('student.health.bloodGroup')} value={bloodGroup} icon={Droplets} highlight="text-rose-600 dark:text-rose-400 font-black text-sm" />
+                <InfoRow label={t('student.health.knownAllergies')} value={allergies} icon={ShieldAlert} highlight={allergies ? "text-amber-600 dark:text-amber-400 font-bold" : undefined} />
+                <InfoRow label={t('student.health.chronicDiseases')} value={conditions} icon={Heart} />
+                <InfoRow label={t('student.health.currentPrescription')} value={medications} icon={FileText} />
               </div>
             </div>
 
@@ -142,14 +145,14 @@ export default function StudentHealth() {
             <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-800/20">
                 <Phone className="h-4.5 w-4.5 text-purple-600" />
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">Emergency contacts</h3>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">{t('student.health.emergencyContacts')}</h3>
               </div>
 
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20">
-                <InfoRow label="Emergency Contact" value={emergencyContact} icon={User} />
-                <InfoRow label="Emergency Phone" value={emergencyPhone} icon={Phone} />
-                <InfoRow label="Primary Doctor" value={doctorName} icon={Shield} />
-                <InfoRow label="Doctor Phone" value={doctorPhone} icon={Phone} />
+                <InfoRow label={t('student.health.emergencyContact')} value={emergencyContact} icon={User} />
+                <InfoRow label={t('student.health.emergencyPhone')} value={emergencyPhone} icon={Phone} />
+                <InfoRow label={t('student.health.primaryDoctor')} value={doctorName} icon={Shield} />
+                <InfoRow label={t('student.health.doctorPhone')} value={doctorPhone} icon={Phone} />
               </div>
             </div>
           </div>
@@ -159,7 +162,7 @@ export default function StudentHealth() {
             <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] p-6 space-y-4 shadow-sm">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-50 dark:border-slate-800/20">
                 <Syringe className="h-4.5 w-4.5 text-purple-600" />
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">Immunization Log</h3>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">{t('student.health.immunizationLog')}</h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -178,7 +181,7 @@ export default function StudentHealth() {
                         )}
                       </div>
                     </div>
-                    {v.dose && <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 border-none font-bold text-[9px]">Dose {v.dose}</Badge>}
+                    {v.dose && <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 border-none font-bold text-[9px]">{t('student.health.doseLabel', { dose: v.dose })}</Badge>}
                   </div>
                 ))}
               </div>
@@ -189,24 +192,24 @@ export default function StudentHealth() {
           <div className="bg-white dark:bg-[#16162A] border border-slate-100 dark:border-slate-800/40 rounded-[24px] overflow-hidden transition-colors shadow-sm">
             <div className="px-6 py-5 border-b border-slate-50 dark:border-slate-800/20 flex items-center gap-2">
               <Clock className="h-4.5 w-4.5 text-purple-600" />
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">Nurse Room Visit History</h3>
+              <h3 className="font-extrabold text-slate-900 dark:text-white text-sm">{t('student.health.nurseVisitHistory')}</h3>
             </div>
 
             {nurseVisits.length === 0 ? (
-              <div className="py-14 text-center text-xs text-slate-400 bg-transparent">No visits logged. Student health is optimal!</div>
+              <div className="py-14 text-center text-xs text-slate-400 bg-transparent">{t('student.health.noVisitsLogged')}</div>
             ) : (
               <div className="divide-y divide-slate-50 dark:divide-slate-800/20">
                 {nurseVisits.map((v, idx) => (
                   <div key={idx} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                       <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-sm leading-tight">
-                        {v.reason || v.complaint || "Routine Evaluation"}
+                        {v.reason || v.complaint || t('student.health.routineEvaluation')}
                       </h4>
-                      {v.treatment && <p className="text-xs text-slate-400 dark:text-slate-500">Treatment: {v.treatment}</p>}
-                      {v.notes && <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-1">Notes: {v.notes}</p>}
+                      {v.treatment && <p className="text-xs text-slate-400 dark:text-slate-500">{t('student.health.treatmentLabel')}: {v.treatment}</p>}
+                      {v.notes && <p className="text-[11px] text-slate-400 dark:text-slate-500 italic mt-1">{t('student.health.notesLabel')}: {v.notes}</p>}
                     </div>
 
-                    <div className="text-left sm:text-right shrink-0">
+                    <div className="text-start sm:text-end shrink-0">
                       <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
                         {v.date && new Date(v.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                       </p>

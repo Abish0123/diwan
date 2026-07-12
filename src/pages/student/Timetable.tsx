@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+﻿import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "@/lib/socket";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -10,6 +10,7 @@ import { filterAnnouncementsForViewer } from "@/lib/announcementAudience";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight,
   CalendarDays, List, LayoutGrid, GraduationCap, User, Info, Bell, Video,
@@ -75,22 +76,22 @@ const SLOTS: SlotType[] = [
 
 /* Pastel color map keyed by subject prefix */
 const SUBJECT_COLORS: Record<string, { bg: string; text: string; dot: string; border: string }> = {
-  English:        { bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-500",    border: "border-l-blue-400" },
-  Mathematics:    { bg: "bg-emerald-50",  text: "text-emerald-700", dot: "bg-emerald-500", border: "border-l-emerald-400" },
-  Science:        { bg: "bg-amber-50",    text: "text-amber-700",   dot: "bg-amber-500",   border: "border-l-amber-400" },
-  "Social Studies": { bg: "bg-indigo-50", text: "text-indigo-700",  dot: "bg-indigo-500",  border: "border-l-indigo-400" },
-  Hindi:          { bg: "bg-rose-50",     text: "text-rose-700",    dot: "bg-rose-500",    border: "border-l-rose-400" },
-  Computers:      { bg: "bg-sky-50",      text: "text-sky-700",     dot: "bg-sky-500",     border: "border-l-sky-400" },
-  Computer:       { bg: "bg-sky-50",      text: "text-sky-700",     dot: "bg-sky-500",     border: "border-l-sky-400" },
-  Art:            { bg: "bg-pink-50",     text: "text-pink-700",    dot: "bg-pink-500",    border: "border-l-pink-400" },
-  "Physical Edu.": { bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-500",  border: "border-l-orange-400" },
-  Library:        { bg: "bg-violet-50",   text: "text-violet-700",  dot: "bg-violet-500",  border: "border-l-violet-400" },
-  Music:          { bg: "bg-teal-50",     text: "text-teal-700",    dot: "bg-teal-500",    border: "border-l-teal-400" },
-  "Life Skills":  { bg: "bg-cyan-50",     text: "text-cyan-700",    dot: "bg-cyan-500",    border: "border-l-cyan-400" },
-  "Value Edu.":   { bg: "bg-slate-100",   text: "text-slate-700",   dot: "bg-slate-500",   border: "border-l-slate-400" },
+  English:        { bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-500",    border: "border-s-blue-400" },
+  Mathematics:    { bg: "bg-emerald-50",  text: "text-emerald-700", dot: "bg-emerald-500", border: "border-s-emerald-400" },
+  Science:        { bg: "bg-amber-50",    text: "text-amber-700",   dot: "bg-amber-500",   border: "border-s-amber-400" },
+  "Social Studies": { bg: "bg-indigo-50", text: "text-indigo-700",  dot: "bg-indigo-500",  border: "border-s-indigo-400" },
+  Hindi:          { bg: "bg-rose-50",     text: "text-rose-700",    dot: "bg-rose-500",    border: "border-s-rose-400" },
+  Computers:      { bg: "bg-sky-50",      text: "text-sky-700",     dot: "bg-sky-500",     border: "border-s-sky-400" },
+  Computer:       { bg: "bg-sky-50",      text: "text-sky-700",     dot: "bg-sky-500",     border: "border-s-sky-400" },
+  Art:            { bg: "bg-pink-50",     text: "text-pink-700",    dot: "bg-pink-500",    border: "border-s-pink-400" },
+  "Physical Edu.": { bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-500",  border: "border-s-orange-400" },
+  Library:        { bg: "bg-violet-50",   text: "text-violet-700",  dot: "bg-violet-500",  border: "border-s-violet-400" },
+  Music:          { bg: "bg-teal-50",     text: "text-teal-700",    dot: "bg-teal-500",    border: "border-s-teal-400" },
+  "Life Skills":  { bg: "bg-cyan-50",     text: "text-cyan-700",    dot: "bg-cyan-500",    border: "border-s-cyan-400" },
+  "Value Edu.":   { bg: "bg-slate-100",   text: "text-slate-700",   dot: "bg-slate-500",   border: "border-s-slate-400" },
 };
 const colorFor = (subj: string) =>
-  SUBJECT_COLORS[subj] || { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-400", border: "border-l-slate-400" };
+  SUBJECT_COLORS[subj] || { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-400", border: "border-s-slate-400" };
 
 const LEGEND_ORDER = [
   "English", "Mathematics", "Science", "Social Studies", "Hindi", "Computers",
@@ -98,6 +99,15 @@ const LEGEND_ORDER = [
 ];
 
 type Cell = { subject: string; teacher: string; room: string };
+
+/* Translate the fixed break/assembly labels baked into SLOTS (module-level
+   data, defined outside the component so it has no hook access). */
+function translateSlotLabel(t: (k: string) => string, label: string) {
+  if (label === "BREAK") return t("student.timetable.slotBreak");
+  if (label === "LUNCH BREAK") return t("student.timetable.slotLunchBreak");
+  if (label === "Assembly / School Auditorium") return t("student.timetable.slotAssembly");
+  return label;
+}
 
 /* ------------------------------------------------------------------ */
 /* Calendar (May 2026)                                                 */
@@ -116,6 +126,7 @@ function buildCalendar(year: number, month: number) {
 /* ================================================================== */
 
 export default function StudentTimetable() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { students } = useStudents();
@@ -184,11 +195,11 @@ export default function StudentTimetable() {
       notices, "student", [{ grade: student.grade, section: student.section }], student.id ? [student.id] : []
     );
     return visible.slice(0, 4).map((n: any) => ({
-      title: n.title || n.subject || "Notice",
+      title: n.title || n.subject || t("student.timetable.noticeFallback"),
       body: n.content || n.body || n.description || "",
       color: "bg-violet-50 text-purple-600",
     }));
-  }, [notices, student]);
+  }, [notices, student, t]);
 
 
   // Real class teacher for this student's own section, looked up from the
@@ -274,7 +285,7 @@ export default function StudentTimetable() {
     setCurrentWeekStart(getMonday(new Date()));
     const day = new Date().getDay();
     setSelectedDayIdx(day === 0 ? 0 : day - 1);
-    toast.success("Jumped to today");
+    toast.success(t("student.timetable.toastJumpedToday"));
   };
 
   // Load admin timetables — DB first (shared MySQL), fall back to localStorage
@@ -456,12 +467,12 @@ export default function StudentTimetable() {
           teacher: cell.teacher,
           room: cell.room,
           time: slot.time,
-          inTxt: `Period ${periodNo}`,
+          inTxt: t("student.timetable.periodN", { n: periodNo }),
         });
       }
     });
     return list.slice(0, 3);
-  }, [grid, todayColIdx, activeSlots]);
+  }, [grid, todayColIdx, activeSlots, t]);
 
   // Periods for the day Daily/List view is showing (browsable — see selectedDayIdx above).
   const todayPeriods = useMemo(() => {
@@ -497,12 +508,12 @@ export default function StudentTimetable() {
               <CalendarDays className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">My Timetable</h1>
-              <p className="text-sm text-slate-400">Stay on track with your class schedule</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("student.timetable.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("student.timetable.pageSubtitle")}</p>
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Academic Year</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("student.timetable.academicYear")}</label>
             <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 select-none">
               2026-27
             </div>
@@ -513,9 +524,9 @@ export default function StudentTimetable() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-xl p-1 shadow-sm">
             {([
-              { k: "weekly", label: "Weekly View", icon: LayoutGrid },
-              { k: "daily",  label: "Daily View",  icon: CalendarIcon },
-              { k: "list",   label: "List View",   icon: List },
+              { k: "weekly", label: t("student.timetable.weeklyView"), icon: LayoutGrid },
+              { k: "daily",  label: t("student.timetable.dailyView"),  icon: CalendarIcon },
+              { k: "list",   label: t("student.timetable.listView"),   icon: List },
             ] as const).map((t) => (
               <button
                 key={t.k}
@@ -535,20 +546,20 @@ export default function StudentTimetable() {
               onClick={handleJumpToToday}
               className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
             >
-              Today
+              {t("student.timetable.today")}
             </button>
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevWeek}
                 className="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 text-slate-500 cursor-pointer"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
               </button>
               <button
                 onClick={handleNextWeek}
                 className="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 text-slate-500 cursor-pointer"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 rtl:rotate-180" />
               </button>
             </div>
             <span className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 select-none">
@@ -566,11 +577,11 @@ export default function StudentTimetable() {
             <div>
               <p className="font-bold text-slate-900 text-base leading-tight">{gradeLabel}</p>
               <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                <span className="flex items-center gap-1"><User className="h-3.5 w-3.5 text-slate-400" /> Class Teacher: {classTeacherName || "Not assigned"}</span>
+                <span className="flex items-center gap-1"><User className="h-3.5 w-3.5 text-slate-400" /> {t("student.timetable.classTeacherLabel", { name: classTeacherName || t("student.timetable.notAssigned") })}</span>
               </div>
               {isSampleTimetable && (
                 <p className="flex items-center gap-1 mt-1.5 text-[11px] font-medium text-amber-600">
-                  <Info className="h-3 w-3 flex-shrink-0" /> Showing sample timetable — your class is not assigned yet.
+                  <Info className="h-3 w-3 flex-shrink-0" /> {t("student.timetable.sampleTimetableNotice")}
                 </p>
               )}
             </div>
@@ -581,7 +592,7 @@ export default function StudentTimetable() {
                 <CalendarIcon className="h-4 w-4 text-purple-600" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-400 leading-tight">Current Week</p>
+                <p className="text-[11px] text-slate-400 leading-tight">{t("student.timetable.currentWeek")}</p>
                 <p className="text-sm font-semibold text-slate-700">{weekRangeStr}</p>
               </div>
             </div>
@@ -590,8 +601,8 @@ export default function StudentTimetable() {
                 <Clock className="h-4 w-4 text-emerald-600" />
               </div>
               <div>
-                <p className="text-[11px] text-slate-400 leading-tight">School Timing</p>
-                <p className="text-sm font-semibold text-slate-700">08:00 AM - 02:30 PM</p>
+                <p className="text-[11px] text-slate-400 leading-tight">{t("student.timetable.schoolTiming")}</p>
+                <p className="text-sm font-semibold text-slate-700">{t("student.timetable.schoolTimingValue")}</p>
               </div>
             </div>
           </div>
@@ -610,7 +621,7 @@ export default function StudentTimetable() {
                   <table className="w-full text-xs border-collapse min-w-[760px]">
                     <thead>
                       <tr className="bg-slate-50/70 border-b border-slate-100">
-                        <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 w-28">Time</th>
+                        <th className="px-4 py-3 text-start text-[11px] font-semibold text-slate-500 w-28">{t("student.timetable.time")}</th>
                         {weekDaysList.map((d, di) => (
                           <th
                             key={d.day}
@@ -632,9 +643,9 @@ export default function StudentTimetable() {
                             <tr key={si}>
                               <td colSpan={weekDaysList.length + 1} className="px-4 py-2 bg-slate-50/80 text-center">
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                  {slot.label}
+                                  {translateSlotLabel(t, slot.label)}
                                 </span>
-                                <span className="text-[11px] text-slate-400 ml-2">{slot.time}</span>
+                                <span className="text-[11px] text-slate-400 ms-2">{slot.time}</span>
                               </td>
                             </tr>
                           );
@@ -647,8 +658,8 @@ export default function StudentTimetable() {
                               </td>
                               <td colSpan={weekDaysList.length} className="px-3 py-3">
                                 <div className="rounded-lg bg-purple-50 border border-purple-100 px-4 py-2.5 text-center">
-                                  <span className="text-[12px] font-bold text-purple-700">Assembly</span>
-                                  <span className="text-[11px] text-purple-500 ml-2">School Auditorium</span>
+                                  <span className="text-[12px] font-bold text-purple-700">{t("student.timetable.assembly")}</span>
+                                  <span className="text-[11px] text-purple-500 ms-2">{t("student.timetable.schoolAuditorium")}</span>
                                 </div>
                               </td>
                             </tr>
@@ -701,17 +712,17 @@ export default function StudentTimetable() {
                 <div className="flex items-center justify-between mb-4 gap-3">
                   <div className="flex items-center gap-2">
                     <button onClick={handlePrevDay} className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">
-                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                     </button>
                     <h2 className="font-bold text-slate-900 text-sm">{todayDateLabel}</h2>
                     <button onClick={handleNextDay} className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500">
-                      <ChevronRight className="h-3.5 w-3.5" />
+                      <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                     </button>
                   </div>
                   {isViewingActualToday ? (
-                    <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Today</span>
+                    <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">{t("student.timetable.today")}</span>
                   ) : (
-                    <button onClick={handleJumpToToday} className="text-[11px] font-semibold text-purple-600 hover:underline px-2.5 py-1">Jump to Today</button>
+                    <button onClick={handleJumpToToday} className="text-[11px] font-semibold text-purple-600 hover:underline px-2.5 py-1">{t("student.timetable.jumpToToday")}</button>
                   )}
                 </div>
                 <div className="space-y-2.5">
@@ -720,23 +731,23 @@ export default function StudentTimetable() {
                       return (
                         <div key={i} className="flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-2.5">
                           <span className="text-base">☕</span>
-                          <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">{slot.label}</span>
-                          <span className="text-[11px] text-slate-400 ml-auto">{slot.time}</span>
+                          <span className="text-[12px] font-bold uppercase tracking-wider text-slate-500">{translateSlotLabel(t, slot.label)}</span>
+                          <span className="text-[11px] text-slate-400 ms-auto">{slot.time}</span>
                         </div>
                       );
                     }
                     if (slot.kind === "assembly") {
                       return (
                         <div key={i} className="flex items-center gap-3 rounded-lg bg-purple-50 border border-purple-100 px-4 py-2.5">
-                          <span className="text-[12px] font-bold text-purple-700">Assembly</span>
-                          <span className="text-[11px] text-purple-500">School Auditorium</span>
-                          <span className="text-[11px] text-purple-400 ml-auto">{slot.time}</span>
+                          <span className="text-[12px] font-bold text-purple-700">{t("student.timetable.assembly")}</span>
+                          <span className="text-[11px] text-purple-500">{t("student.timetable.schoolAuditorium")}</span>
+                          <span className="text-[11px] text-purple-400 ms-auto">{slot.time}</span>
                         </div>
                       );
                     }
                     const c = cell ? colorFor(cell.subject) : colorFor("");
                     return (
-                      <div key={i} className={cn("flex items-center gap-4 rounded-xl border-l-4 bg-white border border-slate-100 px-4 py-3", c.border)}>
+                      <div key={i} className={cn("flex items-center gap-4 rounded-xl border-s-4 bg-white border border-slate-100 px-4 py-3", c.border)}>
                         <div className="w-16 flex-shrink-0">
                           <p className="text-[12px] font-bold text-slate-700">{slot.label}</p>
                         </div>
@@ -744,8 +755,8 @@ export default function StudentTimetable() {
                           <span className={cn("text-[11px] font-bold", c.text)}>{cell ? cell.subject.charAt(0) : "—"}</span>
                         </div>
                         <div className="flex-1">
-                          <p className="font-bold text-slate-900 text-sm leading-tight">{cell ? cell.subject : "Free Period"}</p>
-                          <p className="text-[11px] text-slate-400 flex items-center gap-1">{cell ? <>{cell.teacher} · <RoomLabel room={cell.room} className="text-[11px]" /></> : "No assigned class"}</p>
+                          <p className="font-bold text-slate-900 text-sm leading-tight">{cell ? cell.subject : t("student.timetable.freePeriod")}</p>
+                          <p className="text-[11px] text-slate-400 flex items-center gap-1">{cell ? <>{cell.teacher} · <RoomLabel room={cell.room} className="text-[11px]" /></> : t("student.timetable.noAssignedClass")}</p>
                         </div>
                         <span className="text-[11px] text-slate-400">{slot.time}</span>
                       </div>
@@ -761,24 +772,24 @@ export default function StudentTimetable() {
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 gap-3">
                   <div className="flex items-center gap-2">
                     <button onClick={handlePrevDay} className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500 shrink-0">
-                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                     </button>
-                    <h2 className="font-bold text-slate-900 text-sm">Periods — {todayDateLabel}</h2>
+                    <h2 className="font-bold text-slate-900 text-sm">{t("student.timetable.periodsHeading", { date: todayDateLabel })}</h2>
                     <button onClick={handleNextDay} className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500 shrink-0">
-                      <ChevronRight className="h-3.5 w-3.5" />
+                      <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                     </button>
                   </div>
                   {!isViewingActualToday && (
-                    <button onClick={handleJumpToToday} className="text-[11px] font-semibold text-purple-600 hover:underline shrink-0">Jump to Today</button>
+                    <button onClick={handleJumpToToday} className="text-[11px] font-semibold text-purple-600 hover:underline shrink-0">{t("student.timetable.jumpToToday")}</button>
                   )}
                 </div>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500">Time</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500">Subject</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500">Teacher</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500">Room</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-slate-500">{t("student.timetable.time")}</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-slate-500">{t("student.timetable.subject")}</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-slate-500">{t("student.timetable.teacher")}</th>
+                      <th className="px-5 py-3 text-start text-xs font-semibold text-slate-500">{t("student.timetable.room")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -812,19 +823,19 @@ export default function StudentTimetable() {
             {/* Calendar */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Calendar</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.timetable.calendar")}</h3>
                 <div className="flex items-center gap-1">
                   <button onClick={handlePrevMonth} className="w-6 h-6 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500 cursor-pointer">
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                   </button>
                   <button onClick={handleNextMonth} className="w-6 h-6 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-500 cursor-pointer">
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                   </button>
                 </div>
               </div>
               <p className="text-center text-xs font-semibold text-slate-700 mb-2">{calendar.label}</p>
               <div className="grid grid-cols-7 gap-1 mb-1">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                {[t("student.timetable.daySun"), t("student.timetable.dayMon"), t("student.timetable.dayTue"), t("student.timetable.dayWed"), t("student.timetable.dayThu"), t("student.timetable.dayFri"), t("student.timetable.daySat")].map((d) => (
                   <div key={d} className="text-center text-[9px] font-bold text-slate-400 py-1">{d}</div>
                 ))}
               </div>
@@ -839,7 +850,7 @@ export default function StudentTimetable() {
                       onClick={() => {
                         const sel = new Date(calYear, calMonth, day);
                         setCurrentWeekStart(getMonday(sel));
-                        toast.success(`Viewing week of ${sel.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
+                        toast.success(t("student.timetable.toastViewingWeekOf", { date: sel.toLocaleDateString("en-US", { month: "short", day: "numeric" }) }));
                       }}
                       className={cn(
                         "relative aspect-square rounded-lg text-[11px] font-semibold flex items-center justify-center transition-colors cursor-pointer",
@@ -857,15 +868,15 @@ export default function StudentTimetable() {
             {/* Upcoming Classes */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Today's Classes</h3>
-                <button onClick={() => setView("list")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.timetable.todaysClasses")}</h3>
+                <button onClick={() => setView("list")} className="text-xs text-purple-600 font-semibold hover:underline">{t("student.timetable.viewAll")}</button>
               </div>
               <div className="space-y-2.5">
                 {upcomingClasses.length > 0 ? (
                   upcomingClasses.map((u, i) => {
                     const c = colorFor(u.subject);
                     return (
-                      <div key={i} className={cn("rounded-lg border-l-4 bg-slate-50/60 px-3 py-2.5", c.border)}>
+                      <div key={i} className={cn("rounded-lg border-s-4 bg-slate-50/60 px-3 py-2.5", c.border)}>
                         <div className="flex items-center justify-between">
                           <p className="font-bold text-slate-900 text-[13px] leading-tight">{u.subject}</p>
                           <span className="text-[10px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">{u.inTxt}</span>
@@ -876,7 +887,7 @@ export default function StudentTimetable() {
                     );
                   })
                 ) : (
-                  <div className="text-center py-4 text-xs text-slate-400">No classes scheduled for today.</div>
+                  <div className="text-center py-4 text-xs text-slate-400">{t("student.timetable.noClassesToday")}</div>
                 )}
               </div>
             </div>
@@ -884,11 +895,11 @@ export default function StudentTimetable() {
             {/* Today's Notices */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Today's Notices</h3>
-                <button onClick={() => navigate("/communication/announcements")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                <h3 className="font-bold text-slate-900 text-sm">{t("student.timetable.todaysNotices")}</h3>
+                <button onClick={() => navigate("/communication/announcements")} className="text-xs text-purple-600 font-semibold hover:underline">{t("student.timetable.viewAll")}</button>
               </div>
               {displayNotices.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-2">No notices today</p>
+                <p className="text-sm text-slate-400 text-center py-2">{t("student.timetable.noNoticesToday")}</p>
               ) : (
                 <div className="space-y-2.5">
                   {displayNotices.map((n, i) => (
@@ -912,7 +923,7 @@ export default function StudentTimetable() {
         {/* Footer note */}
         <div className="flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-100 px-4 py-3">
           <Info className="h-4 w-4 text-slate-400 flex-shrink-0" />
-          <p className="text-xs text-slate-500">Timetable is subject to change. Please check regularly for updates.</p>
+          <p className="text-xs text-slate-500">{t("student.timetable.footerNote")}</p>
         </div>
       </div>
     </DashboardLayout>

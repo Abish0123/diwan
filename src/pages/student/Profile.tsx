@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const AVATAR_OPTIONS = [
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Aarav",
@@ -39,6 +40,7 @@ function InfoField({ label, value, icon: Icon }: { label: string; value?: string
 }
 
 export default function StudentProfile() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { students } = useStudents();
   const [activeTab, setActiveTab] = useState<"academic" | "personal" | "family">("academic");
@@ -73,9 +75,9 @@ export default function StudentProfile() {
     if (!user?.uid) return;
     try {
       await userRepository.update(user.uid, { photoURL: url } as any);
-      toast.success("Profile avatar updated successfully!");
+      toast.success(t("student.profile.avatarUpdateSuccess"));
     } catch {
-      toast.error("Failed to save avatar");
+      toast.error(t("student.profile.avatarUpdateError"));
     }
   };
 
@@ -85,7 +87,7 @@ export default function StudentProfile() {
         <div className="min-h-screen bg-[#F8F9FD] dark:bg-[#09090E] -m-6 p-6 pb-12 flex items-center justify-center transition-colors">
           <div className="flex flex-col items-center gap-3 text-slate-400">
             <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#9810fa] animate-spin" />
-            <p className="text-sm font-semibold">Loading profile…</p>
+            <p className="text-sm font-semibold">{t("student.profile.loading")}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -105,31 +107,32 @@ export default function StudentProfile() {
               {/* Profile image with custom editor trigger */}
               <div className="relative group">
                 <div className="w-24 h-24 rounded-[20px] bg-white dark:bg-[#16162A] p-1 border-4 border-white dark:border-[#16162A] shadow-md overflow-hidden flex items-center justify-center">
-                  <img src={avatar} alt="Student Avatar" className="w-full h-full object-cover rounded-[16px]" />
+                  <img src={avatar} alt={t("student.profile.avatarAlt")} className="w-full h-full object-cover rounded-[16px]" />
                 </div>
-                <button 
+                <button
                   onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                  className="absolute bottom-1 right-1 bg-[#9810fa] text-white p-1.5 rounded-lg border-2 border-white dark:border-[#16162A] hover:bg-[#d12386] transition-colors shadow-md outline-none"
-                  title="Change avatar"
+                  className="absolute bottom-1 end-1 bg-[#9810fa] text-white p-1.5 rounded-lg border-2 border-white dark:border-[#16162A] hover:bg-[#d12386] transition-colors shadow-md outline-none"
+                  title={t("student.profile.changeAvatarTitle")}
                 >
                   <Camera className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              <div className="flex-1 text-center md:text-left pt-2 md:pt-0">
+              <div className="flex-1 text-center md:text-start pt-2 md:pt-0">
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
-                  {s?.name || user?.displayName || "Student"}
+                  {s?.name || user?.displayName || t("student.profile.defaultStudentName")}
                 </h2>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-2">
                   {s?.grade && (
                     <Badge className="bg-violet-50 text-violet-700 dark:bg-violet-950/20 dark:text-violet-400 border-none text-[10px] font-bold py-1">
-                      Grade {s.grade}
-                      {s.section ? ` · Section ${s.section}` : ""}
+                      {s.section
+                        ? t("student.profile.gradeSectionBadge", { grade: s.grade, section: s.section })
+                        : t("student.profile.gradeBadge", { grade: s.grade })}
                     </Badge>
                   )}
                   {s?.rollNumber && (
                     <Badge className="bg-sky-50 text-sky-700 dark:bg-sky-950/20 dark:text-sky-400 border-none text-[10px] font-bold py-1">
-                      Roll #{s.rollNumber}
+                      {t("student.profile.rollBadge", { roll: s.rollNumber })}
                     </Badge>
                   )}
                   {s?.status && (
@@ -150,7 +153,7 @@ export default function StudentProfile() {
                   exit={{ height: 0, opacity: 0 }}
                   className="px-8 pb-6 border-t border-slate-50 dark:border-slate-800/20 pt-4 bg-slate-55/10 dark:bg-slate-800/5"
                 >
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">Choose a profile character avatar:</p>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">{t("student.profile.chooseAvatarPrompt")}</p>
                   <div className="flex flex-wrap gap-4">
                     {AVATAR_OPTIONS.map((opt, i) => (
                       <button
@@ -161,7 +164,7 @@ export default function StudentProfile() {
                           avatar === opt ? "border-[#9810fa] bg-violet-50" : "border-slate-200"
                         )}
                       >
-                        <img src={opt} className="w-full h-full object-contain rounded-lg" alt="Avatar option" />
+                        <img src={opt} className="w-full h-full object-contain rounded-lg" alt={t("student.profile.avatarOptionAlt")} />
                       </button>
                     ))}
                   </div>
@@ -173,9 +176,9 @@ export default function StudentProfile() {
           {/* Navigation Tabs */}
           <div className="flex gap-1.5 bg-white dark:bg-[#16162A] rounded-2xl p-1.5 border border-slate-100 dark:border-slate-800/40 w-fit transition-colors shadow-sm">
             {[
-              { id: "academic", label: "Academic Info", icon: GraduationCap },
-              { id: "personal", label: "Personal Info", icon: User },
-              { id: "family", label: "Emergency & Contacts", icon: Phone }
+              { id: "academic", label: t("student.profile.tabAcademic"), icon: GraduationCap },
+              { id: "personal", label: t("student.profile.tabPersonal"), icon: User },
+              { id: "family", label: t("student.profile.tabFamily"), icon: Phone }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -203,36 +206,36 @@ export default function StudentProfile() {
           >
             {activeTab === "academic" && (
               <>
-                <InfoField label="Grade/Class" value={s?.grade ? `Grade ${s.grade}` : null} icon={GraduationCap} />
-                <InfoField label="Section / Class Group" value={s?.section ? `Section ${s.section}` : null} icon={Hash} />
-                <InfoField label="Class Roll Number" value={s?.rollNumber} icon={Bookmark} />
-                <InfoField label="Assigned House" value={s?.house} icon={Shield} />
-                <InfoField label="Class Teacher" value={classTeacher} icon={User} />
-                <InfoField label="Grade Coordinator" value={gradeCoordinator} icon={Award} />
-                <InfoField label="Enrollment Admission No." value={s?.admissionNumber || s?.id} icon={Hash} />
-                <InfoField label="Academic Year" value={s?.academicYear || "2026-27"} icon={Calendar} />
+                <InfoField label={t("student.profile.fieldGradeClass")} value={s?.grade ? t("student.profile.gradeBadge", { grade: s.grade }) : null} icon={GraduationCap} />
+                <InfoField label={t("student.profile.fieldSectionGroup")} value={s?.section ? t("student.profile.sectionValue", { section: s.section }) : null} icon={Hash} />
+                <InfoField label={t("student.profile.fieldClassRollNumber")} value={s?.rollNumber} icon={Bookmark} />
+                <InfoField label={t("student.profile.fieldAssignedHouse")} value={s?.house} icon={Shield} />
+                <InfoField label={t("student.profile.fieldClassTeacher")} value={classTeacher} icon={User} />
+                <InfoField label={t("student.profile.fieldGradeCoordinator")} value={gradeCoordinator} icon={Award} />
+                <InfoField label={t("student.profile.fieldAdmissionNo")} value={s?.admissionNumber || s?.id} icon={Hash} />
+                <InfoField label={t("student.profile.fieldAcademicYear")} value={s?.academicYear || "2026-27"} icon={Calendar} />
               </>
             )}
 
             {activeTab === "personal" && (
               <>
-                <InfoField label="Student Full Name" value={s?.name} icon={User} />
-                <InfoField label="Date of Birth" value={s?.dateOfBirth || s?.dob} icon={Calendar} />
-                <InfoField label="Gender Identity" value={s?.gender} icon={UserCircle} />
-                <InfoField label="Blood Group Grouping" value={s?.bloodGroup} icon={AlertCircle} />
-                <InfoField label="Nationality" value={s?.nationality} icon={MapPin} />
-                <InfoField label="Official Religion" value={s?.religion} icon={Shield} />
+                <InfoField label={t("student.profile.fieldFullName")} value={s?.name} icon={User} />
+                <InfoField label={t("student.profile.fieldDateOfBirth")} value={s?.dateOfBirth || s?.dob} icon={Calendar} />
+                <InfoField label={t("student.profile.fieldGender")} value={s?.gender} icon={UserCircle} />
+                <InfoField label={t("student.profile.fieldBloodGroup")} value={s?.bloodGroup} icon={AlertCircle} />
+                <InfoField label={t("student.profile.fieldNationality")} value={s?.nationality} icon={MapPin} />
+                <InfoField label={t("student.profile.fieldReligion")} value={s?.religion} icon={Shield} />
               </>
             )}
 
             {activeTab === "family" && (
               <>
-                <InfoField label="Primary Contact Email" value={s?.email || user?.email} icon={Mail} />
-                <InfoField label="Contact Phone Line" value={s?.phone || s?.contactNumber} icon={Phone} />
-                <InfoField label="Home Address Line" value={s?.address} icon={Home} />
-                <InfoField label="Residential City" value={s?.city} icon={MapPin} />
-                <InfoField label="Parent/Guardian Name" value={s?.fatherName || s?.parentName} icon={User} />
-                <InfoField label="Parent Primary Phone" value={s?.parentPhone || s?.parentContact} icon={Phone} />
+                <InfoField label={t("student.profile.fieldPrimaryEmail")} value={s?.email || user?.email} icon={Mail} />
+                <InfoField label={t("student.profile.fieldContactPhone")} value={s?.phone || s?.contactNumber} icon={Phone} />
+                <InfoField label={t("student.profile.fieldHomeAddress")} value={s?.address} icon={Home} />
+                <InfoField label={t("student.profile.fieldResidentialCity")} value={s?.city} icon={MapPin} />
+                <InfoField label={t("student.profile.fieldParentGuardianName")} value={s?.fatherName || s?.parentName} icon={User} />
+                <InfoField label={t("student.profile.fieldParentPhone")} value={s?.parentPhone || s?.parentContact} icon={Phone} />
               </>
             )}
           </motion.div>

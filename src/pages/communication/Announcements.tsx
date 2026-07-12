@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ import { useParentChildren } from "@/hooks/useParentChildren";
 import { audienceGroupForRole, filterAnnouncementsForViewer, ViewerClass } from "@/lib/announcementAudience";
 
 const Announcements = () => {
+  const { t } = useTranslation();
   const { notices, addNotice, updateNotice, deleteNotice, loading: noticesLoading } = useNotices();
   const { classes } = useClasses();
   const { role, user } = useAuth();
@@ -141,31 +143,31 @@ const Announcements = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Published": return <CheckCircle2 className="h-3 w-3 mr-1" />;
-      case "Draft": return <Edit className="h-3 w-3 mr-1" />;
-      case "Scheduled": return <Clock className="h-3 w-3 mr-1" />;
+      case "Published": return <CheckCircle2 className="h-3 w-3 me-1" />;
+      case "Draft": return <Edit className="h-3 w-3 me-1" />;
+      case "Scheduled": return <Clock className="h-3 w-3 me-1" />;
       default: return null;
     }
   };
 
   const handleCreateOrUpdate = async () => {
     if (!formData.title || !formData.content) {
-      toast.error("Please fill in all required fields");
+      toast.error(t('shared.announcements.toastFillRequired'));
       return;
     }
 
     try {
       if (isEditing && selectedNotice) {
         await updateNotice(selectedNotice.id, formData);
-        toast.success("Announcement updated successfully");
+        toast.success(t('shared.announcements.toastUpdated'));
       } else {
         await addNotice(formData as Omit<Notice, "id" | "uid" | "createdAt" | "views" | "date" | "postedBy">);
-        toast.success("Announcement broadcasted successfully");
+        toast.success(t('shared.announcements.toastBroadcasted'));
       }
       setIsCreateDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast.error("Failed to save announcement");
+      toast.error(t('shared.announcements.toastSaveFailed'));
     }
   };
 
@@ -206,9 +208,9 @@ const Announcements = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this announcement?")) {
+    if (window.confirm(t('shared.announcements.confirmDelete'))) {
       await deleteNotice(id);
-      toast.success("Announcement deleted successfully");
+      toast.success(t('shared.announcements.toastDeleted'));
     }
   };
 
@@ -222,11 +224,11 @@ const Announcements = () => {
               <Megaphone className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Announcements</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{t('shared.announcements.pageTitle')}</h1>
               <p className="text-sm text-slate-400">
                 {canManage
-                  ? "Manage and broadcast school-wide communications."
-                  : "Stay updated with school, grade and section announcements."}
+                  ? t('shared.announcements.subtitleManage')
+                  : t('shared.announcements.subtitleViewer')}
               </p>
             </div>
           </div>
@@ -237,67 +239,67 @@ const Announcements = () => {
             {canManage && (
               <DialogTrigger asChild>
                 <Button className="gradient-primary shadow-lg shadow-primary/20">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Announcement
+                  <Plus className="h-4 w-4 me-2" />
+                  {t('shared.announcements.newAnnouncement')}
                 </Button>
               </DialogTrigger>
             )}
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>{isEditing ? "Edit Announcement" : "Create Announcement"}</DialogTitle>
+                <DialogTitle>{isEditing ? t('shared.announcements.editAnnouncement') : t('shared.announcements.createAnnouncement')}</DialogTitle>
                 <DialogDescription>
-                  Fill in the details below to broadcast a new announcement.
+                  {t('shared.announcements.dialogDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">Title</label>
-                  <Input 
-                    placeholder="Enter announcement title..." 
+                  <label className="text-sm font-medium">{t('shared.announcements.labelTitle')}</label>
+                  <Input
+                    placeholder={t('shared.announcements.placeholderTitle')}
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">Category</label>
-                    <Select 
-                      value={formData.category} 
+                    <label className="text-sm font-medium">{t('shared.announcements.labelCategory')}</label>
+                    <Select
+                      value={formData.category}
                       onValueChange={(value: Notice["category"]) => setFormData({ ...formData, category: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t('shared.announcements.placeholderCategory')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="General">General</SelectItem>
-                        <SelectItem value="Academic">Academic</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="Urgent">Urgent</SelectItem>
+                        <SelectItem value="General">{t('shared.announcements.categoryGeneral')}</SelectItem>
+                        <SelectItem value="Academic">{t('shared.announcements.categoryAcademic')}</SelectItem>
+                        <SelectItem value="Finance">{t('shared.announcements.categoryFinance')}</SelectItem>
+                        <SelectItem value="Event">{t('shared.announcements.categoryEvent')}</SelectItem>
+                        <SelectItem value="Urgent">{t('shared.announcements.categoryUrgent')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">Priority</label>
-                    <Select 
-                      value={formData.priority} 
+                    <label className="text-sm font-medium">{t('shared.announcements.labelPriority')}</label>
+                    <Select
+                      value={formData.priority}
                       onValueChange={(value: Notice["priority"]) => setFormData({ ...formData, priority: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
+                        <SelectValue placeholder={t('shared.announcements.placeholderPriority')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Low">Low</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="High">High</SelectItem>
+                        <SelectItem value="Low">{t('shared.announcements.priorityLow')}</SelectItem>
+                        <SelectItem value="Medium">{t('shared.announcements.priorityMedium')}</SelectItem>
+                        <SelectItem value="High">{t('shared.announcements.priorityHigh')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">Content</label>
-                  <Textarea 
-                    placeholder="Write your announcement message here..." 
+                  <label className="text-sm font-medium">{t('shared.announcements.labelContent')}</label>
+                  <Textarea
+                    placeholder={t('shared.announcements.placeholderContent')}
                     className="min-h-[150px]"
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -305,33 +307,33 @@ const Announcements = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">Target Audience</label>
-                    <Select 
-                      value={formData.targetAudience} 
+                    <label className="text-sm font-medium">{t('shared.announcements.labelTargetAudience')}</label>
+                    <Select
+                      value={formData.targetAudience}
                       onValueChange={(value: Notice["targetAudience"]) => setFormData({ ...formData, targetAudience: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select audience" />
+                        <SelectValue placeholder={t('shared.announcements.placeholderAudience')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="All">All Users</SelectItem>
-                        <SelectItem value="Students">Students Only</SelectItem>
-                        <SelectItem value="Staff">Staff Only</SelectItem>
-                        <SelectItem value="Parents">Parents Only</SelectItem>
+                        <SelectItem value="All">{t('shared.announcements.audienceAll')}</SelectItem>
+                        <SelectItem value="Students">{t('shared.announcements.audienceStudents')}</SelectItem>
+                        <SelectItem value="Staff">{t('shared.announcements.audienceStaff')}</SelectItem>
+                        <SelectItem value="Parents">{t('shared.announcements.audienceParents')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium">Target Class (Optional)</label>
-                    <Select 
-                      value={formData.targetClass || "none"} 
+                    <label className="text-sm font-medium">{t('shared.announcements.labelTargetClass')}</label>
+                    <Select
+                      value={formData.targetClass || "none"}
                       onValueChange={(value) => setFormData({ ...formData, targetClass: value === "none" ? "" : value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select class" />
+                        <SelectValue placeholder={t('shared.announcements.placeholderClass')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None (School-wide)</SelectItem>
+                        <SelectItem value="none">{t('shared.announcements.classNoneSchoolWide')}</SelectItem>
                         {classes.map((cls) => (
                           <SelectItem key={cls.id} value={cls.name}>{cls.name}</SelectItem>
                         ))}
@@ -340,26 +342,26 @@ const Announcements = () => {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">Publish Status</label>
-                  <Select 
-                    value={formData.status} 
+                  <label className="text-sm font-medium">{t('shared.announcements.labelPublishStatus')}</label>
+                  <Select
+                    value={formData.status}
                     onValueChange={(value: Notice["status"]) => setFormData({ ...formData, status: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder={t('shared.announcements.placeholderStatus')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Published">Publish Now</SelectItem>
-                      <SelectItem value="Scheduled">Schedule for Later</SelectItem>
-                      <SelectItem value="Draft">Save as Draft</SelectItem>
+                      <SelectItem value="Published">{t('shared.announcements.statusPublishNow')}</SelectItem>
+                      <SelectItem value="Scheduled">{t('shared.announcements.statusScheduleLater')}</SelectItem>
+                      <SelectItem value="Draft">{t('shared.announcements.statusSaveDraft')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>{t('shared.announcements.cancel')}</Button>
                 <Button onClick={handleCreateOrUpdate}>
-                  {isEditing ? "Update Announcement" : "Broadcast Announcement"}
+                  {isEditing ? t('shared.announcements.updateAnnouncement') : t('shared.announcements.broadcastAnnouncement')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -399,9 +401,9 @@ const Announcements = () => {
                 </div>
                 <DialogFooter className="sm:justify-between items-center">
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Eye className="h-3 w-3" /> {selectedNotice.views} views
+                    <Eye className="h-3 w-3" /> {t('shared.announcements.viewsCount', { count: selectedNotice.views })}
                   </div>
-                  <Button onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+                  <Button onClick={() => setIsViewDialogOpen(false)}>{t('shared.announcements.close')}</Button>
                 </DialogFooter>
               </>
             )}
@@ -414,7 +416,7 @@ const Announcements = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Broadcasts</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared.announcements.statTotalBroadcasts')}</p>
                   <h3 className="text-2xl font-bold mt-1">{visibleNotices.length}</h3>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -427,7 +429,7 @@ const Announcements = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Views</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared.announcements.statTotalViews')}</p>
                   <h3 className="text-2xl font-bold mt-1">
                     {visibleNotices.reduce((acc, curr) => acc + (curr.views || 0), 0)}
                   </h3>
@@ -442,7 +444,7 @@ const Announcements = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Urgent</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared.announcements.statActiveUrgent')}</p>
                   <h3 className="text-2xl font-bold mt-1">
                     {visibleNotices.filter(n => n.category === "Urgent" && n.status === "Published").length}
                   </h3>
@@ -457,7 +459,7 @@ const Announcements = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Scheduled</p>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared.announcements.statScheduled')}</p>
                   <h3 className="text-2xl font-bold mt-1">
                     {visibleNotices.filter(n => n.status === "Scheduled").length}
                   </h3>
@@ -476,22 +478,22 @@ const Announcements = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <Tabs defaultValue="all" className="w-full md:w-auto" onValueChange={setActiveTab}>
                 <TabsList className="bg-secondary/50 p-1">
-                  <TabsTrigger value="all" className="text-xs px-4">All</TabsTrigger>
-                  <TabsTrigger value="published" className="text-xs px-4">Published</TabsTrigger>
+                  <TabsTrigger value="all" className="text-xs px-4">{t('shared.announcements.tabAll')}</TabsTrigger>
+                  <TabsTrigger value="published" className="text-xs px-4">{t('shared.announcements.tabPublished')}</TabsTrigger>
                   {audienceGroup === "admin" && (
                     <>
-                      <TabsTrigger value="scheduled" className="text-xs px-4">Scheduled</TabsTrigger>
-                      <TabsTrigger value="draft" className="text-xs px-4">Drafts</TabsTrigger>
+                      <TabsTrigger value="scheduled" className="text-xs px-4">{t('shared.announcements.tabScheduled')}</TabsTrigger>
+                      <TabsTrigger value="draft" className="text-xs px-4">{t('shared.announcements.tabDrafts')}</TabsTrigger>
                     </>
                   )}
                 </TabsList>
               </Tabs>
               <div className="flex items-center gap-2">
                 <div className="relative w-full md:w-64">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search announcements..." 
-                    className="pl-9 h-9 text-sm"
+                  <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('shared.announcements.searchPlaceholder')}
+                    className="ps-9 h-9 text-sm"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -503,24 +505,24 @@ const Announcements = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">Filter by Category</div>
+                    <div className="px-2 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('shared.announcements.filterByCategory')}</div>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("all")}>
-                      All Categories {categoryFilter === "all" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.allCategories')} {categoryFilter === "all" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("General")}>
-                      General {categoryFilter === "General" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.categoryGeneral')} {categoryFilter === "General" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("Academic")}>
-                      Academic {categoryFilter === "Academic" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.categoryAcademic')} {categoryFilter === "Academic" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("Finance")}>
-                      Finance {categoryFilter === "Finance" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.categoryFinance')} {categoryFilter === "Finance" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("Event")}>
-                      Event {categoryFilter === "Event" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.categoryEvent')} {categoryFilter === "Event" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-xs" onClick={() => setCategoryFilter("Urgent")}>
-                      Urgent {categoryFilter === "Urgent" && <CheckCircle2 className="h-3 w-3 ml-auto text-primary" />}
+                      {t('shared.announcements.categoryUrgent')} {categoryFilter === "Urgent" && <CheckCircle2 className="h-3 w-3 ms-auto text-primary" />}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -556,15 +558,15 @@ const Announcements = () => {
                             </Badge>
                             {announcement.priority === "High" && (
                               <Badge className="bg-destructive text-destructive-foreground text-[10px] font-bold uppercase tracking-wider">
-                                High Priority
+                                {t('shared.announcements.highPriority')}
                               </Badge>
                             )}
                             <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-sky-500/30 text-sky-600">
-                              <User className="h-3 w-3 mr-1" /> {announcement.targetAudience || "All"}
+                              <User className="h-3 w-3 me-1" /> {announcement.targetAudience || t('shared.announcements.audienceAll')}
                             </Badge>
                             {announcement.targetClass && (
                               <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider border-primary/30 text-primary">
-                                <GraduationCap className="h-3 w-3 mr-1" /> {announcement.targetClass}
+                                <GraduationCap className="h-3 w-3 me-1" /> {announcement.targetClass}
                               </Badge>
                             )}
                           </div>
@@ -585,7 +587,7 @@ const Announcements = () => {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Eye className="h-3.5 w-3.5" />
-                              {announcement.views} views
+                              {t('shared.announcements.viewsCount', { count: announcement.views })}
                             </div>
                           </div>
                         </div>
@@ -599,27 +601,27 @@ const Announcements = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
                                 <DropdownMenuItem className="text-xs" onClick={() => handleEdit(announcement)}>
-                                  <Edit className="h-3.5 w-3.5 mr-2" /> Edit
+                                  <Edit className="h-3.5 w-3.5 me-2" /> {t('shared.announcements.edit')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-xs" onClick={() => handleView(announcement)}>
-                                  <Eye className="h-3.5 w-3.5 mr-2" /> View Details
+                                  <Eye className="h-3.5 w-3.5 me-2" /> {t('shared.announcements.viewDetails')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-xs text-destructive focus:text-destructive"
                                   onClick={() => handleDelete(announcement.id)}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                                  <Trash2 className="h-3.5 w-3.5 me-2" /> {t('shared.announcements.delete')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
                           <Button
-                            variant="outline" 
-                            size="sm" 
+                            variant="outline"
+                            size="sm"
                             className="h-8 text-xs font-bold"
                             onClick={() => handleView(announcement)}
                           >
-                            View Full
+                            {t('shared.announcements.viewFull')}
                           </Button>
                         </div>
                       </motion.div>
@@ -629,9 +631,9 @@ const Announcements = () => {
                       <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
                         <Search className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-bold">No announcements found</h3>
+                      <h3 className="text-lg font-bold">{t('shared.announcements.emptyTitle')}</h3>
                       <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                        Try adjusting your search or filters to find what you're looking for.
+                        {t('shared.announcements.emptySubtitle')}
                       </p>
                     </div>
                   )}

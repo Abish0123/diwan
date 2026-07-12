@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
@@ -57,30 +58,43 @@ function avatarColor(initials: string): string {
 
 // ── Status badge ───────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: Status }) {
+  const { t } = useTranslation();
   const map: Record<Status, string> = {
     "Due Today": "bg-orange-100 text-orange-700",
     Pending: "bg-blue-100 text-blue-700",
     Overdue: "bg-red-100 text-red-700",
     Completed: "bg-green-100 text-green-700",
   };
+  const labelMap: Record<Status, string> = {
+    "Due Today": t("student.homework.statusDueToday"),
+    Pending: t("student.homework.statusPending"),
+    Overdue: t("student.homework.statusOverdue"),
+    Completed: t("student.homework.statusCompleted"),
+  };
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${map[status]}`}>
       {status === "Completed" && <CheckCircle className="w-3 h-3" />}
-      {status}
+      {labelMap[status]}
     </span>
   );
 }
 
 // ── Relative due badge ─────────────────────────────────────────────────────────
+// Note: "relative" comes from mapHomeworkRow (a plain function outside the
+// component tree, no hook access) and drives both display AND string-matching
+// logic (relative.includes("Overdue")) elsewhere, so the raw English value is
+// kept for the dynamic/pluralized cases (day counts) to avoid breaking that
+// matching. Only the fixed literal labels are translated for display.
 function DueBadge({ relative }: { relative: string }) {
+  const { t } = useTranslation();
   if (relative === "Today")
-    return <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">{relative}</span>;
+    return <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">{t("student.homework.relativeToday")}</span>;
   if (relative === "Tomorrow")
-    return <span className="text-xs font-semibold text-purple-600 bg-blue-50 px-2 py-0.5 rounded-full">{relative}</span>;
+    return <span className="text-xs font-semibold text-purple-600 bg-blue-50 px-2 py-0.5 rounded-full">{t("student.homework.relativeTomorrow")}</span>;
   if (relative.includes("Overdue"))
     return <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{relative}</span>;
   if (relative === "Completed")
-    return <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{relative}</span>;
+    return <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{t("student.homework.relativeCompleted")}</span>;
   return <span className="text-xs font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">{relative}</span>;
 }
 
@@ -159,6 +173,7 @@ const normalizeGrade = (g: any) => String(g ?? "").replace(/grade\s*/i, "").trim
 export default function StudentHomework() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   // Load current user's student profile without uid-scoping (students belong to school,
   // not creator-admin uid). Falls back to first student for demo preview.
@@ -248,11 +263,11 @@ export default function StudentHomework() {
         submittedAt: new Date().toISOString(),
         status: "submitted",
       } as any, id);
-      toast.success("Homework submitted successfully!");
+      toast.success(t("student.homework.toastSubmitSuccess"));
       setSubmitText("");
       await reloadSubmissions(studentProfile.id);
     } catch {
-      toast.error("Failed to submit. Please try again.");
+      toast.error(t("student.homework.toastSubmitError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,10 +306,10 @@ export default function StudentHomework() {
   }, [HOMEWORK, calDate]);
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "all", label: "All Homework" },
-    { key: "pending", label: "Pending" },
-    { key: "completed", label: "Completed" },
-    { key: "overdue", label: "Overdue" },
+    { key: "all", label: t("student.homework.tabAll") },
+    { key: "pending", label: t("student.homework.tabPending") },
+    { key: "completed", label: t("student.homework.tabCompleted") },
+    { key: "overdue", label: t("student.homework.tabOverdue") },
   ];
 
   // ── KPI counts derived from the data (must match the table) ──────────────────
@@ -350,13 +365,13 @@ export default function StudentHomework() {
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Homework</h1>
+              <h1 className="text-2xl font-bold text-slate-800">{t("student.homework.pageTitle")}</h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                View, complete and submit your homework assignments.
+                {t("student.homework.pageSubtitle")}
               </p>
               {usingDemo && (
                 <p className="text-xs text-slate-400 italic mt-1">
-                  Sample homework — nothing published for your class yet.
+                  {t("student.homework.demoNotice")}
                 </p>
               )}
             </div>
@@ -367,81 +382,81 @@ export default function StudentHomework() {
             {/* Total */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Homework</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.homework.kpiTotalLabel")}</span>
                 <span className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
                   <BookOpen className="w-4 h-4 text-purple-600" />
                 </span>
               </div>
               <p className="text-3xl font-bold text-slate-800">{kpi.total}</p>
               <button
-                className="text-purple-600 hover:underline text-xs font-medium text-left"
+                className="text-purple-600 hover:underline text-xs font-medium text-start"
                 onClick={() => { setActiveTab("all"); setTodayOnly(false); }}
               >
-                View All
+                {t("student.homework.viewAll")}
               </button>
             </div>
             {/* Pending */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pending</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.homework.kpiPendingLabel")}</span>
                 <span className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
                   <Clock className="w-4 h-4 text-orange-500" />
                 </span>
               </div>
               <p className="text-3xl font-bold text-slate-800">{kpi.pending}</p>
               <button
-                className="text-purple-600 hover:underline text-xs font-medium text-left"
+                className="text-purple-600 hover:underline text-xs font-medium text-start"
                 onClick={() => { setActiveTab("pending"); setTodayOnly(false); }}
               >
-                View Pending
+                {t("student.homework.viewPending")}
               </button>
             </div>
             {/* Completed */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Completed</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.homework.kpiCompletedLabel")}</span>
                 <span className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center">
                   <CheckCircle className="w-4 h-4 text-green-500" />
                 </span>
               </div>
               <p className="text-3xl font-bold text-slate-800">{kpi.completed}</p>
               <button
-                className="text-purple-600 hover:underline text-xs font-medium text-left"
+                className="text-purple-600 hover:underline text-xs font-medium text-start"
                 onClick={() => { setActiveTab("completed"); setTodayOnly(false); }}
               >
-                View Completed
+                {t("student.homework.viewCompleted")}
               </button>
             </div>
             {/* Due Today */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Due Today</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.homework.kpiDueTodayLabel")}</span>
                 <span className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-blue-500" />
                 </span>
               </div>
               <p className="text-3xl font-bold text-slate-800">{kpi.dueToday}</p>
               <button
-                className="text-purple-600 hover:underline text-xs font-medium text-left"
+                className="text-purple-600 hover:underline text-xs font-medium text-start"
                 onClick={() => { setActiveTab("all"); setTodayOnly(true); }}
               >
-                View Today
+                {t("student.homework.viewToday")}
               </button>
             </div>
             {/* Overdue */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Overdue</span>
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("student.homework.kpiOverdueLabel")}</span>
                 <span className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
                   <AlertCircle className="w-4 h-4 text-red-500" />
                 </span>
               </div>
               <p className="text-3xl font-bold text-slate-800">{kpi.overdue}</p>
               <button
-                className="text-purple-600 hover:underline text-xs font-medium text-left"
+                className="text-purple-600 hover:underline text-xs font-medium text-start"
                 onClick={() => { setActiveTab("overdue"); setTodayOnly(false); }}
               >
-                View Overdue
+                {t("student.homework.viewOverdue")}
               </button>
             </div>
           </div>
@@ -469,12 +484,12 @@ export default function StudentHomework() {
             <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-wrap">
               {/* Search */}
               <div className="relative flex-1 min-w-[180px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search homework..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
+                  placeholder={t("student.homework.searchPlaceholder")}
+                  className="w-full ps-9 pe-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
                 />
               </div>
               {/* Subject filter */}
@@ -520,7 +535,7 @@ export default function StudentHomework() {
                 className="flex items-center gap-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50"
               >
                 <Filter className="w-4 h-4" />
-                Clear
+                {t("student.homework.clearFilters")}
               </button>
             </div>
 
@@ -529,23 +544,23 @@ export default function StudentHomework() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">
-                      Homework
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">
+                      {t("student.homework.colHomework")}
                     </th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
-                      Subject
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
+                      {t("student.homework.colSubject")}
                     </th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
-                      Assigned By
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
+                      {t("student.homework.colAssignedBy")}
                     </th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
-                      Due Date
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
+                      {t("student.homework.colDueDate")}
                     </th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
-                      Status
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
+                      {t("student.homework.colStatus")}
                     </th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
-                      Action
+                    <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">
+                      {t("student.homework.colAction")}
                     </th>
                   </tr>
                 </thead>
@@ -553,7 +568,7 @@ export default function StudentHomework() {
                   {filtered.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center py-10 text-slate-400 text-sm">
-                        No homework found.
+                        {t("student.homework.noHomeworkFound")}
                       </td>
                     </tr>
                   )}
@@ -601,7 +616,7 @@ export default function StudentHomework() {
                             className="flex items-center gap-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition-colors"
                           >
                             <Eye className="w-3 h-3" />
-                            View
+                            {t("student.homework.viewAction")}
                           </button>
                           {hw.attachmentUrl && (
                             <a
@@ -609,7 +624,7 @@ export default function StudentHomework() {
                               download={hw.attachment}
                               target="_blank"
                               rel="noopener noreferrer"
-                              title={`Download ${hw.attachment}`}
+                              title={t("student.homework.downloadTitle", { name: hw.attachment })}
                               className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-purple-600"
                             >
                               <Download className="w-4 h-4" />
@@ -626,15 +641,15 @@ export default function StudentHomework() {
             {/* Pagination */}
             <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
               <span className="text-xs text-slate-500">
-                Showing {filtered.length === 0 ? 0 : 1} to {filtered.length} of {HOMEWORK.length} homework
+                {t("student.homework.paginationShowing", { from: filtered.length === 0 ? 0 : 1, to: filtered.length, total: HOMEWORK.length })}
               </span>
               <div className="flex items-center gap-2">
                 <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40" disabled>
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
                 </button>
                 <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-600 text-white text-xs font-bold">1</span>
                 <button className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40" disabled>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                 </button>
               </div>
             </div>
@@ -646,22 +661,30 @@ export default function StudentHomework() {
           {/* Homework Calendar */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-800">Homework Calendar</h3>
+              <h3 className="text-sm font-bold text-slate-800">{t("student.homework.homeworkCalendar")}</h3>
             </div>
             {/* Month/year */}
             <div className="flex items-center justify-between mb-2">
               <button onClick={() => shiftCal(-1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400">
-                <ChevronLeft className="w-3 h-3" />
+                <ChevronLeft className="w-3 h-3 rtl:rotate-180" />
               </button>
               <span className="text-xs font-bold text-slate-700">{calLabel}</span>
               <button onClick={() => shiftCal(1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400">
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-3 h-3 rtl:rotate-180" />
               </button>
             </div>
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-0.5 mb-1">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                <div key={d} className="text-center text-xs font-semibold text-slate-400 py-0.5">
+              {[
+                t("student.homework.daySu"),
+                t("student.homework.dayMo"),
+                t("student.homework.dayTu"),
+                t("student.homework.dayWe"),
+                t("student.homework.dayTh"),
+                t("student.homework.dayFr"),
+                t("student.homework.daySa"),
+              ].map((d, i) => (
+                <div key={`${d}-${i}`} className="text-center text-xs font-semibold text-slate-400 py-0.5">
                   {d}
                 </div>
               ))}
@@ -695,10 +718,10 @@ export default function StudentHomework() {
             {/* Legend */}
             <div className="flex items-center gap-3 mt-3 text-xs text-slate-500">
               <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full bg-purple-600 inline-block" /> Due
+                <span className="w-3 h-3 rounded-full bg-purple-600 inline-block" /> {t("student.homework.legendDue")}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full border-2 border-orange-400 inline-block" /> Today
+                <span className="w-3 h-3 rounded-full border-2 border-orange-400 inline-block" /> {t("student.homework.legendToday")}
               </span>
             </div>
           </div>
@@ -707,11 +730,11 @@ export default function StudentHomework() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle className="w-4 h-4 text-orange-500" />
-              <h3 className="text-sm font-bold text-slate-800">Due Today ({dueTodayRows.length})</h3>
+              <h3 className="text-sm font-bold text-slate-800">{t("student.homework.dueTodayHeading", { count: dueTodayRows.length })}</h3>
             </div>
             <div className="flex flex-col gap-2">
               {dueTodayRows.length === 0 && (
-                <p className="text-xs text-slate-400 px-1 py-2">Nothing due today.</p>
+                <p className="text-xs text-slate-400 px-1 py-2">{t("student.homework.nothingDueToday")}</p>
               )}
               {dueTodayRows.map((hw) => (
                 <div key={hw.id} className="flex items-start gap-2 p-2.5 bg-orange-50 rounded-xl">
@@ -719,7 +742,7 @@ export default function StudentHomework() {
                   <div>
                     <p className="text-xs font-semibold text-slate-800">{hw.title}</p>
                     <p className="text-xs text-slate-500">{hw.subject}</p>
-                    <p className="text-xs text-orange-600 font-medium mt-0.5">Due: Today</p>
+                    <p className="text-xs text-orange-600 font-medium mt-0.5">{t("student.homework.dueTodayLabel")}</p>
                   </div>
                 </div>
               ))}
@@ -739,54 +762,54 @@ export default function StudentHomework() {
                 <path d="M48 10 L50 14 L54 14 L51 17 L52 21 L48 19 L44 21 L45 17 L42 14 L46 14 Z" fill="#f59e0b" />
               </svg>
             </div>
-            <h3 className="text-sm font-bold text-slate-800 text-center mb-2">Plan your time wisely</h3>
+            <h3 className="text-sm font-bold text-slate-800 text-center mb-2">{t("student.homework.studyTipsTitle")}</h3>
             <ul className="flex flex-col gap-1.5">
               <li className="flex items-start gap-2 text-xs text-slate-600">
                 <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-                Start with the hardest subject first.
+                {t("student.homework.studyTip1")}
               </li>
               <li className="flex items-start gap-2 text-xs text-slate-600">
                 <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-                Take a 5-minute break every 25 minutes.
+                {t("student.homework.studyTip2")}
               </li>
             </ul>
           </div>
 
           {/* Quick Actions */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <h3 className="text-sm font-bold text-slate-800 mb-3">Quick Actions</h3>
+            <h3 className="text-sm font-bold text-slate-800 mb-3">{t("student.homework.quickActionsTitle")}</h3>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => { setActiveTab("completed"); setTodayOnly(false); }}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-purple-50 hover:border-purple-200 transition-colors group"
               >
                 <FileText className="w-5 h-5 text-purple-500 group-hover:text-purple-700" />
-                <span className="text-xs font-medium text-slate-600 group-hover:text-purple-700 text-center leading-tight">My Submissions</span>
+                <span className="text-xs font-medium text-slate-600 group-hover:text-purple-700 text-center leading-tight">{t("student.homework.mySubmissions")}</span>
               </button>
               <button
                 onClick={() => {
-                  if (!nextPendingRow) { toast.success("You're all caught up — nothing pending!"); return; }
+                  if (!nextPendingRow) { toast.success(t("student.homework.allCaughtUpToast")); return; }
                   setSelectedHwId(nextPendingRow.id);
                   setSubmitText("");
                 }}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-green-50 hover:border-green-200 transition-colors group"
               >
                 <Send className="w-5 h-5 text-green-500 group-hover:text-green-700" />
-                <span className="text-xs font-medium text-slate-600 group-hover:text-green-700 text-center leading-tight">Submit Homework</span>
+                <span className="text-xs font-medium text-slate-600 group-hover:text-green-700 text-center leading-tight">{t("student.homework.submitHomeworkAction")}</span>
               </button>
               <button
                 onClick={() => navigate("/communication/messages")}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group"
               >
                 <HelpCircle className="w-5 h-5 text-blue-500 group-hover:text-blue-700" />
-                <span className="text-xs font-medium text-slate-600 group-hover:text-blue-700 text-center leading-tight">Homework Help</span>
+                <span className="text-xs font-medium text-slate-600 group-hover:text-blue-700 text-center leading-tight">{t("student.homework.homeworkHelp")}</span>
               </button>
               <button
                 onClick={() => navigate("/student/notifications")}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-orange-50 hover:border-orange-200 transition-colors group"
               >
                 <Bell className="w-5 h-5 text-orange-500 group-hover:text-orange-700" />
-                <span className="text-xs font-medium text-slate-600 group-hover:text-orange-700 text-center leading-tight">Reminders</span>
+                <span className="text-xs font-medium text-slate-600 group-hover:text-orange-700 text-center leading-tight">{t("student.homework.reminders")}</span>
               </button>
             </div>
           </div>
@@ -794,7 +817,7 @@ export default function StudentHomework() {
           {/* Stay on Top! banner */}
           <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-4 flex items-center gap-3 overflow-hidden relative">
             {/* Background decoration */}
-            <div className="absolute right-2 top-2 opacity-20">
+            <div className="absolute end-2 top-2 opacity-20">
               <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="30" cy="30" r="28" stroke="white" strokeWidth="2" />
                 <path d="M20 40 L20 20 L30 26 L40 20 L40 40" stroke="white" strokeWidth="2" strokeLinejoin="round" />
@@ -816,9 +839,9 @@ export default function StudentHomework() {
               </svg>
             </div>
             <div>
-              <p className="text-white font-bold text-sm leading-tight">Stay on Top!</p>
+              <p className="text-white font-bold text-sm leading-tight">{t("student.homework.stayOnTopTitle")}</p>
               <p className="text-purple-200 text-xs mt-1 leading-relaxed">
-                Complete your homework on time and keep learning every day.
+                {t("student.homework.stayOnTopDesc")}
               </p>
             </div>
           </div>
@@ -833,7 +856,7 @@ export default function StudentHomework() {
               <div>
                 <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">{selectedRow.subject}</p>
                 <h3 className="text-lg font-bold text-slate-900 mt-0.5">{selectedRow.title}</h3>
-                <p className="text-sm text-slate-400">Due: {selectedRow.dueDateDisplay} · {selectedRow.assignedBy}</p>
+                <p className="text-sm text-slate-400">{t("student.homework.modalDueLine", { date: selectedRow.dueDateDisplay, teacher: selectedRow.assignedBy })}</p>
               </div>
               <button onClick={() => setSelectedHwId(null)} className="p-1.5 rounded-lg hover:bg-slate-100 mt-1">
                 <X className="h-4 w-4 text-slate-400" />
@@ -845,19 +868,20 @@ export default function StudentHomework() {
                 <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <CheckCircle className="h-7 w-7 text-emerald-600" />
                 </div>
-                <h4 className="font-bold text-slate-900 mb-1">Already Submitted</h4>
+                <h4 className="font-bold text-slate-900 mb-1">{t("student.homework.alreadySubmittedTitle")}</h4>
                 <p className="text-sm text-slate-400">
-                  You submitted this homework on{" "}
-                  {new Date(getSubmission(selectedRaw.id).submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                  {t("student.homework.alreadySubmittedDesc", {
+                    date: new Date(getSubmission(selectedRaw.id).submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+                  })}
                 </p>
-                <button onClick={() => setSelectedHwId(null)} className="mt-4 h-10 px-6 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">Close</button>
+                <button onClick={() => setSelectedHwId(null)} className="mt-4 h-10 px-6 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">{t("student.homework.closeBtn")}</button>
               </div>
             ) : (
               <>
                 <div className="px-6 py-5 space-y-4">
                   {selectedRow.subtitle && (
                     <div className="bg-slate-50 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-slate-500 mb-1">Description</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">{t("student.homework.descriptionLabel")}</p>
                       <p className="text-sm text-slate-700">{selectedRow.subtitle}</p>
                     </div>
                   )}
@@ -874,24 +898,24 @@ export default function StudentHomework() {
                     </a>
                   )}
                   <div>
-                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">Your Answer / Response</label>
+                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">{t("student.homework.answerLabel")}</label>
                     <textarea
                       value={submitText}
                       onChange={(e) => setSubmitText(e.target.value)}
                       rows={5}
-                      placeholder="Write your answer here..."
+                      placeholder={t("student.homework.answerPlaceholder")}
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"
                     />
                   </div>
                 </div>
                 <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
-                  <button onClick={() => setSelectedHwId(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                  <button onClick={() => setSelectedHwId(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">{t("student.homework.cancelBtn")}</button>
                   <button
                     onClick={handleSubmitHomework}
                     disabled={isSubmitting || !submitText.trim()}
                     className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-60 flex items-center gap-1.5"
                   >
-                    {isSubmitting ? "Submitting..." : (<><Send className="h-3.5 w-3.5" /> Submit Homework</>)}
+                    {isSubmitting ? t("student.homework.submittingBtn") : (<><Send className="h-3.5 w-3.5" /> {t("student.homework.submitHomeworkBtn")}</>)}
                   </button>
                 </div>
               </>

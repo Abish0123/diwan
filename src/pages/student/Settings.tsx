@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { requestNotificationPermission } from '@/lib/pushNotifications';
+import { useTranslation } from 'react-i18next';
 
 // Privacy/Theme/Language/Payment/App nav items were removed — this page
 // never had section-conditional rendering (every card below always
@@ -33,10 +34,17 @@ const NAV_ITEMS = [
 ];
 
 export default function StudentSettings() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { students } = useStudents();
   const [activeSection, setActiveSection] = useState('profile');
+
+  const navLabelKeys: Record<string, string> = {
+    profile: 'student.settings.navProfile',
+    account: 'student.settings.navAccount',
+    notifications: 'student.settings.navNotifications',
+  };
 
   // Real per-account preferences, persisted on the user's own `users` row
   // via the self-write carve-out (server.ts USER_SELF_WRITABLE_FIELDS) —
@@ -67,7 +75,7 @@ export default function StudentSettings() {
     try {
       await userRepository.update(user.uid, { [field]: value } as any);
     } catch {
-      toast.error("Failed to save preference");
+      toast.error(t('student.settings.savePrefFailed'));
     }
   }
 
@@ -82,12 +90,12 @@ export default function StudentSettings() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Couldn't send the reset email — please try again.");
+        toast.error(data.error || t('student.settings.resetEmailFailed'));
         return;
       }
-      toast.success(data.message || "If an account exists for that email, a reset link has been sent.");
+      toast.success(data.message || t('student.settings.resetEmailSent'));
     } catch {
-      toast.error("Couldn't reach the server — please try again.");
+      toast.error(t('student.settings.serverUnreachable'));
     } finally {
       setChangingPassword(false);
     }
@@ -111,7 +119,7 @@ export default function StudentSettings() {
   const parentEmail =
     s?.fatherEmail || s?.motherEmail || s?.guardianEmail || s?.parentEmail || '—';
   const dob = s?.dateOfBirth || s?.dob || '—';
-  const grade = s?.grade ? `Grade ${s.grade}` : '—';
+  const grade = s?.grade ? t('student.settings.gradeLabel', { grade: s.grade }) : '—';
   const section = s?.section || '—';
   const gender = s?.gender || '—';
   const username =
@@ -136,9 +144,9 @@ export default function StudentSettings() {
     setSavingProfile(true);
     try {
       await userRepository.update(user.uid, { name: displayName, displayName, phone: displayPhone } as any);
-      toast.success("Profile updated");
+      toast.success(t('student.settings.profileUpdated'));
     } catch {
-      toast.error("Failed to save profile");
+      toast.error(t('student.settings.profileSaveFailed'));
     } finally {
       setSavingProfile(false);
     }
@@ -164,9 +172,9 @@ export default function StudentSettings() {
             <Settings className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('student.settings.pageTitle')}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Manage your account, preferences and security settings.
+              {t('student.settings.pageSubtitle')}
             </p>
           </div>
         </div>
@@ -185,13 +193,13 @@ export default function StudentSettings() {
                         onClick={() => setActiveSection(item.id)}
                         className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
                           isActive
-                            ? 'text-purple-600 font-semibold border-l-2 border-purple-600 bg-purple-50'
-                            : 'text-gray-600 hover:bg-gray-50 border-l-2 border-transparent'
+                            ? 'text-purple-600 font-semibold border-s-2 border-purple-600 bg-purple-50'
+                            : 'text-gray-600 hover:bg-gray-50 border-s-2 border-transparent'
                         }`}
                       >
                         <span className="flex items-center gap-3">
                           <Icon className="w-4 h-4 shrink-0" />
-                          {item.label}
+                          {t(navLabelKeys[item.id])}
                         </span>
                       </button>
                     </li>
@@ -207,9 +215,9 @@ export default function StudentSettings() {
             {activeSection === 'profile' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
-                <h2 className="text-base font-semibold text-gray-900">Profile Settings</h2>
+                <h2 className="text-base font-semibold text-gray-900">{t('student.settings.profileTitle')}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Update your personal information and profile details.
+                  {t('student.settings.profileSubtitle')}
                 </p>
               </div>
 
@@ -217,15 +225,15 @@ export default function StudentSettings() {
                 {/* Full Name */}
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Full Name
+                    {t('student.settings.fullNameLabel')}
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <User className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={displayName === '—' ? '' : displayName}
                       onChange={(e) => setNameDraft(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      className="w-full ps-9 pe-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     />
                   </div>
                 </div>
@@ -233,19 +241,19 @@ export default function StudentSettings() {
                 {/* Email */}
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Email Address
+                    {t('student.settings.emailAddressLabel')}
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="email"
                       readOnly
                       value={email}
-                      className="w-full pl-9 pr-32 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
+                      className="w-full ps-9 pe-32 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                    <span className="absolute end-3 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                       <CheckCircle className="w-3 h-3" />
-                      Verified
+                      {t('student.settings.verifiedBadge')}
                     </span>
                   </div>
                 </div>
@@ -253,15 +261,15 @@ export default function StudentSettings() {
                 {/* Date of Birth */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Date of Birth
+                    {t('student.settings.dobLabel')}
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       readOnly
                       value={dob}
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
+                      className="w-full ps-9 pe-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -269,7 +277,7 @@ export default function StudentSettings() {
                 {/* Gender */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Gender
+                    {t('student.settings.genderLabel')}
                   </label>
                   <select
                     disabled
@@ -283,16 +291,16 @@ export default function StudentSettings() {
                 {/* Contact Number */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Contact Number
+                    {t('student.settings.contactNumberLabel')}
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={displayPhone === '—' ? '' : displayPhone}
                       onChange={(e) => setPhoneDraft(e.target.value)}
-                      placeholder="Add a contact number"
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      placeholder={t('student.settings.contactNumberPlaceholder')}
+                      className="w-full ps-9 pe-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-200"
                     />
                   </div>
                 </div>
@@ -300,14 +308,14 @@ export default function StudentSettings() {
                 {/* Class */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Class
+                    {t('student.settings.classLabel')}
                   </label>
                   <div className="relative">
-                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <BookOpen className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <select
                       disabled
                       value={grade}
-                      className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none appearance-none"
+                      className="w-full ps-9 pe-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none appearance-none"
                     >
                       <option>{grade}</option>
                     </select>
@@ -317,7 +325,7 @@ export default function StudentSettings() {
                 {/* Section */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Section
+                    {t('student.settings.sectionLabel')}
                   </label>
                   <select
                     disabled
@@ -335,7 +343,7 @@ export default function StudentSettings() {
                   disabled={savingProfile || !profileDirty}
                   className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
                 >
-                  {savingProfile ? "Saving…" : "Save Changes"}
+                  {savingProfile ? t('student.settings.savingButton') : t('student.settings.saveChangesButton')}
                 </button>
               </div>
             </div>
@@ -345,15 +353,15 @@ export default function StudentSettings() {
             {activeSection === 'account' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
-                <h2 className="text-base font-semibold text-gray-900">Account Settings</h2>
+                <h2 className="text-base font-semibold text-gray-900">{t('student.settings.accountTitle')}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Manage your account preferences.
+                  {t('student.settings.accountSubtitle')}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('student.settings.usernameLabel')}</label>
                   <input
                     type="text"
                     readOnly
@@ -362,7 +370,7 @@ export default function StudentSettings() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Student ID</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('student.settings.studentIdLabel')}</label>
                   <input
                     type="text"
                     readOnly
@@ -372,7 +380,7 @@ export default function StudentSettings() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Parent/Guardian Email
+                    {t('student.settings.parentEmailLabel')}
                   </label>
                   <input
                     type="email"
@@ -382,13 +390,13 @@ export default function StudentSettings() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t('student.settings.passwordLabel')}</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="password"
                       readOnly
                       value="••••••••"
-                      aria-label="Password (hidden)"
+                      aria-label={t('student.settings.passwordHiddenAria')}
                       className="flex-1 px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none"
                     />
                     <button
@@ -397,10 +405,10 @@ export default function StudentSettings() {
                       className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-purple-600 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors disabled:opacity-60"
                     >
                       <Lock className="w-4 h-4" />
-                      {changingPassword ? "Sending…" : "Change Password"}
+                      {changingPassword ? t('student.settings.sendingButton') : t('student.settings.changePasswordButton')}
                     </button>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">We'll email a reset link to {email}.</p>
+                  <p className="text-[11px] text-gray-400 mt-1.5">{t('student.settings.resetEmailNote', { email })}</p>
                 </div>
               </div>
             </div>
@@ -410,9 +418,9 @@ export default function StudentSettings() {
             {activeSection === 'notifications' && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="mb-5">
-                <h2 className="text-base font-semibold text-gray-900">Notification Settings</h2>
+                <h2 className="text-base font-semibold text-gray-900">{t('student.settings.notificationsTitle')}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Choose how you want to receive notifications.
+                  {t('student.settings.notificationsSubtitle')}
                 </p>
               </div>
 
@@ -421,7 +429,7 @@ export default function StudentSettings() {
                 <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
                   <div className="flex items-center gap-3">
                     <Mail className="w-5 h-5 text-purple-500" />
-                    <p className="text-sm font-medium text-gray-800">Email Notifications</p>
+                    <p className="text-sm font-medium text-gray-800">{t('student.settings.emailNotifLabel')}</p>
                   </div>
                   <button
                     onClick={() => { const v = !emailNotif; setEmailNotif(v); updateNotifPref("emailNotif", v); }}
@@ -430,7 +438,7 @@ export default function StudentSettings() {
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      className={`absolute top-0.5 start-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                         emailNotif ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -441,7 +449,7 @@ export default function StudentSettings() {
                 <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
                   <div className="flex items-center gap-3">
                     <Smartphone className="w-5 h-5 text-purple-500" />
-                    <p className="text-sm font-medium text-gray-800">SMS Notifications</p>
+                    <p className="text-sm font-medium text-gray-800">{t('student.settings.smsNotifLabel')}</p>
                   </div>
                   <button
                     onClick={() => { const v = !smsNotif; setSmsNotif(v); updateNotifPref("smsNotif", v); }}
@@ -450,7 +458,7 @@ export default function StudentSettings() {
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      className={`absolute top-0.5 start-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                         smsNotif ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -465,8 +473,8 @@ export default function StudentSettings() {
                   <div className="flex items-center gap-3">
                     <Bell className="w-5 h-5 text-purple-500" />
                     <div>
-                      <p className="text-sm font-medium text-gray-800">Push Notifications</p>
-                      <p className="text-xs text-gray-500">In-app + browser alerts (while a tab is open)</p>
+                      <p className="text-sm font-medium text-gray-800">{t('student.settings.pushNotifLabel')}</p>
+                      <p className="text-xs text-gray-500">{t('student.settings.pushNotifDesc')}</p>
                     </div>
                   </div>
                   <button
@@ -474,7 +482,7 @@ export default function StudentSettings() {
                       if (!pushNotif) {
                         const granted = await requestNotificationPermission();
                         if (!granted) {
-                          toast.error("Browser notifications are blocked — enable them in your browser's site settings.");
+                          toast.error(t('student.settings.pushBlocked'));
                           return;
                         }
                       }
@@ -485,7 +493,7 @@ export default function StudentSettings() {
                     }`}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      className={`absolute top-0.5 start-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
                         pushNotif ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -510,23 +518,23 @@ export default function StudentSettings() {
               </p>
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                <span className="text-xs text-green-600 font-medium">Active Account</span>
+                <span className="text-xs text-green-600 font-medium">{t('student.settings.activeAccount')}</span>
               </div>
             </div>
 
             {/* Quick Settings */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="px-4 pt-4 pb-2">
-                <p className="text-sm font-semibold text-gray-800">Quick Settings</p>
+                <p className="text-sm font-semibold text-gray-800">{t('student.settings.quickSettingsTitle')}</p>
               </div>
               <ul>
                 {[
                   {
-                    label: 'Change Password',
+                    label: t('student.settings.quickChangePasswordLabel'),
                     onClick: () => { setActiveSection('account'); handleChangePassword(); },
                   },
                   {
-                    label: 'Notification Preferences',
+                    label: t('student.settings.quickNotificationPrefsLabel'),
                     onClick: () => setActiveSection('notifications'),
                   },
                 ].map((item) => (
@@ -536,7 +544,7 @@ export default function StudentSettings() {
                       className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors border-t border-slate-100"
                     >
                       {item.label}
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400 rtl:rotate-180" />
                     </button>
                   </li>
                 ))}
@@ -547,15 +555,15 @@ export default function StudentSettings() {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
               <div className="flex items-center gap-2 mb-1">
                 <HelpCircle className="w-4 h-4 text-purple-500" />
-                <p className="text-sm font-semibold text-gray-800">Help &amp; Support</p>
+                <p className="text-sm font-semibold text-gray-800">{t('student.settings.helpSupportTitle')}</p>
               </div>
               <p className="text-xs text-gray-500 mb-3">
-                Need help with your account settings?
+                {t('student.settings.helpSupportDesc')}
               </p>
               <ul className="space-y-2">
                 {[
                   {
-                    label: 'Message School Office',
+                    label: t('student.settings.messageSchoolOfficeLabel'),
                     onClick: () => navigate('/communication/messages'),
                   },
                 ].map((link) => (
