@@ -440,6 +440,53 @@ export async function createHostelFeeInvoice(input: {
 }
 
 /**
+ * Real, per-family delivery for a freshly-generated fee invoice — a private
+ * Notification (parent inbox), a private Notice (Announcements feed), and,
+ * when the due date is a real date, a private Calendar entry. "Private"
+ * here means `recipientStudentId` is set (see announcementAudience.ts):
+ * visible only to staff and to this one real family, never broadcast to the
+ * whole grade/section the way a normal Notice/CalendarEvent is — Notice and
+ * CalendarEvent otherwise have no per-individual targeting, only whole-class
+ * or school-wide, so a naive bridge would leak one family's invoice amount
+ * to their entire class. Deterministic ids keyed off the invoice id make
+ * this safe to call more than once for the same invoice.
+ */
+export async function notifyFeeInvoiceGenerated(invoice: Invoice, uid: string): Promise<void> {
+  const now = new Date().toISOString();
+  const due = new Date(invoice.dueDate);
+  const dueDateOnly = Number.isNaN(due.getTime()) ? undefined : due.toISOString().split("T")[0];
+  const amountText = `QAR ${invoice.amount.toLocaleString()}`;
+
+  await smartDb.create("Notice", {
+    title: `Fee invoice generated — ${invoice.category}`,
+    content: `Invoice ${invoice.invoiceNumber}: ${amountText} due ${dueDateOnly || "soon"}.`,
+    category: "Finance", priority: "Medium", status: "Published",
+    targetAudience: "Parents", targetClass: "",
+    recipientStudentId: invoice.studentId,
+    postedBy: "Finance", date: now.split("T")[0], views: 0, uid,
+  }, `notice-invoice-${invoice.id}`).catch(() => {});
+
+  if (dueDateOnly) {
+    await smartDb.create("CalendarEvent", {
+      title: `Fee due — ${invoice.category}`,
+      description: `Invoice ${invoice.invoiceNumber}: ${amountText}`,
+      date: dueDateOnly, time: "09:00 AM", location: "", category: "Finance", color: "amber",
+      status: "Published", targetAudience: "Parents", targetClass: "",
+      recipientStudentId: invoice.studentId,
+      source: "Finance", createdBy: uid,
+    }, `calendar-invoice-${invoice.id}`).catch(() => {});
+  }
+
+  await smartDb.create("Notification", {
+    id: `notif-invoice-parent-${invoice.id}`,
+    uid, audienceRole: "parent", studentId: invoice.studentId, category: "finance",
+    type: "invoice_generated", title: "New Fee Invoice",
+    message: `A new invoice (${invoice.category}) for ${amountText} has been generated, due ${dueDateOnly || "soon"}.`,
+    createdAt: now, time: now, read: false,
+  }, `notif-invoice-parent-${invoice.id}`).catch(() => {});
+}
+
+/**
  * When an Admission/SchoolFee invoice is paid IN FULL, advance the linked
  * Admissions Lead's pipeline stage the same way the old FinancePendingPayment
  * "Confirm Payment Received" flow used to — now driven by the real invoice

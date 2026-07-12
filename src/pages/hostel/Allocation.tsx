@@ -65,7 +65,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { smartDb } from "@/lib/localDb";
-import { createHostelFeeInvoice } from "@/hooks/useFees";
+import { createHostelFeeInvoice, notifyFeeInvoiceGenerated } from "@/hooks/useFees";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { ChevronsUpDown } from "lucide-react";
@@ -266,6 +266,7 @@ const Allocation = () => {
             message: `${formData.studentName} was allocated room ${formData.room} — invoice ${invoice.invoiceNumber} (QAR ${invoice.amount.toLocaleString()}) generated, awaiting payment.`,
             createdAt: new Date().toISOString(), time: new Date().toISOString(), read: false,
           }, notifId).catch(() => {});
+          notifyFeeInvoiceGenerated(invoice, user?.uid || "").catch(() => {});
         } else {
           const notifId = `notif_${Date.now()}_admin_hostel_needed_${formData.id}`;
           await smartDb.create("Notification", {

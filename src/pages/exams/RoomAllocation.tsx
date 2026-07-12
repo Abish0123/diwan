@@ -4,7 +4,7 @@ import { useExams, examGrades, getGradePlans } from "@/lib/examStore";
 import { useGrades } from "@/contexts/CurriculumContext";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
-import { createExamFeeInvoice } from "@/hooks/useFees";
+import { createExamFeeInvoice, notifyFeeInvoiceGenerated } from "@/hooks/useFees";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -207,7 +207,10 @@ export function RoomAllocationContent({ examId, onExamIdChange }: { examId: stri
             classId: a.grade, className: `${a.grade}${a.section ? "-" + a.section : ""}`,
             examFee: selected.examFee, examName: selected.name,
           });
-          if (inv) created++;
+          if (inv) {
+            created++;
+            notifyFeeInvoiceGenerated(inv, user.uid).catch(() => {});
+          }
         }
         if (created > 0) toast.success(`${created} Exam Fee invoice${created === 1 ? "" : "s"} generated (QAR ${selected.examFee} each)`);
       } catch { /* non-fatal — seating already saved either way */ }

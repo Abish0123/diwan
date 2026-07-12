@@ -12,6 +12,14 @@ export interface AnnouncementAudienceFields {
   status?: string;
   targetAudience?: string; // "All" | "Students" | "Staff" | "Parents"
   targetClass?: string;    // e.g. "Grade 5-B" — empty = school-wide
+  // Set only for private, per-family entries (e.g. a fee invoice reminder).
+  // When present this OVERRIDES targetAudience/targetClass entirely: the
+  // entry is never broadcast to a grade/section, only to staff and to the
+  // one real student/parent it names — the same per-student scoping
+  // Notification rows already use via studentId, just applied to
+  // Notice/CalendarEvent so a real per-family event can safely live in the
+  // shared feed without leaking one family's business to their whole class.
+  recipientStudentId?: string;
 }
 
 export type AudienceGroup = "admin" | "student" | "staff" | "parent";
@@ -64,11 +72,17 @@ export function canViewAnnouncement(
   announcement: AnnouncementAudienceFields,
   role: string | null | undefined,
   viewerClasses?: ViewerClass[],
+  viewerStudentIds?: string[],
 ): boolean {
   const group = audienceGroupForRole(role);
   if (group === "admin") return true;
 
   if (announcement.status && announcement.status !== "Published") return false;
+
+  if (announcement.recipientStudentId) {
+    if (group === "staff") return true; // finance/staff already have full visibility
+    return !!viewerStudentIds?.includes(announcement.recipientStudentId);
+  }
 
   const audience = announcement.targetAudience || "All";
   if (audience !== "All") {
@@ -92,6 +106,7 @@ export function filterAnnouncementsForViewer<T extends AnnouncementAudienceField
   announcements: T[],
   role: string | null | undefined,
   viewerClasses?: ViewerClass[],
+  viewerStudentIds?: string[],
 ): T[] {
-  return announcements.filter((a) => canViewAnnouncement(a, role, viewerClasses));
+  return announcements.filter((a) => canViewAnnouncement(a, role, viewerClasses, viewerStudentIds));
 }

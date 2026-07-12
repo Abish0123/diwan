@@ -76,9 +76,12 @@ interface Event {
   status?: string;         // "Published" — reuses the same status gate as Notice
   targetAudience?: string; // "All" | "Students" | "Staff" | "Parents"
   targetClass?: string;    // e.g. "Grade 5-B" — empty = school-wide
+  // Set only for private per-family entries (e.g. a fee invoice due date) —
+  // see announcementAudience.ts. Overrides targetAudience/targetClass.
+  recipientStudentId?: string;
   // Marks events auto-created by another real module, instead of manually
   // typed — lets the UI show where an event actually came from.
-  source?: "Manual" | "Exam" | "PTM" | "Leave";
+  source?: "Manual" | "Exam" | "PTM" | "Leave" | "Finance";
   createdBy?: string;
 }
 
@@ -145,9 +148,24 @@ export default function CommunicationCalendar() {
     return [];
   }, [audienceGroup, students, parentChildren, user]);
 
+  // Real ids this viewer is allowed to see private, per-family entries
+  // (e.g. a fee invoice reminder) for — themselves (student) or their real
+  // children (parent). Staff/admin don't need this; they already bypass.
+  const viewerStudentIds = useMemo<string[]>(() => {
+    if (audienceGroup === "student") {
+      const me = students.find((s) =>
+        (user?.email && s.email === user.email) ||
+        (user?.displayName && s.name === user.displayName)
+      ) || students[0];
+      return me ? [me.id] : [];
+    }
+    if (audienceGroup === "parent") return parentChildren.map((c) => c.id);
+    return [];
+  }, [audienceGroup, students, parentChildren, user]);
+
   const visibleEvents = useMemo(
-    () => filterAnnouncementsForViewer(events, role, viewerClasses),
-    [events, role, viewerClasses]
+    () => filterAnnouncementsForViewer(events, role, viewerClasses, viewerStudentIds),
+    [events, role, viewerClasses, viewerStudentIds]
   );
 
   // Real Timetable -> Calendar overlay (Week/Day views only). Recurring

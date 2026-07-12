@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
-import { createTransportFeeInvoice } from "@/hooks/useFees";
+import { createTransportFeeInvoice, notifyFeeInvoiceGenerated } from "@/hooks/useFees";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -143,6 +143,7 @@ export default function StudentManifest() {
             message: `${form.studentName} was activated on route ${form.route} — invoice ${invoice.invoiceNumber} (QAR ${invoice.amount.toLocaleString()}) generated, awaiting payment.`,
             createdAt: new Date().toISOString(), time: new Date().toISOString(), read: false,
           }, notifId).catch(() => {});
+          notifyFeeInvoiceGenerated(invoice, user?.uid || "").catch(() => {});
         } else if (form.monthlyFee <= 0) {
           toast.info("No monthly fee set — set one to auto-generate a transport invoice");
         }

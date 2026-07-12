@@ -275,7 +275,7 @@ export default function StudentPortal() {
 
   // Audience-enforced: students only see Published notices addressed to
   // Students/All, and class-targeted ones only for their own grade/section.
-  const visibleNotices = filterAnnouncementsForViewer(notices, "student", [{ grade, section }]);
+  const visibleNotices = filterAnnouncementsForViewer(notices, "student", [{ grade, section }], student?.id ? [student.id] : []);
   const displayNotices = visibleNotices.slice(0, 3).map((n: any, i: number) => ({
     title: n.title || n.subject || "Notice",
     desc: n.content || n.body || n.description || "",

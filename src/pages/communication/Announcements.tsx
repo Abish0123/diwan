@@ -99,12 +99,26 @@ const Announcements = () => {
     return [];
   }, [audienceGroup, students, parentChildren, user]);
 
+  // Real ids this viewer may see private, per-family notices for (e.g. a fee
+  // invoice reminder) — themselves (student) or their real children (parent).
+  const viewerStudentIds = useMemo<string[]>(() => {
+    if (audienceGroup === "student") {
+      const me = students.find((s) =>
+        (user?.email && s.email === user.email) ||
+        (user?.displayName && s.name === user.displayName)
+      ) || students[0];
+      return me ? [me.id] : [];
+    }
+    if (audienceGroup === "parent") return parentChildren.map((c) => c.id);
+    return [];
+  }, [audienceGroup, students, parentChildren, user]);
+
   // Enforce audience targeting: admin (management console) sees everything;
   // everyone else only sees Published announcements addressed to their group
   // and — for students/parents — their class.
   const visibleNotices = useMemo(
-    () => filterAnnouncementsForViewer(notices, role, viewerClasses),
-    [notices, role, viewerClasses]
+    () => filterAnnouncementsForViewer(notices, role, viewerClasses, viewerStudentIds),
+    [notices, role, viewerClasses, viewerStudentIds]
   );
 
   const filteredAnnouncements = visibleNotices.filter(announcement => {

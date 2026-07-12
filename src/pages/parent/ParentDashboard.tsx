@@ -57,7 +57,8 @@ export default function ParentDashboard() {
   // Parents/All, and class-targeted ones only when one of their children matches.
   const announcements = useMemo(() => {
     const viewerClasses = children.map((c) => ({ grade: c.grade, section: c.section }));
-    return filterAnnouncementsForViewer(noticeRows, "parent", viewerClasses)
+    const viewerStudentIds = children.map((c) => c.id);
+    return filterAnnouncementsForViewer(noticeRows, "parent", viewerClasses, viewerStudentIds)
       .slice(0, 5)
       .map((a: any) => ({
         title: a.title || a.subject || a.message || "Announcement",

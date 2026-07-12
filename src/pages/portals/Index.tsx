@@ -1284,7 +1284,7 @@ export default function ParentPortal() {
   // Real notices for the selected child's grade/section, audience-enforced.
   const realNotices = useMemo<Notice[]>(() => {
     if (!child) return [];
-    const visible = filterAnnouncementsForViewer(noticeRows, "parent", [{ grade: child.class, section: child.section }]);
+    const visible = filterAnnouncementsForViewer(noticeRows, "parent", [{ grade: child.class, section: child.section }], [child.id]);
     return visible.slice(0, 5).map((n: any) => ({
       title: n.title || n.subject || "Notice",
       date: n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
