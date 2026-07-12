@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   FolderOpen, Folder, FileText, Film, Link2, FileSpreadsheet,
@@ -72,6 +72,7 @@ type Screen =
   | { view: "materials"; subject: string; subjectIdx: number; chapter: string };
 
 export default function StudentStudyMaterials() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // Student's own profile (grade + section)
@@ -302,7 +303,7 @@ export default function StudentStudyMaterials() {
             <p className="text-xs text-slate-500 leading-relaxed mb-3">
               Can't find what you need? Ask your teacher to upload it.
             </p>
-            <button onClick={() => toast.info("Material request sent to your teacher!")}
+            <button onClick={() => navigate("/communication/messages")}
               className="w-full flex items-center justify-center gap-1.5 h-9 text-xs font-semibold text-purple-600 border border-violet-200 rounded-lg hover:bg-violet-50 transition-colors">
               <Upload className="h-3.5 w-3.5" /> Request Material
             </button>
@@ -459,10 +460,12 @@ export default function StudentStudyMaterials() {
                               <ExternalLink className="h-3.5 w-3.5" /> Open
                             </a>
                           )}
-                          <button onClick={() => toast.success(`Downloading "${m.title}"…`)}
-                            className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-purple-600 hover:bg-violet-50 hover:border-violet-200 transition-colors">
-                            <Download className="h-3.5 w-3.5" /> Download
-                          </button>
+                          {m.link && (
+                            <a href={m.link} download={m.title} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-purple-600 hover:bg-violet-50 hover:border-violet-200 transition-colors">
+                              <Download className="h-3.5 w-3.5" /> Download
+                            </a>
+                          )}
                         </div>
                       </div>
                     );

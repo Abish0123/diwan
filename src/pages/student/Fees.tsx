@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { downloadInvoiceReceiptPdf } from "@/lib/invoiceReceiptPdf";
 import { createPaymentSession, getPaymentTransaction, GatewayNotConfiguredError } from "@/lib/paymentGateway";
 import {
   Wallet, CreditCard, Package, AlertCircle, Download, Calendar,
-  Receipt, Banknote, Landmark, Smartphone, FileText, Layers, ChevronRight,
+  Receipt, Banknote, Landmark, Smartphone, FileText, ChevronRight,
 } from "lucide-react";
 
 const bhd = (n: number) =>
@@ -59,7 +59,7 @@ function invoiceToFeeRow(inv: Invoice): FeeRow {
   let status: FeeStatus;
   let paid: number;
   if (raw === "Paid") { status = "Paid"; paid = total; }
-  else if (raw === "Partial") { status = "Partial Paid"; paid = Number(inv.paidAmount) || total / 2; }
+  else if (raw === "Partial") { status = "Partial Paid"; paid = Number(inv.paidAmount) || 0; }
   else if (raw === "Overdue") { status = "Overdue"; paid = 0; }
   else { status = "Due"; paid = 0; }
   const baseType = inv.category || inv.invoiceNumber || "Fee";
@@ -81,6 +81,11 @@ export default function StudentFees() {
   const { user } = useAuth();
   const { students } = useStudents();
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
+  const feeDetailsRef = useRef<HTMLDivElement>(null);
+  const paymentHistoryRef = useRef<HTMLDivElement>(null);
+  const upcomingDuesRef = useRef<HTMLDivElement>(null);
+  const [showAllDues, setShowAllDues] = useState(false);
+  const scrollTo = (ref: { current: HTMLDivElement | null }) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const downloadReceipt = (invoice: Invoice) => {
     if (invoice.status !== "Paid") return;
@@ -242,17 +247,19 @@ export default function StudentFees() {
     return { paid, pending, overdue, total };
   }, [feeRows]);
 
+  // Each KPI action jumps to the real section that actually answers it,
+  // instead of a toast that just echoed the label back with no real action.
   const KPIS = [
-    { label: "Total Fees",   value: bhd(summary.total),   action: "View Breakup",  bg: "bg-purple-50",  ic: "text-purple-600",  iconBg: "bg-purple-100",  icon: Wallet },
-    { label: "Paid Fees",    value: bhd(summary.paid),    action: "View Payments", bg: "bg-amber-50",   ic: "text-amber-600",   iconBg: "bg-amber-100",   icon: CreditCard },
-    { label: "Pending Fees", value: bhd(summary.pending), action: "Due Soon",      bg: "bg-emerald-50", ic: "text-emerald-600", iconBg: "bg-emerald-100", icon: Package },
-    { label: "Overdue Fees", value: bhd(summary.overdue), action: "Overdue",       bg: "bg-rose-50",    ic: "text-rose-600",    iconBg: "bg-rose-100",    icon: AlertCircle },
+    { label: "Total Fees",   value: bhd(summary.total),   action: "View Breakup",  bg: "bg-purple-50",  ic: "text-purple-600",  iconBg: "bg-purple-100",  icon: Wallet, fn: () => scrollTo(feeDetailsRef) },
+    { label: "Paid Fees",    value: bhd(summary.paid),    action: "View Payments", bg: "bg-amber-50",   ic: "text-amber-600",   iconBg: "bg-amber-100",   icon: CreditCard, fn: () => scrollTo(paymentHistoryRef) },
+    { label: "Pending Fees", value: bhd(summary.pending), action: "Due Soon",      bg: "bg-emerald-50", ic: "text-emerald-600", iconBg: "bg-emerald-100", icon: Package, fn: () => scrollTo(upcomingDuesRef) },
+    { label: "Overdue Fees", value: bhd(summary.overdue), action: "Overdue",       bg: "bg-rose-50",    ic: "text-rose-600",    iconBg: "bg-rose-100",    icon: AlertCircle, fn: () => scrollTo(feeDetailsRef) },
   ];
 
-  const upcomingDues = feeRows
+  const allUpcomingDues = feeRows
     .filter((r) => r.status !== "Paid" && r.pending > 0)
-    .slice(0, 4)
     .map((r) => ({ type: r.type, amount: r.pending, due: r.dueDate, invoice: r.invoice }));
+  const upcomingDues = showAllDues ? allUpcomingDues : allUpcomingDues.slice(0, 4);
 
   // Donut geometry
   const donutCirc = 2 * Math.PI * 40;
@@ -276,8 +283,6 @@ export default function StudentFees() {
   const quickActions = [
     { label: "Make a Payment",       icon: Wallet,    ic: "text-purple-600",  fn: () => payNow() },
     { label: "Download Fee Receipt", icon: Download,  ic: "text-purple-600",    fn: downloadLatestReceipt },
-    { label: "Fee Structure",        icon: Layers,    ic: "text-emerald-600", fn: () => toast.info("Opening fee structure") },
-    { label: "Payment Methods",      icon: CreditCard,ic: "text-amber-600",   fn: () => toast.info("Manage payment methods") },
   ];
 
   return (
@@ -314,7 +319,7 @@ export default function StudentFees() {
                 <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center", k.iconBg)}>
                   <k.icon className={cn("h-5 w-5", k.ic)} />
                 </div>
-                <button onClick={() => toast.info(`${k.action} — ${k.label}`)}
+                <button onClick={k.fn}
                   className={cn("text-xs font-semibold hover:underline", k.ic)}>
                   {k.action}
                 </button>
@@ -332,7 +337,7 @@ export default function StudentFees() {
           <div className="lg:col-span-3 space-y-5">
 
             {/* Fee Details table */}
-            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+            <div ref={feeDetailsRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="font-bold text-slate-900 text-sm">Fee Details</h3>
                 {loaded && !hasReal && (
@@ -399,7 +404,7 @@ export default function StudentFees() {
             </div>
 
             {/* Payment History table */}
-            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+            <div ref={paymentHistoryRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <h3 className="font-bold text-slate-900 text-sm">Payment History</h3>
               </div>
@@ -443,12 +448,6 @@ export default function StudentFees() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-5 py-4 border-t border-slate-100 flex justify-center">
-                <button onClick={() => toast.info("Showing all payments")}
-                  className="h-9 px-5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                  View All Payments
-                </button>
-              </div>
             </div>
           </div>
 
@@ -456,11 +455,15 @@ export default function StudentFees() {
           <div className="space-y-5">
 
             {/* Upcoming Dues */}
-            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
+            <div ref={upcomingDuesRef} className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-slate-900 text-sm">Upcoming Dues</h3>
-                <button onClick={() => toast.info("Showing all dues")}
-                  className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                {allUpcomingDues.length > 4 && (
+                  <button onClick={() => setShowAllDues((v) => !v)}
+                    className="text-xs text-purple-600 font-semibold hover:underline">
+                    {showAllDues ? "Show Less" : "View All"}
+                  </button>
+                )}
               </div>
               <div className="space-y-3">
                 {upcomingDues.length === 0 && (

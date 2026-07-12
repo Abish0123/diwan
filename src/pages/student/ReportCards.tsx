@@ -8,13 +8,15 @@ import {
   loadGradebookSources, computeStudentGradebook,
   type GradebookSources, type StudentGradebook,
 } from "@/lib/gradebookEngine";
-import { usePublishedReportCard } from "@/lib/reportCardStore";
+import { usePublishedReportCard, getPrincipalName } from "@/lib/reportCardStore";
+import { downloadReportCardPdf } from "@/lib/reportCardPdf";
+import { getSchoolName, getSchoolAddress } from "@/lib/transportSettings";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { smartDb } from "@/lib/localDb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FileCheck, Printer, TrendingUp, BookOpen, UserCheck, Award, Info } from "lucide-react";
+import { FileCheck, Download, TrendingUp, BookOpen, UserCheck, Award, Info } from "lucide-react";
 
 function gradeFromPct(p: number) {
   if (p >= 90) return { g: "A+", c: "bg-emerald-100 text-emerald-700" };
@@ -96,6 +98,24 @@ export default function StudentReportCards() {
   }, [attendance, s]);
 
   const overallGrade = overall !== null ? gradeFromPct(overall) : null;
+  const overallLetter = published ? published.overallGrade : (gb?.overallLetter ?? "—");
+
+  // Real PDF, built from the same rows already rendered on screen — replaces
+  // window.print() with the same jsPDF generator the parent portal's
+  // ReportCards page already uses for this exact published-record shape.
+  const handleDownload = async () => {
+    if (!s || subjectResults.length === 0) return;
+    const principalName = published?.principalName || await getPrincipalName().catch(() => "");
+    downloadReportCardPdf(getSchoolName(), getSchoolAddress(), {
+      studentName: s.name, grade: String(s.grade || ""), section: String(s.section || ""),
+      term: published?.term || "Current Term", year: published?.year || String(new Date().getFullYear()),
+      subjects: subjectResults, overallPct: overall ?? 0, overallGrade: overallLetter,
+      attendancePct: published?.attendancePct ?? attendancePct,
+      classTeacherRemark: published?.classTeacherRemark, principalRemark: published?.principalRemark,
+      teacherName: published?.teacherName, principalName,
+      published: !!published,
+    });
+  };
 
   return (
     <DashboardLayout>
@@ -112,8 +132,8 @@ export default function StudentReportCards() {
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">{published ? `${published.year} · Issued by ${published.teacherName}` : "Academic Year 2025–2026"}</p>
           </div>
-          <Button variant="outline" onClick={() => window.print()} className="h-9 text-xs font-semibold">
-            <Printer className="h-4 w-4 mr-1.5" /> Print
+          <Button variant="outline" onClick={handleDownload} disabled={subjectResults.length === 0} className="h-9 text-xs font-semibold">
+            <Download className="h-4 w-4 mr-1.5" /> Download PDF
           </Button>
         </div>
 
