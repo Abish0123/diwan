@@ -287,7 +287,7 @@ const ADMIN_ONLY_ENTITIES = new Set(["payroll", "users", "financial_settings", "
 // NOT include role/assignedGrade/assignedSection/permissions/password/etc.,
 // so this can never become a self-privilege-escalation path; the PUT handler
 // strips anything outside this list before merging a self-write.
-const USER_SELF_WRITABLE_FIELDS = new Set(["displayName", "name", "phone", "photoURL"]);
+const USER_SELF_WRITABLE_FIELDS = new Set(["displayName", "name", "phone", "photoURL", "emailNotif", "smsNotif"]);
 
 function authorizeEntityAccess(entity: string, auth: SessionAuth, id?: string, method: "read" | "write" = "read"): boolean {
   if (getRole(auth.role).full === true) return true;

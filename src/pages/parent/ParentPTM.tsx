@@ -160,6 +160,29 @@ export default function ParentPTM() {
         createdAt: new Date().toISOString(),
       };
       await smartDb.create("PTMSession", record, record.id);
+      // Real link to the shared Calendar (src/pages/communication/Calendar.tsx)
+      // — that page's Event interface already had a "PTM" source value and a
+      // recipientStudentId field for exactly this, but nothing ever wrote one;
+      // a parent's confirmed meeting never showed up on their own calendar.
+      // Private to this family only (recipientStudentId), no `status` field
+      // so it isn't gated behind Announcements-style publishing.
+      // Deterministic id (derived from the PTMSession id) so a later
+      // cancellation can remove the matching calendar entry without needing
+      // to track a separately-returned server id.
+      await smartDb.create("CalendarEvent", {
+        id: `cal-${record.id}`,
+        title: `PTM with ${form.teacherName}`,
+        description: form.purpose.trim() || undefined,
+        date: form.date,
+        time: form.time,
+        location: record.location || (form.meetingType === "Online" ? "Online" : ""),
+        category: "Meetings",
+        color: "bg-purple-500",
+        source: "PTM",
+        recipientStudentId: selected.id,
+        createdBy: user.uid,
+        createdAt: new Date().toISOString(),
+      }, `cal-${record.id}`).catch(() => {});
       await notifyPTMEvent("requested", record);
       toast.success(`Meeting request sent to ${form.teacherName} — you'll be notified once they confirm.`);
       setBookModal(false);
@@ -173,6 +196,10 @@ export default function ParentPTM() {
   const handleCancel = async (s: PTMSession) => {
     try {
       await smartDb.update("PTMSession", s.id, { status: "Cancelled" });
+      // Remove the matching calendar entry (same deterministic id scheme
+      // used at booking time) so a cancelled meeting doesn't linger on the
+      // shared calendar.
+      await smartDb.delete("CalendarEvent", `cal-${s.id}`).catch(() => {});
       await notifyPTMEvent("cancelled-by-parent", s);
       toast.info("Meeting cancelled.");
       loadSessions();

@@ -1,19 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useParentChildren } from '@/hooks/useParentChildren';
+import { userRepository } from '@/repositories/UserRepository';
 import {
   User,
   Mail,
   Lock,
   Bell,
-  Shield,
   Smartphone,
   CheckCircle,
   Settings,
   HelpCircle,
   ExternalLink,
-  Monitor,
   GraduationCap,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,7 +23,6 @@ import { requestNotificationPermission } from '@/lib/pushNotifications';
 const SECTIONS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'account', label: 'Account', icon: Settings },
-  { id: 'security', label: 'Security', icon: Shield },
   { id: 'notifications', label: 'Notifications', icon: Bell },
 ] as const;
 type SectionId = (typeof SECTIONS)[number]['id'];
@@ -38,12 +37,61 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 
 export default function ParentSettings() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { children, selected } = useParentChildren();
   const [activeSection, setActiveSection] = useState<SectionId>('profile');
 
+  // Real per-account preferences, persisted on the user's own `users` row via
+  // the self-write carve-out (server.ts USER_SELF_WRITABLE_FIELDS) — these
+  // used to be local-only useState, so they silently reset to "on" on every
+  // reload no matter what the parent had actually chosen.
   const [emailNotif, setEmailNotif] = useState(true);
   const [smsNotif, setSmsNotif] = useState(true);
   const [pushNotif, setPushNotif] = useState(true);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    // getOne (a single-record GET by id) hits the self-access carve-out for
+    // "users" (id === auth.uid) — findByEmail's bulk ?email= list query does
+    // not, and 403s for a non-admin parent looking up their own row.
+    userRepository.getOne(user.uid).then(row => {
+      if (!row) return;
+      if (typeof row.emailNotif === "boolean") setEmailNotif(row.emailNotif);
+      if (typeof row.smsNotif === "boolean") setSmsNotif(row.smsNotif);
+    }).catch(() => {});
+  }, [user?.uid]);
+
+  async function updateNotifPref(field: "emailNotif" | "smsNotif", value: boolean) {
+    if (!user?.uid) return;
+    try {
+      await userRepository.update(user.uid, { [field]: value } as any);
+    } catch {
+      toast.error("Failed to save preference");
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!user?.email || changingPassword) return;
+    setChangingPassword(true);
+    try {
+      const res = await fetch("/api/session/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Couldn't send the reset email — please try again.");
+        return;
+      }
+      toast.success(data.message || "If an account exists for that email, a reset link has been sent.");
+    } catch {
+      toast.error("Couldn't reach the server — please try again.");
+    } finally {
+      setChangingPassword(false);
+    }
+  }
 
   const fullName = user?.displayName || 'Parent';
   const email = user?.email || '—';
@@ -110,8 +158,7 @@ export default function ParentSettings() {
               <p className="text-xs text-gray-500 mb-3">Need help with your account?</p>
               <ul className="space-y-2">
                 {[
-                  { label: 'Visit Help Center', onClick: () => toast.info('Opening Help Center…') },
-                  { label: 'Contact Support', onClick: () => toast.info('Connecting you to Support…') },
+                  { label: 'Message School Office', onClick: () => navigate('/communication/messages') },
                 ].map((link) => (
                   <li key={link.label}>
                     <button onClick={link.onClick}
@@ -203,88 +250,17 @@ export default function ParentSettings() {
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                      <input type="password" readOnly defaultValue="password"
+                      <input type="password" readOnly value="••••••••" aria-label="Password (hidden)"
                         className="flex-1 px-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-gray-50 text-gray-700 focus:outline-none" />
                       <button
-                        onClick={() => toast.success('Password reset link sent to your registered email.')}
-                        className="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-purple-600 border border-violet-200 rounded-xl hover:bg-violet-50 transition-colors">
+                        onClick={handleChangePassword} disabled={changingPassword}
+                        className="shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-purple-600 border border-violet-200 rounded-xl hover:bg-violet-50 transition-colors disabled:opacity-60">
                         <Lock className="w-4 h-4" />
-                        Change Password
+                        {changingPassword ? "Sending…" : "Change Password"}
                       </button>
                     </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5">We'll email a reset link to {email}.</p>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'security' && (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                <div className="mb-5">
-                  <h2 className="text-base font-semibold text-gray-900">Security</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Keep your account secure.</p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl border border-slate-100 bg-slate-50">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-violet-500 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">Two-Factor Authentication</p>
-                        <p className="text-xs text-gray-500">Add an extra layer of security</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
-                        <CheckCircle className="w-3 h-3" />
-                        Enabled
-                      </span>
-                      <button onClick={() => toast.info('Opening security settings…')}
-                        className="text-xs font-semibold text-purple-600 border border-violet-200 px-3 py-1.5 rounded-lg hover:bg-violet-50 transition-colors">
-                        Manage
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl border border-slate-100 bg-slate-50">
-                    <div className="flex items-center gap-3">
-                      <Bell className="w-5 h-5 text-violet-500 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">Login Alerts</p>
-                        <p className="text-xs text-gray-500">Get notified of new sign-ins</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
-                        <CheckCircle className="w-3 h-3" />
-                        Enabled
-                      </span>
-                      <button onClick={() => toast.info('Opening security settings…')}
-                        className="text-xs font-semibold text-purple-600 border border-violet-200 px-3 py-1.5 rounded-lg hover:bg-violet-50 transition-colors">
-                        Manage
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-5 border-t border-slate-100">
-                  <p className="text-sm font-semibold text-gray-800 mb-1">Active Session</p>
-                  <p className="text-xs text-gray-500 mb-3">You are currently logged in.</p>
-
-                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 mb-3 flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex items-start gap-2">
-                      <Monitor className="w-4 h-4 text-violet-500 mt-0.5 shrink-0" />
-                      <p className="text-xs font-medium text-gray-800">Windows • Chrome</p>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      This Device
-                    </span>
-                  </div>
-
-                  <button onClick={() => toast.info('No other active sessions.')}
-                    className="text-xs font-semibold text-purple-600 border border-violet-200 px-4 py-2 rounded-xl hover:bg-violet-50 transition-colors">
-                    View All Sessions
-                  </button>
                 </div>
               </div>
             )}
@@ -307,7 +283,7 @@ export default function ParentSettings() {
                         <p className="text-xs text-gray-500">Attendance, exam results, fee reminders</p>
                       </div>
                     </div>
-                    <Toggle on={emailNotif} onClick={() => setEmailNotif(v => !v)} />
+                    <Toggle on={emailNotif} onClick={() => { const v = !emailNotif; setEmailNotif(v); updateNotifPref("emailNotif", v); }} />
                   </div>
 
                   <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
@@ -318,7 +294,7 @@ export default function ParentSettings() {
                         <p className="text-xs text-gray-500">Urgent alerts sent to your phone</p>
                       </div>
                     </div>
-                    <Toggle on={smsNotif} onClick={() => setSmsNotif(v => !v)} />
+                    <Toggle on={smsNotif} onClick={() => { const v = !smsNotif; setSmsNotif(v); updateNotifPref("smsNotif", v); }} />
                   </div>
 
                   <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50">
@@ -356,8 +332,7 @@ export default function ParentSettings() {
               <p className="text-xs text-gray-500 mb-3">Need help with your account?</p>
               <ul className="space-y-2">
                 {[
-                  { label: 'Visit Help Center', onClick: () => toast.info('Opening Help Center…') },
-                  { label: 'Contact Support', onClick: () => toast.info('Connecting you to Support…') },
+                  { label: 'Message School Office', onClick: () => navigate('/communication/messages') },
                 ].map((link) => (
                   <li key={link.label}>
                     <button onClick={link.onClick}

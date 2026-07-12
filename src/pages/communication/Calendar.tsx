@@ -855,8 +855,14 @@ export default function CommunicationCalendar() {
                   <Users className="h-3.5 w-3.5" />
                   Attendees
                 </h4>
+                {/* Real audience from the event's own targetAudience/targetClass —
+                    same fields Announcements.tsx renders as badges — instead of a
+                    static "open to all" line regardless of the actual scope. */}
                 <p className="text-xs text-muted-foreground">
-                  Open to all students and faculty members. No registration required.
+                  {selectedEvent?.targetClass
+                    ? `${selectedEvent.targetClass} only`
+                    : `Open to ${(selectedEvent?.targetAudience || "All").toLowerCase()}`}
+                  . No registration required.
                 </p>
               </div>
             </div>
