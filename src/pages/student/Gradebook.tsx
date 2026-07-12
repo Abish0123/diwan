@@ -9,6 +9,7 @@ import {
   type GradebookSources, type StudentGradebook,
 } from "@/lib/gradebookEngine";
 import { smartDb } from "@/lib/localDb";
+import { getAllAttempts } from "@/lib/assessmentAttempts";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ export default function StudentGradebook() {
   const { curriculum } = useCurriculum();
   const [sources, setSources] = useState<GradebookSources | null>(null);
   const [assessments, setAssessments] = useState<any[]>([]);
+  const [attempts, setAttempts] = useState<any[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
   const year = "2026-27";
@@ -75,9 +77,13 @@ export default function StudentGradebook() {
   useEffect(() => {
     const s = student as any;
     if (!s) return;
-    smartDb.getAll("Assessment", undefined).then((rows: any[]) => {
+    Promise.all([
+      smartDb.getAll("assessments", undefined).catch(() => []),
+      getAllAttempts().catch(() => []),
+    ]).then(([rows, atts]) => {
       const filtered = (rows || []).filter((a: any) => canonGrade(a.grade) === canonGrade(s.grade) && canonSection(a.section) === canonSection(s.section));
       setAssessments(filtered);
+      setAttempts(atts || []);
     }).catch(() => {});
     // cheaply load attendance the same way the Attendance page does
     smartDb.getAll("TeacherAttendance", undefined).then((rows: any[]) => {
@@ -102,18 +108,24 @@ export default function StudentGradebook() {
     return { total, pct: total ? Math.round(((present + late) / total) * 100) : 0 };
   }, [attendanceRecords, student]);
 
+  // Real per-student score comes from the student's own assessment_attempts
+  // row (same canonical contract as student/Assessments.tsx and Exams.tsx) —
+  // assessments themselves carry no per-student "entries" field, so reading
+  // a.entries[].marks[s.id] always resolved to nothing for real data.
   const myResults = useMemo(() => {
     const s = student as any;
     if (!s) return [];
     return assessments.map(a => {
-      const entries = a.entries || [];
-      const entry = entries.find((e: any) => e.studentId === s.id);
-      const marks = entry?.marks?.[s.id] ?? null;
-      const max = a.maxMarks || 100;
-      const pct = marks !== null ? Math.round((marks / max) * 100) : null;
+      const released = a.resultsReleased || a.resultVisibility === "immediate" || !a.resultVisibility;
+      if (!released) return null;
+      const attempt = attempts.find((at: any) => at.assessmentId === a.id && at.studentId === s.id);
+      const marks = attempt?.score ?? null;
+      if (marks === null) return null;
+      const max = a.totalMarks || 100;
+      const pct = Math.round((marks / max) * 100);
       return { ...a, myMarks: marks, maxMarks: max, pct };
-    }).filter(a => a.myMarks !== null);
-  }, [assessments, student]);
+    }).filter((a): a is NonNullable<typeof a> => a !== null);
+  }, [assessments, attempts, student]);
 
   /* ---- gradebook: auto-computed from assignments + assessments + exams ---- */
   const band = useMemo(
@@ -235,7 +247,34 @@ export default function StudentGradebook() {
   const donutCirc = 2 * Math.PI * 40;
   let donutOffset = -90;
 
-  const downloadReport = () => toast.success("Gradebook report downloaded");
+  // Real CSV export of the subjects-performance table — previously a
+  // toast-only stub with no file behind it.
+  const downloadReport = () => {
+    if (!subjects.length) {
+      toast.error("No graded subjects to download yet.");
+      return;
+    }
+    const header = ["Subject", ...columns.map(c => `${c.name} (${c.weight}%)`), "Total (%)", "Grade"];
+    const rows = subjects.map(s => [
+      s.subject,
+      ...s.components.map(c => c.hasData ? `${Math.round((c.obtainedPct / 100) * c.weight * 10) / 10}/${c.weight}` : "—"),
+      String(s.total),
+      gradeFromPct(s.total).g,
+    ]);
+    const csv = [header, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gradebook-${((student as any)?.name || "student").replace(/\s+/g, "_")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Gradebook report downloaded.");
+  };
 
   return (
     <DashboardLayout>

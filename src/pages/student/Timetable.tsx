@@ -166,7 +166,7 @@ export default function StudentTimetable() {
     Promise.allSettled([
       smartDb.getAll("Notice", undefined),
       smartDb.getAll("sd_exams", undefined),
-      smartDb.getAll("Assessment", undefined),
+      smartDb.getAll("assessments", undefined),
       smartDb.getAll("TeacherAssignment", undefined),
     ]).then(([ntc, ex, asmt, asgn]) => {
       if (ntc.status === "fulfilled") setNotices((ntc.value || []) as any[]);

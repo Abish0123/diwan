@@ -181,7 +181,7 @@ export default function StudentPortal() {
           smartDb.getAll("TeacherAssignment", undefined),
           smartDb.getAll("AssignmentSubmission", undefined),
           smartDb.getAll("sd_exams", undefined),
-          smartDb.getAll("Assessment", undefined),
+          smartDb.getAll("assessments", undefined),
           smartDb.getAll("Notice", undefined),
           smartDb.getAll("Achievement", undefined),
           smartDb.getAll("TeacherAttendance", undefined),

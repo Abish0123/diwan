@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
@@ -14,13 +15,14 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
   Eye,
   Bell,
   HelpCircle,
   Send,
   FileText,
   Download,
+  X,
+  Paperclip,
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -34,9 +36,12 @@ interface HomeworkRow {
   subject: string;
   assignedBy: string;
   initials: string;
+  dueDate: string;
   dueDateDisplay: string;
   dueRelative: string;
   status: Status;
+  attachment?: string;
+  attachmentUrl?: string;
 }
 
 
@@ -79,10 +84,6 @@ function DueBadge({ relative }: { relative: string }) {
   return <span className="text-xs font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">{relative}</span>;
 }
 
-// ── May 2026 calendar highlights ────────────────────────────────────────────────
-const TODAY_CAL = 23; // highlighted orange
-const DUE_CAL = 23;  // highlighted purple (same day for demo)
-
 // ── Map a real teacher-published homework row into the table shape ──────────────
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -97,7 +98,7 @@ function fmtDate(d: Date): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function mapHomeworkRow(h: any): HomeworkRow {
+function mapHomeworkRow(h: any, submitted: boolean): HomeworkRow {
   const teacher = h.assignedBy || h.teacher || h.createdBy || "Class Teacher";
   // Parse the teacher's dueDate (ISO "YYYY-MM-DD" from the date input) and derive
   // status + a relative label off today, so the student view always reconciles.
@@ -111,7 +112,10 @@ function mapHomeworkRow(h: any): HomeworkRow {
 
   let status: Status;
   let dueRelative: string;
-  if (String(h.status).toLowerCase() === "completed" || h.completed === true) {
+  // "Completed" comes from the student's own real HomeworkSubmission row, not
+  // h.status/h.completed — the teacher's create flow (teacher/Homework.tsx)
+  // never sets either of those fields, so this branch previously never fired.
+  if (submitted) {
     status = "Completed";
     dueRelative = "Completed";
   } else if (!dueMidnight) {
@@ -139,9 +143,12 @@ function mapHomeworkRow(h: any): HomeworkRow {
     subject: h.subject || "General",
     assignedBy: teacher,
     initials: initialsOf(teacher),
+    dueDate: h.dueDate || "",
     dueDateDisplay: validDue ? fmtDate(due) : (h.dueDate || "—"),
     dueRelative,
     status,
+    attachment: h.attachment || undefined,
+    attachmentUrl: h.attachmentUrl || undefined,
   };
 }
 
@@ -150,6 +157,7 @@ function mapHomeworkRow(h: any): HomeworkRow {
 const normalizeGrade = (g: any) => String(g ?? "").replace(/grade\s*/i, "").trim().toLowerCase();
 
 export default function StudentHomework() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // Load current user's student profile without uid-scoping (students belong to school,
@@ -173,14 +181,27 @@ export default function StudentHomework() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Real teacher-published rows, mapped to the table shape; null until the fetch resolves.
-  const [realRows, setRealRows] = useState<HomeworkRow[] | null>(null);
+  // Real teacher-published rows (raw, for the details/submit modal) and the
+  // student's own real HomeworkSubmission rows — "Completed" status is
+  // derived from actually having submitted, not a field the teacher's
+  // create flow never sets.
+  const [rawHomework, setRawHomework] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+
+  const reloadSubmissions = async (studentId: string) => {
+    const subs = await smartDb.getAll("HomeworkSubmission").catch(() => []);
+    setSubmissions((subs || []).filter((s: any) => String(s.studentId) === String(studentId)));
+  };
 
   useEffect(() => {
+    if (!studentProfile) return;
     let cancelled = false;
     (async () => {
       try {
-        const all = await smartDb.getAll("Homework");
+        const [all, subs] = await Promise.all([
+          smartDb.getAll("Homework"),
+          smartDb.getAll("HomeworkSubmission").catch(() => []),
+        ]);
         const mine = (all || []).filter((h: any) => {
           if (!studentProfile?.grade) return true;
           const gradeMatch = normalizeGrade(h.grade) === normalizeGrade(studentProfile.grade);
@@ -188,16 +209,54 @@ export default function StudentHomework() {
             h.section.trim().toUpperCase() === (studentProfile.section ?? "").trim().toUpperCase();
           return gradeMatch && sectionMatch;
         });
-        if (!cancelled) setRealRows(mine.map(mapHomeworkRow));
+        if (!cancelled) {
+          setRawHomework(mine);
+          setSubmissions((subs || []).filter((s: any) => String(s.studentId) === String(studentProfile.id)));
+        }
       } catch {
-        if (!cancelled) setRealRows([]);
+        if (!cancelled) setRawHomework([]);
       }
     })();
     return () => { cancelled = true; };
   }, [studentProfile]);
 
+  const getSubmission = (homeworkId: string) => submissions.find((s: any) => String(s.homeworkId) === String(homeworkId));
   const usingDemo = false;
-  const HOMEWORK: HomeworkRow[] = realRows || [];
+  const HOMEWORK: HomeworkRow[] = useMemo(
+    () => rawHomework.map((h: any) => mapHomeworkRow(h, !!getSubmission(h.id))),
+    [rawHomework, submissions]
+  );
+
+  // ── Details / submit modal ────────────────────────────────────────────
+  const [selectedHwId, setSelectedHwId] = useState<string | null>(null);
+  const selectedRaw = rawHomework.find((h: any) => String(h.id) === String(selectedHwId));
+  const selectedRow = HOMEWORK.find((h) => h.id === selectedHwId);
+  const [submitText, setSubmitText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitHomework = async () => {
+    if (!selectedRaw || !studentProfile) return;
+    setIsSubmitting(true);
+    try {
+      const id = `hwsub_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await smartDb.create("HomeworkSubmission", {
+        id,
+        homeworkId: selectedRaw.id,
+        studentId: studentProfile.id,
+        studentName: studentProfile.name || "",
+        content: submitText,
+        submittedAt: new Date().toISOString(),
+        status: "submitted",
+      } as any, id);
+      toast.success("Homework submitted successfully!");
+      setSubmitText("");
+      await reloadSubmissions(studentProfile.id);
+    } catch {
+      toast.error("Failed to submit. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
@@ -205,11 +264,9 @@ export default function StudentHomework() {
   const [teacherFilter, setTeacherFilter] = useState("All Teachers");
   const [dueSort, setDueSort] = useState("Due Date");
   const [todayOnly, setTodayOnly] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [calDate, setCalDate] = useState(() => new Date(2026, 4, 1)); // May 2026
+  const [calDate, setCalDate] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
 
   const calLabel = calDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const calIsMay2026 = calDate.getFullYear() === 2026 && calDate.getMonth() === 4;
   const calDaysInMonth = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate();
   const calStartDow = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
   const calDays = Array.from({ length: calDaysInMonth }, (_, i) => i + 1);
@@ -217,13 +274,21 @@ export default function StudentHomework() {
   const shiftCal = (delta: number) =>
     setCalDate((p) => new Date(p.getFullYear(), p.getMonth() + delta, 1));
 
-  // Close the row action menu on any outside click.
-  useEffect(() => {
-    if (!openMenu) return;
-    const close = () => setOpenMenu(null);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [openMenu]);
+  // Real due-date dots for the viewed month, derived from actual homework
+  // rows — previously TODAY_CAL/DUE_CAL were hardcoded to the same fixed
+  // day (23) regardless of any real due date.
+  const now0 = new Date();
+  const calIsCurrentMonth = calDate.getFullYear() === now0.getFullYear() && calDate.getMonth() === now0.getMonth();
+  const dueCalDays = useMemo(() => {
+    const days = new Set<number>();
+    HOMEWORK.forEach((h) => {
+      if (!h.dueDate) return;
+      const d = new Date(h.dueDate);
+      if (isNaN(d.getTime())) return;
+      if (d.getFullYear() === calDate.getFullYear() && d.getMonth() === calDate.getMonth()) days.add(d.getDate());
+    });
+    return days;
+  }, [HOMEWORK, calDate]);
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: "All Homework" },
@@ -242,6 +307,9 @@ export default function StudentHomework() {
   };
 
   const dueTodayRows = HOMEWORK.filter((h) => h.status === "Due Today");
+  const nextPendingRow = [...HOMEWORK]
+    .filter((h) => h.status !== "Completed")
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
 
   // Parse "23 May 2026" → comparable timestamp for sorting.
   const dueTs = (hw: HomeworkRow) => new Date(hw.dueDateDisplay).getTime();
@@ -529,45 +597,24 @@ export default function StudentHomework() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toast.info("Opening homework details…")}
+                            onClick={() => { setSelectedHwId(hw.id); setSubmitText(""); }}
                             className="flex items-center gap-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition-colors"
                           >
                             <Eye className="w-3 h-3" />
                             View
                           </button>
-                          <div className="relative">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === hw.id ? null : hw.id); }}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400"
+                          {hw.attachmentUrl && (
+                            <a
+                              href={hw.attachmentUrl}
+                              download={hw.attachment}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Download ${hw.attachment}`}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-purple-600"
                             >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {openMenu === hw.id && (
-                              <div className="absolute right-0 top-8 z-50 bg-white border border-slate-200 rounded-xl shadow-lg py-1 w-40">
-                                <button
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                                  onClick={() => { toast.success("Homework submitted successfully!"); setOpenMenu(null); }}
-                                >
-                                  <Send className="w-3 h-3 text-purple-500" />
-                                  Submit
-                                </button>
-                                <button
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                                  onClick={() => { toast.info("Downloading homework…"); setOpenMenu(null); }}
-                                >
-                                  <Download className="w-3 h-3 text-blue-500" />
-                                  Download
-                                </button>
-                                <button
-                                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                                  onClick={() => { toast.info("Reminder set!"); setOpenMenu(null); }}
-                                >
-                                  <Bell className="w-3 h-3 text-orange-500" />
-                                  Set Reminder
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                              <Download className="w-4 h-4" />
+                            </a>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -600,12 +647,6 @@ export default function StudentHomework() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-800">Homework Calendar</h3>
-              <button
-                className="text-xs text-purple-600 font-medium hover:underline"
-                onClick={() => toast.info("Opening full calendar…")}
-              >
-                View Calendar
-              </button>
             </div>
             {/* Month/year */}
             <div className="flex items-center justify-between mb-2">
@@ -631,8 +672,8 @@ export default function StudentHomework() {
                 <div key={`blank-${i}`} />
               ))}
               {calDays.map((day) => {
-                const isToday = calIsMay2026 && day === TODAY_CAL;
-                const isDue = calIsMay2026 && day === DUE_CAL;
+                const isToday = calIsCurrentMonth && day === now0.getDate();
+                const isDue = dueCalDays.has(day);
                 return (
                   <div
                     key={day}
@@ -716,28 +757,32 @@ export default function StudentHomework() {
             <h3 className="text-sm font-bold text-slate-800 mb-3">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => toast.info("Opening My Submissions…")}
+                onClick={() => { setActiveTab("completed"); setTodayOnly(false); }}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-purple-50 hover:border-purple-200 transition-colors group"
               >
                 <FileText className="w-5 h-5 text-purple-500 group-hover:text-purple-700" />
                 <span className="text-xs font-medium text-slate-600 group-hover:text-purple-700 text-center leading-tight">My Submissions</span>
               </button>
               <button
-                onClick={() => toast.success("Homework submitted successfully!")}
+                onClick={() => {
+                  if (!nextPendingRow) { toast.success("You're all caught up — nothing pending!"); return; }
+                  setSelectedHwId(nextPendingRow.id);
+                  setSubmitText("");
+                }}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-green-50 hover:border-green-200 transition-colors group"
               >
                 <Send className="w-5 h-5 text-green-500 group-hover:text-green-700" />
                 <span className="text-xs font-medium text-slate-600 group-hover:text-green-700 text-center leading-tight">Submit Homework</span>
               </button>
               <button
-                onClick={() => toast.info("Opening Homework Help…")}
+                onClick={() => navigate("/communication/messages")}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 transition-colors group"
               >
                 <HelpCircle className="w-5 h-5 text-blue-500 group-hover:text-blue-700" />
                 <span className="text-xs font-medium text-slate-600 group-hover:text-blue-700 text-center leading-tight">Homework Help</span>
               </button>
               <button
-                onClick={() => toast.info("Opening Reminders…")}
+                onClick={() => navigate("/student/notifications")}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-slate-100 hover:bg-orange-50 hover:border-orange-200 transition-colors group"
               >
                 <Bell className="w-5 h-5 text-orange-500 group-hover:text-orange-700" />
@@ -779,6 +824,81 @@ export default function StudentHomework() {
           </div>
         </div>
       </div>
+
+      {/* Details / Submit modal */}
+      {selectedRow && selectedRaw && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedHwId(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">{selectedRow.subject}</p>
+                <h3 className="text-lg font-bold text-slate-900 mt-0.5">{selectedRow.title}</h3>
+                <p className="text-sm text-slate-400">Due: {selectedRow.dueDateDisplay} · {selectedRow.assignedBy}</p>
+              </div>
+              <button onClick={() => setSelectedHwId(null)} className="p-1.5 rounded-lg hover:bg-slate-100 mt-1">
+                <X className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
+
+            {getSubmission(selectedRaw.id) ? (
+              <div className="px-6 py-8 text-center">
+                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle className="h-7 w-7 text-emerald-600" />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-1">Already Submitted</h4>
+                <p className="text-sm text-slate-400">
+                  You submitted this homework on{" "}
+                  {new Date(getSubmission(selectedRaw.id).submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+                <button onClick={() => setSelectedHwId(null)} className="mt-4 h-10 px-6 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700">Close</button>
+              </div>
+            ) : (
+              <>
+                <div className="px-6 py-5 space-y-4">
+                  {selectedRow.subtitle && (
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-slate-500 mb-1">Description</p>
+                      <p className="text-sm text-slate-700">{selectedRow.subtitle}</p>
+                    </div>
+                  )}
+                  {selectedRow.attachmentUrl && (
+                    <a
+                      href={selectedRow.attachmentUrl}
+                      download={selectedRow.attachment}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs hover:border-purple-300 hover:bg-purple-50 transition-colors group"
+                    >
+                      <span className="text-slate-700 truncate flex-1 font-medium flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5" /> {selectedRow.attachment}</span>
+                      <Download className="h-3.5 w-3.5 text-slate-400 group-hover:text-purple-600 shrink-0" />
+                    </a>
+                  )}
+                  <div>
+                    <label className="text-sm font-semibold text-slate-700 block mb-1.5">Your Answer / Response</label>
+                    <textarea
+                      value={submitText}
+                      onChange={(e) => setSubmitText(e.target.value)}
+                      rows={5}
+                      placeholder="Write your answer here..."
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-2">
+                  <button onClick={() => setSelectedHwId(null)} className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                  <button
+                    onClick={handleSubmitHomework}
+                    disabled={isSubmitting || !submitText.trim()}
+                    className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    {isSubmitting ? "Submitting..." : (<><Send className="h-3.5 w-3.5" /> Submit Homework</>)}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

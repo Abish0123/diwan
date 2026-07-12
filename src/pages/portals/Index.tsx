@@ -1141,7 +1141,7 @@ export default function ParentPortal() {
           smartDb.getAll("TeacherAssignment", undefined),
           smartDb.getAll("assignment_submissions", undefined),
           smartDb.getAll("sd_exams", undefined),
-          smartDb.getAll("Assessment", undefined),
+          smartDb.getAll("assessments", undefined),
           smartDb.getAll("TeacherAttendance", undefined),
           smartDb.getAll("Notice", undefined),
         ]);

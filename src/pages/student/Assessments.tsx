@@ -13,7 +13,7 @@ import {
   Eye, Download, Shield, Wifi, Maximize2, Copy, RefreshCw, Timer,
   ChevronDown, BarChart3, Target, Zap, FileText, ArrowLeft,
   CheckCheck, XCircle, Info, Lightbulb, BookMarked, Users,
-  Calendar, Filter, Search, SortAsc, Award,
+  Calendar, Filter, Search, SortAsc, Award, X,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -93,6 +93,7 @@ function AssessmentList({
   const [filterSubject, setFilterSubject] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title" | "marks">("date");
   const [page, setPage] = useState(1);
+  const [showGuidelines, setShowGuidelines] = useState(false);
   const PER_PAGE = 6;
 
   const now = new Date();
@@ -231,7 +232,9 @@ function AssessmentList({
             <p className="text-sm text-slate-500 mt-0.5">View all tests, quizzes, exams and assessments.</p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            <button
+              onClick={() => setShowGuidelines(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
               <Shield className="w-4 h-4" /> Assessment Guidelines
             </button>
             <button
@@ -582,6 +585,33 @@ function AssessmentList({
           </div>
         </div>
       </div>
+
+      {/* Assessment Guidelines modal — static reference content, not fabricated data */}
+      {showGuidelines && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowGuidelines(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-bold text-slate-900">Assessment Guidelines</h3>
+              </div>
+              <button onClick={() => setShowGuidelines(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+                <X className="h-4 w-4 text-slate-400" />
+              </button>
+            </div>
+            <ul className="px-6 py-5 space-y-3 text-sm text-slate-700">
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Start the assessment before its scheduled window closes — once time runs out, it auto-submits with whatever has been answered.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Stay on this tab for the full duration — leaving or refreshing may end your attempt early.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Flag questions you want to revisit and review them before submitting.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Each assessment can only be attempted once — there is no retake unless your teacher reopens it.</li>
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />Results appear here once your teacher releases them — an "Upcoming" or "Overdue" status does not mean your score is hidden on purpose.</li>
+            </ul>
+            <div className="px-6 py-4 border-t border-slate-100 flex justify-end">
+              <button onClick={() => setShowGuidelines(false)} className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold">Got it</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

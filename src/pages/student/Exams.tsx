@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
+import { loadExamMarksFresh } from "@/lib/gradebookEngine";
+import { getAllAttempts } from "@/lib/assessmentAttempts";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
 import { useExams, matchesSection, planForGrade, type ExamMode, type ExamRecord } from "@/lib/examStore";
 import { ExamTimetable } from "@/components/exams/ExamTimetable";
@@ -25,11 +28,6 @@ const modeBadge = (m: ExamMode) =>
   m === "Hybrid" ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/20 dark:text-cyan-400" :
   "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400";
 
-const LS_MARKS_KEY = "sd_exam_marks";
-function loadMarks(): Record<string, Record<string, Record<string, number>>> {
-  try { return JSON.parse(localStorage.getItem(LS_MARKS_KEY) || "{}"); } catch { return {}; }
-}
-
 function fmtDate(iso: string) {
   if (!iso) return "TBD";
   try { return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }); }
@@ -39,9 +37,17 @@ function fmtDate(iso: string) {
 export default function StudentExams() {
   const { user } = useAuth();
   const { students } = useStudents();
+  const location = useLocation();
   const allExams = useExams(); // shared localStorage store — same source admin writes to
-  const [results, setResults] = useState<any[]>([]);
-  const [tab, setTab] = useState<"schedule" | "results">("schedule");
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [attempts, setAttempts] = useState<any[]>([]);
+  const [examMarks, setExamMarks] = useState<Record<string, Record<string, Record<string, number>>>>({});
+  // "Exams" and "Results" are the same route/component with two different
+  // sidebar entries — deep-link to the right tab instead of always opening
+  // on the schedule.
+  const [tab, setTab] = useState<"schedule" | "results">(
+    location.pathname === "/student/results" ? "results" : "schedule"
+  );
 
   const student = useMemo(() => {
     if (!students?.length) return null;
@@ -67,15 +73,31 @@ export default function StudentExams() {
       });
   }, [allExams, student]);
 
-  // Online assessment results (separate store) — kept for backward compatibility.
+  // Real online-assessment results: assessments the student's grade/section
+  // can see, joined against their own assessment_attempts row — the same
+  // canonical contract student/Assessments.tsx reads (previously this read
+  // a nonexistent "Assessment" table via smartDb.getAll("Assessment", ...),
+  // which always resolved to [] since the real table is "assessments").
   useEffect(() => {
     const s = student as any;
     if (!s) return;
-    smartDb.getAll("Assessment", undefined).then((rows: any[]) => {
-      const filtered = (rows || []).filter((a: any) => canonGrade(a.grade) === canonGrade(s.grade) && canonSection(a.section) === canonSection(s.section));
-      setResults(filtered);
+    Promise.all([
+      smartDb.getAll("assessments", undefined).catch(() => []),
+      getAllAttempts().catch(() => []),
+    ]).then(([asmts, atts]) => {
+      const filtered = (asmts || []).filter((a: any) => canonGrade(a.grade) === canonGrade(s.grade) && canonSection(a.section) === canonSection(s.section));
+      setAssessments(filtered);
+      setAttempts(atts || []);
     }).catch(() => {});
   }, [student]);
+
+  // Offline (paper) exam marks — fetched fresh from MySQL and merged into the
+  // localStorage cache, not read from localStorage alone (which only ever
+  // reflects what this browser has previously seen — the same stale-cache
+  // bug class already fixed in ParentExams.tsx).
+  useEffect(() => {
+    loadExamMarksFresh().then(setExamMarks).catch(() => {});
+  }, []);
 
   // Scheduled / upcoming exams (have at least one subject slot).
   const scheduleExams = useMemo(
@@ -112,13 +134,12 @@ export default function StudentExams() {
   const offlineResults = useMemo(() => {
     const s = student as any;
     if (!s) return [];
-    const marks = loadMarks();
     const uid = String(s.id ?? s.uid ?? "");
     const rows: { id: string; title: string; subject: string; myMarks: number; maxMarks: number; pct: number }[] = [];
     exams.filter(e => e.status === "Published").forEach(e => {
-      const examMarks = marks[e.id];
-      if (!examMarks) return;
-      Object.entries(examMarks).forEach(([subject, perStudent]) => {
+      const marksForExam = examMarks[e.id];
+      if (!marksForExam) return;
+      Object.entries(marksForExam).forEach(([subject, perStudent]) => {
         const m = (perStudent as Record<string, number>)[uid];
         if (m === undefined || m === null) return;
         const max = e.maxMarks || 100;
@@ -126,20 +147,24 @@ export default function StudentExams() {
       });
     });
     return rows;
-  }, [exams, student]);
+  }, [exams, examMarks, student]);
 
-  // Online assessment results (legacy entries store).
+  // Online assessment results — the student's own real assessment_attempts
+  // row per assessment, gated by the same resultsReleased/resultVisibility
+  // rule student/Assessments.tsx enforces so a score never leaks before the
+  // teacher releases it.
   const onlineResults = useMemo(() => {
     const s = student as any;
     if (!s) return [];
-    return results.map(a => {
-      const entries = a.entries || [];
-      const entry = entries.find((e: any) => e.studentId === s.id);
-      const m = entry?.marks?.[s.id] ?? null;
-      const max = a.maxMarks || 100;
-      return { id: a.id, title: a.title, subject: a.subject, myMarks: m, maxMarks: max, pct: m !== null ? Math.round((m / max) * 100) : null };
-    }).filter(a => a.myMarks !== null);
-  }, [results, student]);
+    return assessments.map((a: any) => {
+      const released = a.resultsReleased || a.resultVisibility === "immediate" || !a.resultVisibility;
+      if (!released) return null;
+      const attempt = attempts.find((at: any) => at.assessmentId === a.id && at.studentId === s.id);
+      if (!attempt || attempt.score === null || attempt.score === undefined) return null;
+      const max = a.totalMarks || 100;
+      return { id: a.id, title: a.title, subject: a.subject, myMarks: attempt.score, maxMarks: max, pct: Math.round((attempt.score / max) * 100) };
+    }).filter((r): r is { id: string; title: string; subject: string; myMarks: number; maxMarks: number; pct: number } => r !== null);
+  }, [assessments, attempts, student]);
 
   const myResults = useMemo(() => [...offlineResults, ...onlineResults], [offlineResults, onlineResults]);
 

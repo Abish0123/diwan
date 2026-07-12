@@ -62,6 +62,7 @@ const entityMapping: Record<string, string> = {
   "TimetableRules": "timetable_rules",
   "Certificate": "certificates",
   "AssignmentSubmission": "assignment_submissions",
+  "HomeworkSubmission": "homework_submissions",
   "ExamDayAttendance": "exam_day_attendance",
   "ExamRemark": "exam_remarks",
   "ClassSemester": "class_semesters",
