@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   FileText, Clock, Calendar, CheckCircle, BarChart3,
-  X, Eye, Download, Upload, MapPin, Users, Send, Award, ClipboardCheck, Lock,
+  X, Eye, MapPin, Users, Send, Award, ClipboardCheck, Lock,
 } from "lucide-react";
 import {
   type ExamRecord, type ExamMode, useExams, updateExam, matchesSection, getGradePlans,
@@ -18,6 +18,7 @@ import { matchesGradeSection } from "@/lib/studentGradeSection";
 import { persistExamMarks, loadExamMarksFresh } from "@/lib/gradebookEngine";
 import { isTeacherAssignedForSubject, type SubjectAssignment } from "@/lib/timetableRules";
 import { logAudit } from "@/lib/auditLog";
+import { notifyClassPublish } from "@/lib/classPublishNotify";
 
 type Tab = "all" | "upcoming" | "completed" | "results";
 
@@ -244,10 +245,6 @@ export default function TeacherExams() {
                   </div>
                   <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] font-semibold border flex-shrink-0", meta.cls)}>{e.status}</span>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => toast.info("Downloading question paper template…")} title="Question paper template"
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Download className="w-4 h-4" /></button>
-                    <button onClick={() => toast.info("Upload scanned answer sheets (optional)")} title="Upload answer sheets"
-                      className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Upload className="w-4 h-4" /></button>
                     {canEnterMarks(e.status) ? (
                       <button onClick={() => setMarksFor({ exam: e, grade: scope.grade, section: scope.section })}
                         className="px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition flex items-center gap-1.5">
@@ -385,6 +382,18 @@ function MarksModal({ exam, students, myName, grade, section, onClose }: {
       module: "Academics", action: "exam_results_published", entity: "ExamMark",
       entity_id: `${exam.id}:${subject}:${grade}-${section}`, status: "success",
     });
+    // Real notification to every student + parent in this grade/section
+    // (plus the class teacher and school leadership) — the toast previously
+    // claimed this happened but nothing was ever actually sent.
+    await notifyClassPublish({
+      grade, section, entity: "Exam", type: "exam_results_published",
+      title: `${subject} Results Published`,
+      message: `${subject} results for ${exam.name} have been published.`,
+      sourceId: `${exam.id}-${subject}`,
+      redirectUrlStudent: "/student/exams",
+      redirectUrlParent: "/parent/exams",
+      redirectUrlTeacher: "/teacher/exams",
+    }).catch(() => {});
     toast.success("Results published to students & parents");
     onClose();
   }
