@@ -134,11 +134,6 @@ interface TeachingSlot {
   classKey: string;
 }
 
-function readAllTimetables(dbGrid?: AllTimetables): AllTimetables {
-  if (dbGrid && Object.keys(dbGrid).length > 0) return dbGrid;
-  try { return JSON.parse(localStorage.getItem("sd_timetables_v3") || "{}"); }
-  catch { return {}; }
-}
 function normName(s: string) {
   return s.toLowerCase().replace(/^(mr\.|mrs\.|ms\.|dr\.)\s*/i, "").trim();
 }
@@ -595,8 +590,7 @@ export default function TeacherTimetable() {
     const slots: TeachingSlot[] = [];
     const myNorm = normName(teacherName);
     try {
-      const compiled: Record<string, { schedule: (CompiledSlot | null)[][]; days: string[] }> =
-        dbTeachers && Object.keys(dbTeachers).length > 0 ? dbTeachers : JSON.parse(localStorage.getItem("sd_teacher_timetables") || "{}");
+      const compiled: Record<string, { schedule: (CompiledSlot | null)[][]; days: string[] }> = dbTeachers || {};
       const key = Object.keys(compiled).find((k) => k === teacherName || k.toLowerCase() === teacherName.toLowerCase() || normName(k) === myNorm);
       if (key) {
         const { schedule, days } = compiled[key];
@@ -621,8 +615,11 @@ export default function TeacherTimetable() {
       }
     } catch { /* fall through */ }
 
-    const allTimetables = readAllTimetables(dbGrid);
-    Object.entries(allTimetables).forEach(([classKey, grid]) => {
+    // Source 2: scan the real full class grid (published-timetable-v3),
+    // matching by real teacher name — no localStorage fallback, so an
+    // empty/not-yet-published real fetch correctly falls through to the
+    // honest "not published yet" empty state instead of stale cached data.
+    Object.entries(dbGrid || {}).forEach(([classKey, grid]) => {
       if (!Array.isArray(grid)) return;
       const dash = classKey.lastIndexOf("-");
       const gradeK = dash > 0 ? classKey.slice(0, dash).trim() : classKey;

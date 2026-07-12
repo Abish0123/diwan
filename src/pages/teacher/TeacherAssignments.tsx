@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import {
   ClipboardList, FileText, Plus, ChevronRight, ChevronLeft,
-  RotateCcw, Eye, Edit2, Trash2, RefreshCw,
-  LayoutTemplate, UploadCloud, CheckSquare, MessageSquare, Download, Clock,
+  Eye, Edit2, Trash2, RefreshCw,
+  Download, Clock, GraduationCap,
   Calculator, FlaskConical, BookOpen, Monitor, Map as MapIcon, Dumbbell,
 } from "lucide-react";
 
@@ -36,6 +36,7 @@ interface Assignment {
   grade: string;
   section: string;
   createdAt: string;
+  status?: string;
 }
 
 const SUBJECT_BADGE: Record<string, string> = {
@@ -62,9 +63,8 @@ function subjectIcon(subject: string) {
 const STATUS_BADGE: Record<string, string> = {
   Active: "bg-emerald-100 text-emerald-700",
   Closed: "bg-slate-100 text-slate-600",
-  Returned: "bg-amber-100 text-amber-700",
   Draft: "bg-blue-100 text-blue-700",
-  Archived: "bg-slate-100 text-slate-500",
+  Upcoming: "bg-purple-100 text-purple-700",
 };
 
 interface Row {
@@ -97,19 +97,7 @@ function StudentAvatar({ name }: { name: string }) {
   );
 }
 
-function Sparkline({ color, data }: { color: string; data: number[] }) {
-  const w = 56, h = 22;
-  const max = Math.max(...data), min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((d, i) => `${(i / (data.length - 1)) * w},${h - ((d - min) / range) * (h - 3) - 1.5}`).join(" ");
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-shrink-0">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-type Tab = "all" | "drafts" | "active" | "closed" | "archived";
+type Tab = "all" | "drafts" | "active" | "closed";
 
 export default function TeacherAssignments() {
   const navigate = useNavigate();
@@ -188,7 +176,11 @@ export default function TeacherAssignments() {
       const due = a.dueDate ? new Date(a.dueDate) : created;
       const fmt = (d: Date) => d.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
       const time = (d: Date) => d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-      const status = due < new Date() ? "Closed" : "Active";
+      // Use the real persisted status (Draft/Upcoming/Active/Closed, set by
+      // CreateAssignment.tsx and SubmissionReviewCenter.tsx's Close action)
+      // instead of recomputing purely from the due date — that overwrite was
+      // why Drafts could never appear in the Drafts tab.
+      const status = a.status || (due < new Date() ? "Closed" : "Active");
       const submitted = submissions.filter(s => s.assignmentId === a.id).length;
       const total = rosterSize;
       return {
@@ -206,7 +198,6 @@ export default function TeacherAssignments() {
     if (tab === "active" && r.status !== "Active") return false;
     if (tab === "closed" && r.status !== "Closed") return false;
     if (tab === "drafts" && r.status !== "Draft") return false;
-    if (tab === "archived" && r.status !== "Archived") return false;
     if (subjectFilter !== "All Subjects" && r.subject !== subjectFilter) return false;
     if (statusFilter !== "All Status" && r.status !== statusFilter) return false;
     return true;
@@ -220,12 +211,33 @@ export default function TeacherAssignments() {
     setStatusFilter("All Status"); setPage(1); toast.success("Filters reset");
   };
 
+  // Real ungraded-submission count across this teacher's own assignments —
+  // replaces the old "Pending Review" KPI, which was a verbatim duplicate of
+  // the Active Assignments count under a misleading label.
+  const assignmentIds = useMemo(() => new Set(items.map(a => a.id)), [items]);
+  const pendingReviewCount = useMemo(
+    () => submissions.filter(s => assignmentIds.has(s.assignmentId) && (s.status === "submitted" || s.status === "resubmitted")).length,
+    [submissions, assignmentIds]
+  );
+  // Real class average across graded submissions — replaces a permanent "—"
+  // placeholder that never computed anything.
+  const classAverage = useMemo(() => {
+    const graded = submissions.filter(s => assignmentIds.has(s.assignmentId) && typeof s.marks === "number");
+    if (!graded.length) return "—";
+    const pctSum = graded.reduce((sum, s) => {
+      const a = items.find(x => x.id === s.assignmentId);
+      const total = a?.totalMarks || 0;
+      return sum + (total > 0 ? (s.marks / total) * 100 : 0);
+    }, 0);
+    return `${Math.round(pctSum / graded.length)}%`;
+  }, [submissions, assignmentIds, items]);
+
   const KPIS = [
-    { icon: ClipboardList, bg: "bg-purple-50",  ic: "text-purple-500",  value: allRows.length,                                                                     label: "Total Assignments", sub: "All time",             spark: "#8b5cf6", data: [10, 13, 12, 16, 18, 21, 24] },
-    { icon: FileText,      bg: "bg-emerald-50", ic: "text-emerald-500", value: allRows.filter(r => r.status === "Active").length,                                   label: "Active Assignments",sub: "Currently running",    spark: "#10b981", data: [3, 5, 4, 6, 7, 7, 8] },
-    { icon: Clock,         bg: "bg-orange-50",  ic: "text-orange-500",  value: allRows.filter(r => r.status === "Active").length,                                   label: "Pending Review",    sub: "Submissions to review",spark: "#f97316", data: [6, 8, 10, 9, 12, 14, 15] },
-    { icon: RotateCcw,     bg: "bg-blue-50",    ic: "text-blue-500",    value: allRows.filter(r => r.status === "Returned" || r.status === "Closed").length,        label: "Returned",          sub: "Needs improvement",    spark: "#3b82f6", data: [2, 3, 3, 4, 5, 5, 6] },
-    { icon: Download,      bg: "bg-pink-50",    ic: "text-pink-500",    value: "—",                                                                                 label: "Class Average",     sub: "This month",           spark: "#ec4899", data: [70, 72, 71, 74, 76, 77, 78] },
+    { icon: ClipboardList, bg: "bg-purple-50",  ic: "text-purple-500",  value: allRows.length,                                     label: "Total Assignments", sub: "All time" },
+    { icon: FileText,      bg: "bg-emerald-50", ic: "text-emerald-500", value: allRows.filter(r => r.status === "Active").length,   label: "Active Assignments",sub: "Currently running" },
+    { icon: Clock,         bg: "bg-orange-50",  ic: "text-orange-500",  value: pendingReviewCount,                                  label: "Pending Review",    sub: "Ungraded submissions" },
+    { icon: FileText,      bg: "bg-blue-50",    ic: "text-blue-500",    value: allRows.filter(r => r.status === "Draft").length,    label: "Drafts",            sub: "Not yet published" },
+    { icon: GraduationCap, bg: "bg-pink-50",    ic: "text-pink-500",    value: classAverage,                                        label: "Class Average",     sub: "Across graded work" },
   ];
 
   // Submission overview donut
@@ -295,10 +307,7 @@ export default function TeacherAssignments() {
                 <span className="text-xs text-slate-500 font-medium leading-tight">{k.label}</span>
               </div>
               <p className="text-2xl font-bold text-slate-900 leading-none">{k.value}</p>
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-xs text-slate-400">{k.sub}</span>
-                <Sparkline color={k.spark} data={k.data} />
-              </div>
+              <p className="text-xs text-slate-400 mt-1.5">{k.sub}</p>
             </div>
           ))}
         </div>
@@ -314,7 +323,6 @@ export default function TeacherAssignments() {
                 { k: "drafts", label: "Drafts" },
                 { k: "active", label: "Active" },
                 { k: "closed", label: "Closed" },
-                { k: "archived", label: "Archived" },
               ] as const).map(t => (
                 <button key={t.k} onClick={() => { setTab(t.k); setPage(1); }}
                   className={cn("px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
@@ -487,14 +495,10 @@ export default function TeacherAssignments() {
             {/* Quick Actions */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3">Quick Actions</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Create Assignment", icon: Plus,           bg: "bg-purple-100", ic: "text-purple-600", fn: () => navigate("/teacher/assignments/new") },
-                  { label: "Templates",         icon: LayoutTemplate, bg: "bg-blue-100",   ic: "text-purple-600",   fn: () => toast.info("Opening assignment templates") },
-                  { label: "Bulk Upload",       icon: UploadCloud,    bg: "bg-emerald-100",ic: "text-emerald-600",fn: () => toast.info("Bulk upload assignments") },
-                  { label: "Grade Submissions", icon: CheckSquare,    bg: "bg-amber-100",  ic: "text-amber-600",  fn: () => toast.info("Opening grading queue") },
-                  { label: "Give Feedback",     icon: MessageSquare,  bg: "bg-pink-100",   ic: "text-pink-600",   fn: () => toast.info("Compose feedback") },
-                  { label: "Export Excel",      icon: Download,       bg: "bg-indigo-100", ic: "text-purple-600", fn: () => exportExcel() },
+                  { label: "Create Assignment", icon: Plus,     bg: "bg-purple-100", ic: "text-purple-600", fn: () => navigate("/teacher/assignments/new") },
+                  { label: "Export Excel",      icon: Download, bg: "bg-indigo-100", ic: "text-purple-600", fn: () => exportExcel() },
                 ].map((a, i) => (
                   <button key={i} onClick={a.fn}
                     className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">

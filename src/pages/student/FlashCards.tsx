@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
-import { smartDb } from "@/lib/localDb";
+import { useFlashCards } from "@/contexts/FlashCardContext";
+import { useClasses } from "@/hooks/useClasses";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,12 +79,23 @@ const BUILTIN: Record<string, { q: string; a: string }[]> = {
 
 const SUBJECTS = Object.keys(BUILTIN);
 
+function sectionLetter(cls: { name?: string; section?: string }): string {
+  return cls.section || cls.name?.match(/[- ]([A-Z])$/)?.[1] || "";
+}
+
 interface StudyCard { q: string; a: string }
 
 export default function StudentFlashCards() {
   const { user } = useAuth();
   const { students } = useStudents();
-  const [dbSets, setDbSets] = useState<any[]>([]);
+  // Real teacher decks — same normalized store (name/title, front/back
+  // aliases already applied) TeacherFlashcards.tsx writes through. Matched
+  // by the real Class id a deck was shared to (assignedTo), the actual
+  // field TeacherFlashcards.tsx's handleShare() sets — previously this
+  // page read raw un-normalized rows and filtered on grade/section/status
+  // fields no real deck ever has, so "From Your Teacher" never appeared.
+  const { sets } = useFlashCards();
+  const { classes } = useClasses();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [studyMode, setStudyMode] = useState(false);
   const [cards, setCards] = useState<StudyCard[]>([]);
@@ -101,15 +113,19 @@ export default function StudentFlashCards() {
     ) || students[0];
   }, [students, user]);
 
-  useEffect(() => {
+  // The real Class id for this student's own grade/section — the same
+  // resolution TeacherFlashcards.tsx uses so "assignedTo" always lines up.
+  const myClassId = useMemo(() => {
     const s = student as any;
-    if (!s) return;
-    smartDb.getAll("FlashCardSet", undefined).then((rows: any[]) => {
-      setDbSets((rows || []).filter((r: any) =>
-        (!r.grade || r.grade == s.grade) && (!r.section || r.section === s.section) && r.status === "Published"
-      ));
-    }).catch(() => {});
-  }, [student]);
+    if (!s) return null;
+    const cls = classes.find(c => c.grade === s.grade && (c.section === s.section || sectionLetter(c) === s.section));
+    return cls?.id || null;
+  }, [classes, student]);
+
+  const dbSets = useMemo(() => {
+    if (!myClassId) return [];
+    return sets.filter(set => (set.assignedTo || []).includes(myClassId) && (set.cards || []).length > 0);
+  }, [sets, myClassId]);
 
   const startStudy = (subject: string, customCards?: StudyCard[]) => {
     const deck = customCards || BUILTIN[subject] || [];

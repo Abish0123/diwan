@@ -7,8 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { notifyClassPublish } from "@/lib/classPublishNotify";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Brain, Plus, ChevronLeft, ChevronRight, Share2, Trash2, X, Search, Layers } from "lucide-react";
-import type { FlashCardSet } from "@/types/flashcard";
+import { Brain, Plus, ChevronLeft, ChevronRight, Share2, Trash2, X, Search, Layers, Pencil, Check } from "lucide-react";
+import type { FlashCardSet, FlashCard } from "@/types/flashcard";
 
 function sectionLetter(cls: { name?: string; section?: string }): string {
   return cls.section || cls.name?.match(/[- ]([A-Z])$/)?.[1] || "";
@@ -54,14 +54,50 @@ export default function TeacherFlashCards() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", assignmentKey: "", chapter: "" });
   const [saving, setSaving] = useState(false);
+  // Real card authoring — previously a deck could be created but had no way
+  // to ever add a card to it anywhere in the app, so every deck stayed
+  // permanently empty. Edits are local until "Save Cards" persists them via
+  // the real updateSet() write.
+  const [editMode, setEditMode] = useState(false);
+  const [draftCards, setDraftCards] = useState<FlashCard[]>([]);
+  const [savingCards, setSavingCards] = useState(false);
 
   const filtered = decks.filter(d =>
     !q || d.name.toLowerCase().includes(q.toLowerCase()) || (d.subject || "").toLowerCase().includes(q.toLowerCase())
   );
 
-  const openDeck = (d: FlashCardSet) => { setActiveDeck(d); setCardIdx(0); setFlipped(false); };
+  const openDeck = (d: FlashCardSet, startEditing = false) => {
+    setActiveDeck(d); setCardIdx(0); setFlipped(false);
+    setDraftCards((d.cards || []).map(c => ({ ...c })));
+    setEditMode(startEditing || (d.cards || []).length === 0);
+  };
   const nextCard = () => { setCardIdx(i => Math.min(i + 1, (activeDeck?.cards.length ?? 1) - 1)); setFlipped(false); };
   const prevCard = () => { setCardIdx(i => Math.max(i - 1, 0)); setFlipped(false); };
+
+  function addDraftCard() {
+    setDraftCards(prev => [...prev, { id: `new-${Date.now()}-${prev.length}`, type: "standard", question: "", answer: "" }]);
+  }
+  function updateDraftCard(idx: number, field: "question" | "answer", value: string) {
+    setDraftCards(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c));
+  }
+  function removeDraftCard(idx: number) {
+    setDraftCards(prev => prev.filter((_, i) => i !== idx));
+  }
+  async function saveCards() {
+    if (!activeDeck) return;
+    const cleaned = draftCards.filter(c => c.question.trim() && c.answer.trim());
+    if (cleaned.length === 0) { toast.error("Add at least one complete question and answer."); return; }
+    setSavingCards(true);
+    try {
+      await updateSet(activeDeck.id, { cards: cleaned });
+      setActiveDeck(prev => prev ? { ...prev, cards: cleaned } : prev);
+      setEditMode(false);
+      setCardIdx(0);
+      toast.success(`Saved ${cleaned.length} card${cleaned.length === 1 ? "" : "s"}.`);
+    } finally {
+      setSavingCards(false);
+    }
+  }
 
   const openCreate = () => {
     setForm({ title: "", assignmentKey: myAssignments[0]?.key || "", chapter: "" });
@@ -185,7 +221,13 @@ export default function TeacherFlashCards() {
               <p className="text-xs text-slate-500">{d.cards?.length || 0} card{(d.cards?.length || 0) !== 1 ? "s" : ""} · Created {d.createdAt}</p>
               <div className="flex gap-2 pt-1 border-t border-slate-50">
                 <button onClick={() => openDeck(d)}
-                  className="flex-1 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition">Study</button>
+                  className="flex-1 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition">
+                  {(d.cards?.length || 0) === 0 ? "Add Cards" : "Study"}
+                </button>
+                <button onClick={() => openDeck(d, true)} title="Edit cards"
+                  className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-400 hover:text-violet-600 transition">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
                 {!(d.assignedTo && d.assignedTo.length > 0) && (
                   <button onClick={() => handleShare(d)}
                     className="flex-1 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition">Share</button>
@@ -202,54 +244,101 @@ export default function TeacherFlashCards() {
           )}
         </div>
 
-        {/* Study Mode Overlay */}
+        {/* Study / Edit Mode Overlay */}
         {activeDeck && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg">
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
                 <div>
                   <h2 className="font-black text-slate-900">{activeDeck.name}</h2>
-                  <p className="text-xs text-slate-400">{activeDeck.cards.length > 0 ? `${cardIdx + 1} / ${activeDeck.cards.length} cards` : "No cards yet"}</p>
+                  <p className="text-xs text-slate-400">
+                    {editMode ? `Editing · ${draftCards.length} card${draftCards.length === 1 ? "" : "s"}` :
+                      activeDeck.cards.length > 0 ? `${cardIdx + 1} / ${activeDeck.cards.length} cards` : "No cards yet"}
+                  </p>
                 </div>
-                <button onClick={() => setActiveDeck(null)}><X className="w-4 h-4 text-slate-400" /></button>
+                <div className="flex items-center gap-2">
+                  {!editMode && (
+                    <button onClick={() => setEditMode(true)} title="Edit cards"
+                      className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-400 hover:text-violet-600 transition">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button onClick={() => { setActiveDeck(null); setEditMode(false); }}><X className="w-4 h-4 text-slate-400" /></button>
+                </div>
               </div>
-              <div className="p-6">
-                {activeDeck.cards.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400">No cards in this deck yet.</div>
-                ) : (
-                  <>
-                    {/* Card */}
-                    <div
-                      className="min-h-[160px] rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white flex flex-col items-center justify-center p-6 cursor-pointer select-none"
-                      onClick={() => setFlipped(f => !f)}
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-3">
-                        {flipped ? "Answer" : "Question — tap to reveal"}
-                      </p>
-                      <p className="text-lg font-bold text-slate-800 text-center">
-                        {flipped ? activeDeck.cards[cardIdx].answer : activeDeck.cards[cardIdx].question}
-                      </p>
-                    </div>
-                    {/* Navigation */}
-                    <div className="flex items-center justify-between mt-5">
-                      <button onClick={prevCard} disabled={cardIdx === 0}
-                        className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition">
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <div className="flex gap-1">
-                        {activeDeck.cards.map((_, i) => (
-                          <button key={i} onClick={() => { setCardIdx(i); setFlipped(false); }}
-                            className={cn("w-2 h-2 rounded-full transition", i === cardIdx ? "bg-purple-600" : "bg-slate-200")} />
-                        ))}
+
+              {editMode ? (
+                <>
+                  <div className="p-5 overflow-y-auto flex-1 space-y-3">
+                    {draftCards.map((c, i) => (
+                      <div key={c.id || i} className="rounded-xl border border-slate-200 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Card {i + 1}</span>
+                          <button onClick={() => removeDraftCard(i)} className="text-slate-300 hover:text-rose-500 transition">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input value={c.question} onChange={e => updateDraftCard(i, "question", e.target.value)}
+                          placeholder="Question"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+                        <input value={c.answer} onChange={e => updateDraftCard(i, "answer", e.target.value)}
+                          placeholder="Answer"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
                       </div>
-                      <button onClick={nextCard} disabled={cardIdx === activeDeck.cards.length - 1}
-                        className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition">
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+                    ))}
+                    <button onClick={addDraftCard}
+                      className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:text-violet-600 hover:border-violet-300 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5" /> Add Card
+                    </button>
+                  </div>
+                  <div className="p-5 border-t border-slate-100 flex gap-2 flex-shrink-0">
+                    <button onClick={() => { setEditMode(false); setDraftCards((activeDeck.cards || []).map(c => ({ ...c }))); if ((activeDeck.cards || []).length === 0) setActiveDeck(null); }}
+                      className="flex-1 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600">Cancel</button>
+                    <button onClick={saveCards} disabled={savingCards}
+                      className="flex-1 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-violet-700 transition disabled:opacity-60 flex items-center justify-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" /> {savingCards ? "Saving…" : "Save Cards"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="p-6">
+                  {activeDeck.cards.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400">No cards in this deck yet.</div>
+                  ) : (
+                    <>
+                      {/* Card */}
+                      <div
+                        className="min-h-[160px] rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white flex flex-col items-center justify-center p-6 cursor-pointer select-none"
+                        onClick={() => setFlipped(f => !f)}
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-3">
+                          {flipped ? "Answer" : "Question — tap to reveal"}
+                        </p>
+                        <p className="text-lg font-bold text-slate-800 text-center">
+                          {flipped ? activeDeck.cards[cardIdx].answer : activeDeck.cards[cardIdx].question}
+                        </p>
+                      </div>
+                      {/* Navigation */}
+                      <div className="flex items-center justify-between mt-5">
+                        <button onClick={prevCard} disabled={cardIdx === 0}
+                          className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition">
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex gap-1">
+                          {activeDeck.cards.map((_, i) => (
+                            <button key={i} onClick={() => { setCardIdx(i); setFlipped(false); }}
+                              className={cn("w-2 h-2 rounded-full transition", i === cardIdx ? "bg-purple-600" : "bg-slate-200")} />
+                          ))}
+                        </div>
+                        <button onClick={nextCard} disabled={cardIdx === activeDeck.cards.length - 1}
+                          className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

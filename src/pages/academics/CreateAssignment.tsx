@@ -4,13 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   ChevronRight, Bold, Italic, Underline as UnderlineIcon,
   List, ListOrdered, Link as LinkIcon, Image as ImageIcon,
-  Plus, UploadCloud, FileSpreadsheet, Eye, Info, Settings,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, Users, Trash2, Download, X,
+  Plus, UploadCloud, FileSpreadsheet, Eye, Info,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Trash2, X,
 } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -67,7 +65,6 @@ export default function CreateAssignment() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [dueDate,        setDueDate]        = useState("");
   const [submissionType, setSubmissionType] = useState("");
-  const [assignedTo,     setAssignedTo]     = useState("entire-class");
   const [attachments,    setAttachments]    = useState<AttachmentFile[]>([]);
   const [isSaving,       setIsSaving]       = useState(false);
   const [editorEmpty,    setEditorEmpty]    = useState(true);
@@ -80,31 +77,6 @@ export default function CreateAssignment() {
 
   // Teachers from DB
   const [teachers, setTeachers] = useState<string[]>([]);
-
-  // Students for "Select Specific Students" — filtered by grade+section
-  const [classStudents, setClassStudents] = useState<{id:string;name:string}[]>([]);
-  useEffect(() => {
-    if (!grade) { setClassStudents([]); return; }
-    smartDb.getAll("Student", undefined).then((all: any[]) => {
-      const norm = (g: string) => (g||"").toLowerCase().replace(/grade\s*/i,"").trim();
-      const normSec = (s: string) => (s||"").toLowerCase().replace(/section\s*/i,"").trim();
-      const filtered = (all||[]).filter((s: any) => {
-        const sGrade = norm(s.grade||s.gradeLevel||"");
-        const aGrade = norm(grade);
-        if (!sGrade || sGrade !== aGrade) return false;
-        if (!section) return true;
-        const sSection = normSec(s.section||"");
-        return !sSection || sSection === normSec(section);
-      });
-      setClassStudents(filtered.map((s: any) => ({ id: s.id||s.uid, name: s.name||s.displayName||"Unknown" })));
-    }).catch(() => {});
-  }, [grade, section]);
-
-  // Quiz-specific
-  const [numQuestions,       setNumQuestions]       = useState("");
-  const [timeLimit,          setTimeLimit]          = useState("");
-  const [showQuestionBuilder,setShowQuestionBuilder]= useState(false);
-  const [questions,          setQuestions]          = useState<any[]>([]);
 
   // Refs
   const editorRef   = useRef<HTMLDivElement>(null);
@@ -232,28 +204,6 @@ export default function CreateAssignment() {
     if (e.target.files) handleFiles(e.target.files);
     e.target.value = "";
   }
-
-  // ─── Quiz helpers ──────────────────────────────────────────────────────────
-  const handleDownloadTemplate = () => {
-    const csv = "data:text/csv;charset=utf-8,Question,Option A,Option B,Option C,Option D,Correct Answer (A/B/C/D)\nWhat is the capital of France?,Berlin,Madrid,Paris,Rome,C";
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csv));
-    link.setAttribute("download", "quiz_template.csv");
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  };
-
-  const handleImport = (e: any) => {
-    if (e.target.files?.length) {
-      toast.success(`Imported ${e.target.files[0].name}`);
-      setShowQuestionBuilder(true);
-      setQuestions([{ question:"Imported Question 1", options:["","","",""], correct:"A" }]);
-    }
-  };
-
-  const handleAddQuestion = () => {
-    setShowQuestionBuilder(true);
-    setQuestions(q => [...q, { question:"", options:["","","",""], correct:"A" }]);
-  };
 
   // ─── Link helpers ──────────────────────────────────────────────────────────
   function handleAddLink() {
@@ -646,87 +596,6 @@ export default function CreateAssignment() {
                   </CardContent>
                 </Card>
 
-                {/* Quiz Setup (only when Quiz selected) */}
-                {assignmentType === "Quiz" && (
-                  <Card className="border-purple-200 shadow-md shadow-blue-500/5 rounded-2xl overflow-hidden bg-purple-50/30">
-                    <CardContent className="p-8 space-y-6">
-                      <div className="flex items-center border-b border-purple-200/60 pb-4">
-                        <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold mr-3">Q</div>
-                        <h2 className="text-lg font-bold text-slate-900">Quiz Setup</h2>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                          <FieldLabel>Number of Questions</FieldLabel>
-                          <Input type="number" value={numQuestions} onChange={e => setNumQuestions(e.target.value)}
-                            placeholder="e.g. 10" className="rounded-xl border-white shadow-sm h-11 bg-white focus-visible:ring-purple-600"/>
-                        </div>
-                        <div>
-                          <FieldLabel>Time Limit (Minutes)</FieldLabel>
-                          <Input type="number" value={timeLimit} onChange={e => setTimeLimit(e.target.value)}
-                            placeholder="e.g. 30" className="rounded-xl border-white shadow-sm h-11 bg-white focus-visible:ring-purple-600"/>
-                        </div>
-                        <div>
-                          <FieldLabel>Shuffle Questions</FieldLabel>
-                          <div className="flex items-center h-11 gap-2">
-                            <Checkbox id="shuffle" className="rounded border-slate-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 w-5 h-5"/>
-                            <label htmlFor="shuffle" className="text-sm text-slate-700 cursor-pointer">Randomize order</label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {!showQuestionBuilder ? (
-                        <div className="pt-2 flex flex-col md:flex-row md:items-center gap-4">
-                          <Button onClick={handleAddQuestion} className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm rounded-xl">
-                            <Plus className="w-4 h-4 mr-2"/> Add Questions Now
-                          </Button>
-                          <div className="relative">
-                            <input type="file" accept=".csv,.xlsx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImport}/>
-                            <Button variant="outline" className="border-purple-200 text-purple-700 bg-white hover:bg-purple-50 rounded-xl pointer-events-none w-full md:w-auto">
-                              <UploadCloud className="w-4 h-4 mr-2"/> Import from Question Bank
-                            </Button>
-                          </div>
-                          <Button onClick={handleDownloadTemplate} variant="ghost" className="text-purple-600 hover:text-purple-700 hover:bg-purple-50">
-                            <Download className="w-4 h-4 mr-2"/> Download Template
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="pt-4 space-y-6">
-                          {questions.map((q, i) => (
-                            <div key={i} className="border border-slate-200 rounded-xl p-4 bg-white relative">
-                              <div className="absolute top-4 right-4">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50"
-                                  onClick={() => setQuestions(questions.filter((_, idx) => idx !== i))}>
-                                  <Trash2 className="w-4 h-4"/>
-                                </Button>
-                              </div>
-                              <Label className="text-slate-700 font-bold">Question {i + 1}</Label>
-                              <Input
-                                defaultValue={q.question}
-                                onChange={e => { const qs = [...questions]; qs[i].question = e.target.value; setQuestions(qs); }}
-                                placeholder="Enter your question here..."
-                                className="mt-2 mb-4 bg-slate-50/50 border-slate-200"/>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {["A","B","C","D"].map((opt, oIdx) => (
-                                  <div key={opt} className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center font-bold text-purple-700 text-xs shrink-0">{opt}</div>
-                                    <Input
-                                      defaultValue={q.options[oIdx]}
-                                      onChange={e => { const qs = [...questions]; qs[i].options[oIdx] = e.target.value; setQuestions(qs); }}
-                                      placeholder={`Option ${opt}`} className="bg-slate-50/50 border-slate-200"/>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                          <Button onClick={handleAddQuestion} variant="outline" className="border-dashed border-2 border-slate-300 text-slate-600 hover:bg-slate-50 w-full py-6">
-                            <Plus className="w-4 h-4 mr-2"/> Add Another Question
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-
                 {/* Section 3: Attachments & Resources */}
                 <Card className="border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
                   <CardContent className="p-8 space-y-6">
@@ -819,30 +688,6 @@ export default function CreateAssignment() {
               {/* Right Column: Sidebar */}
               <div className="space-y-6">
 
-                {/* Assignment Options */}
-                <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-slate-900 flex items-center mb-5 pb-4 border-b border-slate-100">
-                      <Settings className="w-4 h-4 mr-2 text-purple-600"/> Assignment Options
-                    </h3>
-                    <div className="space-y-4">
-                      {[
-                        { id:"opt1", label:"Publish to students immediately", checked:true },
-                        { id:"opt2", label:"Allow late submissions",          checked:true },
-                        { id:"opt3", label:"Notify students",                 checked:true },
-                        { id:"opt4", label:"Enable comments",                 checked:false },
-                        { id:"opt5", label:"Hide from students",              checked:false },
-                      ].map(opt => (
-                        <div key={opt.id} className="flex items-center space-x-3">
-                          <Checkbox id={opt.id} defaultChecked={opt.checked}
-                            className="rounded border-slate-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 w-5 h-5"/>
-                          <label htmlFor={opt.id} className="text-sm font-medium text-slate-700 leading-none cursor-pointer">{opt.label}</label>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Live Summary */}
                 <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
                   <CardContent className="p-6">
@@ -868,19 +713,6 @@ export default function CreateAssignment() {
                   </CardContent>
                 </Card>
 
-                {/* Rubric */}
-                <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-slate-900 flex items-center mb-2">
-                      <ListOrdered className="w-4 h-4 mr-2 text-purple-600"/> Rubric <span className="text-slate-400 font-normal ml-2 text-sm">(Optional)</span>
-                    </h3>
-                    <p className="text-sm text-slate-600 mb-5">Use a rubric to evaluate this assignment</p>
-                    <Button variant="outline" className="w-full h-11 border-purple-200 text-purple-700 font-semibold hover:bg-purple-50 rounded-xl border-dashed">
-                      <Plus className="w-4 h-4 mr-2"/> Add Rubric
-                    </Button>
-                  </CardContent>
-                </Card>
-
                 {/* Preview */}
                 <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
                   <CardContent className="p-6">
@@ -891,35 +723,6 @@ export default function CreateAssignment() {
                     <Button onClick={() => setShowPreview(true)} variant="outline" className="w-full h-11 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 rounded-xl shadow-sm">
                       <Eye className="w-4 h-4 mr-2 text-slate-500"/> Preview Assignment
                     </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Assigned To */}
-                <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-slate-900 flex items-center mb-5 pb-4 border-b border-slate-100">
-                      <Users className="w-4 h-4 mr-2 text-purple-600"/> Assigned To
-                    </h3>
-                    <RadioGroup value={assignedTo} onValueChange={setAssignedTo} className="space-y-4">
-                      {[
-                        { val:"entire-class", label:"Entire Class" },
-                        { val:"group",        label:"Group of Students" },
-                        { val:"select",       label:"Select Specific Students" },
-                      ].map(opt => (
-                        <div key={opt.val} className="flex items-center space-x-3">
-                          <RadioGroupItem value={opt.val} id={opt.val} className="text-purple-600 border-slate-300 w-5 h-5"/>
-                          <Label htmlFor={opt.val} className="font-medium text-slate-800 cursor-pointer">{opt.label}</Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                    {assignedTo === "select" && (
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <Label className="text-slate-700 font-semibold text-sm mb-2 block">Search Students</Label>
-                        <StyledSelect value="" onChange={() => {}} placeholder={classStudents.length ? "Select students..." : grade ? "No students found for this grade/section" : "Select grade first"}>
-                          {classStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </StyledSelect>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 

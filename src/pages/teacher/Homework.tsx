@@ -7,15 +7,16 @@ import { SubjectContextBar } from "@/components/teacher/SubjectContextBar";
 import { useAuth } from "@/hooks/useAuth";
 import { smartDb } from "@/lib/localDb";
 import { canonGrade, canonSection } from "@/lib/studentGradeSection";
+import { notifyClassPublish } from "@/lib/classPublishNotify";
 import { toast } from "sonner";
 import {
-  BookMarked, Plus, Calendar, CheckCircle2, Clock, Paperclip, X, Trash2,
+  BookMarked, Plus, Calendar, CheckCircle2, Clock, Paperclip, X, Trash2, Upload,
 } from "lucide-react";
 
 interface HW {
   id: string; title: string; subject: string; description: string;
   dueDate: string; grade: string; section: string; createdAt: string;
-  attachment?: string;
+  attachment?: string; attachmentUrl?: string;
 }
 
 const SUBJECTS = ["Mathematics", "English", "Science", "Arabic", "Islamic Studies", "Social Studies", "Computer", "Art"];
@@ -35,7 +36,8 @@ export default function Homework() {
     ? `${activeSubject.grade} · Sec ${activeSubject.section} · ${activeSubject.subject}`
     : assignment.className;
 
-  const [form, setForm] = useState({ title: "", subject: "Mathematics", description: "", dueDate: "", attachment: "" });
+  const [form, setForm] = useState({ title: "", subject: "Mathematics", description: "", dueDate: "", attachment: "", attachmentUrl: "" });
+  const [uploading, setUploading] = useState(false);
 
   // Sync subject dropdown to active subject when it changes
   useEffect(() => {
@@ -51,6 +53,34 @@ export default function Homework() {
     return () => unsub();
   }, [user, effGrade, effSection]);
 
+  async function handleAttachmentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/uploads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, fileData: dataUrl }),
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      setForm(f => ({ ...f, attachment: file.name, attachmentUrl: url }));
+      toast.success("File attached");
+    } catch {
+      toast.error("Could not upload file");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const submit = async () => {
     if (!form.title || !form.dueDate) { toast.error("Title and due date are required"); return; }
     const hw: HW = {
@@ -59,9 +89,25 @@ export default function Homework() {
     };
     try {
       await smartDb.create("Homework", { ...hw, uid: user!.uid }, hw.id);
+      // Real notification to students/parents/class teacher/leadership —
+      // previously this was the one "publish"-type action among the
+      // teacher's content modules (Study Materials, Flash Cards,
+      // Assignments) that created real data but told no one about it.
+      await notifyClassPublish({
+        grade: effGrade, section: effSection,
+        entity: "Homework", type: "homework_assigned",
+        title: `New Homework: ${hw.title}`,
+        message: `${hw.subject} homework "${hw.title}" is due ${hw.dueDate}.`,
+        sourceId: hw.id,
+        redirectUrlStudent: "/student/homework",
+        // No dedicated /parent/homework page exists — Assignments is the
+        // closest real parent-facing view of their child's coursework.
+        redirectUrlParent: "/parent/assignments",
+        redirectUrlTeacher: "/teacher/homework",
+      }).catch(() => {});
       toast.success("Homework assigned to " + assignment.className);
       setOpen(false);
-      setForm({ title: "", subject: "Mathematics", description: "", dueDate: "", attachment: "" });
+      setForm({ title: "", subject: "Mathematics", description: "", dueDate: "", attachment: "", attachmentUrl: "" });
     } catch { toast.error("Failed to save"); }
   };
 
@@ -103,7 +149,16 @@ export default function Homework() {
               </div>
               <h3 className="font-bold text-slate-900">{h.title}</h3>
               {h.description && <p className="text-sm text-slate-500 mt-1 line-clamp-2">{h.description}</p>}
-              {h.attachment && <p className="text-xs text-purple-600 mt-2 flex items-center gap-1"><Paperclip className="w-3 h-3" /> {h.attachment}</p>}
+              {h.attachment && (
+                h.attachmentUrl ? (
+                  <a href={h.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-purple-600 mt-2 flex items-center gap-1 hover:underline w-fit">
+                    <Paperclip className="w-3 h-3" /> {h.attachment}
+                  </a>
+                ) : (
+                  <p className="text-xs text-purple-600 mt-2 flex items-center gap-1"><Paperclip className="w-3 h-3" /> {h.attachment}</p>
+                )
+              )}
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
                 <span className={`text-xs font-semibold flex items-center gap-1 ${isOverdue(h.dueDate) ? "text-rose-600" : "text-slate-500"}`}>
                   <Calendar className="w-3 h-3" /> Due {h.dueDate}
@@ -151,9 +206,12 @@ export default function Homework() {
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none resize-none" />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Attachment (name)</label>
-                <input value={form.attachment} onChange={e => setForm({ ...form, attachment: e.target.value })} placeholder="e.g. worksheet.pdf"
-                  className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm focus:border-violet-500 outline-none" />
+                <label className="text-sm font-medium text-slate-700 block mb-1.5">Attachment (optional)</label>
+                <label className={`flex items-center gap-2 h-11 px-3 rounded-xl border text-sm cursor-pointer transition ${form.attachment ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-400 hover:border-violet-300"}`}>
+                  <Upload className="w-4 h-4" />
+                  {uploading ? "Uploading…" : form.attachment || "Click to attach a file"}
+                  <input type="file" className="hidden" onChange={handleAttachmentChange} disabled={uploading} />
+                </label>
               </div>
             </div>
             <div className="flex gap-3 mt-6">

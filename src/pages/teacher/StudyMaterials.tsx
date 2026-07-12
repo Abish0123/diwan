@@ -225,21 +225,46 @@ export default function StudyMaterials() {
     if (screen.view !== "subject") return;
     const { grade, section, subject } = screen;
     if (!upTitle.trim()) { toast.error("Title is required"); return; }
+    if (upType !== "Video Link" && !upFile) { toast.error("Choose a file to upload"); return; }
     const chapter = upCh.trim() || "General";
     setUploading(true); setUpPct(0);
-    await new Promise<void>(res => {
-      let p = 0;
-      const iv = setInterval(() => {
-        p += Math.random() * 22 + 7;
-        if (p >= 100) { p = 100; clearInterval(iv); res(); }
-        setUpPct(Math.floor(p));
-      }, 90);
-    });
+
+    // Real upload: FileReader -> POST /api/uploads -> stored-file URL, the
+    // same pattern Documents.tsx/TeacherSettings.tsx use — previously only
+    // the file's NAME was saved, never the bytes, so a student had nothing
+    // real to actually open for anything but a Video Link.
+    let fileUrl = "";
+    if (upType !== "Video Link" && upFile) {
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(upFile);
+        });
+        setUpPct(50);
+        const res = await fetch("/api/uploads", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: upFile.name, fileData: dataUrl }),
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const { url } = await res.json();
+        fileUrl = url;
+        setUpPct(100);
+      } catch {
+        toast.error("Failed to upload file");
+        setUploading(false);
+        return;
+      }
+    } else {
+      setUpPct(100);
+    }
+
     const stamp = new Date().toISOString();
     const mat: Material = {
       id: `MAT-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,
       title: upTitle.trim(), subject, type: upType,
-      link: upType === "Video Link" ? upLink.trim() : (upFile?.name || upLink.trim()),
+      link: upType === "Video Link" ? upLink.trim() : fileUrl,
       grade, section, chapter,
       lesson: upLs.trim() || undefined,
       teacher: teacherName, createdAt: stamp,
@@ -589,7 +614,7 @@ export default function StudyMaterials() {
                                               <span className="text-[11.5px] text-slate-400">{fmtDate(m.createdAt)}</span>
                                             </div>
                                           </div>
-                                          {(m.type === "Video Link" || m.type === "Video") && m.link?.startsWith("http") && (
+                                          {m.link && (m.link.startsWith("http") || m.link.startsWith("/uploads/")) && (
                                             <a href={m.link} target="_blank" rel="noreferrer"
                                               onClick={e => e.stopPropagation()}
                                               className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#DCFCE7] text-[#16A34A] rounded-lg text-xs font-semibold">
@@ -624,6 +649,13 @@ export default function StudyMaterials() {
                                     <span className="text-[11.5px] text-slate-400">{fmtDate(m.createdAt)}</span>
                                   </div>
                                 </div>
+                                {m.link && (m.link.startsWith("http") || m.link.startsWith("/uploads/")) && (
+                                  <a href={m.link} target="_blank" rel="noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#DCFCE7] text-[#16A34A] rounded-lg text-xs font-semibold">
+                                    <Play className="h-3 w-3" /> Open
+                                  </a>
+                                )}
                                 <button onClick={() => removeItem(m.id, m.title)}
                                   className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
                                   <Trash2 className="h-3.5 w-3.5" />
