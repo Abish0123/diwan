@@ -1952,6 +1952,59 @@ async function startServer() {
     }
   });
 
+  // One-time backfill for accounts that already drifted out of sync before
+  // syncPasswordAcrossDuplicateUserRows() existed — that fix only keeps
+  // FUTURE password writes in sync; every account whose duplicate rows
+  // already disagreed stays broken until someone resets it again (or this
+  // runs once). For each email with >1 `users` row and mismatched
+  // passwords, treat the row login actually authenticates against (the one
+  // whose id === email, since that's login's first, always-wins lookup) as
+  // the source of truth and copy its password onto the other duplicate(s) —
+  // this never invalidates a password that currently works, it only makes
+  // the inconsistent copy agree with it. When no row has id === email,
+  // falls back to the most recently updated row, since that's the one most
+  // likely to reflect a real reset someone actually knows.
+  app.post("/api/admin/sync-duplicate-user-passwords", requireAuth, async (req, res) => {
+    const auth = (req as express.Request & { auth: SessionAuth }).auth;
+    if (getRole(auth.role).full !== true) return res.status(403).json({ error: "Admin only" });
+    try {
+      const rows = await dbQuery(`SELECT id, data, updatedAt FROM \`users\``);
+      const byEmail = new Map<string, { id: string; data: Record<string, unknown>; updatedAt: string }[]>();
+      for (const r of rows) {
+        let parsed: Record<string, unknown>;
+        try { parsed = JSON.parse(r.data || "{}"); } catch { continue; }
+        const email = String(parsed.email || "").trim().toLowerCase();
+        if (!email) continue;
+        if (!byEmail.has(email)) byEmail.set(email, []);
+        byEmail.get(email)!.push({ id: r.id, data: parsed, updatedAt: r.updatedAt });
+      }
+      let emailsFixed = 0, rowsUpdated = 0;
+      const now = new Date().toISOString();
+      for (const [email, group] of byEmail) {
+        if (group.length < 2) continue;
+        const passwords = new Set(group.map(g => g.data.password || ""));
+        if (passwords.size <= 1) continue;
+        const canonical =
+          group.find(g => g.id.toLowerCase() === email) ||
+          [...group].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+        const canonicalPassword = canonical.data.password;
+        let changed = false;
+        for (const g of group) {
+          if (g.id === canonical.id || g.data.password === canonicalPassword) continue;
+          const merged = { ...g.data, password: canonicalPassword };
+          await dbQuery(`UPDATE \`users\` SET data = ?, updatedAt = ? WHERE id = ?`, [JSON.stringify(merged), now, g.id]);
+          rowsUpdated++;
+          changed = true;
+        }
+        if (changed) emailsFixed++;
+      }
+      entityCache.delete("users");
+      res.json({ emailsChecked: byEmail.size, emailsFixed, rowsUpdated });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Admin: deduplicate students by name and remove their orphaned user credentials
   app.post("/api/admin/cleanup-student-credentials", async (req, res) => {
     try {
