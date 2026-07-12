@@ -25,14 +25,19 @@ function fmtDate(iso: string) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Real stored values (see teacher/StudyMaterials.tsx's CAT_META, the module
+// that actually writes this field) — this used to key on a different
+// vocabulary ("PDF"/"Document"/"Video"/etc.) that real rows never contain,
+// so every material silently fell through to the generic default icon.
 function typeMeta(type: string) {
   switch (String(type)) {
-    case "PDF":          return { icon: FileText,        bg: "bg-rose-100",   text: "text-rose-600",   badge: "bg-rose-50 text-rose-600" };
-    case "Document":     return { icon: FileSpreadsheet, bg: "bg-blue-100",   text: "text-purple-600",   badge: "bg-blue-50 text-purple-600" };
-    case "Presentation": return { icon: Presentation,   bg: "bg-orange-100", text: "text-orange-600", badge: "bg-orange-50 text-orange-600" };
-    case "Video":        return { icon: Film,            bg: "bg-purple-100", text: "text-purple-600", badge: "bg-purple-50 text-purple-600" };
-    case "Link":         return { icon: Link2,           bg: "bg-teal-100",   text: "text-teal-600",   badge: "bg-teal-50 text-teal-600" };
-    default:             return { icon: FileText,        bg: "bg-slate-100",  text: "text-slate-600",  badge: "bg-slate-50 text-slate-600" };
+    case "PDF Notes":            return { icon: FileText,        bg: "bg-rose-100",   text: "text-rose-600",   badge: "bg-rose-50 text-rose-600" };
+    case "PPT Presentation":     return { icon: Presentation,    bg: "bg-orange-100", text: "text-orange-600", badge: "bg-orange-50 text-orange-600" };
+    case "Worksheet":            return { icon: FileSpreadsheet, bg: "bg-cyan-100",   text: "text-cyan-600",   badge: "bg-cyan-50 text-cyan-600" };
+    case "Video Link":           return { icon: Film,            bg: "bg-purple-100", text: "text-purple-600", badge: "bg-purple-50 text-purple-600" };
+    case "Assignment File":      return { icon: FileText,        bg: "bg-violet-100", text: "text-violet-600", badge: "bg-violet-50 text-violet-600" };
+    case "Additional Resources": return { icon: Link2,           bg: "bg-teal-100",   text: "text-teal-600",   badge: "bg-teal-50 text-teal-600" };
+    default:                     return { icon: FileText,        bg: "bg-slate-100",  text: "text-slate-600",  badge: "bg-slate-50 text-slate-600" };
   }
 }
 
@@ -146,8 +151,8 @@ export default function ParentStudyMaterials() {
 
   // KPIs from real data only
   const kpiTotal = materials.length;
-  const kpiPdf = materials.filter(m => m.type === "PDF").length;
-  const kpiVideo = materials.filter(m => m.type === "Video").length;
+  const kpiPdf = materials.filter(m => m.type === "PDF Notes").length;
+  const kpiVideo = materials.filter(m => m.type === "Video Link").length;
   const kpiSubjects = classSubjects.length;
 
   // ── SUBJECTS VIEW ─────────────────────────────────────────────────────────────

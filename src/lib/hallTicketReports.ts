@@ -205,6 +205,19 @@ function drawTicket(doc: jsPDF, schoolName: string, schoolAddress: string, examN
   );
 }
 
+// Single hall ticket, for a student/parent downloading their own — the same
+// drawTicket() the admin bulk export uses, just one PDF instead of a ZIP.
+export function downloadHallTicketPdf(
+  schoolName: string,
+  schoolAddress: string,
+  examName: string,
+  ticket: HallTicketData,
+): void {
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  drawTicket(doc, schoolName, schoolAddress, examName, ticket);
+  doc.save(`${sanitizeFileName(examName)}_${sanitizeFileName(ticket.rollNo)}_HallTicket.pdf`);
+}
+
 // One PDF per student, bundled into a single ZIP archive so the admin gets
 // "Download All" instead of triggering N separate browser downloads.
 export async function downloadAllHallTicketsZip(

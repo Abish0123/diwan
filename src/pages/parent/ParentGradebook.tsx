@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useCurriculum } from "@/hooks/useCurriculum";
-import { getBandForGrade } from "@/lib/curriculumConfig";
+import { getBandForGrade, getPeriodLabels } from "@/lib/curriculumConfig";
 import {
   loadGradebookSources, computeStudentGradebook,
   type GradebookSources, type StudentGradebook,
@@ -29,6 +29,15 @@ export default function ParentGradebook() {
     loadGradebookSources().then(setSources).catch(() => setSources(null));
   }, []);
 
+  // Real term selector — mirrors academics/Gradebook.tsx's TERMS. Without
+  // this, computeStudentGradebook was always called with no term, so it
+  // silently aggregated marks across every term/override combined — a
+  // parent had no way to see a specific term the way the admin/teacher
+  // Gradebook can, and the numbers wouldn't line up with a per-term report card.
+  const TERMS = useMemo(() => getPeriodLabels(curriculum), [curriculum]);
+  const [term, setTerm] = useState(() => TERMS[0] ?? "Term 1");
+  useEffect(() => { setTerm(TERMS[0] ?? "Term 1"); }, [TERMS]);
+
   const band = useMemo(
     () => getBandForGrade(curriculum, selected?.grade || ""),
     [curriculum, selected?.grade]
@@ -49,14 +58,35 @@ export default function ParentGradebook() {
     if (!sources || !selected) return null;
     return computeStudentGradebook(
       { id: String((selected as any).studentId ?? selected.id), name: selected.name, grade: selected.grade || "", section: selected.section || "" },
-      band, sources
+      band, sources, undefined, term
     );
-  }, [sources, selected, band]);
+  }, [sources, selected, band, term]);
 
   const graded = gb?.subjects.filter(s => s.hasData) ?? [];
   const avgPct = gb ? Math.round(gb.overallPercentage) : 0;
   const topSubject = graded.length ? graded.reduce((a, s) => (s.percentage > a.percentage ? s : a), graded[0]) : null;
   const lowSubject = graded.length ? graded.reduce((a, s) => (s.percentage < a.percentage ? s : a), graded[0]) : null;
+
+  // Real CSV, built from the same per-subject component breakdown the table
+  // already renders — mirrors academics/Gradebook.tsx's exportCsv pattern.
+  // Previously this was a toast.info() stub that produced no file.
+  const exportCsv = () => {
+    if (!selected || graded.length === 0) return;
+    const headers = ["Subject", ...columns.map(c => `${c.name} (Max ${c.weight})`), "Total (%)", "Grade"];
+    const rows = graded.map(s => [
+      `"${s.subject}"`,
+      ...s.components.map(c => c.hasData ? Math.round((c.obtainedPct / 100) * c.weight * 10) / 10 : ""),
+      Math.round(s.percentage), s.letter,
+    ].join(","));
+    const csv = "﻿" + [headers.join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `Gradebook_${selected.name}_${term}.csv`.replace(/ /g, "_");
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    toast.success(`Exported ${graded.length} subjects`);
+  };
 
   if (childrenLoading) {
     return <DashboardLayout><div className="p-6 text-center text-slate-400 text-sm">Loading…</div></DashboardLayout>;
@@ -93,9 +123,15 @@ export default function ParentGradebook() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {TERMS.length > 1 && (
+              <select value={term} onChange={e => setTerm(e.target.value)}
+                className="h-10 px-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-200">
+                {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            )}
             <ChildSwitcher className="w-56" />
-            <button onClick={() => toast.info("Downloading grade report…")}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+            <button onClick={exportCsv} disabled={graded.length === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed">
               <Download className="w-4 h-4" /> Export
             </button>
           </div>

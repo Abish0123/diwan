@@ -28,11 +28,18 @@ function statusMeta(s: string) {
 // Assessments module — status must come from the child's real
 // assessment_attempts row, not the assessment date alone, otherwise a
 // graded test would still show as "Upcoming" forever.
+//
+// Results are only shown once the teacher has actually released them —
+// same resultsReleased/resultVisibility gate student/Assessments.tsx
+// enforces (line 1013). Without this, a parent could see a graded score
+// before the teacher released it to the student.
 function mapAssessment(a: any, attempt?: any): AssessmentRow {
   const now = new Date();
   const testDate = a.date ? new Date(a.date) : null;
+  const resultsAvailable = a.resultsReleased || a.resultVisibility === "immediate" || !a.resultVisibility;
+  const isGraded = (attempt?.isMarked || attempt?.score != null) && resultsAvailable;
   let status: AssessmentRow["status"];
-  if (attempt?.isMarked || attempt?.score != null) status = "Graded";
+  if (isGraded) status = "Graded";
   else if (attempt) status = "Awaiting Marks";
   else status = testDate && testDate < now ? "Missed" : "Upcoming";
   return {
@@ -43,7 +50,7 @@ function mapAssessment(a: any, attempt?: any): AssessmentRow {
     date: a.date || "—",
     status,
     grade: a.grade || undefined,
-    score: attempt?.score ?? undefined,
+    score: isGraded ? (attempt?.score ?? undefined) : undefined,
     totalMarks: a.totalMarks || undefined,
   };
 }

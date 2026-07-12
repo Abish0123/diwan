@@ -1,25 +1,39 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { useExams, matchesSection, planForGrade, seatNumber, type ExamMode, type ExamRecord } from "@/lib/examStore";
+import { loadExamMarksFresh, type GradebookSources } from "@/lib/gradebookEngine";
+import { findSeat, findRoomByRoll, findSeatAnywhere } from "@/lib/seatingStore";
+import { downloadHallTicketPdf, type HallTicketData } from "@/lib/hallTicketReports";
+import { getSchoolName, getSchoolAddress } from "@/lib/transportSettings";
 import { ExamTimetable } from "@/components/exams/ExamTimetable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FileText, Calendar, Clock, AlertTriangle, Download, BarChart3, CheckCircle, Wifi, MapPin, Armchair, Users2 } from "lucide-react";
 
 interface Exam {
-  id: string; name: string; subject: string; date: string; time: string;
+  id: string; examId: string; name: string; subject: string; date: string; time: string;
   venue: string; duration: string; totalMarks: number; type: string;
   mode: ExamMode; seat?: string;
   status: "Upcoming" | "Completed";
   score?: number; grade?: string;
 }
 
-const LS_MARKS_KEY = "sd_exam_marks";
-function loadMarks(): Record<string, Record<string, Record<string, number>>> {
-  try { return JSON.parse(localStorage.getItem(LS_MARKS_KEY) || "{}"); } catch { return {}; }
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  try { return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); }
+  catch { return iso; }
 }
+function fmtTime(t: string): string {
+  if (!t) return "—";
+  try {
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h >= 12 ? "PM" : "AM";
+    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+  } catch { return t; }
+}
+
 const letterFromPct = (p: number) => p >= 90 ? "A+" : p >= 80 ? "A" : p >= 70 ? "B+" : p >= 60 ? "B" : p >= 50 ? "C" : p >= 40 ? "D" : "F";
 const modeBadge = (m: ExamMode) =>
   m === "Online" ? "bg-violet-50 text-violet-700 border-violet-200" :
@@ -39,11 +53,18 @@ export default function ParentExams() {
   const { selected, loading } = useParentChildren();
   const allStoreExams = useExams();
 
+  // Real cross-session marks source (merges MySQL ExamMark rows), the exact
+  // same one ParentGradebook.tsx uses — this page used to read ONLY the
+  // localStorage cache, so a mark entered by a teacher on a different
+  // device/session could show correctly on the Gradebook page while staying
+  // stale/missing here for the identical exam and child.
+  const [marks, setMarks] = useState<GradebookSources["examMarks"]>({});
+  useEffect(() => { loadExamMarksFresh().then(setMarks).catch(() => {}); }, []);
+
   // Map examStore ExamRecord[] → flat Exam[] visible to this child's grade/section.
   // Only exams the admin has published to students/parents are shown.
   const exams: Exam[] = useMemo(() => {
     if (!selected) return [];
-    const marks = loadMarks();
     const childUid = String((selected as any).studentId ?? selected.id ?? "");
     const storeMatches = allStoreExams.filter(e =>
       matchesSection(e, selected.grade || "", selected.section || "") && e.publishedToStudents !== false
@@ -64,7 +85,7 @@ export default function ParentExams() {
         const score = lookupScore(rec.subjects || "Overall");
         const pct = score !== undefined ? Math.round((score / rec.maxMarks) * 100) : undefined;
         return [{
-          id: rec.id, name: rec.name, subject: rec.subjects || "All Subjects",
+          id: rec.id, examId: rec.id, name: rec.name, subject: rec.subjects || "All Subjects",
           date: rec.startDate, time: "09:00", venue: rec.venue || rec.room || "Main Hall",
           duration: "—", totalMarks: rec.maxMarks, type: rec.type, mode: rec.mode, seat,
           status, score, grade: pct !== undefined ? letterFromPct(pct) : undefined,
@@ -74,14 +95,14 @@ export default function ParentExams() {
         const score = lookupScore(sl.subject);
         const pct = score !== undefined ? Math.round((score / rec.maxMarks) * 100) : undefined;
         return {
-          id: `${rec.id}-${i}`, name: rec.name, subject: sl.subject,
+          id: `${rec.id}-${i}`, examId: rec.id, name: rec.name, subject: sl.subject,
           date: sl.date, time: sl.start, venue: `${sl.room || rec.room || "Hall"} · Seat ${seat}`,
           duration: `${sl.start}–${sl.end}`, totalMarks: rec.maxMarks, type: rec.type, mode: rec.mode, seat,
           status, score, grade: pct !== undefined ? letterFromPct(pct) : undefined,
         };
       });
     });
-  }, [allStoreExams, selected]);
+  }, [allStoreExams, selected, marks]);
 
   const isLive = !!selected && allStoreExams.some(e =>
     matchesSection(e, selected.grade || "", selected.section || "") && e.publishedToStudents !== false
@@ -108,6 +129,36 @@ export default function ParentExams() {
   const upcoming  = exams.filter(e => e.status === "Upcoming");
   const completed = exams.filter(e => e.status === "Completed");
   const avgScore  = completed.length ? Math.round(completed.reduce((a,e)=>a+(e.score||0)/e.totalMarks*100,0)/completed.length) : 0;
+
+  // Real hall ticket — same room/seat resolution chain (and same real-PDF
+  // generator) the admin's Hall Tickets page uses, gated on an actual
+  // allocation existing. Previously this button was a toast.info() stub
+  // that never produced a file.
+  const handleDownloadHallTicket = (e: Exam) => {
+    if (!selected) return;
+    const rec = allStoreExams.find(r => r.id === e.examId);
+    if (!rec) { toast.error("Exam details unavailable."); return; }
+    const rollNo = String((selected as any).rollNo ?? (selected as any).roll ?? "");
+    const placed = findSeat(rec.id, childUid)
+      || findRoomByRoll(rec.id, rollNo)
+      || findSeatAnywhere(childUid, { grade: selected.grade, section: selected.section, rollNo });
+    if (!placed) {
+      toast.error("Hall ticket not available yet — seating hasn't been finalized for this exam.");
+      return;
+    }
+    const slots = planForGrade(rec, selected.grade || "")?.slots || rec.slots || [];
+    const ticket: HallTicketData = {
+      studentId: childUid, studentName: selected.name,
+      admissionNo: String((selected as any).admissionNo ?? (selected as any).admNo ?? "—"),
+      rollNo, grade: selected.grade || "", section: selected.section || "",
+      venue: rec.venue || rec.room || "TBD",
+      hallNo: placed.roomNo || rec.room || "—",
+      seatNo: placed.seatLabel || e.seat || "—",
+      schedule: (slots.length ? slots : [{ subject: e.subject, date: e.date, start: e.time, room: e.venue }])
+        .map(sl => ({ subject: sl.subject, date: fmtDate(sl.date), time: fmtTime(sl.start), hall: placed.roomNo || sl.room || rec.room || "—" })),
+    };
+    downloadHallTicketPdf(getSchoolName(), getSchoolAddress(), rec.name, ticket);
+  };
 
   if (loading) {
     return <DashboardLayout><div className="p-6 text-center text-slate-400 text-sm">Loading…</div></DashboardLayout>;
@@ -219,7 +270,7 @@ export default function ParentExams() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => toast.info("Downloading hall ticket…")}
+                    <button onClick={() => handleDownloadHallTicket(e)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
                       <Download className="w-3.5 h-3.5" /> Hall Ticket
                     </button>
