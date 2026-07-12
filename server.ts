@@ -1772,6 +1772,37 @@ async function startServer() {
     }
   });
 
+  // Real accounts frequently exist as TWO separate `users` rows for the same
+  // person — one keyed by their internal id (e.g. "SD/2026/999-parent", from
+  // bulk student/parent provisioning) and one keyed by their own email
+  // (created the first time they actually logged in/registered). Login's
+  // primary lookup is an exact `id = email` match, which — when that row
+  // exists — always wins over whichever row an admin action happened to be
+  // addressing. So resetting a password on "the parent's row" in the Users
+  // console could silently update the OTHER duplicate, leaving the row login
+  // actually authenticates against untouched: the admin sees a fresh
+  // password, but the account still rejects it. Rather than the much riskier
+  // job of deduplicating the live users table, every password write now
+  // fans out to every `users` row sharing that email so they can never drift
+  // apart again.
+  async function syncPasswordAcrossDuplicateUserRows(email: string, hashedPassword: string, excludeId: string) {
+    if (!email) return;
+    try {
+      const rows = await dbQuery(`SELECT id, data FROM \`users\``);
+      const now = new Date().toISOString();
+      for (const row of rows) {
+        if (row.id === excludeId) continue;
+        let parsed: Record<string, unknown>;
+        try { parsed = JSON.parse(row.data || "{}"); } catch { continue; }
+        if (String(parsed.email || "").toLowerCase() !== email.toLowerCase()) continue;
+        parsed.password = hashedPassword;
+        await dbQuery(`UPDATE \`users\` SET data = ?, updatedAt = ? WHERE id = ?`, [JSON.stringify(parsed), now, row.id]);
+      }
+    } catch (e) {
+      console.error("Failed to sync password across duplicate user rows:", e);
+    }
+  }
+
   app.put("/api/data/:entity/:id", requireAuth, writeRateLimit, async (req, res) => {
     const entity = String(req.params.entity);
     const routeId = String(req.params.id);
@@ -1861,6 +1892,9 @@ async function startServer() {
         return m;
       });
       entityCache.delete(entity); // Invalidate cache
+      if (entity === "users" && typeof data.password === "string" && data.password) {
+        await syncPasswordAcrossDuplicateUserRows(String((merged as any).email || routeId), (merged as any).password, id);
+      }
       // See the matching comment in the POST handler above — persisted so it
       // Updates are routine (every field edit on every record) — unlike a
       // brand-new arrival, an edit is never itself "something admin needs to
@@ -2155,9 +2189,15 @@ async function startServer() {
       const rows = await dbQuery(`SELECT data FROM \`users\` WHERE id = ?`, [claim.uid]);
       const existing = rows[0]?.data ? JSON.parse(rows[0].data) : null;
       if (!existing) return res.status(404).json({ error: "Account not found." });
-      const updated = { ...existing, password: hashPassword(newPassword) };
+      const hashed = hashPassword(newPassword);
+      const updated = { ...existing, password: hashed };
       await dbQuery(`UPDATE \`users\` SET data = ?, updatedAt = ? WHERE id = ?`, [JSON.stringify(updated), new Date().toISOString(), claim.uid]);
       entityCache.delete("users");
+      // Same duplicate-row hazard as the admin PUT path above — without this,
+      // a self-service reset can land on a row that isn't the one login
+      // actually authenticates against, and the user is told "incorrect
+      // password" with the password they just set.
+      await syncPasswordAcrossDuplicateUserRows(String(existing.email || claim.uid), hashed, claim.uid);
       res.json({ success: true });
     } catch (error) {
       console.error("Error resetting password:", error);
