@@ -94,6 +94,44 @@ export default function TeacherAttendance() {
   const PER_PAGE = 8;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Real parent-submitted absence requests for this class (see
+  // ParentAttendance.tsx's "Absence Request" modal, which used to be a pure
+  // UI stub that saved nothing anywhere).
+  const [absenceRequests, setAbsenceRequests] = useState<any[]>([]);
+  const loadAbsenceRequests = () => {
+    smartDb.getAll("StudentAbsenceRequest").then((rows: any[]) => {
+      const wantG = canonGrade(grade);
+      const wantS = canonSection(section);
+      setAbsenceRequests(
+        (rows || [])
+          .filter((r: any) => canonGrade(r.grade) === wantG && canonSection(r.section) === wantS && r.status === "Pending")
+          .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      );
+    }).catch(() => {});
+  };
+  useEffect(loadAbsenceRequests, [grade, section]);
+
+  const decideAbsenceRequest = async (req: any, decision: "Approved" | "Rejected") => {
+    try {
+      await smartDb.update("StudentAbsenceRequest", req.id, { status: decision });
+      setAbsenceRequests(prev => prev.filter(r => r.id !== req.id));
+      if (req.parentEmail) {
+        notifyParentsOfStudents(
+          [{ id: req.studentId, name: req.studentName, message: `Your absence request for ${req.date} was ${decision.toLowerCase()}.` }],
+          {
+            entity: "StudentAbsenceRequest", type: "absence_request_decided",
+            title: `Absence Request ${decision}`,
+            sourceId: req.id, grade, section,
+            redirectUrl: "/parent/attendance",
+          }
+        ).catch(() => {});
+      }
+      toast.success(`Absence request ${decision.toLowerCase()}`);
+    } catch {
+      toast.error("Failed to update request");
+    }
+  };
+
   // Real published timetable grid — same source (/api/data/timetable_slots
   // /published-timetable-v3) TeacherTimetable.tsx reads. Used to derive which
   // periods actually exist for this class on the selected date, instead of a
@@ -485,6 +523,29 @@ export default function TeacherAttendance() {
             onChange={setActiveSubject}
           />
         </div>
+
+        {/* Pending absence requests from parents */}
+        {absenceRequests.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl shadow-sm p-4">
+            <h3 className="text-sm font-bold text-amber-900 mb-3">Pending Absence Requests ({absenceRequests.length})</h3>
+            <div className="space-y-2">
+              {absenceRequests.map((r) => (
+                <div key={r.id} className="bg-white rounded-lg border border-amber-100 px-3 py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{r.studentName} — {r.date}</p>
+                    <p className="text-xs text-slate-500 truncate">{r.reason}{r.note ? ` · ${r.note}` : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button onClick={() => decideAbsenceRequest(r, "Approved")}
+                      className="h-7 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Approve</button>
+                    <button onClick={() => decideAbsenceRequest(r, "Rejected")}
+                      className="h-7 px-3 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold">Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* KPI cards */}
         <div className="grid grid-cols-5 gap-3">

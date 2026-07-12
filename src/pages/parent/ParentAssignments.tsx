@@ -4,7 +4,6 @@ import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { useParentChildren } from "@/hooks/useParentChildren";
 import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { FileText, Clock, CheckCircle, AlertTriangle, Search, ChevronLeft, ChevronRight, Wifi, Users2 } from "lucide-react";
 
 interface Assignment {
