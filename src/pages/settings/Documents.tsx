@@ -46,6 +46,11 @@ interface DocRecord {
   folderId: string | null;
   uid?: string;
   createdAt?: string;
+  // Set the first time someone copies this file's share link — makes
+  // "Shared Files" a real distinct count instead of duplicating Total Files
+  // (every document previously had status "Active", so the two stats were
+  // always identical).
+  sharedAt?: string;
 }
 
 interface FolderRecord {
@@ -212,7 +217,7 @@ export default function Documents() {
 
   const totalFiles = documents.length;
   const totalBytes = documents.reduce((sum, d) => sum + (d.sizeBytes || 0), 0);
-  const sharedFiles = documents.filter((d) => d.status === "Active").length;
+  const sharedFiles = documents.filter((d) => !!d.sharedAt).length;
   const recentUploads = documents.filter((d) => {
     const updated = new Date(d.createdAt || d.updatedAt).getTime();
     return !isNaN(updated) && Date.now() - updated <= 7 * 24 * 60 * 60 * 1000;
@@ -357,6 +362,11 @@ export default function Documents() {
       () => toast.success("Link copied to clipboard"),
       () => toast.error("Couldn't copy — select and copy manually")
     );
+    if (!doc.sharedAt) {
+      const sharedAt = new Date().toISOString();
+      smartDb.update("Document", doc.id, { sharedAt }).catch(() => {});
+      setDocuments((prev) => prev.map((d) => (d.id === doc.id ? { ...d, sharedAt } : d)));
+    }
   }
 
   async function handleDelete(doc: DocRecord) {

@@ -374,12 +374,14 @@ const Integrations = () => {
                   <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><KeyRound className="w-4 h-4 text-purple-600" /> API Keys</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Live Access Token</Label>
+                      <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Sample Access Token</Label>
                       <div className="flex items-center gap-2">
                         <Input readOnly value={devKey} className="font-mono text-xs bg-slate-50" />
-                        <Button variant="outline" size="sm" onClick={() => copyText(devKey, "Access token")}><Copy className="w-3.5 h-3.5" /></Button>
+                        <Button variant="outline" size="sm" onClick={() => copyText(devKey, "Sample token")}><Copy className="w-3.5 h-3.5" /></Button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">Send as <span className="font-mono">Authorization: Bearer &lt;token&gt;</span> — this session's real token, same one the app itself uses.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Placeholder only — there's no real API key issuance yet. Real requests need the actual signed session token from your own login, sent as <span className="font-mono">Authorization: Bearer &lt;token&gt;</span>.
+                      </p>
                     </div>
                     <div>
                       <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1 block">Webhook URL (optional)</Label>
