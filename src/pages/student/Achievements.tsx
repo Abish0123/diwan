@@ -3,9 +3,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
 import { smartDb } from "@/lib/localDb";
+import { downloadCertificate } from "@/lib/certificateReports";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Trophy, Calendar, ShieldCheck, X } from "lucide-react";
+import { Trophy, Calendar, Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const ACCOMPLISHMENT_CATEGORIES = ["All", "Academic", "Sports", "Arts", "Extra-curricular"];
@@ -48,7 +49,13 @@ export default function StudentAchievements() {
     type: a.type || "Academic",
     position: a.position || a.award || "1st",
     date: a.date ? new Date(a.date).toLocaleDateString("en-GB") : "Recently",
-    desc: a.description || "Awarded for exceptional performance and active school participation."
+    desc: a.description || "",
+    // Fields needed to generate the same real certificate the parent portal
+    // can already download for this achievement (src/lib/certificateReports.ts).
+    grade: a.grade || (student as any)?.grade || "",
+    section: a.section || (student as any)?.section || "",
+    award: a.award || a.position || "Certificate",
+    certNo: a.certNo || "—",
   }));
 
   const filtered = listToRender.filter(a => activeCategory === "All" || a.type === activeCategory);
@@ -215,12 +222,17 @@ export default function StudentAchievements() {
                   </div>
 
                   <div className="bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800/40 rounded-2xl p-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed w-full">
-                    {selectedAccolade.desc}
+                    {selectedAccolade.desc || <span className="italic text-slate-400">No description provided.</span>}
                   </div>
 
                   <div className="w-full pt-4 border-t border-slate-50 dark:border-slate-800/20 flex items-center justify-between text-[11px] font-bold text-slate-400">
                     <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Date: {selectedAccolade.date}</span>
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ShieldCheck className="h-3.5 w-3.5" /> Officially Attested</span>
+                    <button
+                      onClick={() => downloadCertificate(selectedAccolade, (student as any)?.name || "Student")}
+                      className="flex items-center gap-1 text-purple-600 dark:text-violet-400 hover:underline"
+                    >
+                      <Download className="h-3.5 w-3.5" /> Download Certificate
+                    </button>
                   </div>
                 </motion.div>
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, type RefObject } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudents } from "@/contexts/StudentContext";
@@ -106,6 +106,13 @@ export default function StudentLibrary() {
   const [availability, setAvailability] = useState("All Availability");
   const [format, setFormat] = useState("All Formats");
   const [page, setPage] = useState(1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const categorySelectRef = useRef<HTMLSelectElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const focusAndScroll = (el: HTMLElement | null) => {
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus();
+  };
 
   /* resolve the logged-in student (real data) */
   const student = useMemo(() => {
@@ -205,10 +212,10 @@ export default function StudentLibrary() {
   }).length;
 
   const KPIS = [
-    { label: "Books Borrowed", value: kBorrowed, icon: BookCopy,   bg: "bg-purple-50",  ring: "bg-purple-100",  ic: "text-purple-600" },
-    { label: "Books Reserved", value: kReserved, icon: BookMarked, bg: "bg-amber-50",   ring: "bg-amber-100",   ic: "text-amber-600"  },
-    { label: "Books Read",     value: kRead,     icon: BookOpen,   bg: "bg-emerald-50", ring: "bg-emerald-100", ic: "text-emerald-600" },
-    { label: "Overdue Books",  value: kOverdue,  icon: AlertCircle,bg: "bg-rose-50",    ring: "bg-rose-100",    ic: "text-rose-600"   },
+    { label: "Books Borrowed", value: kBorrowed, icon: BookCopy,   bg: "bg-purple-50",  ring: "bg-purple-100",  ic: "text-purple-600",  tab: "Borrowed" as Tab },
+    { label: "Books Reserved", value: kReserved, icon: BookMarked, bg: "bg-amber-50",   ring: "bg-amber-100",   ic: "text-amber-600",   tab: "Reserved" as Tab },
+    { label: "Books Read",     value: kRead,     icon: BookOpen,   bg: "bg-emerald-50", ring: "bg-emerald-100", ic: "text-emerald-600", tab: "Reading History" as Tab },
+    { label: "Overdue Books",  value: kOverdue,  icon: AlertCircle,bg: "bg-rose-50",    ring: "bg-rose-100",    ic: "text-rose-600",    tab: "Borrowed" as Tab },
   ];
 
   /* titles the student has actually read (from real borrow history) */
@@ -258,12 +265,13 @@ export default function StudentLibrary() {
     setQ(""); setPage(1); toast.success("Filters reset");
   };
 
-  /* header buttons */
+  /* header buttons — each jumps to (and focuses) the real control that does
+     the thing, instead of a toast that just echoed the label back. */
   const HEADER_ACTIONS = [
-    { label: "Search Books",      icon: Search,    fn: () => toast.info("Search the full catalogue") },
-    { label: "Browse Categories", icon: FolderTree,fn: () => toast.info("Browse by category") },
-    { label: "My Borrowed Books", icon: BookCopy,  fn: () => { setTab("Borrowed"); toast.info("Showing your borrowed books"); } },
-    { label: "Reading History",   icon: History,   fn: () => { setTab("Reading History"); toast.info("Showing your reading history"); } },
+    { label: "Search Books",      icon: Search,    fn: () => focusAndScroll(searchInputRef.current) },
+    { label: "Browse Categories", icon: FolderTree,fn: () => focusAndScroll(categorySelectRef.current) },
+    { label: "My Borrowed Books", icon: BookCopy,  fn: () => { setTab("Borrowed"); setPage(1); } },
+    { label: "Reading History",   icon: History,   fn: () => { setTab("Reading History"); setPage(1); } },
   ];
 
   /* My Borrowed Books — real active borrows from smartDb */
@@ -418,7 +426,7 @@ export default function StudentLibrary() {
                 <span className="text-3xl font-bold text-slate-900 leading-none">{k.value}</span>
               </div>
               <p className="text-sm font-semibold text-slate-700 mt-4">{k.label}</p>
-              <button onClick={() => toast.info(`${k.label}: details`)}
+              <button onClick={() => { setTab(k.tab); setPage(1); focusAndScroll(tableRef.current); }}
                 className="text-xs font-semibold text-purple-600 hover:underline mt-1 inline-flex items-center gap-1">
                 View Details <ArrowRight className="h-3 w-3" />
               </button>
@@ -443,17 +451,17 @@ export default function StudentLibrary() {
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input value={q} onChange={e => { setQ(e.target.value); setPage(1); }}
+            <input ref={searchInputRef} value={q} onChange={e => { setQ(e.target.value); setPage(1); }}
               placeholder="Search by title, author, ISBN..."
               className="w-full pl-9 pr-3 h-9 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
           </div>
           {[
-            { value: category,     set: setCategory,     opts: CATEGORIES },
-            { value: language,     set: setLanguage,     opts: LANGUAGES },
-            { value: availability, set: setAvailability, opts: AVAILABILITY },
-            { value: format,       set: setFormat,       opts: FORMATS },
+            { value: category,     set: setCategory,     opts: CATEGORIES,   ref: categorySelectRef },
+            { value: language,     set: setLanguage,     opts: LANGUAGES,    ref: undefined as RefObject<HTMLSelectElement> | undefined },
+            { value: availability, set: setAvailability, opts: AVAILABILITY, ref: undefined as RefObject<HTMLSelectElement> | undefined },
+            { value: format,       set: setFormat,       opts: FORMATS,      ref: undefined as RefObject<HTMLSelectElement> | undefined },
           ].map((s, i) => (
-            <select key={i} value={s.value} onChange={e => { s.set(e.target.value); setPage(1); }}
+            <select key={i} ref={s.ref} value={s.value} onChange={e => { s.set(e.target.value); setPage(1); }}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none">
               {s.opts.map(o => <option key={o}>{o}</option>)}
             </select>
@@ -468,7 +476,7 @@ export default function StudentLibrary() {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-5">
 
           {/* LEFT — table */}
-          <div className="xl:col-span-3 bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+          <div ref={tableRef} className="xl:col-span-3 bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
