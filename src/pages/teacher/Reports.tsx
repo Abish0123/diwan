@@ -1,31 +1,39 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
+import { useCurriculum } from "@/hooks/useCurriculum";
+import { getBandForGrade } from "@/lib/curriculumConfig";
+import { loadGradebookSources, computeStudentGradebook } from "@/lib/gradebookEngine";
 import { smartDb } from "@/lib/localDb";
 import { toast } from "sonner";
 import {
-  BarChart3, UserCheck, FileText, TrendingUp, Shield, MessageSquare,
+  BarChart3, UserCheck, FileText, TrendingUp, Shield,
   Download, Printer, FileSpreadsheet, ArrowRight,
 } from "lucide-react";
 
+function normGradeSection(s: string) { return (s || "").toLowerCase().replace(/^grade\s*/, "").trim(); }
+
+// No "Parent Communication Report" tile — no parent-communication log entity
+// exists anywhere in this app, so that report could never contain real data.
 const REPORTS = [
   { key: "attendance", title: "Attendance Report", desc: "Daily & monthly attendance summary for the class", icon: UserCheck, tone: "bg-emerald-50 text-emerald-600" },
-  { key: "assignment", title: "Assignment Report", desc: "Submission rates and pending assignments", icon: FileText, tone: "bg-violet-50 text-purple-600" },
+  { key: "assignment", title: "Assignment Report", desc: "Submission rates across assigned work", icon: FileText, tone: "bg-violet-50 text-purple-600" },
   { key: "progress", title: "Student Progress Report", desc: "Academic performance across assessments", icon: TrendingUp, tone: "bg-sky-50 text-sky-600" },
   { key: "behavior", title: "Behavior Report", desc: "Achievements, incidents and warnings log", icon: Shield, tone: "bg-amber-50 text-amber-600" },
-  { key: "communication", title: "Parent Communication Report", desc: "Messages and meeting history with parents", icon: MessageSquare, tone: "bg-rose-50 text-rose-600" },
 ];
 
 export default function Reports() {
   const { assignment, classStudents } = useTeacherClass();
+  const { curriculum } = useCurriculum();
   const [preview, setPreview] = useState<string | null>(null);
 
   // Real per-student metrics — previously attendance defaulted to a
   // hardcoded 92%, "progress" was an arbitrary index-based formula
-  // unrelated to any real mark, and Behavior/Communication always showed a
-  // static "OK" for every student regardless of real records.
+  // unrelated to any real mark, and Behavior always showed a static "OK"
+  // for every student regardless of real records.
   const [attendancePct, setAttendancePct] = useState<Record<string, number | null>>({});
   const [progressPct, setProgressPct] = useState<Record<string, number | null>>({});
+  const [assignmentPct, setAssignmentPct] = useState<Record<string, number | null>>({});
   const [incidentCount, setIncidentCount] = useState<Record<string, number>>({});
   useEffect(() => {
     if (classStudents.length === 0) return;
@@ -49,25 +57,48 @@ export default function Reports() {
       setAttendancePct(pct);
     }).catch(() => {});
 
-    smartDb.getAll("ExamMark", "").then((rows) => {
-      const sums = new Map<string, { total: number; count: number }>();
-      (rows as Record<string, unknown>[]).forEach(row => {
-        Object.entries(row).forEach(([key, val]) => {
-          if (key === "id" || typeof val !== "object" || val === null) return;
-          Object.entries(val as Record<string, unknown>).forEach(([studentId, mark]) => {
-            if (!ids.has(studentId) || typeof mark !== "number") return;
-            const cur = sums.get(studentId) || { total: 0, count: 0 };
-            cur.total += mark; cur.count++;
-            sums.set(studentId, cur);
-          });
-        });
+    // Real weighted subject percentage from the same shared engine the
+    // Gradebook/Report Cards use (assignments+assessments+exams, weighted
+    // by the curriculum band, with approved MarkOverride corrections
+    // applied) — previously this was a hand-rolled flat average over raw
+    // ExamMark rows that could (and did) disagree with the real Gradebook.
+    loadGradebookSources().then((src) => {
+      const band = getBandForGrade(curriculum, assignment.grade || "");
+      const pct: Record<string, number | null> = {};
+      classStudents.forEach(s => {
+        const gb = computeStudentGradebook(
+          { id: s.id, name: s.name, grade: assignment.grade || "", section: assignment.section || "" },
+          band, src
+        );
+        const graded = gb.subjects.filter(sub => sub.hasData);
+        pct[s.id] = graded.length ? Math.round(gb.overallPercentage) : null;
+      });
+      setProgressPct(pct);
+    }).catch(() => {});
+
+    // Real submission rate: of every assignment actually given to this
+    // class/section, how many has each student submitted (or had graded)?
+    Promise.all([
+      smartDb.getAll("TeacherAssignment", undefined),
+      smartDb.getAll("AssignmentSubmission", undefined),
+    ]).then(([assignments, submissions]) => {
+      const myAssignments = (assignments as { id: string; grade?: string; section?: string }[])
+        .filter(a => normGradeSection(a.grade || "") === normGradeSection(assignment.grade || "") &&
+          (!a.section || normGradeSection(a.section) === normGradeSection(assignment.section || "")));
+      const assignmentIds = new Set(myAssignments.map(a => a.id));
+      const total = myAssignments.length;
+      const submittedByStudent = new Map<string, Set<string>>();
+      (submissions as { assignmentId?: string; studentId?: string; status?: string }[]).forEach(s => {
+        if (!s.assignmentId || !s.studentId || !assignmentIds.has(s.assignmentId)) return;
+        if (!ids.has(s.studentId)) return;
+        if (!submittedByStudent.has(s.studentId)) submittedByStudent.set(s.studentId, new Set());
+        submittedByStudent.get(s.studentId)!.add(s.assignmentId);
       });
       const pct: Record<string, number | null> = {};
       ids.forEach(id => {
-        const s = sums.get(id);
-        pct[id] = s && s.count > 0 ? Math.round(s.total / s.count) : null;
+        pct[id] = total > 0 ? Math.round(((submittedByStudent.get(id)?.size || 0) / total) * 100) : null;
       });
-      setProgressPct(pct);
+      setAssignmentPct(pct);
     }).catch(() => {});
 
     smartDb.getAll("BehaviorIncident", undefined).then((rows) => {
@@ -78,7 +109,7 @@ export default function Reports() {
       });
       setIncidentCount(counts);
     }).catch(() => {});
-  }, [classStudents.map(s => s.id).join(",")]);
+  }, [classStudents.map(s => s.id).join(","), curriculum.id, assignment.grade, assignment.section]);
 
   const generate = (key: string, action: "preview" | "download" | "print") => {
     const report = REPORTS.find(r => r.key === key)!;
@@ -90,12 +121,12 @@ export default function Reports() {
     }
     // download: produce a CSV summary, with the same real per-student
     // metric shown in the preview table (not a fabricated value).
-    const metricLabel = key === "attendance" ? "Attendance %" : key === "progress" ? "Avg Score %" : key === "behavior" ? "Incidents" : "Status";
+    const metricLabel = key === "attendance" ? "Attendance %" : key === "assignment" ? "Submission Rate %" : key === "progress" ? "Avg Score %" : "Incidents";
     const metricFor = (id: string) => {
       if (key === "attendance") return attendancePct[id] != null ? String(attendancePct[id]) : "No records";
+      if (key === "assignment") return assignmentPct[id] != null ? String(assignmentPct[id]) : "No assignments given";
       if (key === "progress") return progressPct[id] != null ? String(progressPct[id]) : "No marks yet";
-      if (key === "behavior") return String(incidentCount[id] || 0);
-      return "Not tracked";
+      return String(incidentCount[id] || 0);
     };
     const rows = [
       ["Report", report.title],
@@ -166,12 +197,13 @@ export default function Reports() {
                 <thead>
                   <tr className="text-left text-xs font-semibold text-slate-400 uppercase border-b border-slate-100">
                     <th className="py-2 pr-4">#</th><th className="py-2 pr-4">Student</th><th className="py-2 pr-4">ID</th>
-                    <th className="py-2 text-right">{previewReport.key === "attendance" ? "Attendance" : previewReport.key === "progress" ? "Avg Score" : previewReport.key === "behavior" ? "Incidents" : "Status"}</th>
+                    <th className="py-2 text-right">{previewReport.key === "attendance" ? "Attendance" : previewReport.key === "assignment" ? "Submission Rate" : previewReport.key === "progress" ? "Avg Score" : "Incidents"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {classStudents.map((s, i) => {
                     const att = attendancePct[s.id];
+                    const asg = assignmentPct[s.id];
                     const prog = progressPct[s.id];
                     const incidents = incidentCount[s.id] || 0;
                     return (
@@ -181,19 +213,14 @@ export default function Reports() {
                         <td className="py-2 pr-4 text-slate-400 text-xs">{s.id}</td>
                         <td className="py-2 text-right font-semibold text-slate-700">
                           {previewReport.key === "attendance" ? (att != null ? `${att}%` : <span className="text-slate-300 font-normal">No records</span>)
+                            : previewReport.key === "assignment" ? (asg != null ? `${asg}%` : <span className="text-slate-300 font-normal">No assignments given</span>)
                             : previewReport.key === "progress" ? (prog != null ? `${prog}%` : <span className="text-slate-300 font-normal">No marks yet</span>)
-                            : previewReport.key === "behavior" ? (incidents > 0 ? <span className="text-amber-600">{incidents} incident{incidents === 1 ? "" : "s"}</span> : <span className="text-emerald-600">Clean</span>)
-                            : <span className="text-slate-300 font-normal">Not tracked</span>}
+                            : (incidents > 0 ? <span className="text-amber-600">{incidents} incident{incidents === 1 ? "" : "s"}</span> : <span className="text-emerald-600">Clean</span>)}
                         </td>
                       </tr>
                     );
                   })}
                   {classStudents.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-slate-400">No students in this class</td></tr>}
-                  {previewReport.key === "communication" && classStudents.length > 0 && (
-                    <tr><td colSpan={4} className="py-4 text-center text-xs text-slate-400">
-                      No parent-communication log exists yet in this app — this column is honestly unavailable rather than a placeholder value.
-                    </td></tr>
-                  )}
                 </tbody>
               </table>
             </div>

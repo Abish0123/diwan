@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useLeave } from "@/contexts/LeaveContext";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
+import { buildApprovalChain } from "@/lib/roles";
 import { LeaveRequest, LeaveType } from "@/types";
 import {
   CalendarOff, Send, Clock, CheckCircle2, XCircle, AlertCircle,
@@ -158,7 +159,7 @@ function ApplyTab({ onSubmit, submitting }: {
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
         <p className="text-xs font-bold text-blue-800 mb-2">Approval Workflow</p>
         <div className="flex items-center gap-2 flex-wrap text-xs text-blue-700">
-          {["You (Staff)", "→", "HOD / Manager", "→", "Principal", "→", "HR / Admin", "→", "Attendance Updated"].map((s,i) => (
+          {["You (Staff)", ...buildApprovalChain("staff").flatMap(step => ["→", step.label])].map((s,i) => (
             <span key={i} className={s === "→" ? "text-blue-300" : "bg-blue-100 px-2 py-0.5 rounded-lg font-semibold"}>{s}</span>
           ))}
         </div>
@@ -233,6 +234,11 @@ function HistoryTab({ leaves, loading, onCancel }: {
                         {l.startDate === l.endDate ? l.startDate : `${l.startDate} → ${l.endDate}`}
                       </p>
                       <p className="text-xs text-slate-600">{l.reason}</p>
+                      {l.status === "Pending" && l.approvalChain?.length ? (
+                        <p className="text-xs text-blue-600 mt-1 font-semibold">
+                          Awaiting {l.approvalChain[l.currentStep ?? 0]?.label || l.approvalChain[0].label} approval
+                        </p>
+                      ) : null}
                       {l.approverRemark && <p className="text-xs text-purple-600 mt-1 italic">"{l.approverRemark}"</p>}
                       {l.docFile && (
                         <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">

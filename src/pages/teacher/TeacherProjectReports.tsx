@@ -13,7 +13,7 @@ import {
 
 interface ProjectReport {
   id: string; title: string; studentName: string; subject: string;
-  submittedDate: string; dueDate: string; pages: number;
+  submittedDate: string; dueDate: string;
   status: "Submitted" | "Reviewed" | "Pending" | "Late";
   grade?: string; feedback?: string; score?: number; maxScore: number;
   assignmentId: string; attachmentUrl?: string;
@@ -87,7 +87,6 @@ export default function TeacherProjectReports() {
             subject: a.subject || "—",
             submittedDate: s.submittedAt || "",
             dueDate: a.dueDate,
-            pages: 0,
             status: graded ? "Reviewed" : late ? "Late" : "Submitted",
             feedback: s.feedback,
             score: s.marks,
@@ -216,7 +215,6 @@ export default function TeacherProjectReports() {
                 <th className="px-4 py-3 text-left">Project Title</th>
                 <th className="px-4 py-3 text-left">Student</th>
                 <th className="px-4 py-3 text-left hidden sm:table-cell">Subject</th>
-                <th className="px-4 py-3 text-center hidden md:table-cell">Pages</th>
                 <th className="px-4 py-3 text-center">Score</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3 text-center">Actions</th>
@@ -224,7 +222,7 @@ export default function TeacherProjectReports() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && (
-                <tr><td colSpan={7} className="text-center py-12 text-slate-400">Loading reports…</td></tr>
+                <tr><td colSpan={6} className="text-center py-12 text-slate-400">Loading reports…</td></tr>
               )}
               {!loading && pageData.length === 0 && (
                 <tr><td colSpan={7} className="text-center py-12 text-slate-400">No reports found.</td></tr>
@@ -239,7 +237,6 @@ export default function TeacherProjectReports() {
                     </td>
                     <td className="px-4 py-3 text-slate-700 font-medium">{r.studentName}</td>
                     <td className="px-4 py-3 text-slate-500 hidden sm:table-cell">{r.subject}</td>
-                    <td className="px-4 py-3 text-center text-slate-500 hidden md:table-cell">{r.pages || "—"}</td>
                     <td className="px-4 py-3 text-center">
                       {r.score != null ? (
                         <span className="font-bold text-emerald-600">{r.score}/{r.maxScore}</span>
