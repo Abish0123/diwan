@@ -277,7 +277,12 @@ export const smartDb = {
     // Always prefer MySQL (source of truth) — matches getAll(). Firestore is
     // write-through only, so checking it first could return a stale snapshot
     // for a record that's since been updated.
-    const res = await fetch(`/api/data/${normalizedEntity}/${id}`);
+    // Real ids frequently contain "/" (e.g. a parent row id like
+    // "SD/2026/999-parent", derived from the student's admission number) —
+    // an unencoded id splits across multiple URL path segments, so Express
+    // never matches the `/api/data/:entity/:id` route and 404s. Encoding it
+    // keeps the whole id in the single :id segment.
+    const res = await fetch(`/api/data/${normalizedEntity}/${encodeURIComponent(id)}`);
     if (res.ok) return res.json();
     if (res.status === 404) {
       const listRes = await fetch(`/api/data/${normalizedEntity}`);
@@ -329,7 +334,10 @@ export const smartDb = {
   async update(entity: string, id: string, data: Record<string, unknown>) {
     const normalizedEntity = normalizeEntity(entity);
     // Always write to MySQL first (source of truth)
-    const res = await fetch(`/api/data/${normalizedEntity}/${id}`, {
+    // Encode the id — see the matching comment in getOne() above; a raw "/"
+    // in the id (e.g. parent row ids like "SD/2026/999-parent") splits the
+    // URL across path segments and 404s before it ever reaches the update.
+    const res = await fetch(`/api/data/${normalizedEntity}/${encodeURIComponent(id)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -355,7 +363,8 @@ export const smartDb = {
     // success, so MySQL's row was silently left behind (orphaned) whenever
     // Firestore was enabled: the app believed the record was gone, but it was
     // still sitting in the real database.
-    const res = await fetch(`/api/data/${normalizedEntity}/${id}`, {
+    // Encode the id — see getOne()'s comment above.
+    const res = await fetch(`/api/data/${normalizedEntity}/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error(`Failed to delete ${normalizedEntity}`);
