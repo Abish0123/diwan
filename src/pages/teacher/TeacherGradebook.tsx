@@ -317,7 +317,7 @@ export default function TeacherGradebook() {
   const rows = useMemo(() => {
     if (!subject) return [];
     return classStudents.map((s, idx) => {
-      const sg = gbSources ? computeSubject(subject, s, band, gbSources) : null;
+      const sg = gbSources ? computeSubject(subject, s, band, gbSources, term) : null;
       const marks: Record<string, number | ""> = {};
       const autos: Record<string, number | ""> = {};
       const overridden: Record<string, boolean> = {};
@@ -334,7 +334,7 @@ export default function TeacherGradebook() {
       const pct = hasData ? Math.round((total / (columns.reduce((a, c) => a + c.max, 0) || 1)) * 1000) / 10 : 0;
       return { id: s.id, name: s.name, rollNo: s.rollNo || String(idx + 1), marks, autos, overridden, total, pct, hasData };
     });
-  }, [classStudents, subject, gbSources, band, columns, overrides]);
+  }, [classStudents, subject, gbSources, band, columns, overrides, term]);
 
   const ranked = useMemo(() =>
     [...rows].sort((a, b) => b.pct - a.pct).map((r, i) => ({ ...r, rank: i + 1 })),

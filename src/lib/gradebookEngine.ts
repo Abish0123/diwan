@@ -21,6 +21,7 @@
 import { smartDb } from "@/lib/localDb";
 import { getExams, matchesSection, getGradePlans, type ExamRecord } from "@/lib/examStore";
 import type { GradebookBand, GradebookCategory } from "@/lib/curriculumConfig";
+import type { MarkOverride } from "@/lib/gradebookApproval";
 
 const LS_EXAM_MARKS = "sd_exam_marks";
 
@@ -88,6 +89,7 @@ export interface GradebookSources {
   attempts: any[];          // assessment_attempts[]
   exams: ExamRecord[];      // sd_exams
   examMarks: Record<string, Record<string, Record<string, number>>>; // examId→subject→uid→mark
+  overrides: MarkOverride[]; // real teacher-reviewed manual corrections (MarkOverride)
 }
 
 export interface GradebookStudent { id: string; name: string; grade: string; section: string }
@@ -165,12 +167,13 @@ export async function loadExamMarksFresh(): Promise<GradebookSources["examMarks"
 }
 
 export async function loadGradebookSources(): Promise<GradebookSources> {
-  const [assignments, submissions, assessments, attempts, examMarks] = await Promise.all([
+  const [assignments, submissions, assessments, attempts, examMarks, overrides] = await Promise.all([
     smartDb.getAll("TeacherAssignment", "").catch(() => []),
     smartDb.getAll("AssignmentSubmission", "").catch(() => []),
     smartDb.getAll("assessments", "").catch(() => []),
     smartDb.getAll("assessment_attempts", "").catch(() => []),
     loadExamMarksFresh(),
+    smartDb.getAll("MarkOverride", "").catch(() => []),
   ]);
 
   return {
@@ -180,6 +183,7 @@ export async function loadGradebookSources(): Promise<GradebookSources> {
     attempts: attempts || [],
     exams: getExams(),
     examMarks,
+    overrides: (overrides || []) as MarkOverride[],
   };
 }
 
@@ -270,8 +274,15 @@ export function discoverSubjects(student: GradebookStudent, src: GradebookSource
 
 // ── public compute API ──────────────────────────────────────────────────────────
 
+// Derives the same columnKey TeacherGradebook.tsx uses to key a MarkOverride
+// to a band category, so a saved override matches the exact component it
+// was entered against.
+function columnKeyFor(categoryName: string): string {
+  return categoryName.toLowerCase().replace(/[\s/()]+/g, "_").replace(/_+$/, "");
+}
+
 export function computeSubject(
-  subject: string, student: GradebookStudent, band: GradebookBand | null, src: GradebookSources
+  subject: string, student: GradebookStudent, band: GradebookBand | null, src: GradebookSources, term?: string
 ): SubjectGrade {
   // When no curriculum band is available, fall back to a generic 20/20/20/40 split
   // (Assignments / Assessments / Mid-Term / Final) so the engine still works.
@@ -288,13 +299,31 @@ export function computeSubject(
     if (source === "assignment") res = assignmentPct(subject, student, src);
     else if (source === "assessment") res = assessmentPct(subject, student, src);
     else if (source === "exam") res = examPct(subject, student, src);
-    const hasData = source !== "pending" && res.count > 0;
+    let hasData = source !== "pending" && res.count > 0;
+    let obtainedPct = res.pct;
+
+    // A real, human-reviewed correction (MarkOverride) always wins over the
+    // raw auto-computed value — this is what makes a subject teacher's
+    // reviewed-and-approved correction actually show up on Report Cards and
+    // the admin Gradebook instead of those silently reverting to the
+    // uncorrected number. Term-scoped only when the caller supplies a term
+    // (Report Cards/admin Gradebook do); otherwise any matching override
+    // applies, matching this engine's existing term-agnostic aggregation.
+    const columnKey = columnKeyFor(cat.name);
+    const ov = src.overrides.find(o =>
+      String(o.studentId) === String(student.id) && o.subject === subject && o.columnKey === columnKey &&
+      (!term || o.term === term));
+    if (ov && cat.marks > 0) {
+      obtainedPct = Math.max(0, Math.min(100, (ov.overrideValue / cat.marks) * 100));
+      hasData = true;
+    }
+
     return {
       category: cat.name,
       weight: cat.marks,
       source,
-      obtainedPct: res.pct,
-      weighted: hasData ? (res.pct / 100) * cat.marks : 0,
+      obtainedPct,
+      weighted: hasData ? (obtainedPct / 100) * cat.marks : 0,
       count: res.count,
       hasData,
     };
@@ -315,10 +344,10 @@ export function computeSubject(
 }
 
 export function computeStudentGradebook(
-  student: GradebookStudent, band: GradebookBand | null, src: GradebookSources, subjectList?: string[]
+  student: GradebookStudent, band: GradebookBand | null, src: GradebookSources, subjectList?: string[], term?: string
 ): StudentGradebook {
   const subjects = (subjectList && subjectList.length ? subjectList : discoverSubjects(student, src))
-    .map(sub => computeSubject(sub, student, band, src))
+    .map(sub => computeSubject(sub, student, band, src, term))
     .filter(s => s.hasData || (subjectList && subjectList.length > 0)); // keep explicit subjects even if empty
 
   const graded = subjects.filter(s => s.hasData);
@@ -344,9 +373,9 @@ export function computeStudentGradebook(
 
 // Compute a whole class at once (sources fetched once), ranked by overall %.
 export function computeClassGradebook(
-  students: GradebookStudent[], band: GradebookBand | null, src: GradebookSources, subjectList?: string[]
+  students: GradebookStudent[], band: GradebookBand | null, src: GradebookSources, subjectList?: string[], term?: string
 ): (StudentGradebook & { rank: number })[] {
-  const rows = students.map(s => computeStudentGradebook(s, band, src, subjectList));
+  const rows = students.map(s => computeStudentGradebook(s, band, src, subjectList, term));
   const ranked = [...rows].sort((a, b) => b.overallPercentage - a.overallPercentage);
   const rankOf = new Map(ranked.map((r, i) => [r.studentId, i + 1]));
   return rows.map(r => ({ ...r, rank: rankOf.get(r.studentId) || 0 }));

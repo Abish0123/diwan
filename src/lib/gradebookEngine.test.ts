@@ -49,7 +49,7 @@ const BAND: GradebookBand = {
 };
 
 function emptySources(): GradebookSources {
-  return { assignments: [], submissions: [], assessments: [], attempts: [], exams: [], examMarks: {} };
+  return { assignments: [], submissions: [], assessments: [], attempts: [], exams: [], examMarks: {}, overrides: [] };
 }
 
 describe("computeStudentGradebook", () => {

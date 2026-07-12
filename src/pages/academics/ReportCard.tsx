@@ -2240,7 +2240,8 @@ export default function ReportCard() {
   // gets duplicated.
   function buildRecordFor(r: RCStudent & { id: string }, src: GradebookSources, band: ReturnType<typeof getBandForGrade>, requiredSubjects: string[] = []): ReportCardRecord | null {
     const gb = computeStudentGradebook(
-      { id: String(r.id), name: r.name, grade: cls, section: section.replace("Section ", "").trim() }, band, src
+      { id: String(r.id), name: r.name, grade: cls, section: section.replace("Section ", "").trim() }, band, src,
+      undefined, term
     );
     const subs = gb.subjects.filter(s => s.hasData);
     if (!subs.length) return null;

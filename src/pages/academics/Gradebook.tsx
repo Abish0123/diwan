@@ -351,7 +351,7 @@ export default function Gradebook() {
       // Auto-pull each component from the engine (assignment/assessment/exam),
       // mapped to the band columns by position. No fabrication, no manual entry.
       const sg = gbSources
-        ? computeSubject(subject, { id: String(s.id), name: s.name, grade: s.grade || grade, section: s.section || section }, band, gbSources)
+        ? computeSubject(subject, { id: String(s.id), name: s.name, grade: s.grade || grade, section: s.section || section }, band, gbSources, term)
         : null;
       columns.forEach((c, ci) => {
         const comp = sg?.components[ci];
@@ -360,7 +360,7 @@ export default function Gradebook() {
       const rollNo = s.rollNumber || String(idx + 1);
       return { id: s.id, name: s.name, rollNo, marks: rowMarks };
     });
-  }, [filteredLiveStudents, columns, subject, band, gbSources, grade, section]);
+  }, [filteredLiveStudents, columns, subject, band, gbSources, grade, section, term]);
 
   const max = useMemo(() => maxTotal(columns), [columns]);
 
@@ -400,9 +400,9 @@ export default function Gradebook() {
     if (!gbSources) return [];
     return computeClassGradebook(
       filteredLiveStudents.map(s => ({ id: String(s.id), name: s.name, grade: s.grade || grade, section: s.section || section })),
-      band, gbSources, SUBJECTS
+      band, gbSources, SUBJECTS, term
     );
-  }, [gbSources, filteredLiveStudents, band, grade, section]);
+  }, [gbSources, filteredLiveStudents, band, grade, section, term]);
 
   const resultsByRoll = useMemo(() =>
     [...classGradebook].sort((a, b) => Number(rollOf.get(a.studentId) ?? 0) - Number(rollOf.get(b.studentId) ?? 0))
