@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { KpiCard } from "@/components/dashboard/KpiCard";
+import { StaticKpiCard } from "@/components/dashboard/StaticKpiCard";
 import { AttendanceOverviewCard } from "@/components/dashboard/AttendanceOverviewCard";
 import { FeeCollectionOverviewCard } from "@/components/dashboard/FeeCollectionOverviewCard";
 import { StudentDistributionDonut } from "@/components/dashboard/StudentDistributionDonut";
@@ -117,7 +117,7 @@ const AdminIndex = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <KpiCard
+          <StaticKpiCard
             title="Total Students"
             value={totalStudents || 0}
             icon={Users}
@@ -125,11 +125,10 @@ const AdminIndex = () => {
             trendType="up"
             description="this month"
             iconClassName="bg-indigo-50 text-purple-600"
-            index={0}
             trendSeries={cumulativeCountTrend(students as any, totalStudents || 0)}
             accentColor="#4f46e5"
           />
-          <KpiCard
+          <StaticKpiCard
             title="Attendance Today"
             value={`${overview.attendanceBreakdown.presentPct}%`}
             icon={UserCheck}
@@ -137,11 +136,10 @@ const AdminIndex = () => {
             trendType={overview.attendanceBreakdown.presentPct >= 90 ? "up" : "neutral"}
             description={overview.attendanceBreakdown.date ? `as of ${overview.attendanceBreakdown.date}` : "no data yet"}
             iconClassName="bg-emerald-50 text-emerald-600"
-            index={1}
             trendSeries={overview.attendanceTrend}
             accentColor="#10b981"
           />
-          <KpiCard
+          <StaticKpiCard
             title="Total Staff"
             value={staff.length || 0}
             icon={GraduationCap}
@@ -149,11 +147,10 @@ const AdminIndex = () => {
             trendType="up"
             description="vs last month"
             iconClassName="bg-purple-50 text-purple-600"
-            index={2}
             trendSeries={cumulativeCountTrend(staff as any, staff.length || 0)}
             accentColor="#9810fa"
           />
-          <KpiCard
+          <StaticKpiCard
             title={`Fee Collection (${currencySymbol})`}
             value={overview.feeOverview.collected}
             icon={DollarSign}
@@ -161,11 +158,10 @@ const AdminIndex = () => {
             trendType="up"
             description="this month"
             iconClassName="bg-blue-50 text-blue-600"
-            index={3}
             trendSeries={overview.feeTrend}
             accentColor="#3b82f6"
           />
-          <KpiCard
+          <StaticKpiCard
             title="Pending Tasks"
             value={overview.pendingTasksCount}
             icon={ClipboardList}
@@ -173,7 +169,6 @@ const AdminIndex = () => {
             trendType={overview.pendingTasksCount > 0 ? "down" : "up"}
             description="awaiting review"
             iconClassName="bg-rose-50 text-rose-600"
-            index={4}
             accentColor="#f43f5e"
           />
         </div>
