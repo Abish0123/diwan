@@ -15,6 +15,7 @@ import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useTeacherCalendarEvents, TeacherCalendarEvent } from "@/hooks/useTeacherCalendarEvents";
 import { useSweepProgress } from "@/hooks/useSweepProgress";
 import { CountUpNumber } from "@/components/dashboard/CountUpNumber";
+import { StaticKpiCard } from "@/components/dashboard/StaticKpiCard";
 import {
   Users, GraduationCap, ClipboardList, CheckCircle2, MessageSquare,
   CalendarCheck, FilePlus2, UploadCloud, ClipboardCheck, FileText,
@@ -49,36 +50,20 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-/* ── KPI card — count-up, hover lift+scale, icon rotate, soft glow ── */
+/* ── KPI card — same shared StaticKpiCard the admin overview dashboard uses
+     (src/pages/Index.tsx): plain static card, CountUpNumber, setTimeout-
+     driven sparkline draw-in. See KpiSpec below for the real trend/
+     description values this page feeds it. ── */
 
-interface KpiSpec { icon: typeof Users; label: string; sub: string; value: number | string; bg: string; ic: string; glow: string }
-
-function TeacherKpiCard({ icon: Icon, label, sub, value, bg, ic, glow, index }: KpiSpec & { index: number }) {
-  const numeric = typeof value === "number";
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.08, duration: 0.35, ease: "easeOut" }}
-      whileHover={{ y: -6, scale: 1.02 }}
-      className="group relative bg-card border border-border/50 rounded-[24px] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow duration-300 hover:shadow-[0_8px_30px_rgba(152,16,250,0.12)] cursor-default overflow-hidden"
-    >
-      <div
-        className="pointer-events-none absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-2xl"
-        style={{ background: glow }}
-      />
-      <div className="relative flex items-center gap-2.5 mb-2.5">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:rotate-[8deg] group-hover:scale-110", bg)}>
-          <Icon className={cn("h-5 w-5", ic)} />
-        </div>
-        <span className="text-xs text-muted-foreground font-medium leading-tight">{label}</span>
-      </div>
-      <p className="relative text-2xl font-bold text-foreground leading-none tabular-nums">
-        {numeric ? <CountUpNumber value={value as number} animateOnMount duration={900} /> : value}
-      </p>
-      <p className="relative text-xs text-muted-foreground mt-1.5">{sub}</p>
-    </motion.div>
-  );
+interface KpiSpec {
+  icon: typeof Users;
+  title: string;
+  value: number | string;
+  description?: string;
+  trend?: string;
+  trendType?: "up" | "down" | "neutral";
+  iconClassName: string;
+  accentColor: string;
 }
 
 /* ── Today's Schedule — vertical timeline ── */
@@ -662,11 +647,35 @@ export default function TeacherDashboard() {
   }, [assignments, totalStudents]);
 
   const KPIS: KpiSpec[] = [
-    { icon: GraduationCap, label: "My Classes", sub: `${myClassesCount} Active Class${myClassesCount === 1 ? "" : "es"}`, value: myClassesCount, bg: "bg-primary/10", ic: "text-primary", glow: "radial-gradient(circle, #9810fa55, transparent 70%)" },
-    { icon: Users, label: "Students", sub: "Total students", value: totalStudents, bg: "bg-blue-50", ic: "text-blue-600", glow: "radial-gradient(circle, #3b82f655, transparent 70%)" },
-    { icon: CheckCircle2, label: "Attendance", sub: "Present today", value: markedToday ? `${attendancePct}%` : "—", bg: "bg-emerald-50", ic: "text-emerald-600", glow: "radial-gradient(circle, #10b98155, transparent 70%)" },
-    { icon: ClipboardList, label: "Pending Assignments", sub: "To be graded", value: pendingAssignmentsCount, bg: "bg-orange-50", ic: "text-orange-600", glow: "radial-gradient(circle, #f9731655, transparent 70%)" },
-    { icon: MessageSquare, label: "Messages", sub: "Unread messages", value: unreadMessages, bg: "bg-[#d12386]/10", ic: "text-[#d12386]", glow: "radial-gradient(circle, #d1238655, transparent 70%)" },
+    {
+      icon: GraduationCap, title: "My Classes", value: myClassesCount,
+      description: `${myClassesCount} Active Class${myClassesCount === 1 ? "" : "es"}`,
+      iconClassName: "bg-primary/10 text-primary", accentColor: "#9810fa",
+    },
+    {
+      icon: Users, title: "Students", value: totalStudents,
+      description: "Total students",
+      iconClassName: "bg-blue-50 text-blue-600", accentColor: "#3b82f6",
+    },
+    {
+      icon: CheckCircle2, title: "Attendance", value: markedToday ? `${attendancePct}%` : "—",
+      description: "Present today",
+      trend: markedToday ? (attendancePct >= 90 ? "On track" : "Review") : undefined,
+      trendType: attendancePct >= 90 ? "up" : "neutral",
+      iconClassName: "bg-emerald-50 text-emerald-600", accentColor: "#10b981",
+    },
+    {
+      icon: ClipboardList, title: "Pending Assignments", value: pendingAssignmentsCount,
+      description: "To be graded",
+      trend: pendingAssignmentsCount > 0 ? "Action needed" : "All clear",
+      trendType: pendingAssignmentsCount > 0 ? "down" : "up",
+      iconClassName: "bg-orange-50 text-orange-600", accentColor: "#f97316",
+    },
+    {
+      icon: MessageSquare, title: "Messages", value: unreadMessages,
+      description: "Unread messages",
+      iconClassName: "bg-[#d12386]/10 text-[#d12386]", accentColor: "#d12386",
+    },
   ];
 
   const quickLinks: QuickLink[] = [
@@ -694,7 +703,7 @@ export default function TeacherDashboard() {
         </motion.div>
 
         <div className="relative grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {KPIS.map((k, i) => <TeacherKpiCard key={k.label} {...k} index={i} />)}
+          {KPIS.map((k) => <StaticKpiCard key={k.title} {...k} />)}
         </div>
 
         <MyAppraisalWidget />
