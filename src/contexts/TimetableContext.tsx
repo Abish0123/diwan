@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { TimetableEntry, Subject, Teacher, Room, TimeSlot, DayOfWeek, TimetableConflict } from '@/types/timetable';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
