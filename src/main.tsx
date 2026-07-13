@@ -29,6 +29,8 @@ let sessionExpiryHandled = false;
 // token is being stored. Auth endpoints (/api/session/*) set this flag so
 // that a brief race between token storage and the first data fetch is ignored.
 let loginInProgress = false;
+// Track when we last successfully stored a token to avoid false session expiry
+let lastSuccessfulLoginTime = 0;
 
 // Expose a setter for AuthContext to call around loginWithEmail
 let loginProgressTimeout: NodeJS.Timeout | null = null;
@@ -44,11 +46,20 @@ let loginProgressTimeout: NodeJS.Timeout | null = null;
   }
 };
 
+// Monitor when AuthContext stores a token (via __loginTime) to update our grace period
+setInterval(() => {
+  const win = window as Window & { __loginTime?: number };
+  if (win.__loginTime && win.__loginTime > lastSuccessfulLoginTime) {
+    lastSuccessfulLoginTime = win.__loginTime;
+    sessionExpiryHandled = false; // Reset the handler so it can fire again after 8 seconds
+  }
+}, 100);
+
 function handleSessionExpired() {
   if (sessionExpiryHandled) return;
   if (loginInProgress) return; // Don't expire during an active login
-  // Also don't expire if we have a token (we just authenticated)
-  if (sessionStorage.getItem('sd_token')) return;
+  // Don't expire for 8 seconds after successful login (grace period for initial page loads)
+  if (Date.now() - lastSuccessfulLoginTime < 8000) return;
   sessionExpiryHandled = true;
   sessionStorage.removeItem('sd_user');
   sessionStorage.removeItem('sd_role');

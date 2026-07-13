@@ -301,7 +301,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.setItem('sd_role', data.user.role);
         // The signed session token every /api/data/* request now must present — see
         // src/lib/apiFetch.ts, which reads this key and attaches it as a Bearer header.
-        if (data.token) sessionStorage.setItem('sd_token', data.token);
+        if (data.token) {
+          sessionStorage.setItem('sd_token', data.token);
+          // Signal to main.tsx's session expiry handler that we just logged in
+          const win = window as Window & { __loginTime?: number };
+          win.__loginTime = Date.now();
+        }
 
         toast.success(`Logged in as ${data.user.displayName} (Local DB)`);
         trackEvent({ type: 'login', uid: data.user.uid, role: data.user.role });
