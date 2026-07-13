@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Eye, Check, RotateCcw, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +32,7 @@ const LAYOUT_GROUPS: { layout: SidebarLayout; label: string }[] = [
 export function RoleSwitcher() {
   const { realRole, role, canImpersonate, isImpersonating, impersonateRole, stopImpersonating } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Switch role then land on "/" so the newly-previewed portal's own home loads
   // (its home router resolves the right dashboard for that layout).
@@ -62,7 +64,7 @@ export function RoleSwitcher() {
         >
           <Eye className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">
-            {isImpersonating ? `Viewing: ${roleLabel(role)}` : "View as"}
+            {isImpersonating ? `${t('header.viewAs')}: ${roleLabel(role)}` : t('header.viewAs')}
           </span>
           <ChevronDown className="h-3 w-3 opacity-60" />
         </Button>

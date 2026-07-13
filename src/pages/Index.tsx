@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGradeCoordinator } from "@/hooks/useGradeCoordinator";
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
 import { getRole } from "@/lib/roles";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
   const { role } = useAuth();
@@ -35,6 +36,9 @@ const Index = () => {
 };
 
 const AdminIndex = () => {
+  const { t } = useTranslation();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t('header.goodMorning') : hour < 17 ? t('header.goodAfternoon') : t('header.goodEvening');
   const { students, totalStudents: totalStudentsRaw } = useStudents();
   const { staff } = useStaff();
   const stats = useDashboardStats();
@@ -85,7 +89,7 @@ const AdminIndex = () => {
         >
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-              👋 Good Morning, Admin
+              👋 {greeting}, Admin
             </h2>
             <p className="text-xs text-muted-foreground font-bold tracking-[0.15em] uppercase opacity-70 flex items-center gap-2">
               Bluewood School <span className="h-1 w-1 rounded-full bg-muted-foreground/30" /> {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}

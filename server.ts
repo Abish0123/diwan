@@ -1367,7 +1367,7 @@ async function startServer() {
       // on it surviving the generic recency cap.
       if (entity === "notifications" && typeof req.query.forUid === "string" && req.query.forUid) {
         const targetedRows = await dbQuery(
-          `SELECT * FROM \`notifications\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.recipientUid')) = ? ORDER BY createdAt DESC LIMIT 100`,
+          `SELECT * FROM \`notifications\` WHERE json_extract(data, '$.recipientUid') = ? ORDER BY createdAt DESC LIMIT 100`,
           [req.query.forUid]
         );
         const targeted = targetedRows.map((row: any) => {
@@ -1393,7 +1393,7 @@ async function startServer() {
         let myName: string | undefined;
         try {
           const staffRows = await dbQuery(
-            `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+            `SELECT data FROM \`staff\` WHERE json_extract(data, '$.email') = ? LIMIT 1`,
             [(auth.email || "").toLowerCase()]
           );
           myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
@@ -1544,7 +1544,7 @@ async function startServer() {
         let myName: string | undefined;
         try {
           const staffRows = await dbQuery(
-            `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+            `SELECT data FROM \`staff\` WHERE json_extract(data, '$.email') = ? LIMIT 1`,
             [(auth.email || "").toLowerCase()]
           );
           myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
@@ -1841,7 +1841,7 @@ async function startServer() {
       if (typeof data.status === "string" && GRADE_STATUSES.has(data.status)) delete data.status;
       try {
         const staffRows = await dbQuery(
-          `SELECT data FROM \`staff\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+          `SELECT data FROM \`staff\` WHERE json_extract(data, '$.email') = ? LIMIT 1`,
           [(auth.email || "").toLowerCase()]
         );
         const myName = staffRows[0] ? JSON.parse(staffRows[0].data).name : undefined;
@@ -2094,7 +2094,7 @@ async function startServer() {
       let rows = await dbQuery(`SELECT * FROM \`users\` WHERE id = ? LIMIT 1`, [email]);
       if (rows.length === 0) {
         rows = await dbQuery(
-          `SELECT * FROM \`users\` WHERE uid = ? OR JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? OR JSON_UNQUOTE(JSON_EXTRACT(data, '$.username')) = ? LIMIT 1`,
+          `SELECT * FROM \`users\` WHERE uid = ? OR json_extract(data, '$.email') = ? OR json_extract(data, '$.username') = ? LIMIT 1`,
           [email, email, email]
         );
       }
@@ -2190,7 +2190,7 @@ async function startServer() {
     if (!email || typeof email !== "string") return res.json(generic);
     try {
       const rows = await dbQuery(
-        `SELECT * FROM \`users\` WHERE id = ? OR uid = ? OR JSON_UNQUOTE(JSON_EXTRACT(data, '$.email')) = ? LIMIT 1`,
+        `SELECT * FROM \`users\` WHERE id = ? OR uid = ? OR json_extract(data, '$.email') = ? LIMIT 1`,
         [email, email, email]
       );
       const user = rows[0] as { id: string; data: string } | undefined;
@@ -2667,7 +2667,7 @@ async function startServer() {
       const exists = await dbTableExists("feedback_submissions");
       if (!exists) return res.json([]);
       const rows = await dbQuery(
-        `SELECT data FROM \`feedback_submissions\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.cycleId')) = ?`,
+        `SELECT data FROM \`feedback_submissions\` WHERE json_extract(data, '$.cycleId') = ?`,
         [cycleId]
       );
       const submissions = rows.map((r: any) => { try { return JSON.parse(r.data); } catch { return null; } }).filter(Boolean);
@@ -3060,7 +3060,7 @@ async function startServer() {
     try {
       const norm = (s: unknown) => String(s || "").trim().toLowerCase();
       const rows = await dbQuery(
-        `SELECT id, data FROM \`students\` WHERE JSON_UNQUOTE(JSON_EXTRACT(data, '$.name')) = ? LIMIT 5`,
+        `SELECT id, data FROM \`students\` WHERE json_extract(data, '$.name') = ? LIMIT 5`,
         [studentName]
       );
       if (rows.length === 0) return null;
@@ -3323,7 +3323,7 @@ async function startServer() {
   app.get("/api/transport/trips", async (_req, res) => {
     try {
       if (pool) {
-        const [rows] = await pool.execute("SELECT id, data FROM transport_trips ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.createdAt')) DESC") as [Array<{id:string;data:string}>, unknown];
+        const [rows] = await pool.execute("SELECT id, data FROM transport_trips ORDER BY json_extract(data,'$.createdAt') DESC") as [Array<{id:string;data:string}>, unknown];
         return res.json(rows.map(r => { try { return {id:r.id,...JSON.parse(r.data)}; } catch { return null; } }).filter(Boolean));
       }
       res.json([]);
@@ -3355,7 +3355,7 @@ async function startServer() {
   app.get("/api/transport/attendance", async (_req, res) => {
     try {
       if (pool) {
-        const [rows] = await pool.execute("SELECT id, data FROM transport_attendance ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.date')) DESC") as [Array<{id:string;data:string}>, unknown];
+        const [rows] = await pool.execute("SELECT id, data FROM transport_attendance ORDER BY json_extract(data,'$.date') DESC") as [Array<{id:string;data:string}>, unknown];
         return res.json(rows.map(r => { try { return {id:r.id,...JSON.parse(r.data)}; } catch { return null; } }).filter(Boolean));
       }
       res.json([]);
@@ -3379,7 +3379,7 @@ async function startServer() {
   app.get("/api/transport/incidents", async (_req, res) => {
     try {
       if (pool) {
-        const [rows] = await pool.execute("SELECT id, data FROM transport_incidents ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data,'$.reportedAt')) DESC") as [Array<{id:string;data:string}>, unknown];
+        const [rows] = await pool.execute("SELECT id, data FROM transport_incidents ORDER BY json_extract(data,'$.reportedAt') DESC") as [Array<{id:string;data:string}>, unknown];
         return res.json(rows.map(r => { try { return {id:r.id,...JSON.parse(r.data)}; } catch { return null; } }).filter(Boolean));
       }
       res.json([]);

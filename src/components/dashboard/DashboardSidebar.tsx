@@ -49,14 +49,67 @@ import { useExams, matchesSection } from "@/lib/examStore";
 // the rest of this file compares against. Titles with no entry here just
 // render in English, same as before.
 const NAV_TITLE_TO_KEY: Record<string, string> = {
-  "Dashboard": "nav.dashboard", "My Classes": "nav.myClasses", "Students": "nav.students",
+  // Core
+  "Dashboard": "sidebar.dashboard", "My Classes": "nav.myClasses", "Students": "nav.students",
   "Attendance": "nav.attendance", "Behavior": "nav.behavior", "Timetable": "nav.timetable",
   "Assignments": "nav.assignments", "Homework": "nav.homework", "Assessments": "nav.assessments",
   "Gradebook": "nav.gradebook", "Study Materials": "nav.studyMaterials", "Flash Cards": "nav.flashCards",
   "Marks Entry": "nav.marksEntry", "My Invigilations": "nav.myInvigilations",
   "Messages": "nav.messages", "Announcements": "nav.announcements", "Notifications": "nav.notifications",
   "PTM Booking": "nav.ptmBooking", "Analytics": "nav.analytics",
-  "Leave Management": "nav.leave", "Project Reports": "nav.projectReports", "Settings": "nav.settings",
+  "Leave Management": "nav.leaveManagement", "Project Reports": "nav.projectReports", "Settings": "nav.settings",
+  // Student management
+  "My Profile": "nav.myProfile", "All Students": "nav.allStudents", "Admissions": "nav.admissions",
+  "Health Records": "nav.healthRecords", "Alumni": "nav.alumni", "Graduates": "nav.graduates",
+  // Academics / exams
+  "Exams": "nav.exams", "Exam Schedule": "nav.examSchedule",
+  "Report Cards": "nav.reportCards", "Transcripts": "nav.transcripts",
+  "Live Classes": "nav.liveClasses", "Mission Generator": "nav.missionGenerator",
+  "Submission Review": "nav.submissionReview",
+  // HR
+  "Appraisal": "nav.appraisal", "Staff Directory": "nav.staffDirectory",
+  "Payroll": "nav.payroll", "Recruitment": "nav.recruitment", "Staff Onboarding": "nav.onboarding",
+  // Finance
+  "Fees": "nav.fees", "Fee Collection": "nav.feeCollection",
+  "Financial Statements": "nav.financialStatements",
+  "Revenue & Expense Reports": "nav.revenueExpense",
+  "Budget": "nav.budget", "Assets": "nav.assets", "Reconciliation": "nav.reconciliation",
+  "Finance Settings": "nav.financeSettings", "Permissions": "nav.permissions",
+  // Communication
+  "Calendar": "nav.calendar",
+  // Transport
+  "Routes": "nav.routes", "Vehicles": "nav.vehicles", "Drivers": "nav.drivers",
+  "Helpers": "nav.helpers", "Tracking": "nav.tracking",
+  // Hostel
+  "Rooms": "nav.rooms", "Hostel Allocation": "nav.hostelAllocation", "Mess Menu": "nav.messMenu",
+  // Security
+  "Visitors": "nav.visitors", "Gate Pass": "nav.gatePass",
+  // Inventory
+  "Stock": "nav.stock", "Purchases": "nav.purchases", "Vendors": "nav.vendors",
+  // Intelligence
+  "AI Center": "nav.aiCenter",
+  // Admin
+  "Users": "nav.users", "Audit Logs": "nav.auditLogs", "Integrations": "nav.integrations",
+  "Coding Assessments": "nav.codingAssessments", "Plagiarism Detection": "nav.plagiarism",
+};
+
+// Maps group labels (English) to i18n keys
+const GROUP_LABEL_TO_KEY: Record<string, string> = {
+  "Student Management": "nav.groups.studentManagement",
+  "Academics": "nav.groups.academics",
+  "Examinations": "nav.groups.examinations",
+  "Reports": "nav.groups.reports",
+  "Teaching & Learning": "nav.groups.teachingLearning",
+  "Staff & HR": "nav.groups.staffHr",
+  "Finance": "nav.groups.finance",
+  "Communication": "nav.groups.communication",
+  "Transport": "nav.groups.transport",
+  "Hostel & Cafeteria": "nav.groups.hostelCafeteria",
+  "Security": "nav.groups.security",
+  "Inventory & Procurement": "nav.groups.inventoryProcurement",
+  "Intelligence": "nav.groups.intelligence",
+  "Multi-Branch": "nav.groups.multiBranch",
+  "Administration": "nav.groups.administration",
 };
 
 function navLabel(t: (key: string, fallback?: string) => string, title: string): string {
@@ -169,8 +222,11 @@ function NavItemComponent({ item, collapsed, unreadCount, pendingPaymentCount, m
 function CollapsibleNavGroup({ group, collapsed, unreadCount, pendingPaymentCount, messagesUnreadCount, searchQuery = '' }: { group: NavGroup; collapsed: boolean; unreadCount?: number; pendingPaymentCount?: number; messagesUnreadCount?: number; searchQuery?: string }) {
   const [open, setOpen] = useState(true);
   const dark = useSidebarDark();
+  const { t } = useTranslation();
   const isSearching = !!searchQuery.trim();
   const isOpen = isSearching || open;
+  const groupLabelKey = GROUP_LABEL_TO_KEY[group.label];
+  const groupLabel = groupLabelKey ? t(groupLabelKey, group.label) : group.label;
 
   if (collapsed) {
     return (
@@ -200,7 +256,7 @@ function CollapsibleNavGroup({ group, collapsed, unreadCount, pendingPaymentCoun
           dark ? "text-slate-500 hover:text-slate-300" : "text-slate-500 hover:text-slate-600",
           isSearching && "cursor-default")}
       >
-        <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={group.label}>{group.label}</span>
+        <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={group.label}>{groupLabel}</span>
         {!isSearching && <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isOpen && "rotate-180")} aria-hidden="true" />}
       </button>
       {isOpen && (
@@ -331,6 +387,7 @@ export function DashboardSidebar() {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const { user, logout, role } = useAuth();
+  const { t } = useTranslation();
   const { unreadCount, notifications } = useNotificationsContext();
   const messagesUnreadCount = notifications.filter(n => n.type === "chat_message" && !n.read).length;
   const { assignment: teacherAssignment } = useTeacherClass();
@@ -606,7 +663,7 @@ export function DashboardSidebar() {
                       activeClassName={dark ? "bg-white/10 text-white font-semibold rounded-lg border-l-2 border-[#d12386]" : "bg-[#9810fa]/10 text-[#9810fa] font-semibold rounded-lg border-l-2 border-[#9810fa]"}
                     >
                       <LayoutDashboard className="h-5 w-5 shrink-0" strokeWidth={1.8} />
-                      {!collapsed && <span>Dashboard</span>}
+                      {!collapsed && <span>{t('sidebar.dashboard')}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -646,13 +703,13 @@ export function DashboardSidebar() {
           type="button"
           onClick={toggleTheme}
           aria-pressed={dark}
-          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={dark ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
           className={cn(
             "w-full flex items-center rounded-xl border transition-all group",
             collapsed ? "justify-center h-10 w-10 mx-auto p-0" : "gap-2.5 px-3 py-2",
             dark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-slate-50 border-slate-100 hover:bg-slate-100"
           )}
-          title={dark ? "Switch to light mode" : "Switch to dark mode"}
+          title={dark ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
         >
           <div aria-hidden="true" className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110",
             dark ? "bg-[#9b5de5]/20" : "bg-[#9810fa]/10")}>
@@ -660,8 +717,8 @@ export function DashboardSidebar() {
           </div>
           {!collapsed && (
             <div className="text-left flex-1">
-              <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>{dark ? "Light Mode" : "Dark Mode"}</p>
-              <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>App appearance</p>
+              <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>{dark ? t('sidebar.lightMode') : t('sidebar.darkMode')}</p>
+              <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>{t('sidebar.appAppearance')}</p>
             </div>
           )}
           {!collapsed && (
@@ -682,8 +739,8 @@ export function DashboardSidebar() {
               <HelpCircle className={cn("h-3.5 w-3.5", dark ? "text-[#b388ff]" : "text-[#9810fa]")} />
             </div>
             <div className="text-start">
-              <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>Help Center</p>
-              <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>Guides for every module</p>
+              <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>{t('sidebar.helpCenter')}</p>
+              <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>{t('sidebar.guidesForEveryModule')}</p>
             </div>
           </button>
         )}

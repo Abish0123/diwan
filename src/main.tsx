@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './i18n'
+import { LanguageProvider } from './contexts/LanguageContext.tsx'
 
 // Every /api/data/* request now requires a signed session token (server.ts's
 // requireAuth middleware) — but the app has ~34 call sites that fetch it
@@ -23,8 +24,22 @@ const nativeFetch = window.fetch.bind(window);
 // The first 401 on a real data call now forces a clean re-login instead of
 // leaving the app in that silently-broken state.
 let sessionExpiryHandled = false;
+// Set to true during the login sequence to prevent a 401 on an in-flight
+// /api/data request from incorrectly triggering session expiry while a fresh
+// token is being stored. Auth endpoints (/api/session/*) set this flag so
+// that a brief race between token storage and the first data fetch is ignored.
+let loginInProgress = false;
+
+// Expose a setter for AuthContext to call around loginWithEmail
+(window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress = (v: boolean) => {
+  loginInProgress = v;
+  // Auto-clear after 5 seconds as a safety net in case AuthContext forgets
+  if (v) setTimeout(() => { loginInProgress = false; }, 5000);
+};
+
 function handleSessionExpired() {
   if (sessionExpiryHandled) return;
+  if (loginInProgress) return; // Don't expire during an active login
   sessionExpiryHandled = true;
   sessionStorage.removeItem('sd_user');
   sessionStorage.removeItem('sd_role');
@@ -36,7 +51,9 @@ function handleSessionExpired() {
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === "string" ? input : input instanceof URL ? input.pathname : (input as Request).url;
   const isDataCall = !!url && url.includes("/api/data");
-  if (isDataCall) {
+  // Never intercept /api/session/* — those are auth endpoints that don't need a token
+  const isAuthCall = !!url && url.includes("/api/session");
+  if (isDataCall && !isAuthCall) {
     const token = sessionStorage.getItem('sd_token');
     if (token) {
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
@@ -45,10 +62,11 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
   }
   const response = await nativeFetch(input, init);
-  // Only treat this as a dead session if we actually had a token to send —
-  // a 401 with no token yet (e.g. the brief window right after logout, or a
-  // pre-login probe) is expected and not a session-expiry event.
-  if (isDataCall && response.status === 401 && sessionStorage.getItem('sd_token')) {
+  // Only treat this as a dead session if:
+  // 1. We actually had a token to send (so a pre-login probe is not a session expiry)
+  // 2. We are not currently in the middle of a login sequence
+  // 3. The response is from a real data call, not an auth endpoint
+  if (isDataCall && !isAuthCall && response.status === 401 && sessionStorage.getItem('sd_token') && !loginInProgress) {
     handleSessionExpired();
   }
   return response;
@@ -99,6 +117,8 @@ if ("serviceWorker" in navigator) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </React.StrictMode>,
 )
