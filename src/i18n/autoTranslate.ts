@@ -202,7 +202,7 @@ const MANUAL: Record<string, string> = {
   'Vice Principal': 'نائب المدير',
   'Staff Member': 'الموظف', 'Role & Dept': 'الدور والقسم',
   'Search by name, ID, or department': 'البحث بالاسم أو الرقم أو القسم',
-  'Export CSV': 'تصدير CSV', 'Departments': 'الأقسام',
+  'Export CSV': 'تصدير CSV',
   // Misc
   'Page Not Found': 'الصفحة غير موجودة',
   "The page you are looking for doesn't exist or has been moved": 'الصفحة التي تبحث عنها غير موجودة أو تم نقلها',
