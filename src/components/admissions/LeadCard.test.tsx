@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { LeadCard } from "./LeadCard";
@@ -86,17 +86,39 @@ function makeLead(overrides: Partial<Lead> = {}): Lead {
   };
 }
 
+/** Render a LeadCard inside the required providers.
+ *  The PointerSensor is configured with a 10px activation distance so that a
+ *  single tap/click never triggers a drag, allowing onClick handlers on child
+ *  buttons to fire normally in jsdom. */
+function TestDndWrapper({ children }: { children: React.ReactNode }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
+  );
+  return <DndContext sensors={sensors}>{children}</DndContext>;
+}
+
 function renderCard(lead: Lead, onOpenProfile = vi.fn()) {
   return render(
     <AdmissionsProvider>
-      <DndContext>
+      <TestDndWrapper>
         <LeadCard lead={lead} onOpenProfile={onOpenProfile} />
-      </DndContext>
+      </TestDndWrapper>
     </AdmissionsProvider>
   );
 }
 
 describe("LeadCard", () => {
+  /** Seed smartDb.watch so AdmissionsContext's `leads` state contains the
+   *  given lead. moveLead / updateLead both do `leads.find(l => l.id === id)`
+   *  before writing to the DB; without the seed they bail out early. */
+  function seedLead(lead: Lead) {
+    smartDbMock.watch.mockImplementation((entity: string, _f: unknown, cb: (d: unknown[]) => void) => {
+      if (entity === "Lead") cb([lead]);
+      else cb([]);
+      return vi.fn();
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     authState.user = { uid: "admin-1" };
@@ -104,6 +126,7 @@ describe("LeadCard", () => {
     authState.isMockSession = false;
     smartDbMock.getAll.mockResolvedValue([]);
     smartDbMock.getOne.mockResolvedValue(null);
+    // Default: empty leads list (overridden per-test where needed)
     smartDbMock.watch.mockImplementation((_e: string, _f: unknown, cb: (d: unknown[]) => void) => {
       cb([]);
       return vi.fn();
@@ -132,9 +155,9 @@ describe("LeadCard", () => {
 
     rerender(
       <AdmissionsProvider>
-        <DndContext>
+        <TestDndWrapper>
           <LeadCard lead={makeLead({ aiInsight: "Great match" })} onOpenProfile={vi.fn()} />
-        </DndContext>
+        </TestDndWrapper>
       </AdmissionsProvider>
     );
   });
@@ -144,21 +167,23 @@ describe("LeadCard", () => {
     const user = userEvent.setup();
     renderCard(makeLead(), onOpenProfile);
 
-    // The eye button has no accessible name; select via icon container button list.
-    const buttons = screen.getAllByRole("button");
-    const eyeButton = buttons.find(b => b.querySelector("svg.lucide-eye"));
-    expect(eyeButton).toBeTruthy();
-    await user.click(eyeButton!);
+    // The inline eye button has aria-label="View profile" added for accessibility.
+    const eyeBtn = screen.getByRole("button", { name: "View profile" });
+    await user.click(eyeBtn);
     expect(onOpenProfile).toHaveBeenCalledWith("lead-1");
   });
 
   it("advances to the next stage when the chevron button is clicked", async () => {
+    const lead = makeLead({ status: "Enquiry" });
+    seedLead(lead);
     smartDbMock.update.mockResolvedValue(undefined);
     const user = userEvent.setup();
-    renderCard(makeLead({ status: "Enquiry" }));
+    renderCard(lead);
 
-    const advanceBtn = screen.getByTitle("Advance to Form Sent");
-    await user.click(advanceBtn);
+    // Wait for AdmissionsContext useEffect to flush and populate `leads` state
+    // before clicking — moveLead bails out if leads.find() returns undefined.
+    await waitFor(() => expect(screen.getByTitle("Advance to Form Sent")).toBeInTheDocument());
+    await user.click(screen.getByTitle("Advance to Form Sent"));
 
     await waitFor(() =>
       expect(smartDbMock.update).toHaveBeenCalledWith(
@@ -180,11 +205,12 @@ describe("LeadCard", () => {
     // Lock icon with the admissions-team-only title should be visible.
     expect(screen.getByTitle("Only the admissions team can manage this lead")).toBeInTheDocument();
 
-    // Opening the actions menu, Edit/Delete should be disabled.
-    const moreButtons = screen.getAllByRole("button");
-    const moreBtn = moreButtons.find(b => b.querySelector("svg.lucide-more-vertical"));
-    await user.click(moreBtn!);
+    // Opening the actions menu via the aria-labelled trigger button.
+    const moreBtn = screen.getByRole("button", { name: "Lead actions" });
+    await user.click(moreBtn);
 
+    // Radix DropdownMenu renders into a portal attached to document.body;
+    // findByText searches the whole document so it will find the portal items.
     const editItem = await screen.findByText("Edit Details");
     const deleteItem = await screen.findByText("Delete Lead");
     expect(editItem.closest('[role="menuitem"]')).toHaveAttribute("aria-disabled", "true");
@@ -198,15 +224,17 @@ describe("LeadCard", () => {
   });
 
   it("opens the edit dialog, edits a field, and saves via updateLead", async () => {
+    const lead = makeLead();
+    seedLead(lead);
     smartDbMock.update.mockResolvedValue(undefined);
     const user = userEvent.setup();
-    renderCard(makeLead());
+    renderCard(lead);
 
-    const moreButtons = screen.getAllByRole("button");
-    const moreBtn = moreButtons.find(b => b.querySelector("svg.lucide-more-vertical"));
-    await user.click(moreBtn!);
+    // Open the dropdown then click Edit Details (Radix portal).
+    await user.click(await screen.findByRole("button", { name: "Lead actions" }));
     await user.click(await screen.findByText("Edit Details"));
 
+    // The edit dialog should appear; find the student name input by its current value.
     const nameInput = await screen.findByDisplayValue("Ali Hassan");
     await user.clear(nameInput);
     await user.type(nameInput, "Ali Updated");
@@ -222,13 +250,13 @@ describe("LeadCard", () => {
   });
 
   it("deletes the lead when Delete Lead is clicked", async () => {
+    const lead = makeLead();
+    seedLead(lead);
     smartDbMock.delete.mockResolvedValue(undefined);
     const user = userEvent.setup();
-    renderCard(makeLead());
+    renderCard(lead);
 
-    const moreButtons = screen.getAllByRole("button");
-    const moreBtn = moreButtons.find(b => b.querySelector("svg.lucide-more-vertical"));
-    await user.click(moreBtn!);
+    await user.click(await screen.findByRole("button", { name: "Lead actions" }));
     await user.click(await screen.findByText("Delete Lead"));
 
     await waitFor(() => expect(smartDbMock.delete).toHaveBeenCalledWith("Lead", "lead-1"));
