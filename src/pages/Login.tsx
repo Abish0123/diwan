@@ -15,62 +15,9 @@ import { toast } from "sonner";
 type Portal = "staff" | "student" | "parent";
 type Step = "portal" | "login";
 
-const PORTALS: { id: Portal; label: string; subtitle: string; icon: React.ElementType; gradient: string; tag: string }[] = [
-  {
-    id: "staff",
-    label: "Staff Portal",
-    subtitle: "Teachers, Admin & Support",
-    icon: Users,
-    gradient: "from-[#7C3AED] to-[#4F46E5]",
-    tag: "bg-violet-100 text-violet-700",
-  },
-  {
-    id: "student",
-    label: "Student Portal",
-    subtitle: "Access classes, results & assignments",
-    icon: GraduationCap,
-    gradient: "from-[#DB2777] to-[#9333EA]",
-    tag: "bg-pink-100 text-pink-700",
-  },
-  {
-    id: "parent",
-    label: "Parent Portal",
-    subtitle: "Monitor your child's progress",
-    icon: BookOpen,
-    gradient: "from-[#C026D3] to-[#7C3AED]",
-    tag: "bg-fuchsia-100 text-fuchsia-700",
-  },
-];
 
-const HERO: Record<Portal, { headline: string; body: string; features: { icon: React.ElementType; text: string }[] }> = {
-  staff: {
-    headline: "Empower Your Teaching",
-    body: "Manage classes, track attendance, set assignments, and view student performance — all in one place.",
-    features: [
-      { icon: BookOpen, text: "Manage Subjects & Assignments" },
-      { icon: TrendingUp, text: "Gradebook & Analytics" },
-      { icon: Bell, text: "Attendance & Notifications" },
-    ],
-  },
-  student: {
-    headline: "Your Learning, Simplified",
-    body: "Check your timetable, view results, submit assignments, and stay on top of exams effortlessly.",
-    features: [
-      { icon: Sparkles, text: "View Marks & Report Cards" },
-      { icon: BookOpen, text: "Assignments & Study Materials" },
-      { icon: Bell, text: "Exam Schedules & Alerts" },
-    ],
-  },
-  parent: {
-    headline: "Stay Close to Your Child",
-    body: "Track attendance, monitor academic progress, get fee updates, and communicate with teachers in real time.",
-    features: [
-      { icon: TrendingUp, text: "Academic Progress Reports" },
-      { icon: ShieldCheck, text: "Attendance & Behaviour" },
-      { icon: Bell, text: "Fee Alerts & Notifications" },
-    ],
-  },
-};
+
+
 
 const DEMO: Record<Portal, { email: string; password: string }> = {
   staff: { email: "teacher@studentdiwan.com", password: "demo1234" },
@@ -91,6 +38,18 @@ export default function Login() {
   const { loginWithEmail, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t } = useTranslation();
+
+  const HERO: Record<Portal, { headline: string; body: string; features: { icon: React.ElementType; text: string }[] }> = {
+    staff:   { headline: t('login.heroStaffHeadline'),   body: t('login.heroStaffBody'),   features: [{ icon: BookOpen, text: t('login.heroStaffF1') }, { icon: TrendingUp, text: t('login.heroStaffF2') }, { icon: Bell, text: t('login.heroStaffF3') }] },
+    student: { headline: t('login.heroStudentHeadline'), body: t('login.heroStudentBody'), features: [{ icon: Sparkles, text: t('login.heroStudentF1') }, { icon: BookOpen, text: t('login.heroStudentF2') }, { icon: Bell, text: t('login.heroStudentF3') }] },
+    parent:  { headline: t('login.heroParentHeadline'),  body: t('login.heroParentBody'),  features: [{ icon: TrendingUp, text: t('login.heroParentF1') }, { icon: ShieldCheck, text: t('login.heroParentF2') }, { icon: Bell, text: t('login.heroParentF3') }] },
+  };
+
+  const PORTALS = [
+    { id: "staff"   as Portal, label: t('login.staffPortal'),   subtitle: t('login.staffSubtitle'),   icon: Users,        gradient: "from-[#7C3AED] to-[#4F46E5]", tag: "bg-violet-100 text-violet-700" },
+    { id: "student" as Portal, label: t('login.studentPortal'), subtitle: t('login.studentSubtitle'), icon: GraduationCap, gradient: "from-[#DB2777] to-[#9333EA]", tag: "bg-pink-100 text-pink-700" },
+    { id: "parent"  as Portal, label: t('login.parentPortal'),  subtitle: t('login.parentSubtitle'),  icon: BookOpen,      gradient: "from-[#C026D3] to-[#7C3AED]", tag: "bg-fuchsia-100 text-fuchsia-700" },
+  ];
 
   const [step, setStep] = useState<Step>("portal");
   const [portal, setPortal] = useState<Portal>("staff");

@@ -6283,7 +6283,22 @@
     "featureSecure": "Secure Access",
     "featureMulti": "Multi-Portal",
     "copyright": "© 2026 Student Diwan. All rights reserved.",
-    "privacyTerms": "Privacy · Terms"
+    "privacyTerms": "Privacy · Terms",
+    "heroStaffHeadline": "Empower Your Teaching",
+    "heroStaffBody": "Manage classes, track attendance, set assignments, and view student performance — all in one place.",
+    "heroStaffF1": "Manage Subjects & Assignments",
+    "heroStaffF2": "Gradebook & Analytics",
+    "heroStaffF3": "Attendance & Notifications",
+    "heroStudentHeadline": "Your Learning, Simplified",
+    "heroStudentBody": "Check your timetable, view results, submit assignments, and stay on top of exams effortlessly.",
+    "heroStudentF1": "View Marks & Report Cards",
+    "heroStudentF2": "Assignments & Study Materials",
+    "heroStudentF3": "Exam Schedules & Alerts",
+    "heroParentHeadline": "Stay Close to Your Child",
+    "heroParentBody": "Track attendance, monitor academic progress, get fee updates, and communicate with teachers in real time.",
+    "heroParentF1": "Academic Progress Reports",
+    "heroParentF2": "Attendance & Behaviour",
+    "heroParentF3": "Fee Alerts & Notifications"
   },
   "sidebar": {
     "dashboard": "Dashboard",
