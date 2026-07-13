@@ -59,8 +59,13 @@ function handleSessionExpired() {
   if (sessionExpiryHandled) return;
   if (loginInProgress) return; // Don't expire during an active login
   // Don't expire for 8 seconds after successful login (grace period for initial page loads)
-  if (Date.now() - lastSuccessfulLoginTime < 8000) return;
+  const timeSinceLogin = Date.now() - lastSuccessfulLoginTime;
+  if (timeSinceLogin < 8000) {
+    console.log(`[v0] Session expiry suppressed: ${timeSinceLogin}ms since login (grace period 8000ms)`);
+    return;
+  }
   sessionExpiryHandled = true;
+  console.log(`[v0] Handling session expiry after ${timeSinceLogin}ms since login`);
   sessionStorage.removeItem('sd_user');
   sessionStorage.removeItem('sd_role');
   sessionStorage.removeItem('sd_token');
