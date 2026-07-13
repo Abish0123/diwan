@@ -136,7 +136,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If a local mock session is active, trust it completely and ignore Firebase.
       // A stale Firebase auth session (e.g. from a previous Google login that was never
       // properly signed out) must not be allowed to overwrite the local session role.
-      if (sessionStorage.getItem('sd_user')) {
+      const storedUser = sessionStorage.getItem('sd_user');
+      const storedRole = sessionStorage.getItem('sd_role');
+      if (storedUser && storedRole) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setRole(storedRole);
+        } catch (e) {
+          console.error('Failed to parse stored user:', e);
+        }
         setLoading(false);
         return;
       }
