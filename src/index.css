@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Cairo:wght@300;400;500;600;700;800&display=swap');
 @import "leaflet/dist/leaflet.css";
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
@@ -456,25 +456,89 @@
     @apply bg-slate-100 px-1.5 py-0.5 rounded text-sm font-mono text-[#9810fa];
   }
 
-  /* RTL Support */
-  /* Note: Prefer margin-inline-start / margin-inline-end over ml-* / mr-* for logical RTL/LTR switching */
+  /* ── RTL / Arabic Support ─────────────────────────────────────────────── */
+
+  /* Arabic font on <html dir="rtl"> — affects every element by inheritance */
+  [dir="rtl"],
+  [dir="rtl"] body,
+  [dir="rtl"] * {
+    font-family: 'Cairo', 'Segoe UI', sans-serif !important;
+    letter-spacing: 0 !important; /* Inter's letter-spacing looks wrong in Arabic */
+  }
+
+  /* Base direction + alignment */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  /* Sidebar: pin to right edge in RTL */
   [dir="rtl"] .sidebar {
     right: 0;
     left: auto;
   }
 
-  [dir="rtl"] {
+  /* Flip all flex rows that contain icon + label so icon stays on the right */
+  [dir="rtl"] .flex-row,
+  [dir="rtl"] .flex {
+    direction: rtl;
+  }
+
+  /* Margin / padding logical flips for common Tailwind utility combos */
+  [dir="rtl"] .ml-auto  { margin-left: 0;    margin-right: auto; }
+  [dir="rtl"] .mr-auto  { margin-right: 0;   margin-left: auto; }
+  [dir="rtl"] .ml-1     { margin-left: 0;    margin-right: 0.25rem; }
+  [dir="rtl"] .ml-2     { margin-left: 0;    margin-right: 0.5rem; }
+  [dir="rtl"] .ml-3     { margin-left: 0;    margin-right: 0.75rem; }
+  [dir="rtl"] .ml-4     { margin-left: 0;    margin-right: 1rem; }
+  [dir="rtl"] .mr-1     { margin-right: 0;   margin-left: 0.25rem; }
+  [dir="rtl"] .mr-2     { margin-right: 0;   margin-left: 0.5rem; }
+  [dir="rtl"] .mr-3     { margin-right: 0;   margin-left: 0.75rem; }
+  [dir="rtl"] .mr-4     { margin-right: 0;   margin-left: 1rem; }
+  [dir="rtl"] .pl-2     { padding-left: 0;   padding-right: 0.5rem; }
+  [dir="rtl"] .pl-3     { padding-left: 0;   padding-right: 0.75rem; }
+  [dir="rtl"] .pl-4     { padding-left: 0;   padding-right: 1rem; }
+  [dir="rtl"] .pl-6     { padding-left: 0;   padding-right: 1.5rem; }
+  [dir="rtl"] .pl-8     { padding-left: 0;   padding-right: 2rem; }
+  [dir="rtl"] .pr-2     { padding-right: 0;  padding-left: 0.5rem; }
+  [dir="rtl"] .pr-3     { padding-right: 0;  padding-left: 0.75rem; }
+  [dir="rtl"] .pr-4     { padding-right: 0;  padding-left: 1rem; }
+
+  /* Left border accent → right side in RTL */
+  [dir="rtl"] .border-l  { border-left: none;  border-right-width: 1px; }
+  [dir="rtl"] .border-l-2 { border-left: none; border-right-width: 2px; }
+  [dir="rtl"] .border-l-4 { border-left: none; border-right-width: 4px; }
+  [dir="rtl"] .rounded-l-md  { border-radius: 0 0.375rem 0.375rem 0; }
+  [dir="rtl"] .rounded-r-md  { border-radius: 0.375rem 0 0 0.375rem; }
+  [dir="rtl"] .rounded-l-lg  { border-radius: 0 0.5rem 0.5rem 0; }
+  [dir="rtl"] .rounded-r-lg  { border-radius: 0.5rem 0 0 0.5rem; }
+
+  /* Input icons / search field adornments */
+  [dir="rtl"] .input-icon-left  { left: auto; right: 0.75rem; }
+  [dir="rtl"] .input-icon-right { right: auto; left: 0.75rem; }
+
+  /* Lucide-react chevrons used for "next/prev" should be mirrored */
+  [dir="rtl"] .lucide-chevron-right,
+  [dir="rtl"] .lucide-chevron-left,
+  [dir="rtl"] .lucide-arrow-right,
+  [dir="rtl"] .lucide-arrow-left {
+    transform: scaleX(-1);
+  }
+
+  /* Table cells default to right-aligned text in RTL */
+  [dir="rtl"] th,
+  [dir="rtl"] td {
     text-align: right;
   }
 
-  [dir="rtl"] .ml-auto {
-    margin-left: 0;
-    margin-right: auto;
+  /* Dropdown / popover alignment */
+  [dir="rtl"] [data-radix-popper-content-wrapper] {
+    direction: rtl;
   }
 
-  [dir="rtl"] .mr-2 {
-    margin-left: 0.5rem;
-    margin-right: 0;
+  /* Dialog / sheet */
+  [dir="rtl"] [role="dialog"],
+  [dir="rtl"] [data-side="left"] {
+    text-align: right;
   }
 
   /* Print Styles */

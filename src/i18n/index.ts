@@ -12,17 +12,24 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+const applyLang = (lang: string) => {
+  const isAr = lang === 'ar';
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', lang);
+  // Switch the Tailwind --font-sans token so every font-sans class renders Cairo in Arabic
+  document.documentElement.style.setProperty(
+    '--font-sans',
+    isAr ? "'Cairo', 'Segoe UI', sans-serif" : "'Inter', ui-sans-serif, system-ui, sans-serif"
+  );
+};
+
 export const setLanguage = (lang: 'en' | 'ar') => {
   localStorage.setItem('lang', lang);
   i18n.changeLanguage(lang);
-  document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-  document.documentElement.setAttribute('lang', lang);
-  document.documentElement.style.fontFamily = lang === 'ar' ? "'Cairo', 'Segoe UI', sans-serif" : '';
+  applyLang(lang);
 };
 
 // Apply on load
-document.documentElement.setAttribute('dir', saved === 'ar' ? 'rtl' : 'ltr');
-document.documentElement.setAttribute('lang', saved);
-if (saved === 'ar') document.documentElement.style.fontFamily = "'Cairo', 'Segoe UI', sans-serif";
+applyLang(saved);
 
 export default i18n;
