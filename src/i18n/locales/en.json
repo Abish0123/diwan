@@ -1,4 +1,74 @@
 {
+  "login": {
+    "portals": {
+      "staff": { "label": "Staff Portal", "subtitle": "Teachers, Admin & Support" },
+      "student": { "label": "Student Portal", "subtitle": "Access classes, results & assignments" },
+      "parent": { "label": "Parent Portal", "subtitle": "Monitor your child's progress" }
+    },
+    "hero": {
+      "staff": {
+        "headline": "Empower Your Teaching",
+        "body": "Manage classes, track attendance, set assignments, and view student performance — all in one place.",
+        "feature1": "Manage Subjects & Assignments",
+        "feature2": "Gradebook & Analytics",
+        "feature3": "Attendance & Notifications"
+      },
+      "student": {
+        "headline": "Your Learning, Simplified",
+        "body": "Check your timetable, view results, submit assignments, and stay on top of exams effortlessly.",
+        "feature1": "View Marks & Report Cards",
+        "feature2": "Assignments & Study Materials",
+        "feature3": "Exam Schedules & Alerts"
+      },
+      "parent": {
+        "headline": "Stay Close to Your Child",
+        "body": "Track attendance, monitor academic progress, get fee updates, and communicate with teachers in real time.",
+        "feature1": "Academic Progress Reports",
+        "feature2": "Attendance & Behaviour",
+        "feature3": "Fee Alerts & Notifications"
+      }
+    },
+    "brand": {
+      "name": "Student Diwan",
+      "headline": "Manage Your Institution, Beautifully",
+      "body": "The all-in-one ERP for modern schools — streamline administration, empower teachers, and engage students in one connected experience.",
+      "badgeAi": "AI-Powered",
+      "badgeSync": "Real-time Sync",
+      "badgeSecure": "Secure Access",
+      "badgeMultiPortal": "Multi-Portal",
+      "copyright": "© 2026 Student Diwan. All rights reserved.",
+      "privacyTerms": "Privacy · Terms"
+    },
+    "welcomeBack": "Welcome Back",
+    "selectPortal": "Select your portal to continue",
+    "adminQuestion": "Admin?",
+    "adminSignIn": "Admin Sign-in",
+    "allPortals": "All Portals",
+    "signingInTo": "Signing in to",
+    "enterCredentials": "Enter your credentials to continue",
+    "emailLabel": "Email or Login ID",
+    "emailPlaceholder": "you@school.com or Student/Parent ID",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot Password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signInTo": "Sign in to {{portal}}",
+    "orContinueWith": "or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "forgot": {
+      "title": "Reset your password",
+      "description": "Enter the email on your account and we'll send you a link to set a new password.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@school.com",
+      "cancel": "Cancel",
+      "send": "Send Reset Link",
+      "errorSend": "Couldn't send the reset email — please try again.",
+      "errorServer": "Couldn't reach the server — please try again.",
+      "success": "If an account exists for that email, a reset link has been sent."
+    }
+  },
   "nav": {
     "dashboard": "Dashboard",
     "students": "Students",

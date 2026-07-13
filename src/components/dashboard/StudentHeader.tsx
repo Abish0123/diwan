@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function StudentHeader() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export function StudentHeader() {
       </div>
 
       <div className="flex items-center gap-6">
+        <LanguageSwitcher />
         <button className="relative p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1.5 end-1.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />

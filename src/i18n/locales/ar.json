@@ -1,4 +1,74 @@
 {
+  "login": {
+    "portals": {
+      "staff": { "label": "بوابة الموظفين", "subtitle": "المعلمون والإدارة والدعم" },
+      "student": { "label": "بوابة الطالب", "subtitle": "الوصول إلى الفصول والنتائج والواجبات" },
+      "parent": { "label": "بوابة ولي الأمر", "subtitle": "تابع تقدم طفلك" }
+    },
+    "hero": {
+      "staff": {
+        "headline": "مكّن تدريسك",
+        "body": "أدر الفصول، وتابع الحضور، وحدد الواجبات، واطّلع على أداء الطلاب — كل ذلك في مكان واحد.",
+        "feature1": "إدارة المواد والواجبات",
+        "feature2": "سجل الدرجات والتحليلات",
+        "feature3": "الحضور والإشعارات"
+      },
+      "student": {
+        "headline": "تعلّمك، ببساطة",
+        "body": "اطّلع على جدولك الدراسي، وشاهد نتائجك، وسلّم واجباتك، وتابع امتحاناتك بكل سهولة.",
+        "feature1": "عرض الدرجات وكشوف النتائج",
+        "feature2": "الواجبات والمواد الدراسية",
+        "feature3": "جداول الامتحانات والتنبيهات"
+      },
+      "parent": {
+        "headline": "ابقَ قريباً من طفلك",
+        "body": "تابع الحضور، وراقب التقدم الأكاديمي، واحصل على تحديثات الرسوم، وتواصل مع المعلمين في الوقت الفعلي.",
+        "feature1": "تقارير التقدم الأكاديمي",
+        "feature2": "الحضور والسلوك",
+        "feature3": "تنبيهات الرسوم والإشعارات"
+      }
+    },
+    "brand": {
+      "name": "ديوان الطالب",
+      "headline": "أدر مؤسستك بشكل رائع",
+      "body": "نظام تخطيط موارد شامل للمدارس الحديثة — بسّط الإدارة، ومكّن المعلمين، وأشرك الطلاب في تجربة واحدة متصلة.",
+      "badgeAi": "مدعوم بالذكاء الاصطناعي",
+      "badgeSync": "مزامنة فورية",
+      "badgeSecure": "وصول آمن",
+      "badgeMultiPortal": "بوابات متعددة",
+      "copyright": "© 2026 ديوان الطالب. جميع الحقوق محفوظة.",
+      "privacyTerms": "الخصوصية · الشروط"
+    },
+    "welcomeBack": "مرحباً بعودتك",
+    "selectPortal": "اختر بوابتك للمتابعة",
+    "adminQuestion": "مسؤول؟",
+    "adminSignIn": "تسجيل دخول المسؤول",
+    "allPortals": "جميع البوابات",
+    "signingInTo": "تسجيل الدخول إلى",
+    "enterCredentials": "أدخل بيانات الاعتماد للمتابعة",
+    "emailLabel": "البريد الإلكتروني أو معرّف الدخول",
+    "emailPlaceholder": "you@school.com أو معرّف الطالب/ولي الأمر",
+    "passwordLabel": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "signInTo": "تسجيل الدخول إلى {{portal}}",
+    "orContinueWith": "أو تابع باستخدام",
+    "continueWithGoogle": "المتابعة باستخدام Google",
+    "switchToLight": "التبديل إلى الوضع الفاتح",
+    "switchToDark": "التبديل إلى الوضع الداكن",
+    "forgot": {
+      "title": "إعادة تعيين كلمة المرور",
+      "description": "أدخل البريد الإلكتروني لحسابك وسنرسل لك رابطاً لتعيين كلمة مرور جديدة.",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "you@school.com",
+      "cancel": "إلغاء",
+      "send": "إرسال رابط إعادة التعيين",
+      "errorSend": "تعذّر إرسال بريد إعادة التعيين — يرجى المحاولة مرة أخرى.",
+      "errorServer": "تعذّر الوصول إلى الخادم — يرجى المحاولة مرة أخرى.",
+      "success": "إذا كان هناك حساب لهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين."
+    }
+  },
   "nav": {
     "dashboard": "لوحة التحكم",
     "students": "الطلاب",
@@ -349,10 +419,10 @@
         "arabic": "اللغة العربية",
         "social": "الدراسات الاجتماعية"
       },
-      "cardsCount": "بطاقة واحدة / {{count}} بطاقة",
+      "cardsCount": "بطاقة واحدة / {{count}} ب��اقة",
       "knownCount": "بطاقة واحدة معروفة / {{count}} معروفة",
       "learningCount": "بطاقة واحدة قيد التعلم / {{count}} قيد التعلم",
-      "toReviewCount": "بطاقة واحدة للمراجعة / {{count}} للمراجعة"
+      "toReviewCount": "ب��اقة واحدة للمراجعة / {{count}} للمراجعة"
     },
     "notifications": {
       "pageTitle": "الإشعارات",
@@ -1200,7 +1270,7 @@
       "toastAllSubjectStrengths": "جميع نقاط القوة في المواد",
       "needsImprovementTitle": "بحاجة إلى تحسين",
       "recentlyUpdatedTitle": "آخر التحديثات",
-      "noAssessmentsRecorded": "لم تُسجَّل أي تقييمات بعد",
+      "noAssessmentsRecorded": "لم تُسجَّل ��ي تقييمات بعد",
       "assessmentFallback": "تقييم",
       "updatedOn": "تم التحديث بتاريخ {{date}}",
       "dateNotSet": "التاريخ غير محدد",
@@ -1357,7 +1427,7 @@
       "showingRange": "عرض {{from}} إلى {{to}} من {{total}} كتابًا",
       "sidebarMyBorrowedBooks": "كتبي المستعارة",
       "noBorrowedBooks": "ليس لديك أي كتب مستعارة حاليًا. استعر عنوانًا لتظهر هنا.",
-      "statusOverdue": "متأخر",
+      "statusOverdue": "��تأخر",
       "statusActive": "نشط",
       "tooltipAlreadyRenewed": "تم التجديد بالفعل",
       "tooltipReturnOrPayFine": "أعد الكتاب أو ادفع الغرامة أولاً",
@@ -1619,7 +1689,7 @@
       "classPeriodsLabel": "الحصص الدراسية (من الجدول الزمني)",
       "timetableBadge": "الجدول الزمني",
       "clickForDetails": "انقر للاطلاع على التفاصيل",
-      "noEventsScheduledToday": "لا توجد فعاليات مجدولة لهذا اليوم",
+      "noEventsScheduledToday": "لا ��وجد فعاليات مجدولة لهذا اليوم",
       "addEventButton": "إضافة فعالية",
       "upcomingEventsTitle": "الفعاليات القادمة",
       "noEventsFound": "لم يتم العثور على فعاليات",
@@ -1865,7 +1935,7 @@
         "semesterOption2": "الفصل الدراسي 2",
         "termOption1": "الدورة 1",
         "termOption2": "الدورة 2",
-        "semesterSkipHint": "يمكنك تخطي هذه الخطوة — يمكن تحديث الفصل الدراسي لاحقًا.",
+        "semesterSkipHint": "يمكنك ��خطي هذه الخطوة — يمكن تحديث الفصل الدراسي لاحقًا.",
         "selectedSubjectsLabel": "المواد المختارة ({{count}})",
         "addCustomSubjectLabel": "إضافة مادة مخصصة",
         "typeSubjectNamePlaceholder": "اكتب اسم المادة...",
@@ -2278,7 +2348,7 @@
         "uploadFileSubtitle": "اسحب وأفلت ملفك هنا، أو انقر للتصفح",
         "browseFileButton": "تصفح الملف",
         "timetableSetupTitle": "إعداد الجدول الزمني",
-        "timetableSetupSubtitle": "أنشئ جدولًا زمنيًا محسّنًا تلقائيًا بناءً على موادك ومعلميك، أو أعده يدويًا لاحقًا.",
+        "timetableSetupSubtitle": "أنشئ جدولًا زمنيًا محسّنًا تلقائيًا بناءً على موادك ومعلميك، ��و أعده يدويًا لاحقًا.",
         "autoGenerateTitle": "إنشاء تلقائي",
         "autoGenerateDesc": "توزيع المواد على أيام الأسبوع",
         "manualSetupTitle": "إعداد يدوي",

@@ -9,65 +9,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, BookOpen, ShieldCheck, Sparkles, TrendingUp, Bell, Lock, Zap, Mail, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 type Portal = "staff" | "student" | "parent";
 type Step = "portal" | "login";
 
-const PORTALS: { id: Portal; label: string; subtitle: string; icon: React.ElementType; gradient: string; tag: string }[] = [
+const PORTALS: { id: Portal; icon: React.ElementType; gradient: string; tag: string }[] = [
   {
     id: "staff",
-    label: "Staff Portal",
-    subtitle: "Teachers, Admin & Support",
     icon: Users,
     gradient: "from-[#7C3AED] to-[#4F46E5]",
     tag: "bg-violet-100 text-violet-700",
   },
   {
     id: "student",
-    label: "Student Portal",
-    subtitle: "Access classes, results & assignments",
     icon: GraduationCap,
     gradient: "from-[#DB2777] to-[#9333EA]",
     tag: "bg-pink-100 text-pink-700",
   },
   {
     id: "parent",
-    label: "Parent Portal",
-    subtitle: "Monitor your child's progress",
     icon: BookOpen,
     gradient: "from-[#C026D3] to-[#7C3AED]",
     tag: "bg-fuchsia-100 text-fuchsia-700",
   },
 ];
 
-const HERO: Record<Portal, { headline: string; body: string; features: { icon: React.ElementType; text: string }[] }> = {
-  staff: {
-    headline: "Empower Your Teaching",
-    body: "Manage classes, track attendance, set assignments, and view student performance — all in one place.",
-    features: [
-      { icon: BookOpen, text: "Manage Subjects & Assignments" },
-      { icon: TrendingUp, text: "Gradebook & Analytics" },
-      { icon: Bell, text: "Attendance & Notifications" },
-    ],
-  },
-  student: {
-    headline: "Your Learning, Simplified",
-    body: "Check your timetable, view results, submit assignments, and stay on top of exams effortlessly.",
-    features: [
-      { icon: Sparkles, text: "View Marks & Report Cards" },
-      { icon: BookOpen, text: "Assignments & Study Materials" },
-      { icon: Bell, text: "Exam Schedules & Alerts" },
-    ],
-  },
-  parent: {
-    headline: "Stay Close to Your Child",
-    body: "Track attendance, monitor academic progress, get fee updates, and communicate with teachers in real time.",
-    features: [
-      { icon: TrendingUp, text: "Academic Progress Reports" },
-      { icon: ShieldCheck, text: "Attendance & Behaviour" },
-      { icon: Bell, text: "Fee Alerts & Notifications" },
-    ],
-  },
+const HERO_ICONS: Record<Portal, React.ElementType[]> = {
+  staff: [BookOpen, TrendingUp, Bell],
+  student: [Sparkles, BookOpen, Bell],
+  parent: [TrendingUp, ShieldCheck, Bell],
 };
 
 const DEMO: Record<Portal, { email: string; password: string }> = {
@@ -88,6 +60,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { loginWithEmail, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState<Step>("portal");
   const [portal, setPortal] = useState<Portal>("staff");
@@ -101,8 +74,9 @@ export default function Login() {
   const [forgotSending, setForgotSending] = useState(false);
 
   const current = PORTALS.find((p) => p.id === portal)!;
-  const hero = HERO[portal];
+  const heroIcons = HERO_ICONS[portal];
   const col = COLORS[portal];
+  const currentLabel = t(`login.portals.${portal}.label`);
 
   // Focus management: AnimatePresence swaps the whole step's content, but
   // never moves keyboard/screen-reader focus anywhere — without this, a
@@ -156,14 +130,14 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Couldn't send the reset email — please try again.");
+        toast.error(data.error || t("login.forgot.errorSend"));
         return;
       }
-      toast.success(data.message || "If an account exists for that email, a reset link has been sent.");
+      toast.success(data.message || t("login.forgot.success"));
       setForgotOpen(false);
       setForgotEmail("");
     } catch {
-      toast.error("Couldn't reach the server — please try again.");
+      toast.error(t("login.forgot.errorServer"));
     } finally {
       setForgotSending(false);
     }
@@ -213,21 +187,21 @@ export default function Login() {
               <>
                 <div>
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white backdrop-blur-sm mb-5 ring-1 ring-white/20">
-                    <Sparkles className="w-3 h-3" /> Student Diwan
+                    <Sparkles className="w-3 h-3" /> {t("login.brand.name")}
                   </span>
                   <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
-                    Manage Your Institution, Beautifully
+                    {t("login.brand.headline")}
                   </h1>
                   <p className="text-white/80 text-lg leading-relaxed mt-4">
-                    The all-in-one ERP for modern schools — streamline administration, empower teachers, and engage students in one connected experience.
+                    {t("login.brand.body")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {[
-                    { icon: Zap, label: "AI-Powered" },
-                    { icon: TrendingUp, label: "Real-time Sync" },
-                    { icon: Lock, label: "Secure Access" },
-                    { icon: Users, label: "Multi-Portal" },
+                    { icon: Zap, label: t("login.brand.badgeAi") },
+                    { icon: TrendingUp, label: t("login.brand.badgeSync") },
+                    { icon: Lock, label: t("login.brand.badgeSecure") },
+                    { icon: Users, label: t("login.brand.badgeMultiPortal") },
                   ].map(({ icon: Icon, label }) => (
                     <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 text-white text-xs rounded-full font-semibold backdrop-blur-sm ring-1 ring-white/10">
                       <Icon className="w-3 h-3" /> {label}
@@ -239,18 +213,18 @@ export default function Login() {
               <>
                 <div>
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${current.tag} mb-4`}>
-                    {current.label}
+                    {currentLabel}
                   </span>
-                  <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight mb-4">{hero.headline}</h1>
-                  <p className="text-white/80 text-base leading-relaxed">{hero.body}</p>
+                  <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight mb-4">{t(`login.hero.${portal}.headline`)}</h1>
+                  <p className="text-white/80 text-base leading-relaxed">{t(`login.hero.${portal}.body`)}</p>
                 </div>
                 <div className="flex flex-col gap-4 mt-2">
-                  {hero.features.map(({ icon: Icon, text }) => (
-                    <div key={text} className="flex items-center gap-3">
+                  {heroIcons.map((Icon, i) => (
+                    <div key={i} className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0 backdrop-blur-sm ring-1 ring-white/10">
                         <Icon className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-white/90 text-sm font-medium">{text}</span>
+                      <span className="text-white/90 text-sm font-medium">{t(`login.hero.${portal}.feature${i + 1}`)}</span>
                     </div>
                   ))}
                 </div>
@@ -259,8 +233,8 @@ export default function Login() {
           </div>
 
           <div className="relative z-10 flex items-center justify-between">
-            <span className="text-white/50 text-xs">© 2026 Student Diwan. All rights reserved.</span>
-            <span className="text-white/40 text-xs font-medium">Privacy · Terms</span>
+            <span className="text-white/50 text-xs">{t("login.brand.copyright")}</span>
+            <span className="text-white/40 text-xs font-medium">{t("login.brand.privacyTerms")}</span>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -274,15 +248,20 @@ export default function Login() {
         {/* Theme toggle — the rest of the app only exposes this inside the
             dashboard sidebar, leaving no way to switch themes before signing
             in at all. */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          aria-pressed={theme === "dark"}
-          className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 h-10 w-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
-        </button>
+        <div className="absolute top-4 end-4 sm:top-6 sm:end-6 z-20 flex items-center gap-2">
+          <div className="h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center px-1 hover:shadow-md transition-all">
+            <LanguageSwitcher />
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? t("login.switchToLight") : t("login.switchToDark")}
+            aria-pressed={theme === "dark"}
+            className="h-10 w-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        </div>
 
         <div className="w-full max-w-[440px] py-6 relative z-10">
           <AnimatePresence mode="wait">
@@ -297,8 +276,8 @@ export default function Login() {
                   </div>
                 </div>
 
-                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
-                <p className="text-slate-600 mb-8">Select your portal to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight outline-none">{t("login.welcomeBack")}</h2>
+                <p className="text-slate-600 mb-8">{t("login.selectPortal")}</p>
 
                 <div className="flex flex-col gap-3">
                   {PORTALS.map((p) => {
@@ -313,10 +292,10 @@ export default function Login() {
                           <Icon className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900 text-base leading-snug">{p.label}</p>
-                          <p className="text-slate-600 text-sm leading-snug mt-0.5">{p.subtitle}</p>
+                          <p className="font-bold text-slate-900 text-base leading-snug">{t(`login.portals.${p.id}.label`)}</p>
+                          <p className="text-slate-600 text-sm leading-snug mt-0.5">{t(`login.portals.${p.id}.subtitle`)}</p>
                         </div>
-                        <svg aria-hidden="true" className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg aria-hidden="true" className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
@@ -325,12 +304,12 @@ export default function Login() {
                 </div>
 
                 <p className="text-center text-sm text-slate-600 mt-8">
-                  Admin?{" "}
+                  {t("login.adminQuestion")}{" "}
                   <button
                     onClick={() => { setPortal("staff"); setEmail("educationleadershipexpo@gmail.com"); setPassword("admin123"); setStep("login"); }}
                     className="text-purple-600 font-semibold hover:underline"
                   >
-                    Admin Sign-in
+                    {t("login.adminSignIn")}
                   </button>
                 </p>
               </motion.div>
@@ -340,7 +319,7 @@ export default function Login() {
             {step === "login" && (
               <motion.div key="login" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
                 <button type="button" onClick={() => setStep("portal")} className="flex items-center gap-1.5 text-slate-600 hover:text-slate-800 text-sm font-medium mb-8 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded">
-                  <ArrowLeft className="w-4 h-4" aria-hidden="true" /> All Portals
+                  <ArrowLeft className="w-4 h-4 rtl:rotate-180" aria-hidden="true" /> {t("login.allPortals")}
                 </button>
 
                 {/* Portal badge */}
@@ -349,23 +328,23 @@ export default function Login() {
                     <current.icon className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-0.5">Signing in to</p>
-                    <p className="font-bold text-slate-900 text-sm leading-none">{current.label}</p>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-0.5">{t("login.signingInTo")}</p>
+                    <p className="font-bold text-slate-900 text-sm leading-none">{currentLabel}</p>
                   </div>
                 </div>
 
-                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
-                <p className="text-slate-600 text-sm mb-7">Enter your credentials to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold text-slate-900 mb-1 tracking-tight outline-none">{t("login.welcomeBack")}</h2>
+                <p className="text-slate-600 text-sm mb-7">{t("login.enterCredentials")}</p>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email or Login ID</Label>
+                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">{t("login.emailLabel")}</Label>
                     <Input
                       id="email"
                       type="text"
                       inputMode="email"
                       autoComplete="username"
-                      placeholder="you@school.com or Student/Parent ID"
+                      placeholder={t("login.emailPlaceholder")}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -375,13 +354,13 @@ export default function Login() {
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                      <Label htmlFor="password" className="text-sm font-medium text-slate-700">{t("login.passwordLabel")}</Label>
                       <button
                         type="button"
                         onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
                         className={`text-xs font-semibold ${col.text} hover:underline`}
                       >
-                        Forgot Password?
+                        {t("login.forgotPassword")}
                       </button>
                     </div>
                     <div className="relative">
@@ -397,9 +376,9 @@ export default function Login() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                         aria-pressed={showPassword}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                       </button>
@@ -407,14 +386,14 @@ export default function Login() {
                   </div>
 
                   <Button type="submit" disabled={isLoading} className={`w-full h-12 ${col.btn} text-white font-semibold rounded-xl transition-all duration-200 shadow-lg mt-2 border-0`}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : `Sign in to ${current.label}`}
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t("login.signInTo", { portal: currentLabel })}
                   </Button>
                 </form>
 
                 {/* Google sign-in */}
                 <div className="relative my-5">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div>
-                  <div className="relative flex justify-center text-xs"><span className="bg-slate-50 px-3 text-slate-400">or continue with</span></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-slate-50 px-3 text-slate-400">{t("login.orContinueWith")}</span></div>
                 </div>
                 <Button
                   type="button"
@@ -427,8 +406,8 @@ export default function Login() {
                   }}
                   className="w-full h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-white font-medium text-sm"
                 >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="h-4 w-4 mr-2" alt="" />
-                  Continue with Google
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="h-4 w-4 me-2" alt="" />
+                  {t("login.continueWithGoogle")}
                 </Button>
               </motion.div>
             )}
@@ -443,15 +422,15 @@ export default function Login() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-violet-600" />
-              Reset your password
+              {t("login.forgot.title")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <p className="text-sm text-slate-500">
-              Enter the email on your account and we'll send you a link to set a new password.
+              {t("login.forgot.description")}
             </p>
             <div className="space-y-1.5">
-              <Label htmlFor="forgot-email" className="text-sm font-medium text-slate-700">Email</Label>
+              <Label htmlFor="forgot-email" className="text-sm font-medium text-slate-700">{t("login.forgot.emailLabel")}</Label>
               <Input
                 id="forgot-email"
                 type="email"
@@ -464,10 +443,10 @@ export default function Login() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
-                Cancel
+                {t("login.forgot.cancel")}
               </Button>
               <Button type="submit" disabled={forgotSending} className="bg-violet-600 hover:bg-violet-700 text-white">
-                {forgotSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Reset Link"}
+                {forgotSending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("login.forgot.send")}
               </Button>
             </DialogFooter>
           </form>
