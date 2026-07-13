@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ArrowRight, BookOpen, Users, DollarSign, Settings, Calendar, GraduationCap } from "lucide-react";
+import { Search, ArrowRight, BookOpen, Users, DollarSign, Settings, Calendar, GraduationCap, LifeBuoy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAllArticles } from "@/lib/helpCenter";
 
 type CommandItem = {
   title: string;
@@ -22,6 +23,12 @@ const ALL_ITEMS: CommandItem[] = [
   { title: "Library", path: "/library", category: "Pages" },
   { title: "Admissions", path: "/admissions", category: "Pages" },
   { title: "Settings", path: "/settings/academic", category: "Pages" },
+  { title: "Help Center", path: "/help", category: "Pages" },
+  ...getAllArticles().map((a) => ({
+    title: a.title,
+    path: `/help/${a.categoryId}/${a.slug}`,
+    category: "Help",
+  })),
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -29,6 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Students: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   Staff: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   Finance: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  Help: "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
 };
 
 const getCategoryIcon = (category: string) => {
@@ -37,6 +45,7 @@ const getCategoryIcon = (category: string) => {
     case "Staff": return <GraduationCap className="h-4 w-4" />;
     case "Finance": return <DollarSign className="h-4 w-4" />;
     case "Pages": return <BookOpen className="h-4 w-4" />;
+    case "Help": return <LifeBuoy className="h-4 w-4" />;
     default: return <Settings className="h-4 w-4" />;
   }
 };

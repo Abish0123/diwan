@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
@@ -673,49 +672,20 @@ export function DashboardSidebar() {
         </button>
 
         {!collapsed && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <button
-                className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all group",
-                  dark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-slate-50 border-slate-100 hover:bg-slate-100")}
-              >
-                <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform",
-                  dark ? "bg-[#9b5de5]/20" : "bg-[#9810fa]/10")}>
-                  <HelpCircle className={cn("h-3.5 w-3.5", dark ? "text-[#b388ff]" : "text-[#9810fa]")} />
-                </div>
-                <div className="text-left">
-                  <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>Help & Support</p>
-                  <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>Raise ticket or live chat</p>
-                </div>
-              </button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Need Assistance?</DialogTitle>
-                <DialogDescription>
-                  Our support team is here to help. Choose your preferred method of contact below.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <button 
-                  onClick={() => { toast.success("Support ticket system initializing..."); }}
-                  className="flex flex-col items-center justify-center p-6 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl transition-colors group"
-                >
-                  <FileText className="h-8 w-8 text-slate-400 group-hover:text-primary mb-3 transition-colors" />
-                  <h4 className="font-bold text-sm text-slate-800">Raise a Support Ticket</h4>
-                  <p className="text-xs text-slate-500 mt-1 text-center">Best for technical issues and formal requests</p>
-                </button>
-                <button 
-                  onClick={() => { toast.success("Connecting to a live agent..."); }}
-                  className="flex flex-col items-center justify-center p-6 bg-[#9810fa]/5 hover:bg-[#9810fa]/10 border border-[#9810fa]/20 rounded-2xl transition-colors group"
-                >
-                  <MessageSquare className="h-8 w-8 text-[#9810fa]/60 group-hover:text-[#9810fa] mb-3 transition-colors" />
-                  <h4 className="font-bold text-sm text-[#9810fa]">Ask Support in Chat</h4>
-                  <p className="text-xs text-[#9810fa]/70 mt-1 text-center">Instant responses for quick queries</p>
-                </button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <button
+            onClick={() => navigate("/help")}
+            className={cn("w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all group",
+              dark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-slate-50 border-slate-100 hover:bg-slate-100")}
+          >
+            <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform",
+              dark ? "bg-[#9b5de5]/20" : "bg-[#9810fa]/10")}>
+              <HelpCircle className={cn("h-3.5 w-3.5", dark ? "text-[#b388ff]" : "text-[#9810fa]")} />
+            </div>
+            <div className="text-start">
+              <p className={cn("text-[11px] font-bold leading-none", dark ? "text-white" : "text-slate-900")}>Help Center</p>
+              <p className={cn("text-[9px] mt-1 font-medium", dark ? "text-slate-400" : "text-slate-500")}>Guides for every module</p>
+            </div>
+          </button>
         )}
         <div className="flex items-center gap-2.5">
           <Avatar className={cn("h-8 w-8 border", dark ? "border-white/10" : "border-slate-200")}>

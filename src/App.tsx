@@ -34,6 +34,9 @@ const Index                  = lazy(() => import("./pages/Index.tsx"));
 const Login                  = lazy(() => import("./pages/Login.tsx"));
 const ResetPassword          = lazy(() => import("./pages/ResetPassword.tsx"));
 const NotFound               = lazy(() => import("./pages/NotFound.tsx"));
+const HelpHome                = lazy(() => import("./pages/help/HelpHome.tsx"));
+const HelpCategory            = lazy(() => import("./pages/help/HelpCategory.tsx"));
+const HelpArticle             = lazy(() => import("./pages/help/HelpArticle.tsx"));
 const Students               = lazy(() => import("./pages/Students.tsx"));
 const Staff                  = lazy(() => import("./pages/Staff.tsx"));
 const Attendance             = lazy(() => import("./pages/Attendance.tsx"));
@@ -655,6 +658,9 @@ const App = () => (
                                             <Route path="/reports/khda" element={<KHDAReport />} />
                                             <Route path="/branches" element={<BranchManagement />} />
                                             <Route path="/board" element={<BoardDashboard />} />
+                                            <Route path="/help" element={<HelpHome />} />
+                                            <Route path="/help/:categoryId" element={<HelpCategory />} />
+                                            <Route path="/help/:categoryId/:slug" element={<HelpArticle />} />
                                             <Route path="/cafeteria" element={<Cafeteria />} />
                                           </Route>
 
