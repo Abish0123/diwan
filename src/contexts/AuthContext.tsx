@@ -264,6 +264,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // loginWithEmail (validate) and a separate verifyOTP step (a fixed demo
   // constant with no real verification value), which only added friction.
   const loginWithEmail = useCallback(async (email: string, password: string) => {
+    // Signal main.tsx's fetch patch that we are actively logging in so that
+    // any in-flight /api/data 401 is not treated as a session-expiry event.
+    const setLoginInProgress = (window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress;
+    setLoginInProgress?.(true);
     try {
       const res = await fetch('/api/session/login', {
         method: 'POST',
@@ -317,6 +321,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Email login error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to login');
       throw error;
+    } finally {
+      // Clear the login-in-progress flag after a short delay to allow the
+      // dashboard's initial data fetches to complete with the fresh token.
+      setTimeout(() => setLoginInProgress?.(false), 2000);
     }
   }, []);
 
