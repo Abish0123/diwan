@@ -311,9 +311,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error(error instanceof Error ? error.message : 'Failed to login');
       throw error;
     } finally {
-      // Clear the login-in-progress flag after a short delay to allow the
+      // Clear the login-in-progress flag after a delay to allow the
       // dashboard's initial data fetches to complete with the fresh token.
-      setTimeout(() => setLoginInProgress?.(false), 2000);
+      setTimeout(() => setLoginInProgress?.(false), 3000);
     }
   }, []);
 

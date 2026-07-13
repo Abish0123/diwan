@@ -31,21 +31,31 @@ let sessionExpiryHandled = false;
 let loginInProgress = false;
 
 // Expose a setter for AuthContext to call around loginWithEmail
+let loginProgressTimeout: NodeJS.Timeout | null = null;
 (window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress = (v: boolean) => {
+  if (loginProgressTimeout) clearTimeout(loginProgressTimeout);
   loginInProgress = v;
-  // Auto-clear after 5 seconds as a safety net in case AuthContext forgets
-  if (v) setTimeout(() => { loginInProgress = false; }, 5000);
+  // Auto-clear after 10 seconds as a safety net in case AuthContext forgets
+  if (v) {
+    loginProgressTimeout = setTimeout(() => {
+      loginInProgress = false;
+      loginProgressTimeout = null;
+    }, 10000);
+  }
 };
 
 function handleSessionExpired() {
   if (sessionExpiryHandled) return;
   if (loginInProgress) return; // Don't expire during an active login
+  // Also don't expire if we have a token (we just authenticated)
+  if (sessionStorage.getItem('sd_token')) return;
   sessionExpiryHandled = true;
   sessionStorage.removeItem('sd_user');
   sessionStorage.removeItem('sd_role');
   sessionStorage.removeItem('sd_token');
   sessionStorage.setItem('sd_session_expired_msg', 'Your session expired — please sign in again.');
-  window.location.reload();
+  // Use a longer timeout to allow page to render before showing the message
+  setTimeout(() => window.location.reload(), 500);
 }
 
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
