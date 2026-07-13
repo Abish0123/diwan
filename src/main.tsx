@@ -58,20 +58,18 @@ setInterval(() => {
 function handleSessionExpired() {
   if (sessionExpiryHandled) return;
   if (loginInProgress) return; // Don't expire during an active login
-  // Don't expire for 8 seconds after successful login (grace period for initial page loads)
+  // Don't expire for 10 seconds after successful login (grace period for initial page loads)
   const timeSinceLogin = Date.now() - lastSuccessfulLoginTime;
-  if (timeSinceLogin < 8000) {
-    console.log(`[v0] Session expiry suppressed: ${timeSinceLogin}ms since login (grace period 8000ms)`);
+  if (timeSinceLogin < 10000) {
+    // Still in the grace period — suppress the expiry
     return;
   }
+  // After grace period, just clear the token but don't reload (the page components
+  // will notice the missing token and render appropriately).
+  if (sessionExpiryHandled) return;
   sessionExpiryHandled = true;
-  console.log(`[v0] Handling session expiry after ${timeSinceLogin}ms since login`);
-  sessionStorage.removeItem('sd_user');
-  sessionStorage.removeItem('sd_role');
   sessionStorage.removeItem('sd_token');
-  sessionStorage.setItem('sd_session_expired_msg', 'Your session expired — please sign in again.');
-  // Use a longer timeout to allow page to render before showing the message
-  setTimeout(() => window.location.reload(), 500);
+  // Leave sd_user and sd_role intact so components can show who was logged in before expiry
 }
 
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
