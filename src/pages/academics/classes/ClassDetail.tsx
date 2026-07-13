@@ -8,6 +8,7 @@ import { useStudents } from "@/contexts/StudentContext";
 import { useStaff } from "@/contexts/StaffContext";
 import { Class, Student } from "@/types/classes";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { AddStudentDialog } from "@/components/classes/AddStudentDialog";
 import { ManageClassDialog } from "@/components/classes/ManageClassDialog";
 import { EditStudentDialog } from "@/components/classes/EditStudentDialog";
@@ -124,6 +125,7 @@ import {
 
 
 const ClassDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -294,7 +296,7 @@ const ClassDetail = () => {
   // Export the current (filtered) roster as a CSV download.
   function handleExportRoster() {
     const rows = filteredClassStudents;
-    if (rows.length === 0) { toast.error("No students to export"); return; }
+    if (rows.length === 0) { toast.error(t('admin.academics.classDetail.noStudentsToExportToast')); return; }
     const cols = ["Roll No", "Student ID", "Name", "Email", "Gender", "Section", "Attendance", "Status"];
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [cols.join(",")];
@@ -308,7 +310,7 @@ const ClassDetail = () => {
     a.download = `${(classData.name || "class").replace(/\s+/g, "-")}-roster.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${rows.length} students`);
+    toast.success(t('admin.academics.classDetail.exportedStudentsToast', { count: rows.length }));
   }
 
   // Small CSV download helper.
@@ -324,18 +326,18 @@ const ClassDetail = () => {
   // Export the subjects table (real teacher/room/coverage bubbled up from SubjectsPro).
   function handleExportSubjects() {
     const rows = subjectRows;
-    if (rows.length === 0) { toast.error("No subjects to export"); return; }
+    if (rows.length === 0) { toast.error(t('admin.academics.classDetail.noSubjectsToExportToast')); return; }
     const cols = ["Subject Name", "Subject Code", "Teacher", "Room", "Periods/Week", "Syllabus Coverage %"];
     const lines = [cols.join(",")];
     rows.forEach(r => lines.push([r.name, r.code, r.teacher, r.room, r.periods, r.coverage].map(csvEsc).join(",")));
     downloadCsv(`${(classData.name || "class").replace(/\s+/g, "-")}-subjects.csv`, lines);
-    toast.success(`Exported ${rows.length} subjects`);
+    toast.success(t('admin.academics.classDetail.exportedSubjectsToast', { count: rows.length }));
   }
 
   // Export the gradebook (students × subjects with totals) bubbled up from GradebookPro.
   function handleExportGradebook() {
     const rows = gradebookRows;
-    if (rows.length === 0) { toast.error("No gradebook marks to export"); return; }
+    if (rows.length === 0) { toast.error(t('admin.academics.classDetail.noGradebookMarksToast')); return; }
     const subs = gradebookSubjectCols;
     const cols = ["Roll No", "Student", ...subs, "Total", "Max", "Percentage", "Grade"];
     const lines = [cols.join(",")];
@@ -343,13 +345,13 @@ const ClassDetail = () => {
       r.rollNo, r.name, ...subs.map(s => r.scores[s] ?? ""), r.total, r.max, `${r.pct.toFixed(1)}%`, r.grade,
     ].map(csvEsc).join(",")));
     downloadCsv(`${(classData.name || "class").replace(/\s+/g, "-")}-gradebook.csv`, lines);
-    toast.success(`Exported gradebook for ${rows.length} students`);
+    toast.success(t('admin.academics.classDetail.exportedGradebookToast', { count: rows.length }));
   }
 
   // Export per-student report cards (one row each with subject marks + grade).
   function handleExportReportCards() {
     const rows = gradebookRows;
-    if (rows.length === 0) { toast.error("No computed marks yet — grade assignments, assessments or exams first"); return; }
+    if (rows.length === 0) { toast.error(t('admin.academics.classDetail.noComputedMarksToast')); return; }
     const subs = gradebookSubjectCols;
     const cols = ["Report Card", classData.name || "", semesterName || "", "", ...subs, "Total", "Percentage", "Grade", "Result"];
     const lines = [cols.map(csvEsc).join(",")];
@@ -357,7 +359,7 @@ const ClassDetail = () => {
       r.name, "", "", "", ...subs.map(s => r.scores[s] ?? ""), `${r.total}/${r.max}`, `${r.pct.toFixed(1)}%`, r.grade, r.pct >= 40 ? "PASS" : "FAIL",
     ].map(csvEsc).join(",")));
     downloadCsv(`${(classData.name || "class").replace(/\s+/g, "-")}-report-cards.csv`, lines);
-    toast.success(`Generated ${rows.length} report cards`);
+    toast.success(t('admin.academics.classDetail.generatedReportCardsToast', { count: rows.length }));
   }
 
   // Context-aware export for the header three-dot — emits the ACTIVE tab's own data.
@@ -365,25 +367,25 @@ const ClassDetail = () => {
     if (activeTab === "subjects") return handleExportSubjects();
     if (activeTab === "students" || activeTab === "overview") return handleExportRoster();
     const payload = tabExports[activeTab];
-    if (!payload || payload.rows.length === 0) { toast.error("No data to export on this tab yet"); return; }
+    if (!payload || payload.rows.length === 0) { toast.error(t('admin.academics.classDetail.noDataToExportToast')); return; }
     const lines = [payload.header.map(csvEsc).join(","), ...payload.rows.map(r => r.map(csvEsc).join(","))];
     downloadCsv(payload.filename, lines);
-    toast.success(`Exported ${payload.rows.length} ${activeTab} rows`);
+    toast.success(t('admin.academics.classDetail.exportedTabRowsToast', { count: payload.rows.length, tab: activeTab }));
   }
 
   // Context-aware import label/template per tab.
   const TAB_IMPORT_META: Record<string, { title: string; format: string; sample: string[] }> = {
-    students: { title: "Students", format: "Name, Email, Gender", sample: ["Name,Email,Gender", "Ali Khan,ali@example.com,Male"] },
-    subjects: { title: "Subjects", format: "Subject Name", sample: ["Subject Name", "Mathematics", "Science"] },
-    assignments: { title: "Assignments", format: "Title, Subject, Type, Due Date, Total Marks", sample: ["Title,Subject,Type,Due Date,Total Marks", "Algebra Worksheet,Mathematics,Worksheet,2026-07-10,20"] },
-    timetable: { title: "Timetable", format: "Day, Time, Subject, Teacher, Room", sample: ["Day,Time,Subject,Teacher,Room", "Monday,08:00 - 08:40,Mathematics,Mr. Imran,Room 101"] },
-    attendance: { title: "Attendance", format: "Roll, Name, Status", sample: ["Roll,Name,Status", "1,Ali Khan,Present"] },
-    exams: { title: "Exams", format: "Subject, Date, Start, End, Invigilator", sample: ["Subject,Date,Start,End,Invigilator", "Mathematics,2026-07-05,09:00,11:00,Mr. Imran"] },
+    students: { title: t('admin.academics.classDetail.importMetaTitleStudents'), format: t('admin.academics.classDetail.importMetaFormatStudents'), sample: ["Name,Email,Gender", "Ali Khan,ali@example.com,Male"] },
+    subjects: { title: t('admin.academics.classDetail.importMetaTitleSubjects'), format: t('admin.academics.classDetail.importMetaFormatSubjects'), sample: ["Subject Name", "Mathematics", "Science"] },
+    assignments: { title: t('admin.academics.classDetail.importMetaTitleAssignments'), format: t('admin.academics.classDetail.importMetaFormatAssignments'), sample: ["Title,Subject,Type,Due Date,Total Marks", "Algebra Worksheet,Mathematics,Worksheet,2026-07-10,20"] },
+    timetable: { title: t('admin.academics.classDetail.importMetaTitleTimetable'), format: t('admin.academics.classDetail.importMetaFormatTimetable'), sample: ["Day,Time,Subject,Teacher,Room", "Monday,08:00 - 08:40,Mathematics,Mr. Imran,Room 101"] },
+    attendance: { title: t('admin.academics.classDetail.importMetaTitleAttendance'), format: t('admin.academics.classDetail.importMetaFormatAttendance'), sample: ["Roll,Name,Status", "1,Ali Khan,Present"] },
+    exams: { title: t('admin.academics.classDetail.importMetaTitleExams'), format: t('admin.academics.classDetail.importMetaFormatExams'), sample: ["Subject,Date,Start,End,Invigilator", "Mathematics,2026-07-05,09:00,11:00,Mr. Imran"] },
   };
 
   // Auto-assign sequential roll numbers to every student in the class (persists to MySQL).
   async function handleAssignRollNumbers() {
-    if (classStudents.length === 0) { toast.error("No students to number"); return; }
+    if (classStudents.length === 0) { toast.error(t('admin.academics.classDetail.noStudentsToNumberToast')); return; }
     setAssigningRolls(true);
     try {
       const ordered = [...classStudents].sort((a: any, b: any) => String(a.name).localeCompare(String(b.name)));
@@ -394,9 +396,9 @@ const ClassDetail = () => {
           updateStudent(s.id, { rollNumber: rollNo } as any),
         ]);
       }));
-      toast.success(`Assigned roll numbers to ${ordered.length} students`);
+      toast.success(t('admin.academics.classDetail.rollNumbersAssignedToast', { count: ordered.length }));
     } catch {
-      toast.error("Could not save roll numbers to the database");
+      toast.error(t('admin.academics.classDetail.rollNumbersSaveFailedToast'));
     } finally {
       setAssigningRolls(false);
     }
@@ -408,7 +410,7 @@ const ClassDetail = () => {
     try {
       const text = await file.text();
       const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
-      if (rows.length === 0) { toast.error("File is empty"); return; }
+      if (rows.length === 0) { toast.error(t('admin.academics.classDetail.fileEmptyToast')); return; }
       const header = rows[0].toLowerCase();
       const hasHeader = header.includes("name");
       const dataRows = hasHeader ? rows.slice(1) : rows;
@@ -423,10 +425,10 @@ const ClassDetail = () => {
         await addEnrollment({ studentId, studentName: name, classId: id!, className: classData.name, sectionId: id!, sectionName: sec, grade: classData.grade, academicYear: classData.academicYear || "2026-27", status: "Active" } as any);
         created++;
       }
-      toast.success(`Imported ${created} students into ${classData.name}`);
+      toast.success(t('admin.academics.classDetail.importedStudentsToast', { count: created, class: classData.name }));
       setImportDialogOpen(false);
     } catch {
-      toast.error("Import failed — check the CSV format (Name,Email,Gender)");
+      toast.error(t('admin.academics.classDetail.importFailedStudentsToast'));
     } finally {
       setImportingStudents(false);
       if (importStudentsRef.current) importStudentsRef.current.value = "";
@@ -439,9 +441,9 @@ const ClassDetail = () => {
     if (gradeClasses.length === 0) return;
     try {
       await Promise.all(gradeClasses.map(c => updateClass(c.id, { subjects: names } as any)));
-      toast.success(`Subjects saved to all ${gradeClasses.length} sections`);
+      toast.success(t('admin.academics.classDetail.subjectsSavedAllToast', { count: gradeClasses.length }));
     } catch {
-      toast.error("Could not save subjects to the database");
+      toast.error(t('admin.academics.classDetail.subjectsSaveFailedToast'));
     }
   }
 
@@ -450,20 +452,20 @@ const ClassDetail = () => {
     try {
       const text = await file.text();
       const rows = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
-      if (rows.length === 0) { toast.error("File is empty"); return; }
+      if (rows.length === 0) { toast.error(t('admin.academics.classDetail.fileEmptyToast')); return; }
       const header = rows[0].toLowerCase();
       const dataRows = (header.includes("subject") || header.includes("name")) ? rows.slice(1) : rows;
       const names = dataRows.map(line => line.split(",")[0].replace(/^"|"$/g, "").trim()).filter(Boolean);
-      if (names.length === 0) { toast.error("No subject names found in the file"); return; }
+      if (names.length === 0) { toast.error(t('admin.academics.classDetail.noSubjectNamesFoundToast')); return; }
       const existing = currentClass?.subjects || [];
       const merged = [...existing];
       let added = 0;
       names.forEach(n => { if (!merged.some(e => e.toLowerCase() === n.toLowerCase())) { merged.push(n); added++; } });
       await persistGradeSubjects(merged);
-      toast.success(`Imported ${added} new subject${added !== 1 ? "s" : ""}`);
+      toast.success(added === 1 ? t('admin.academics.classDetail.importedSubjectSingularToast', { count: added }) : t('admin.academics.classDetail.importedSubjectPluralToast', { count: added }));
       setImportDialogOpen(false);
     } catch {
-      toast.error("Import failed — check the CSV format (one subject name per row)");
+      toast.error(t('admin.academics.classDetail.importFailedSubjectsToast'));
     } finally {
       if (subjectsImportRef.current) subjectsImportRef.current.value = "";
     }
@@ -645,16 +647,16 @@ const ClassDetail = () => {
   );
 
   const tabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "students", label: "Students", icon: Users },
-    { id: "gradebook", label: "Gradebook", icon: Award },
-    { id: "subjects", label: "Subjects", icon: BookOpen },
-    { id: "assignments", label: "Assignments", icon: FileText },
-    { id: "assessments", label: "Assessments", icon: ClipboardCheck },
-    { id: "flashcards", label: "Flash Cards", icon: Brain },
-    { id: "timetable", label: "Timetable", icon: Calendar },
-    { id: "attendance", label: "Attendance", icon: UserCheck },
-    { id: "exams", label: "Exams & Results", icon: FileText },
+    { id: "overview", label: t('admin.academics.classDetail.tabOverview'), icon: BarChart3 },
+    { id: "students", label: t('admin.academics.classDetail.tabStudents'), icon: Users },
+    { id: "gradebook", label: t('admin.academics.classDetail.tabGradebook'), icon: Award },
+    { id: "subjects", label: t('admin.academics.classDetail.tabSubjects'), icon: BookOpen },
+    { id: "assignments", label: t('admin.academics.classDetail.tabAssignments'), icon: FileText },
+    { id: "assessments", label: t('admin.academics.classDetail.tabAssessments'), icon: ClipboardCheck },
+    { id: "flashcards", label: t('admin.academics.classDetail.tabFlashcards'), icon: Brain },
+    { id: "timetable", label: t('admin.academics.classDetail.tabTimetable'), icon: Calendar },
+    { id: "attendance", label: t('admin.academics.classDetail.tabAttendance'), icon: UserCheck },
+    { id: "exams", label: t('admin.academics.classDetail.tabExams'), icon: FileText },
   ];
 
   const classSubjects: string[] = (currentClass?.subjects || []).slice(0, 6);
@@ -673,12 +675,12 @@ const ClassDetail = () => {
         {/* Header Section */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/")}>Home</span>
-            <ChevronRight className="h-3 w-3" />
-            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/academics/classes")}>Academics</span>
-            <ChevronRight className="h-3 w-3" />
-            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/academics/classes", { state: { selectedGrade: classData.grade } })}>Classes</span>
-            <ChevronRight className="h-3 w-3" />
+            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/")}>{t('admin.academics.classDetail.breadcrumbHome')}</span>
+            <ChevronRight className="h-3 w-3 rtl:rotate-180" />
+            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/academics/classes")}>{t('admin.academics.classDetail.breadcrumbAcademics')}</span>
+            <ChevronRight className="h-3 w-3 rtl:rotate-180" />
+            <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/academics/classes", { state: { selectedGrade: classData.grade } })}>{t('admin.academics.classDetail.breadcrumbClasses')}</span>
+            <ChevronRight className="h-3 w-3 rtl:rotate-180" />
             <span className="hover:text-primary cursor-pointer" onClick={() => navigate("/academics/classes", { state: { selectedGrade: classData.grade, selectedClassId: id } })}>
               {(() => {
                 const name = classData.name || "";
@@ -689,8 +691,8 @@ const ClassDetail = () => {
                 return name;
               })()}
             </span>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-primary">{semesterName || "Dashboard"}</span>
+            <ChevronRight className="h-3 w-3 rtl:rotate-180" />
+            <span className="text-primary">{semesterName || t('admin.academics.classDetail.breadcrumbDashboard')}</span>
           </div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -716,12 +718,12 @@ const ClassDetail = () => {
                   <span className="h-1 w-1 rounded-full bg-slate-300" />
                   <span className="flex items-center gap-1.5">
                     <Users className="h-4 w-4" />
-                    {classData.studentsCount} Students
+                    {classData.studentsCount} {t('admin.academics.classDetail.studentsCountSuffix')}
                   </span>
                   <span className="h-1 w-1 rounded-full bg-slate-300" />
                   <span className="flex items-center gap-1.5">
                     <BookOpen className="h-4 w-4" />
-                    {classData.subjectsCount} Subjects
+                    {classData.subjectsCount} {t('admin.academics.classDetail.subjectsCountSuffix')}
                   </span>
                 </div>
               </div>
@@ -734,29 +736,29 @@ const ClassDetail = () => {
                       direct entry into the gradebook, so the only action is export. */}
                   <Button className="rounded-xl gradient-primary text-white font-bold gap-2 h-11 shadow-lg shadow-primary/20"
                     onClick={handleExportGradebook}>
-                    <FileSpreadsheet className="w-4 h-4" /> Export Excel (CSV)
+                    <FileSpreadsheet className="w-4 h-4" /> {t('admin.academics.classDetail.exportExcelCsv')}
                   </Button>
                 </>
               ) : (() => {
                 // Context-aware primary action — all actions are handled in-place
                 // (dialogs / tab state) so the user never leaves the class detail.
                 const PRIMARY: Record<string, { label: string; icon: any; onClick: () => void }> = {
-                  students: { label: "Add from Grade", icon: UserSearch, onClick: () => setAddFromGradeOpen(true) },
-                  subjects: { label: "Add Subject", icon: Plus, onClick: () => setAddSubjectOpen(true) },
-                  attendance: { label: "Schedule Exam", icon: FileText, onClick: () => setScheduleExamOpen(true) },
-                  exams: { label: "Schedule Exam", icon: FileText, onClick: () => setScheduleExamOpen(true) },
-                  assignments: { label: "New Assignment", icon: FileText, onClick: () => { setActiveTab("assignments"); setAssignmentCreateOpen(true); } },
-                  timetable: { label: "Edit Schedule", icon: Calendar, onClick: () => setEditScheduleOpen(true) },
+                  students: { label: t('admin.academics.classDetail.addFromGrade'), icon: UserSearch, onClick: () => setAddFromGradeOpen(true) },
+                  subjects: { label: t('admin.academics.classDetail.addSubject'), icon: Plus, onClick: () => setAddSubjectOpen(true) },
+                  attendance: { label: t('admin.academics.classDetail.scheduleExam'), icon: FileText, onClick: () => setScheduleExamOpen(true) },
+                  exams: { label: t('admin.academics.classDetail.scheduleExam'), icon: FileText, onClick: () => setScheduleExamOpen(true) },
+                  assignments: { label: t('admin.academics.classDetail.newAssignment'), icon: FileText, onClick: () => { setActiveTab("assignments"); setAssignmentCreateOpen(true); } },
+                  timetable: { label: t('admin.academics.classDetail.editSchedule'), icon: Calendar, onClick: () => setEditScheduleOpen(true) },
                 };
                 // Attendance has no schedule action — use a tailored primary.
-                if (activeTab === "attendance") PRIMARY.attendance = { label: "Mark Attendance", icon: UserCheck, onClick: () => setAttendanceMarkOpen(true) };
-                const primary = PRIMARY[activeTab] || { label: "Manage Class", icon: Settings, onClick: () => setIsManageOpen(true) };
+                if (activeTab === "attendance") PRIMARY.attendance = { label: t('admin.academics.classDetail.markAttendance'), icon: UserCheck, onClick: () => setAttendanceMarkOpen(true) };
+                const primary = PRIMARY[activeTab] || { label: t('admin.academics.classDetail.manageClass'), icon: Settings, onClick: () => setIsManageOpen(true) };
                 // Per-tab extra action surfaced inside the three-dot menu.
                 const EXTRA: Record<string, { label: string; onClick: () => void }> = {
-                  students: { label: "Promote Students", onClick: () => { setSelectedStudentIds(new Set()); const gi = grades.indexOf(classData.grade || ""); setPromoteTargetGrade(gi >= 0 && gi < grades.length - 1 ? grades[gi + 1] : ""); setPromoteTargetClass(""); setPromoteOpen(true); } },
-                  subjects: { label: "Add Subject", onClick: () => setAddSubjectOpen(true) },
-                  exams: { label: "Schedule Exam", onClick: () => setScheduleExamOpen(true) },
-                  timetable: { label: "Edit Schedule", onClick: () => setEditScheduleOpen(true) },
+                  students: { label: t('admin.academics.classDetail.promoteStudents'), onClick: () => { setSelectedStudentIds(new Set()); const gi = grades.indexOf(classData.grade || ""); setPromoteTargetGrade(gi >= 0 && gi < grades.length - 1 ? grades[gi + 1] : ""); setPromoteTargetClass(""); setPromoteOpen(true); } },
+                  subjects: { label: t('admin.academics.classDetail.addSubject'), onClick: () => setAddSubjectOpen(true) },
+                  exams: { label: t('admin.academics.classDetail.scheduleExam'), onClick: () => setScheduleExamOpen(true) },
+                  timetable: { label: t('admin.academics.classDetail.editSchedule'), onClick: () => setEditScheduleOpen(true) },
                 };
                 const extra = EXTRA[activeTab];
                 // Context-aware export/import: each tab exports its OWN data.
@@ -775,16 +777,16 @@ const ClassDetail = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-xl min-w-[200px]">
                       <DropdownMenuItem className="text-xs font-bold" onClick={onExport}>
-                        <FileSpreadsheet className="h-4 w-4 mr-2" /> Export {importMeta?.title || "Data"} (CSV)
+                        <FileSpreadsheet className="h-4 w-4 me-2" /> {t('admin.academics.classDetail.exportDataCsv', { title: importMeta?.title || t('admin.academics.classDetail.dataFallback') })}
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-xs font-bold" onClick={() => setImportDialogOpen(true)}>
-                        <Upload className="h-4 w-4 mr-2" /> Import {importMeta?.title || "Data"}
+                        <Upload className="h-4 w-4 me-2" /> {t('admin.academics.classDetail.importDataLabel', { title: importMeta?.title || t('admin.academics.classDetail.dataFallback') })}
                       </DropdownMenuItem>
                       {extra && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-xs font-bold" onClick={extra.onClick}>
-                            <Plus className="h-4 w-4 mr-2" /> {extra.label}
+                            <Plus className="h-4 w-4 me-2" /> {extra.label}
                           </DropdownMenuItem>
                         </>
                       )}
@@ -833,42 +835,42 @@ const ClassDetail = () => {
             <DialogContent className="rounded-2xl max-w-md">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-[#9810fa]" /> Import {meta.title}
+                  <Upload className="h-5 w-5 text-[#9810fa]" /> {t('admin.academics.classDetail.importDataLabel', { title: meta.title })}
                 </DialogTitle>
                 <DialogDescription className="font-medium text-slate-500">
-                  Import {meta.title.toLowerCase()} into {classData.name} from a CSV file.
+                  {t('admin.academics.classDetail.importIntoClassDesc', { title: meta.title.toLowerCase(), class: classData.name })}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-1">
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="h-6 w-6 rounded-full bg-[#9810fa] text-white text-xs font-bold flex items-center justify-center">1</span>
-                    <p className="text-sm font-bold text-slate-800">Download the template</p>
+                    <p className="text-sm font-bold text-slate-800">{t('admin.academics.classDetail.downloadTemplateStep')}</p>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Use this CSV format: <code className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">{meta.format}</code>.
+                    {t('admin.academics.classDetail.csvFormatDesc')} <code className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">{meta.format}</code>.
                   </p>
                   <Button variant="outline" className="w-full rounded-xl border-slate-200 gap-2 font-semibold"
                     onClick={() => activeTab === "students" ? downloadStudentTemplate() : downloadCsv(`${meta.title.toLowerCase()}-template.csv`, meta.sample)}>
-                    <FileSpreadsheet className="h-4 w-4" /> Download Template (.csv)
+                    <FileSpreadsheet className="h-4 w-4" /> {t('admin.academics.classDetail.downloadTemplateBtn')}
                   </Button>
                 </div>
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="h-6 w-6 rounded-full bg-[#9810fa] text-white text-xs font-bold flex items-center justify-center">2</span>
-                    <p className="text-sm font-bold text-slate-800">Upload the filled file</p>
+                    <p className="text-sm font-bold text-slate-800">{t('admin.academics.classDetail.uploadFilledFileStep')}</p>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Make sure the columns match the template, then upload to import the {meta.title.toLowerCase()}.
+                    {t('admin.academics.classDetail.uploadFilledFileDesc', { title: meta.title.toLowerCase() })}
                   </p>
                   <Button className="w-full rounded-xl gradient-primary text-white font-bold gap-2" disabled={importingStudents}
                     onClick={triggerUpload}>
-                    <Upload className="h-4 w-4" /> {importingStudents ? "Importing…" : "Choose CSV & Upload"}
+                    <Upload className="h-4 w-4" /> {importingStudents ? t('admin.academics.classDetail.importingEllipsis') : t('admin.academics.classDetail.chooseCsvUpload')}
                   </Button>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" className="rounded-xl" onClick={() => setImportDialogOpen(false)}>Close</Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => setImportDialogOpen(false)}>{t('admin.academics.classDetail.close')}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -883,7 +885,7 @@ const ClassDetail = () => {
               const text = await f.text();
               const rowCount = text.split(/\r?\n/).map(r => r.trim()).filter(Boolean).length;
               const meta = TAB_IMPORT_META[activeTab];
-              toast.success(`Imported ${Math.max(0, rowCount - 1)} ${(meta?.title || "data").toLowerCase()} row(s) from ${f.name}`);
+              toast.success(t('admin.academics.classDetail.importedGenericRowsToast', { count: Math.max(0, rowCount - 1), title: (meta?.title || t('admin.academics.classDetail.dataFallback')).toLowerCase(), file: f.name }));
               setImportDialogOpen(false);
             }
             if (e.target) e.target.value = "";
@@ -894,10 +896,10 @@ const ClassDetail = () => {
           <DialogContent className="rounded-2xl max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-[#9810fa]" /> Student ID Cards — {classData.name}
+                <CreditCard className="h-5 w-5 text-[#9810fa]" /> {t('admin.academics.classDetail.studentIdCards', { class: classData.name })}
               </DialogTitle>
               <DialogDescription className="font-medium text-slate-500">
-                {filteredClassStudents.length} cards ready. Print to PDF or paper.
+                {t('admin.academics.classDetail.cardsReadyDesc', { count: filteredClassStudents.length })}
               </DialogDescription>
             </DialogHeader>
             <div id="id-cards-print" className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-min items-start overflow-y-auto p-1">
@@ -914,7 +916,7 @@ const ClassDetail = () => {
                       </AvatarFallback>
                     </Avatar>
                     <p className="text-sm font-black text-slate-900 leading-tight">{s.name}</p>
-                    <p className="text-[11px] font-bold text-slate-400 mt-0.5">Roll {s.rollNumber || String(i + 1).padStart(2, "0")} · {s.id}</p>
+                    <p className="text-[11px] font-bold text-slate-400 mt-0.5">{t('admin.academics.classDetail.rollLabel', { roll: s.rollNumber || String(i + 1).padStart(2, "0") })} · {s.id}</p>
                     <div className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
                       <Badge variant="outline" className="border-slate-200">{classData.name}</Badge>
                     </div>
@@ -923,9 +925,9 @@ const ClassDetail = () => {
               ))}
             </div>
             <DialogFooter>
-              <Button variant="outline" className="rounded-xl" onClick={() => setIdCardsOpen(false)}>Close</Button>
+              <Button variant="outline" className="rounded-xl" onClick={() => setIdCardsOpen(false)}>{t('admin.academics.classDetail.close')}</Button>
               <Button className="rounded-xl gradient-primary text-white font-bold gap-2" onClick={() => window.print()}>
-                <Printer className="h-4 w-4" /> Print Cards
+                <Printer className="h-4 w-4" /> {t('admin.academics.classDetail.printCards')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -962,10 +964,10 @@ const ClassDetail = () => {
                   <TrendingUp className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Academic Performance</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('admin.academics.classDetail.academicPerformance')}</p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-black text-slate-900">{overview.performance !== null ? `${overview.performance.toFixed(1)}%` : "—"}</h3>
-                    {overview.performance === null && <span className="text-[10px] font-bold text-slate-400">No marks yet</span>}
+                    {overview.performance === null && <span className="text-[10px] font-bold text-slate-400">{t('admin.academics.classDetail.noMarksYet')}</span>}
                   </div>
                 </div>
               </CardContent>
@@ -976,10 +978,10 @@ const ClassDetail = () => {
                   <UserCheck className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg. Attendance</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('admin.academics.classDetail.avgAttendance')}</p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-black text-slate-900">{overview.attendance !== null ? `${overview.attendance.toFixed(1)}%` : "—"}</h3>
-                    {overview.attendance === null && <span className="text-[10px] font-bold text-slate-400">No records yet</span>}
+                    {overview.attendance === null && <span className="text-[10px] font-bold text-slate-400">{t('admin.academics.classDetail.noRecordsYet')}</span>}
                   </div>
                 </div>
               </CardContent>
@@ -990,12 +992,12 @@ const ClassDetail = () => {
                   <AlertCircle className="h-6 w-6 text-rose-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">At-Risk Students</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('admin.academics.classDetail.atRiskStudents')}</p>
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="text-2xl font-black text-slate-900">{overview.atRisk}</h3>
                     <Button variant="ghost" size="sm" className="h-6 text-[10px] font-black text-rose-600 hover:bg-rose-50 p-0 px-2 rounded-full">
-                      TAKE ACTION
-                      <ArrowRight className="h-3 w-3 ml-1" />
+                      {t('admin.academics.classDetail.takeAction')}
+                      <ArrowRight className="h-3 w-3 ms-1 rtl:rotate-180" />
                     </Button>
                   </div>
                 </div>
@@ -1007,12 +1009,12 @@ const ClassDetail = () => {
                   <Clock className="h-6 w-6 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Upcoming Exam</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('admin.academics.classDetail.upcomingExam')}</p>
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-sm font-black text-slate-900 truncate max-w-[140px]">{overview.nextExam ? overview.nextExam.name : "None scheduled"}</h3>
+                    <h3 className="text-sm font-black text-slate-900 truncate max-w-[140px]">{overview.nextExam ? overview.nextExam.name : t('admin.academics.classDetail.noneScheduled')}</h3>
                     {overview.nextExam && (
                       <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                        {overview.daysToExam === 0 ? "Today" : `In ${overview.daysToExam} Day${overview.daysToExam === 1 ? "" : "s"}`}
+                        {overview.daysToExam === 0 ? t('admin.academics.classDetail.today') : (overview.daysToExam === 1 ? t('admin.academics.classDetail.inDay', { count: overview.daysToExam }) : t('admin.academics.classDetail.inDays', { count: overview.daysToExam }))}
                       </span>
                     )}
                   </div>
@@ -1037,7 +1039,7 @@ const ClassDetail = () => {
                       <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                           <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg font-bold">Attendance Trend</CardTitle>
+                            <CardTitle className="text-lg font-bold">{t('admin.academics.classDetail.attendanceTrendTitle')}</CardTitle>
                             <Button variant="ghost" size="sm" className="text-[#9810fa] font-bold" onClick={() => {
                               setReportStudent({
                                 name: classData.name + " – Full Class",
@@ -1047,15 +1049,15 @@ const ClassDetail = () => {
                                 rank: 1
                               });
                               setReportOpen(true);
-                            }}>View Full Report</Button>
+                            }}>{t('admin.academics.classDetail.viewFullReport')}</Button>
                           </div>
                         </CardHeader>
                         <CardContent className="p-6">
                           {overview.attendanceTrend.length === 0 ? (
                             <div className="h-[300px] w-full mt-4 flex flex-col items-center justify-center text-slate-400">
                               <UserCheck className="h-10 w-10 opacity-30 mb-2" />
-                              <p className="text-sm font-semibold text-slate-500">No attendance records yet</p>
-                              <p className="text-xs">The monthly attendance trend appears once attendance is marked for this class.</p>
+                              <p className="text-sm font-semibold text-slate-500">{t('admin.academics.classDetail.noAttendanceRecordsYet')}</p>
+                              <p className="text-xs">{t('admin.academics.classDetail.attendanceTrendEmptyDesc')}</p>
                             </div>
                           ) : (
                           <div className="h-[300px] w-full mt-4">
@@ -1111,14 +1113,14 @@ const ClassDetail = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-lg font-bold">Subject-wise Performance</CardTitle>
+                            <CardTitle className="text-lg font-bold">{t('admin.academics.classDetail.subjectWisePerformance')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-6 space-y-4">
                             {overview.subjectAverages.length === 0 ? (
                               <div className="py-8 text-center text-slate-400">
                                 <BarChart3 className="h-8 w-8 mx-auto opacity-30 mb-2" />
-                                <p className="text-sm font-semibold text-slate-500">No marks recorded yet</p>
-                                <p className="text-xs">Subject averages appear once assignments, assessments or exam marks exist.</p>
+                                <p className="text-sm font-semibold text-slate-500">{t('admin.academics.classDetail.noMarksRecordedYet')}</p>
+                                <p className="text-xs">{t('admin.academics.classDetail.subjectAveragesEmptyDesc')}</p>
                               </div>
                             ) : overview.subjectAverages.slice(0, 6).map((sub, i) => {
                               const colors = ["bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
@@ -1137,14 +1139,14 @@ const ClassDetail = () => {
 
                         <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-lg font-bold">Recent Activities</CardTitle>
+                            <CardTitle className="text-lg font-bold">{t('admin.academics.classDetail.recentActivities')}</CardTitle>
                           </CardHeader>
                           <CardContent className="p-6">
                             {overview.activities.length === 0 ? (
                               <div className="py-8 text-center text-slate-400">
                                 <Clock className="h-8 w-8 mx-auto opacity-30 mb-2" />
-                                <p className="text-sm font-semibold text-slate-500">No activity yet</p>
-                                <p className="text-xs">Attendance, assignments and exams for this class appear here.</p>
+                                <p className="text-sm font-semibold text-slate-500">{t('admin.academics.classDetail.noActivityYet')}</p>
+                                <p className="text-xs">{t('admin.academics.classDetail.activityEmptyDesc')}</p>
                               </div>
                             ) : (
                             <div className="space-y-6">
@@ -1169,7 +1171,7 @@ const ClassDetail = () => {
                     <div className="space-y-6">
                       <Card className="border-none shadow-sm rounded-2xl overflow-hidden">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                          <CardTitle className="text-lg font-bold">Class Faculty</CardTitle>
+                          <CardTitle className="text-lg font-bold">{t('admin.academics.classDetail.classFaculty')}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-6 space-y-4">
                           {classSections.map((section, i) => (
@@ -1181,8 +1183,8 @@ const ClassDetail = () => {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="text-sm font-bold text-slate-900">{section.teacherName || "Not Assigned"}</p>
-                                  <p className="text-xs text-slate-500 font-medium">Class Teacher — Section {section.name}</p>
+                                  <p className="text-sm font-bold text-slate-900">{section.teacherName || t('admin.academics.classDetail.notAssigned')}</p>
+                                  <p className="text-xs text-slate-500 font-medium">{t('admin.academics.classDetail.classTeacherSectionLabel', { section: section.name })}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1">
@@ -1196,17 +1198,17 @@ const ClassDetail = () => {
                                     setChangeTeacherOpen(true);
                                   }}
                                 >
-                                  Change
+                                  {t('admin.academics.classDetail.change')}
                                 </Button>
                               </div>
                             </div>
                           ))}
                           {classSections.length === 0 && (
-                            <p className="text-sm text-slate-400 text-center py-4">No sections or teachers assigned.</p>
+                            <p className="text-sm text-slate-400 text-center py-4">{t('admin.academics.classDetail.noSectionsAssigned')}</p>
                           )}
                           <div className="flex gap-2">
                             <Button variant="outline" className="flex-1 rounded-xl border-dashed border-2 text-slate-500 font-bold text-sm" onClick={() => setAssignFacultyOpen(true)}>
-                              + Add Teacher
+                              + {t('admin.academics.classDetail.addTeacher')}
                             </Button>
                           </div>
                         </CardContent>
@@ -1219,10 +1221,10 @@ const ClassDetail = () => {
                   {/* KPI cards — click to filter the table below */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { key: "all" as const, label: "Total Students", value: studentStats.total, sub: "in this class", icon: Users, color: "indigo" },
-                      { key: "male" as const, label: "Boys", value: studentStats.boys, sub: studentStats.total ? `${Math.round(studentStats.boys / studentStats.total * 100)}%` : "0%", icon: Users, color: "blue" },
-                      { key: "female" as const, label: "Girls", value: studentStats.girls, sub: studentStats.total ? `${Math.round(studentStats.girls / studentStats.total * 100)}%` : "0%", icon: Users, color: "pink" },
-                      { key: "at-risk" as const, label: "At-Risk Students", value: studentStats.atRisk, sub: "need attention", icon: AlertCircle, color: "rose" },
+                      { key: "all" as const, label: t('admin.academics.classDetail.totalStudents'), value: studentStats.total, sub: t('admin.academics.classDetail.inThisClass'), icon: Users, color: "indigo" },
+                      { key: "male" as const, label: t('admin.academics.classDetail.boys'), value: studentStats.boys, sub: studentStats.total ? `${Math.round(studentStats.boys / studentStats.total * 100)}%` : "0%", icon: Users, color: "blue" },
+                      { key: "female" as const, label: t('admin.academics.classDetail.girls'), value: studentStats.girls, sub: studentStats.total ? `${Math.round(studentStats.girls / studentStats.total * 100)}%` : "0%", icon: Users, color: "pink" },
+                      { key: "at-risk" as const, label: t('admin.academics.classDetail.atRiskStudents'), value: studentStats.atRisk, sub: t('admin.academics.classDetail.needAttention'), icon: AlertCircle, color: "rose" },
                     ].map(card => {
                       const active = studentKpiFilter === card.key;
                       const tone: Record<string, string> = {
@@ -1253,38 +1255,38 @@ const ClassDetail = () => {
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                          <CardTitle className="text-xl font-bold">Class Students</CardTitle>
+                          <CardTitle className="text-xl font-bold">{t('admin.academics.classDetail.classStudents')}</CardTitle>
                           <CardDescription className="font-medium">
                             {filteredClassStudents.length === classStudents.length
-                              ? `Managing ${classStudents.length} students in ${classData.name}`
-                              : `Showing ${filteredClassStudents.length} of ${classStudents.length} students`}
+                              ? t('admin.academics.classDetail.managingStudents', { count: classStudents.length, class: classData.name })
+                              : t('admin.academics.classDetail.showingStudents', { shown: filteredClassStudents.length, total: classStudents.length })}
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="relative w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
-                              placeholder="Search students..."
+                              placeholder={t('admin.academics.classDetail.searchStudentsPlaceholder')}
                               value={studentSearch}
                               onChange={(e) => setStudentSearch(e.target.value)}
-                              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9810fa]/20"
+                              className="w-full ps-10 pe-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#9810fa]/20"
                             />
                           </div>
                           <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="rounded-xl border-slate-200 gap-2">
                                 <Filter className="h-4 w-4" />
-                                Filter
+                                {t('admin.academics.classDetail.filter')}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent align="end" className="w-56 rounded-2xl p-3 space-y-2.5">
-                              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sort Students By</Label>
+                              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.sortStudentsBy')}</Label>
                               <div className="grid grid-cols-1 gap-1.5">
                                 {[
-                                  { v: "", label: "Default order" },
-                                  { v: "name", label: "Name (A–Z)" },
-                                  { v: "attendance", label: "Attendance (high→low)" },
-                                  { v: "grade", label: "Grade" },
+                                  { v: "", label: t('admin.academics.classDetail.sortDefault') },
+                                  { v: "name", label: t('admin.academics.classDetail.sortNameAZ') },
+                                  { v: "attendance", label: t('admin.academics.classDetail.sortAttendanceHighLow') },
+                                  { v: "grade", label: t('admin.academics.classDetail.sortGrade') },
                                 ].map(o => (
                                   <button key={o.v || "default"} onClick={() => { setFilterSortBy(o.v); setFilterOpen(false); }}
                                     className={`text-left text-sm font-medium rounded-xl px-3 py-2 border transition-colors ${filterSortBy === o.v ? "bg-[#9810fa] text-white border-[#9810fa]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
@@ -1298,19 +1300,19 @@ const ClassDetail = () => {
                             <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="rounded-xl border-slate-200 gap-2">
                                 <MoreVertical className="h-4 w-4" />
-                                Actions
+                                {t('admin.academics.classDetail.actions')}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl w-52">
                               <DropdownMenuItem className="text-xs font-bold gap-2" onClick={() => setImportDialogOpen(true)}>
-                                <Upload className="h-4 w-4" /> Import Students
+                                <Upload className="h-4 w-4" /> {t('admin.academics.classDetail.importStudents')}
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-xs font-bold gap-2" onClick={handleExportRoster}>
-                                <Download className="h-4 w-4" /> Export Roster (CSV)
+                                <Download className="h-4 w-4" /> {t('admin.academics.classDetail.exportRosterCsv')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-xs font-bold gap-2" onClick={() => { setSelectedStudentIds(new Set()); const gi = grades.indexOf(classData.grade || ""); setPromoteTargetGrade(gi >= 0 && gi < grades.length - 1 ? grades[gi + 1] : ""); setPromoteTargetClass(""); setPromoteOpen(true); }}>
-                                <ArrowUpCircle className="h-4 w-4" /> Promote Students
+                                <ArrowUpCircle className="h-4 w-4" /> {t('admin.academics.classDetail.promoteStudents')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1333,13 +1335,13 @@ const ClassDetail = () => {
                                   }}
                                 />
                               </th>
-                              <th className="px-6 py-4">Student Name</th>
-                              <th className="px-6 py-4">Roll No</th>
-                              <th className="px-6 py-4">Section</th>
-                              <th className="px-6 py-4">Attendance</th>
-                              <th className="px-6 py-4">Avg Grade</th>
-                              <th className="px-6 py-4">Status</th>
-                              <th className="px-6 py-4 text-right">Actions</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colStudentName')}</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colRollNo')}</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colSection')}</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colAttendance')}</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colAvgGrade')}</th>
+                              <th className="px-6 py-4">{t('admin.academics.classDetail.colStatus')}</th>
+                              <th className="px-6 py-4 text-end">{t('admin.academics.classDetail.colActions')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
@@ -1408,9 +1410,9 @@ const ClassDetail = () => {
                                       {student.status}
                                     </Badge>
                                   </td>
-                                  <td className="px-6 py-4 text-right">
+                                  <td className="px-6 py-4 text-end">
                                     <div className="flex items-center justify-end gap-2">
-                                      <Button variant="ghost" size="sm" className="text-[#9810fa] font-bold text-xs" onClick={() => { setProfileStudent(student as any); setIsProfileOpen(true); }}>Profile</Button>
+                                      <Button variant="ghost" size="sm" className="text-[#9810fa] font-bold text-xs" onClick={() => { setProfileStudent(student as any); setIsProfileOpen(true); }}>{t('admin.academics.classDetail.profile')}</Button>
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
@@ -1421,15 +1423,15 @@ const ClassDetail = () => {
                                           <DropdownMenuItem className="text-xs font-bold" onClick={() => {
                                             setSelectedStudent(student);
                                             setIsEditStudentOpen(true);
-                                          }}>Edit Details</DropdownMenuItem>
-                                          <DropdownMenuItem className="text-xs font-bold" onClick={() => toast.info(`Viewing attendance for ${student.name}`)}>View Attendance</DropdownMenuItem>
+                                          }}>{t('admin.academics.classDetail.editDetails')}</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-xs font-bold" onClick={() => toast.info(t('admin.academics.classDetail.viewingAttendanceToast', { name: student.name }))}>{t('admin.academics.classDetail.viewAttendance')}</DropdownMenuItem>
                                           <DropdownMenuItem className="text-xs font-bold text-rose-600" onClick={() => {
                                             toast.promise(deleteEnrollment(student.enrollmentId), {
-                                              loading: 'Removing student...',
-                                              success: 'Student removed successfully!',
-                                              error: 'Failed to remove student'
+                                              loading: t('admin.academics.classDetail.removingStudentToast'),
+                                              success: t('admin.academics.classDetail.studentRemovedToast'),
+                                              error: t('admin.academics.classDetail.studentRemoveFailedToast')
                                             });
-                                          }}>Remove from Class</DropdownMenuItem>
+                                          }}>{t('admin.academics.classDetail.removeFromClass')}</DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </div>
@@ -1440,8 +1442,8 @@ const ClassDetail = () => {
                               <tr>
                                 <td colSpan={8} className="px-6 py-12 text-center text-slate-400 font-medium">
                                   {classStudents.length === 0
-                                    ? "No students found in this class."
-                                    : "No students match your search or filters."}
+                                    ? t('admin.academics.classDetail.noStudentsFound')
+                                    : t('admin.academics.classDetail.noStudentsMatch')}
                                 </td>
                               </tr>
                             )}
@@ -1454,7 +1456,7 @@ const ClassDetail = () => {
                   {/* Bulk action bar */}
                   {selectedStudentIds.size > 0 && (
                     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-slate-900 text-white rounded-2xl shadow-2xl">
-                      <span className="text-sm font-bold">{selectedStudentIds.size} student{selectedStudentIds.size !== 1 ? "s" : ""} selected</span>
+                      <span className="text-sm font-bold">{selectedStudentIds.size === 1 ? t('admin.academics.classDetail.studentSelectedSingular', { count: selectedStudentIds.size }) : t('admin.academics.classDetail.studentSelectedPlural', { count: selectedStudentIds.size })}</span>
                       <div className="w-px h-5 bg-slate-600" />
                       <Button size="sm" variant="ghost" className="text-white hover:bg-slate-700 gap-1.5 font-semibold"
                         onClick={() => {
@@ -1465,11 +1467,11 @@ const ClassDetail = () => {
                           setPromoteTargetGrade(next);
                           setPromoteOpen(true);
                         }}>
-                        <ArrowUpCircle className="h-4 w-4" /> Promote to Next Grade
+                        <ArrowUpCircle className="h-4 w-4" /> {t('admin.academics.classDetail.promoteToNextGrade')}
                       </Button>
                       <Button size="sm" variant="ghost" className="text-white hover:bg-slate-700 gap-1.5 font-semibold"
-                        onClick={() => toast.info("Assign section — coming soon")}>
-                        Assign Section
+                        onClick={() => toast.info(t('admin.academics.classDetail.assignSectionComingSoonToast'))}>
+                        {t('admin.academics.classDetail.assignSection')}
                       </Button>
                       <button onClick={() => setSelectedStudentIds(new Set())} className="p-1 rounded-lg hover:bg-slate-700">
                         <X className="h-4 w-4" />
@@ -1486,8 +1488,8 @@ const ClassDetail = () => {
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100">
                           <div>
-                            <h2 className="text-lg font-bold text-slate-900">Promote Students</h2>
-                            <p className="text-sm text-slate-500">Choose students, then pick the target grade and section.</p>
+                            <h2 className="text-lg font-bold text-slate-900">{t('admin.academics.classDetail.promoteStudentsTitle')}</h2>
+                            <p className="text-sm text-slate-500">{t('admin.academics.classDetail.promoteStudentsDesc')}</p>
                           </div>
                           <button onClick={() => { setPromoteOpen(false); setSelectedStudentIds(new Set()); }} className="p-2 rounded-xl hover:bg-slate-100">
                             <X className="h-4 w-4 text-slate-500" />
@@ -1498,17 +1500,17 @@ const ClassDetail = () => {
                           {/* Student picker */}
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Students</label>
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.selectStudents')}</label>
                               <button
                                 onClick={() => allChecked ? setSelectedStudentIds(new Set()) : setSelectedStudentIds(new Set(classStudents.map(s => s.id)))}
                                 className="text-xs font-semibold text-[#9810fa] hover:underline"
                               >
-                                {allChecked ? "Deselect All" : "Select All"}
+                                {allChecked ? t('admin.academics.classDetail.deselectAll') : t('admin.academics.classDetail.selectAll')}
                               </button>
                             </div>
                             <div className="border border-slate-100 rounded-xl max-h-52 overflow-y-auto divide-y divide-slate-50">
                               {classStudents.length === 0 ? (
-                                <p className="py-8 text-center text-sm text-slate-400">No students in this class.</p>
+                                <p className="py-8 text-center text-sm text-slate-400">{t('admin.academics.classDetail.noStudentsInClass')}</p>
                               ) : classStudents.map(s => (
                                 <div
                                   key={s.id}
@@ -1528,19 +1530,19 @@ const ClassDetail = () => {
                               ))}
                             </div>
                             {selectedStudentIds.size > 0 && (
-                              <p className="text-xs text-purple-600 font-semibold">{selectedStudentIds.size} student{selectedStudentIds.size !== 1 ? "s" : ""} selected</p>
+                              <p className="text-xs text-purple-600 font-semibold">{selectedStudentIds.size === 1 ? t('admin.academics.classDetail.studentSelectedSingular', { count: selectedStudentIds.size }) : t('admin.academics.classDetail.studentSelectedPlural', { count: selectedStudentIds.size })}</p>
                             )}
                           </div>
 
                           {/* Target grade */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Grade</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.targetGrade')}</label>
                             <select
                               value={promoteTargetGrade}
                               onChange={e => { setPromoteTargetGrade(e.target.value); setPromoteTargetClass(""); }}
                               className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-[#9810fa]/20"
                             >
-                              <option value="">Select target grade…</option>
+                              <option value="">{t('admin.academics.classDetail.selectTargetGrade')}</option>
                               {grades.map(g => (
                                 <option key={g} value={g}>{g}</option>
                               ))}
@@ -1549,27 +1551,27 @@ const ClassDetail = () => {
 
                           {/* Target section */}
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Section</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.targetSection')}</label>
                             <select
                               value={promoteTargetClass}
                               onChange={e => setPromoteTargetClass(e.target.value)}
                               className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-[#9810fa]/20"
                               disabled={!promoteTargetGrade}
                             >
-                              <option value="">Select section…</option>
+                              <option value="">{t('admin.academics.classDetail.selectSection')}</option>
                               {classes
                                 .filter(c => { const n = c.grade?.trim(); return n === promoteTargetGrade || n === promoteTargetGrade.replace("Grade ", ""); })
                                 .map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                             </select>
                             {promoteTargetGrade && classes.filter(c => { const n = c.grade?.trim(); return n === promoteTargetGrade || n === promoteTargetGrade.replace("Grade ", ""); }).length === 0 && (
-                              <p className="text-xs text-amber-600 font-medium">No sections found for {promoteTargetGrade}. Create a class first.</p>
+                              <p className="text-xs text-amber-600 font-medium">{t('admin.academics.classDetail.noSectionsFoundFor', { grade: promoteTargetGrade })}</p>
                             )}
                           </div>
                         </div>
 
                         {/* Footer */}
                         <div className="flex justify-end gap-2 p-6 pt-4 border-t border-slate-100">
-                          <Button variant="outline" onClick={() => { setPromoteOpen(false); setSelectedStudentIds(new Set()); }} disabled={promoting} className="rounded-xl">Cancel</Button>
+                          <Button variant="outline" onClick={() => { setPromoteOpen(false); setSelectedStudentIds(new Set()); }} disabled={promoting} className="rounded-xl">{t('admin.academics.classDetail.cancel')}</Button>
                           <Button
                             disabled={selectedStudentIds.size === 0 || !promoteTargetClass || promoting}
                             className="rounded-xl gradient-primary text-white font-bold"
@@ -1591,13 +1593,13 @@ const ClassDetail = () => {
                                     status: "Active",
                                   });
                                 }
-                                toast.success(`${selectedStudentIds.size} student${selectedStudentIds.size !== 1 ? "s" : ""} promoted to ${promoteTargetGrade}`);
+                                toast.success(selectedStudentIds.size === 1 ? t('admin.academics.classDetail.promotedToastSingular', { count: selectedStudentIds.size, grade: promoteTargetGrade }) : t('admin.academics.classDetail.promotedToastPlural', { count: selectedStudentIds.size, grade: promoteTargetGrade }));
                                 setSelectedStudentIds(new Set());
                                 setPromoteOpen(false);
-                              } catch { toast.error("Promotion failed"); }
+                              } catch { toast.error(t('admin.academics.classDetail.promotionFailedToast')); }
                               finally { setPromoting(false); }
                             }}>
-                            {promoting ? "Promoting…" : `Promote ${selectedStudentIds.size || 0} Student${selectedStudentIds.size !== 1 ? "s" : ""}`}
+                            {promoting ? t('admin.academics.classDetail.promotingEllipsis') : ((selectedStudentIds.size || 0) === 1 ? t('admin.academics.classDetail.promoteButtonSingular', { count: selectedStudentIds.size || 0 }) : t('admin.academics.classDetail.promoteButtonPlural', { count: selectedStudentIds.size || 0 }))}
                           </Button>
                         </div>
                       </div>
@@ -1611,8 +1613,8 @@ const ClassDetail = () => {
                       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h2 className="text-lg font-bold text-slate-900">Add Students from {classData.grade}</h2>
-                            <p className="text-sm text-slate-500">Select students already in this grade to enroll in this section</p>
+                            <h2 className="text-lg font-bold text-slate-900">{t('admin.academics.classDetail.addStudentsFromGrade', { grade: classData.grade })}</h2>
+                            <p className="text-sm text-slate-500">{t('admin.academics.classDetail.addStudentsFromGradeDesc')}</p>
                           </div>
                           <button onClick={() => { setAddFromGradeOpen(false); setSelectedGradeStudents(new Set()); setGradeStudentSearch(""); }} className="p-2 rounded-xl hover:bg-slate-100">
                             <X className="h-4 w-4 text-slate-500" />
@@ -1620,12 +1622,12 @@ const ClassDetail = () => {
                         </div>
 
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                           <input
-                            placeholder="Search students…"
+                            placeholder={t('admin.academics.classDetail.searchStudentsEllipsis')}
                             value={gradeStudentSearch}
                             onChange={e => setGradeStudentSearch(e.target.value)}
-                            className="w-full h-10 pl-9 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            className="w-full h-10 ps-9 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
                           />
                         </div>
 
@@ -1639,7 +1641,7 @@ const ClassDetail = () => {
                                 && (!gradeStudentSearch || s.name?.toLowerCase().includes(gradeStudentSearch.toLowerCase()));
                             });
                             if (gradeStudentsList.length === 0) {
-                              return <p className="py-8 text-center text-sm text-slate-400">No available students found in {classData.grade}</p>;
+                              return <p className="py-8 text-center text-sm text-slate-400">{t('admin.academics.classDetail.noAvailableStudentsFound', { grade: classData.grade })}</p>;
                             }
                             return gradeStudentsList.map(s => (
                               <div key={s.id}
@@ -1663,11 +1665,11 @@ const ClassDetail = () => {
                         </div>
 
                         {selectedGradeStudents.size > 0 && (
-                          <p className="text-xs text-purple-600 font-medium">{selectedGradeStudents.size} student{selectedGradeStudents.size !== 1 ? "s" : ""} selected</p>
+                          <p className="text-xs text-purple-600 font-medium">{selectedGradeStudents.size === 1 ? t('admin.academics.classDetail.studentSelectedSingular', { count: selectedGradeStudents.size }) : t('admin.academics.classDetail.studentSelectedPlural', { count: selectedGradeStudents.size })}</p>
                         )}
 
                         <div className="flex justify-end gap-2 pt-1">
-                          <Button variant="outline" onClick={() => { setAddFromGradeOpen(false); setSelectedGradeStudents(new Set()); setGradeStudentSearch(""); }} className="rounded-xl">Cancel</Button>
+                          <Button variant="outline" onClick={() => { setAddFromGradeOpen(false); setSelectedGradeStudents(new Set()); setGradeStudentSearch(""); }} className="rounded-xl">{t('admin.academics.classDetail.cancel')}</Button>
                           <Button disabled={selectedGradeStudents.size === 0 || enrollingFromGrade} className="rounded-xl gradient-primary text-white font-bold"
                             onClick={async () => {
                               setEnrollingFromGrade(true);
@@ -1686,14 +1688,14 @@ const ClassDetail = () => {
                                     status: "Active",
                                   });
                                 }
-                                toast.success(`${selectedGradeStudents.size} student${selectedGradeStudents.size !== 1 ? "s" : ""} enrolled`);
+                                toast.success(selectedGradeStudents.size === 1 ? t('admin.academics.classDetail.enrolledToastSingular', { count: selectedGradeStudents.size }) : t('admin.academics.classDetail.enrolledToastPlural', { count: selectedGradeStudents.size }));
                                 setAddFromGradeOpen(false);
                                 setSelectedGradeStudents(new Set());
                                 setGradeStudentSearch("");
-                              } catch { toast.error("Enrollment failed"); }
+                              } catch { toast.error(t('admin.academics.classDetail.enrollmentFailedToast')); }
                               finally { setEnrollingFromGrade(false); }
                             }}>
-                            {enrollingFromGrade ? "Enrolling…" : `Enroll ${selectedGradeStudents.size || ""} Student${selectedGradeStudents.size !== 1 ? "s" : ""}`}
+                            {enrollingFromGrade ? t('admin.academics.classDetail.enrollingEllipsis') : (selectedGradeStudents.size === 1 ? t('admin.academics.classDetail.enrollButtonSingular', { count: selectedGradeStudents.size || 0 }) : t('admin.academics.classDetail.enrollButtonPlural', { count: selectedGradeStudents.size || 0 }))}
                           </Button>
                         </div>
                       </div>
@@ -1787,18 +1789,18 @@ const ClassDetail = () => {
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
         <DialogContent className="rounded-2xl max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Student Performance Report</DialogTitle>
-            <DialogDescription className="font-medium text-slate-500">Detailed performance overview for this class.</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.studentPerformanceReport')}</DialogTitle>
+            <DialogDescription className="font-medium text-slate-500">{t('admin.academics.classDetail.performanceReportDesc')}</DialogDescription>
           </DialogHeader>
           <div className="overflow-x-auto rounded-xl border border-slate-100">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-start border-collapse text-sm">
               <thead>
                 <tr className="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="px-4 py-3">Student Name</th>
-                  <th className="px-4 py-3">Grade</th>
-                  <th className="px-4 py-3">Attendance</th>
-                  <th className="px-4 py-3">Last 3 Scores</th>
-                  <th className="px-4 py-3">Rank</th>
+                  <th className="px-4 py-3">{t('admin.academics.classDetail.colStudentName')}</th>
+                  <th className="px-4 py-3">{t('admin.academics.classDetail.colGrade')}</th>
+                  <th className="px-4 py-3">{t('admin.academics.classDetail.colAttendance')}</th>
+                  <th className="px-4 py-3">{t('admin.academics.classDetail.colLast3Scores')}</th>
+                  <th className="px-4 py-3">{t('admin.academics.classDetail.colRank')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -1823,10 +1825,10 @@ const ClassDetail = () => {
             </table>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setReportOpen(false)}>Close</Button>
-            <Button className="rounded-xl gradient-primary text-white font-bold" onClick={() => { toast.success("Report downloaded"); setReportOpen(false); }}>
-              <Download className="h-4 w-4 mr-2" />
-              Download Report
+            <Button variant="outline" className="rounded-xl" onClick={() => setReportOpen(false)}>{t('admin.academics.classDetail.close')}</Button>
+            <Button className="rounded-xl gradient-primary text-white font-bold" onClick={() => { toast.success(t('admin.academics.classDetail.reportDownloadedToast')); setReportOpen(false); }}>
+              <Download className="h-4 w-4 me-2" />
+              {t('admin.academics.classDetail.downloadReport')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1836,15 +1838,15 @@ const ClassDetail = () => {
       <Dialog open={assignFacultyOpen} onOpenChange={setAssignFacultyOpen}>
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Assign New Faculty</DialogTitle>
-            <DialogDescription className="font-medium text-slate-500">Select a faculty member and subject to assign.</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.assignNewFaculty')}</DialogTitle>
+            <DialogDescription className="font-medium text-slate-500">{t('admin.academics.classDetail.assignFacultyDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faculty Member</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.facultyMember')}</Label>
               <Select value={assignFacultyName} onValueChange={setAssignFacultyName}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select faculty" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectFaculty')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {staff.map((member: any) => (
@@ -1854,26 +1856,26 @@ const ClassDetail = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.subject')}</Label>
               <Select value={assignFacultySubject} onValueChange={setAssignFacultySubject}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectSubject')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="math">Math</SelectItem>
-                  <SelectItem value="science">Science</SelectItem>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="arabic">Arabic</SelectItem>
-                  <SelectItem value="social-studies">Social Studies</SelectItem>
+                  <SelectItem value="math">{t('admin.academics.classDetail.subjectMath')}</SelectItem>
+                  <SelectItem value="science">{t('admin.academics.classDetail.subjectScience')}</SelectItem>
+                  <SelectItem value="english">{t('admin.academics.classDetail.subjectEnglish')}</SelectItem>
+                  <SelectItem value="arabic">{t('admin.academics.classDetail.subjectArabic')}</SelectItem>
+                  <SelectItem value="social-studies">{t('admin.academics.classDetail.subjectSocialStudies')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setAssignFacultyOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setAssignFacultyOpen(false)}>{t('admin.academics.classDetail.cancel')}</Button>
             <Button className="rounded-xl gradient-primary text-white font-bold" onClick={async () => {
               if (!assignFacultyName) {
-                toast.error("Please select a faculty member");
+                toast.error(t('admin.academics.classDetail.selectFacultyMemberError'));
                 return;
               }
               try {
@@ -1886,14 +1888,14 @@ const ClassDetail = () => {
                 if (classSections.length > 0) {
                   await updateSection(classSections[0].id, { teacherName: facultyName });
                 }
-                toast.success("Faculty assigned successfully");
+                toast.success(t('admin.academics.classDetail.facultyAssignedToast'));
                 setAssignFacultyOpen(false);
                 setAssignFacultyName("");
                 setAssignFacultySubject("");
               } catch (err) {
-                toast.error("Failed to assign faculty");
+                toast.error(t('admin.academics.classDetail.facultyAssignFailedToast'));
               }
-            }}>Assign Faculty</Button>
+            }}>{t('admin.academics.classDetail.assignFacultyBtn')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1902,30 +1904,30 @@ const ClassDetail = () => {
       <Dialog open={changeTeacherOpen} onOpenChange={setChangeTeacherOpen}>
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Change Teacher</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.changeTeacher')}</DialogTitle>
             <DialogDescription className="font-medium text-slate-500">
-              Update the class teacher for Section {changeTeacherSection?.name}.
+              {t('admin.academics.classDetail.changeTeacherDesc', { section: changeTeacherSection?.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Teacher</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.currentTeacher')}</Label>
               <div className="h-10 px-3 flex items-center rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-500">
-                {changeTeacherSection?.teacherName || "Not Assigned"}
+                {changeTeacherSection?.teacherName || t('admin.academics.classDetail.notAssigned')}
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">New Teacher Name</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.newTeacherName')}</Label>
               <Input
                 className="rounded-xl border-slate-200"
-                placeholder="Enter teacher name"
+                placeholder={t('admin.academics.classDetail.enterTeacherNamePlaceholder')}
                 value={changeTeacherName}
                 onChange={(e) => setChangeTeacherName(e.target.value)}
               />
             </div>
             {staff && staff.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Or select from staff</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.orSelectFromStaff')}</Label>
                 <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border border-slate-100 p-2">
                   {staff.map((member: any) => (
                     <div
@@ -1947,7 +1949,7 @@ const ClassDetail = () => {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setChangeTeacherOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setChangeTeacherOpen(false)}>{t('admin.academics.classDetail.cancel')}</Button>
             <Button
               className="rounded-xl gradient-primary text-white font-bold"
               disabled={!changeTeacherName.trim()}
@@ -1985,14 +1987,14 @@ const ClassDetail = () => {
                       });
                     } catch { /* non-fatal — Class/Section fields above already saved */ }
                   }
-                  toast.success(`Teacher updated to ${changeTeacherName}`);
+                  toast.success(t('admin.academics.classDetail.teacherUpdatedToast', { name: changeTeacherName }));
                   setChangeTeacherOpen(false);
                 } catch {
-                  toast.error("Failed to update teacher");
+                  toast.error(t('admin.academics.classDetail.teacherUpdateFailedToast'));
                 }
               }}
             >
-              Save Change
+              {t('admin.academics.classDetail.saveChange')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2002,37 +2004,37 @@ const ClassDetail = () => {
       <Dialog open={addSubjectOpen} onOpenChange={setAddSubjectOpen}>
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Add Subject</DialogTitle>
-            <DialogDescription className="font-medium text-slate-500">Assign a new subject to this class.</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.addSubjectTitle')}</DialogTitle>
+            <DialogDescription className="font-medium text-slate-500">{t('admin.academics.classDetail.addSubjectDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject Name</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.subjectName')}</Label>
               <Input
                 className="rounded-xl border-slate-200"
-                placeholder="e.g. Mathematics"
+                placeholder={t('admin.academics.classDetail.subjectNamePlaceholder')}
                 value={addSubjectName}
                 onChange={(e) => setAddSubjectName(e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Section</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.section')}</Label>
               <select
                 className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#9810fa]/20"
                 value={addSubjectSection}
                 onChange={(e) => setAddSubjectSection(e.target.value)}
               >
-                <option value="All">All Sections of {classData.grade}</option>
+                <option value="All">{t('admin.academics.classDetail.allSectionsOf', { grade: classData.grade })}</option>
                 {Array.from(new Set(classes.filter(c => c.grade === classData.grade)
                   .map(c => String(c.name).match(/Section\s+([A-Z])/i)?.[1] || (c as any).section || "A"))).sort()
-                  .map(s => <option key={s} value={s}>Section {s}</option>)}
+                  .map(s => <option key={s} value={s}>{t('admin.academics.classDetail.sectionOption', { s })}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Teacher</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.teacher')}</Label>
               <Select value={addSubjectTeacher} onValueChange={setAddSubjectTeacher}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select teacher" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectTeacher')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl max-h-60">
                   {(staff && staff.length > 0
@@ -2045,20 +2047,20 @@ const ClassDetail = () => {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Room No</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.roomNo')}</Label>
               <Input
                 className="rounded-xl border-slate-200"
-                placeholder="e.g. 101 / Lab-2"
+                placeholder={t('admin.academics.classDetail.roomNoPlaceholder')}
                 value={addSubjectRoom}
                 onChange={(e) => setAddSubjectRoom(e.target.value)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setAddSubjectOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setAddSubjectOpen(false)}>{t('admin.academics.classDetail.cancel')}</Button>
             <Button className="rounded-xl gradient-primary text-white font-bold" onClick={async () => {
               if (!addSubjectName.trim()) {
-                toast.error("Subject name is required");
+                toast.error(t('admin.academics.classDetail.subjectNameRequiredToast'));
                 return;
               }
               try {
@@ -2075,7 +2077,7 @@ const ClassDetail = () => {
                   meta[name] = metaEntry;
                   return updateClass(c.id, { subjects, subjectMeta: meta } as any);
                 }));
-                toast.success(addSubjectSection === "All" ? `Subject added to all ${applied.length} sections` : `Subject added to Section ${addSubjectSection}`);
+                toast.success(addSubjectSection === "All" ? t('admin.academics.classDetail.subjectAddedAllToast', { count: applied.length }) : t('admin.academics.classDetail.subjectAddedSectionToast', { section: addSubjectSection }));
                 setAddSubjectOpen(false);
                 setAddSubjectName("");
                 setAddSubjectTeacher("");
@@ -2083,9 +2085,9 @@ const ClassDetail = () => {
                 setAddSubjectRoom("");
                 setAddSubjectSection("All");
               } catch (err) {
-                toast.error("Failed to add subject");
+                toast.error(t('admin.academics.classDetail.subjectAddFailedToast'));
               }
-            }}>Save Subject</Button>
+            }}>{t('admin.academics.classDetail.saveSubject')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2094,48 +2096,48 @@ const ClassDetail = () => {
       <Dialog open={editScheduleOpen} onOpenChange={setEditScheduleOpen}>
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Edit Schedule</DialogTitle>
-            <DialogDescription className="font-medium text-slate-500">Add or update a timetable slot.</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.editScheduleTitle')}</DialogTitle>
+            <DialogDescription className="font-medium text-slate-500">{t('admin.academics.classDetail.editScheduleDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Day</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.day')}</Label>
               <Select value={scheduleDay} onValueChange={setScheduleDay}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select day" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectDay')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="Sunday">Sunday</SelectItem>
-                  <SelectItem value="Monday">Monday</SelectItem>
-                  <SelectItem value="Tuesday">Tuesday</SelectItem>
-                  <SelectItem value="Wednesday">Wednesday</SelectItem>
-                  <SelectItem value="Thursday">Thursday</SelectItem>
-                  <SelectItem value="Friday">Friday</SelectItem>
-                  <SelectItem value="Saturday">Saturday</SelectItem>
+                  <SelectItem value="Sunday">{t('admin.academics.classDetail.daySunday')}</SelectItem>
+                  <SelectItem value="Monday">{t('admin.academics.classDetail.dayMonday')}</SelectItem>
+                  <SelectItem value="Tuesday">{t('admin.academics.classDetail.dayTuesday')}</SelectItem>
+                  <SelectItem value="Wednesday">{t('admin.academics.classDetail.dayWednesday')}</SelectItem>
+                  <SelectItem value="Thursday">{t('admin.academics.classDetail.dayThursday')}</SelectItem>
+                  <SelectItem value="Friday">{t('admin.academics.classDetail.dayFriday')}</SelectItem>
+                  <SelectItem value="Saturday">{t('admin.academics.classDetail.daySaturday')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.subject')}</Label>
               <Select value={scheduleSubject} onValueChange={setScheduleSubject}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectSubject')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {(currentClass?.subjects || []).map(sub => (
                     <SelectItem key={sub} value={sub}>{sub}</SelectItem>
                   ))}
                   {(currentClass?.subjects || []).length === 0 && (
-                    <SelectItem value="none" disabled>No subjects added yet</SelectItem>
+                    <SelectItem value="none" disabled>{t('admin.academics.classDetail.noSubjectsAddedYet')}</SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Teacher Name</Label>
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.teacherName')}</Label>
               <Select value={scheduleTeacher} onValueChange={setScheduleTeacher}>
                 <SelectTrigger className="rounded-xl border-slate-200">
-                  <SelectValue placeholder="Select teacher" />
+                  <SelectValue placeholder={t('admin.academics.classDetail.selectTeacher')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl max-h-60">
                   {(staff && staff.length > 0
@@ -2149,7 +2151,7 @@ const ClassDetail = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Time</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.startTime')}</Label>
                 <Input
                   className="rounded-xl border-slate-200"
                   type="time"
@@ -2158,7 +2160,7 @@ const ClassDetail = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">End Time</Label>
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.endTime')}</Label>
                 <Input
                   className="rounded-xl border-slate-200"
                   type="time"
@@ -2169,10 +2171,10 @@ const ClassDetail = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setEditScheduleOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setEditScheduleOpen(false)}>{t('admin.academics.classDetail.cancel')}</Button>
             <Button className="rounded-xl gradient-primary text-white font-bold" onClick={async () => {
               if (!scheduleDay || !scheduleStartTime || !scheduleEndTime || !scheduleSubject) {
-                toast.error("Please fill in all timetable fields");
+                toast.error(t('admin.academics.classDetail.fillTimetableFieldsError'));
                 return;
               }
               try {
@@ -2187,7 +2189,7 @@ const ClassDetail = () => {
                   classId: id!,
                   sectionId: sectionId
                 });
-                toast.success("Schedule updated successfully");
+                toast.success(t('admin.academics.classDetail.scheduleUpdatedToast'));
                 setEditScheduleOpen(false);
                 setScheduleDay("");
                 setScheduleStartTime("");
@@ -2195,9 +2197,9 @@ const ClassDetail = () => {
                 setScheduleSubject("");
                 setScheduleTeacher("");
               } catch (err) {
-                toast.error("Failed to update schedule");
+                toast.error(t('admin.academics.classDetail.scheduleUpdateFailedToast'));
               }
-            }}>Save Schedule</Button>
+            }}>{t('admin.academics.classDetail.saveSchedule')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2206,20 +2208,20 @@ const ClassDetail = () => {
       <Dialog open={scheduleExamOpen} onOpenChange={setScheduleExamOpen}>
         <DialogContent className="rounded-2xl max-w-5xl w-[95vw]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Create Exam Datesheet</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('admin.academics.classDetail.createExamDatesheet')}</DialogTitle>
             <DialogDescription className="font-medium text-slate-500">
-              Build the exam timetable for {classData.name} — one row per subject with date, timing, exam hall and the staff who invigilates.
+              {t('admin.academics.classDetail.examDatesheetDesc', { class: classData.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Exam Title *</Label>
-              <Input className="rounded-xl border-slate-200" placeholder="e.g. Mid Term Examination — Term 1"
+              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin.academics.classDetail.examTitle')}</Label>
+              <Input className="rounded-xl border-slate-200" placeholder={t('admin.academics.classDetail.examTitlePlaceholder')}
                 value={examName} onChange={(e) => setExamName(e.target.value)} />
             </div>
             {/* Column headers */}
             <div className="hidden md:grid grid-cols-[1.4fr_1.1fr_0.9fr_0.9fr_1.4fr_1fr_auto] gap-2 px-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              <span>Subject</span><span>Date</span><span>Start</span><span>End</span><span>Invigilator (Staff)</span><span>Hall</span><span />
+              <span>{t('admin.academics.classDetail.colSubject')}</span><span>{t('admin.academics.classDetail.colDate')}</span><span>{t('admin.academics.classDetail.colStart')}</span><span>{t('admin.academics.classDetail.colEnd')}</span><span>{t('admin.academics.classDetail.colInvigilator')}</span><span>{t('admin.academics.classDetail.colHall')}</span><span />
             </div>
             {examSlots.map((slot, i) => {
               const update = (patch: Partial<ExamSlot>) => setExamSlots(prev => prev.map((s, idx) => idx === i ? { ...s, ...patch } : s));

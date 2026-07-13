@@ -83,6 +83,7 @@ import { RecordExpenseDialog } from "@/components/finance/RecordExpenseDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { smartDb } from "@/lib/localDb";
+import { useTranslation } from "react-i18next";
 
 interface Transaction {
   id: string;
@@ -107,7 +108,21 @@ interface FinancialCategory {
   createdAt: { seconds: number; nanoseconds: number } | null;
 }
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Pending: 'admin.finance.transactions.statusPending',
+  Completed: 'admin.finance.transactions.statusCompleted',
+  Cancelled: 'admin.finance.transactions.statusCancelled',
+  Refunded: 'admin.finance.transactions.statusRefunded',
+};
+
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  Income: 'admin.finance.transactions.typeIncome',
+  Expense: 'admin.finance.transactions.typeExpense',
+  Transfer: 'admin.finance.transactions.typeTransfer',
+};
+
 const Transactions = () => {
+  const { t } = useTranslation();
   const { user, loading: authLoading, isMockSession } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -144,10 +159,10 @@ const Transactions = () => {
     try {
       await smartDb.delete(transactionToDelete.collection, transactionToDelete.id);
       setTransactions(prev => prev.filter(t => t.id !== transactionToDelete.id));
-      toast.success("Transaction deleted successfully");
+      toast.success(t('admin.finance.transactions.toastDeleteSuccess'));
     } catch (error) {
       console.error("Failed to delete transaction:", error);
-      toast.error("Failed to delete transaction");
+      toast.error(t('admin.finance.transactions.toastDeleteError'));
     } finally {
       setIsDeleteDialogOpen(false);
       setTransactionToDelete(null);
@@ -157,7 +172,7 @@ const Transactions = () => {
   const openEditDialog = (txn: Transaction) => {
     setEditingTransaction(txn);
     setEditDescription(txn.category || "");
-    setEditStatus(txn.status || "Completed");
+    setEditStatus(txn.status || "Completed"); // logic default kept in English; UI label handled via STATUS_LABEL_KEYS
     setEditNotes("");
   };
 
@@ -179,11 +194,11 @@ const Transactions = () => {
           t.id === id ? { ...t, category: editDescription, status: editStatus } : t
         )
       );
-      toast.success("Transaction updated");
+      toast.success(t('admin.finance.transactions.toastUpdateSuccess'));
       setEditingTransaction(null);
     } catch (error) {
       console.error("Failed to update transaction:", error);
-      toast.error("Failed to update transaction");
+      toast.error(t('admin.finance.transactions.toastUpdateError'));
     }
   };
 
@@ -336,7 +351,7 @@ const Transactions = () => {
     };
   }, [transactions]);
 
-  const formatTrendBadge = (pct: number | null) => pct === null ? "New" : `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`;
+  const formatTrendBadge = (pct: number | null) => pct === null ? t('admin.finance.transactions.trendNew') : `${pct >= 0 ? "+" : ""}${pct.toFixed(0)}%`;
 
   const chartData = useMemo(() => {
     const last7Days = [...Array(7)].map((_, i) => {
@@ -360,7 +375,7 @@ const Transactions = () => {
   const handleExport = () => {
     const rows = filteredTransactions;
     if (rows.length === 0) {
-      toast.info("No transactions to export.");
+      toast.info(t('admin.finance.transactions.toastNoDataToExport'));
       return;
     }
 
@@ -369,9 +384,16 @@ const Transactions = () => {
       return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
     };
 
-    const headers = ["Date", "Entity", "Category", "Type", "Amount", "Status"];
-    const lines = rows.map(t =>
-      [t.date, t.entity, t.category, t.type, t.amount, t.status].map(escapeCsv).join(",")
+    const headers = [
+      t('admin.finance.transactions.csvHeaderDate'),
+      t('admin.finance.transactions.csvHeaderEntity'),
+      t('admin.finance.transactions.csvHeaderCategory'),
+      t('admin.finance.transactions.csvHeaderType'),
+      t('admin.finance.transactions.csvHeaderAmount'),
+      t('admin.finance.transactions.csvHeaderStatus'),
+    ];
+    const lines = rows.map(row =>
+      [row.date, row.entity, row.category, row.type, row.amount, row.status].map(escapeCsv).join(",")
     );
     const csv = [headers.join(","), ...lines].join("\n");
 
@@ -385,7 +407,11 @@ const Transactions = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast.success(`Exported ${rows.length} transaction${rows.length === 1 ? "" : "s"}.`);
+    toast.success(
+      rows.length === 1
+        ? t('admin.finance.transactions.toastExportSuccessSingular', { count: rows.length })
+        : t('admin.finance.transactions.toastExportSuccessPlural', { count: rows.length })
+    );
   };
 
   return (
@@ -401,9 +427,9 @@ const Transactions = () => {
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Day Book</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.transactions.pageTitle')}</h1>
               <p className="text-sm text-slate-400 flex items-center gap-2">
-                Centralized view of all daily financial movements.
+                {t('admin.finance.transactions.pageSubtitle')}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
@@ -411,7 +437,7 @@ const Transactions = () => {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs p-3 rounded-xl">
                       <p className="text-xs leading-relaxed">
-                        The Day Book provides a real-time ledger of all income and expenses across the school, helping you track cash flow at a glance.
+                        {t('admin.finance.transactions.pageTooltip')}
                       </p>
                     </TooltipContent>
                   </Tooltip>
@@ -422,37 +448,37 @@ const Transactions = () => {
 
           <div className="flex items-center gap-3">
             <Button variant="outline" className="rounded-xl h-11 px-6 bg-white shadow-sm hover:bg-secondary/50 transition-all" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
+              <Download className="h-4 w-4 me-2" />
+              {t('admin.finance.transactions.exportButton')}
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="rounded-xl h-11 px-6 gradient-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Transaction
+                  <Plus className="h-4 w-4 me-2" />
+                  {t('admin.finance.transactions.newTransactionButton')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-xl p-2 shadow-xl border-none">
                 <DropdownMenuItem className="rounded-lg py-2 cursor-pointer" onClick={() => { setRevenueType("student"); setRevenueDialogOpen(true); }}>
-                  <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
-                  Student Revenue
+                  <TrendingUp className="h-4 w-4 me-2 text-green-600" />
+                  {t('admin.finance.transactions.menuStudentRevenue')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg py-2 cursor-pointer" onClick={() => { setRevenueType("entity"); setRevenueDialogOpen(true); }}>
-                  <TrendingUp className="h-4 w-4 mr-2 text-emerald-600" />
-                  Entity Revenue
+                  <TrendingUp className="h-4 w-4 me-2 text-emerald-600" />
+                  {t('admin.finance.transactions.menuEntityRevenue')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg py-2 cursor-pointer" onClick={() => { setExpenseType("expenses"); setExpenseDialogOpen(true); }}>
-                  <TrendingDown className="h-4 w-4 mr-2 text-red-600" />
-                  Operational Expense
+                  <TrendingDown className="h-4 w-4 me-2 text-red-600" />
+                  {t('admin.finance.transactions.menuOperationalExpense')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg py-2 cursor-pointer" onClick={() => { setExpenseType("payroll"); setExpenseDialogOpen(true); }}>
-                  <Users className="h-4 w-4 mr-2 text-purple-600" />
-                  Staff Payroll
+                  <Users className="h-4 w-4 me-2 text-purple-600" />
+                  {t('admin.finance.transactions.menuStaffPayroll')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg py-2 cursor-pointer" onClick={() => { setExpenseType("assets"); setExpenseDialogOpen(true); }}>
-                  <Building2 className="h-4 w-4 mr-2 text-amber-600" />
-                  Asset Purchase
+                  <Building2 className="h-4 w-4 me-2 text-amber-600" />
+                  {t('admin.finance.transactions.menuAssetPurchase')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -461,9 +487,9 @@ const Transactions = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { label: 'Total Income', value: `${financialSettings.currency}${stats.income.toLocaleString()}`, icon: TrendingUp, color: 'green', trend: formatTrendBadge(stats.incomeChangePct) },
-            { label: 'Total Expense', value: `${financialSettings.currency}${stats.expense.toLocaleString()}`, icon: TrendingDown, color: 'red', trend: formatTrendBadge(stats.expenseChangePct) },
-            { label: 'Transaction Count', value: stats.count, icon: Activity, color: 'blue', trend: 'Active' }
+            { label: t('admin.finance.transactions.statTotalIncome'), value: `${financialSettings.currency}${stats.income.toLocaleString()}`, icon: TrendingUp, color: 'green', trend: formatTrendBadge(stats.incomeChangePct) },
+            { label: t('admin.finance.transactions.statTotalExpense'), value: `${financialSettings.currency}${stats.expense.toLocaleString()}`, icon: TrendingDown, color: 'red', trend: formatTrendBadge(stats.expenseChangePct) },
+            { label: t('admin.finance.transactions.statTransactionCount'), value: stats.count, icon: Activity, color: 'blue', trend: t('admin.finance.transactions.trendActive') }
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -493,15 +519,15 @@ const Transactions = () => {
             className="lg:col-span-2 premium-card p-6 bg-white/80 backdrop-blur-md"
           >
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-lg font-bold">Financial Snapshot</h3>
+              <h3 className="text-lg font-bold">{t('admin.finance.transactions.financialSnapshotTitle')}</h3>
               <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-green-500" />
-                  Income
+                  {t('admin.finance.transactions.legendIncome')}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-red-500" />
-                  Expense
+                  {t('admin.finance.transactions.legendExpense')}
                 </div>
               </div>
             </div>
@@ -538,7 +564,7 @@ const Transactions = () => {
             transition={{ delay: 0.1 }}
             className="premium-card p-6 bg-white/80 backdrop-blur-md"
           >
-            <h3 className="text-lg font-bold mb-6">Recent Activity</h3>
+            <h3 className="text-lg font-bold mb-6">{t('admin.finance.transactions.recentActivityTitle')}</h3>
             <div className="space-y-4">
               {recentActivityList.map((txn, idx) => (
                 <motion.div
@@ -568,7 +594,7 @@ const Transactions = () => {
               {transactions.length === 0 && (
                 <div className="py-12 text-center">
                   <Activity className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-xs text-muted-foreground font-medium">No recent activity</p>
+                  <p className="text-xs text-muted-foreground font-medium">{t('admin.finance.transactions.noRecentActivity')}</p>
                 </div>
               )}
             </div>
@@ -578,7 +604,7 @@ const Transactions = () => {
                 className="w-full mt-6 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl"
                 onClick={() => setShowAll(prev => !prev)}
               >
-                {showAll ? "Show Less" : "View All Transactions"}
+                {showAll ? t('admin.finance.transactions.showLessButton') : t('admin.finance.transactions.viewAllButton')}
               </Button>
             )}
             {transactions.length <= 10 && transactions.length > 0 && (
@@ -587,7 +613,7 @@ const Transactions = () => {
                 className="w-full mt-6 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl"
                 disabled
               >
-                All transactions shown
+                {t('admin.finance.transactions.allTransactionsShown')}
               </Button>
             )}
           </motion.div>
@@ -598,7 +624,7 @@ const Transactions = () => {
             transition={{ delay: 0.2 }}
             className="premium-card p-6 bg-white/80 backdrop-blur-md"
           >
-            <h3 className="text-lg font-bold mb-6">Budget vs Actual</h3>
+            <h3 className="text-lg font-bold mb-6">{t('admin.finance.transactions.budgetVsActualTitle')}</h3>
             <div className="space-y-6">
               {categories.slice(0, 5).map((cat, i) => {
                 const actual = transactions.filter(t => t.category === cat.name).reduce((acc, t) => acc + t.amount, 0);
@@ -627,7 +653,7 @@ const Transactions = () => {
               })}
               {categories.length === 0 && (
                 <div className="text-center py-10 text-muted-foreground italic text-sm">
-                  No categories defined in setup.
+                  {t('admin.finance.transactions.noCategoriesDefined')}
                 </div>
               )}
             </div>
@@ -642,15 +668,15 @@ const Transactions = () => {
         >
           <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-secondary/10">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-bold">Detailed Ledger</h3>
+              <h3 className="text-lg font-bold">{t('admin.finance.transactions.detailedLedgerTitle')}</h3>
               <Badge variant="secondary" className="rounded-full px-3">{filteredTransactions.length}</Badge>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                 <Input
-                  className="pl-10 h-10 text-sm rounded-xl border-none bg-white shadow-sm"
-                  placeholder="Search transactions..."
+                  className="ps-10 h-10 text-sm rounded-xl border-none bg-white shadow-sm"
+                  placeholder={t('admin.finance.transactions.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -664,38 +690,38 @@ const Transactions = () => {
                   >
                     <Filter className="h-4 w-4" />
                     {(filterType !== "all" || filterDateRange !== "all") && (
-                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                      <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-primary" />
                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-4 rounded-xl" align="end">
                   <div className="space-y-4">
-                    <h4 className="font-bold text-sm">Filter Transactions</h4>
+                    <h4 className="font-bold text-sm">{t('admin.finance.transactions.filterPopoverTitle')}</h4>
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Type</Label>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.filterTypeLabel')}</Label>
                       <Select value={filterType} onValueChange={setFilterType}>
                         <SelectTrigger className="h-9 rounded-lg text-sm">
-                          <SelectValue placeholder="All Types" />
+                          <SelectValue placeholder={t('admin.finance.transactions.filterAllTypes')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="Income">Income</SelectItem>
-                          <SelectItem value="Expense">Expense</SelectItem>
-                          <SelectItem value="Transfer">Transfer</SelectItem>
+                          <SelectItem value="all">{t('admin.finance.transactions.filterAllTypes')}</SelectItem>
+                          <SelectItem value="Income">{t(TYPE_LABEL_KEYS.Income)}</SelectItem>
+                          <SelectItem value="Expense">{t(TYPE_LABEL_KEYS.Expense)}</SelectItem>
+                          <SelectItem value="Transfer">{t(TYPE_LABEL_KEYS.Transfer)}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date Range</Label>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.filterDateRangeLabel')}</Label>
                       <Select value={filterDateRange} onValueChange={setFilterDateRange}>
                         <SelectTrigger className="h-9 rounded-lg text-sm">
-                          <SelectValue placeholder="All Time" />
+                          <SelectValue placeholder={t('admin.finance.transactions.filterAllTime')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Time</SelectItem>
-                          <SelectItem value="7">Last 7 days</SelectItem>
-                          <SelectItem value="30">Last 30 days</SelectItem>
-                          <SelectItem value="90">Last 90 days</SelectItem>
+                          <SelectItem value="all">{t('admin.finance.transactions.filterAllTime')}</SelectItem>
+                          <SelectItem value="7">{t('admin.finance.transactions.filterLast7Days')}</SelectItem>
+                          <SelectItem value="30">{t('admin.finance.transactions.filterLast30Days')}</SelectItem>
+                          <SelectItem value="90">{t('admin.finance.transactions.filterLast90Days')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -706,7 +732,7 @@ const Transactions = () => {
                         className="w-full text-xs"
                         onClick={() => { setFilterType("all"); setFilterDateRange("all"); }}
                       >
-                        Clear Filters
+                        {t('admin.finance.transactions.clearFiltersButton')}
                       </Button>
                     )}
                   </div>
@@ -718,7 +744,7 @@ const Transactions = () => {
           {loading ? (
             <div className="p-24 flex flex-col items-center justify-center text-muted-foreground">
               <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
-              <p className="text-sm font-medium animate-pulse">Synchronizing ledger data...</p>
+              <p className="text-sm font-medium animate-pulse">{t('admin.finance.transactions.synchronizingLedger')}</p>
             </div>
           ) : filteredTransactions.length === 0 ? (
             <div className="p-20 text-center space-y-4">
@@ -726,8 +752,8 @@ const Transactions = () => {
                 <Activity className="h-10 w-10 text-muted-foreground/40" />
               </div>
               <div className="max-w-xs mx-auto">
-                <h4 className="font-bold text-lg">No records found</h4>
-                <p className="text-sm text-muted-foreground">Try adjusting your search or filters to find what you're looking for.</p>
+                <h4 className="font-bold text-lg">{t('admin.finance.transactions.noRecordsFoundTitle')}</h4>
+                <p className="text-sm text-muted-foreground">{t('admin.finance.transactions.noRecordsFoundSubtitle')}</p>
               </div>
             </div>
           ) : (

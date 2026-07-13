@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { useFlashCards } from "@/hooks/useFlashCards";
 import { useAuth } from "@/hooks/useAuth";
 import type { FlashCardSet, FlashCardStudyOptions } from "@/types/flashcard";
+import { useTranslation } from "react-i18next";
 
 const DEFAULT_STUDY_OPTIONS: FlashCardStudyOptions = {
   shuffle: true, spacedRepetition: true, showHints: true, typeAnswer: false, gamified: true,
@@ -44,11 +45,11 @@ const SUBJECT_COLORS: Record<string, string> = {
 const PIE_COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#8B5CF6", "#EC4899", "#94A3B8", "#14B8A6", "#F43F5E"];
 
 const FC_TABS = [
-  { id: "my", label: "My Flashcards", icon: BookOpen },
-  { id: "assigned", label: "Assigned Sets", icon: Share2 },
-  { id: "library", label: "Library View", icon: Library },
-  { id: "subject", label: "By Subject", icon: FolderOpen },
-  { id: "class", label: "By Class", icon: GraduationCap },
+  { id: "my", label: "My Flashcards", labelKey: "admin.academics.flashCards.tabMy", icon: BookOpen },
+  { id: "assigned", label: "Assigned Sets", labelKey: "admin.academics.flashCards.tabAssigned", icon: Share2 },
+  { id: "library", label: "Library View", labelKey: "admin.academics.flashCards.tabLibrary", icon: Library },
+  { id: "subject", label: "By Subject", labelKey: "admin.academics.flashCards.tabSubject", icon: FolderOpen },
+  { id: "class", label: "By Class", labelKey: "admin.academics.flashCards.tabClass", icon: GraduationCap },
 ];
 
 function KPI({ icon: Icon, label, value, color, bg }: { icon: typeof Users; label: string; value: string; color: string; bg: string }) {
@@ -82,20 +83,21 @@ function SetTable({
   onEdit: (s: FlashCardSet) => void;
   onDelete: (s: FlashCardSet) => void;
 }) {
+  const { t } = useTranslation();
   const cols = variant === "assigned"
-    ? ["Title", "Subject", "Class", "Cards", "Assigned To", "Last Updated", "Actions"]
-    : ["Title", "Subject", "Class", "Cards", "Created By", "Last Updated", "Status", "Actions"];
+    ? [t("admin.academics.flashCards.colTitle"), t("admin.academics.flashCards.colSubject"), t("admin.academics.flashCards.colClass"), t("admin.academics.flashCards.colCards"), t("admin.academics.flashCards.colAssignedTo"), t("admin.academics.flashCards.colLastUpdated"), t("admin.academics.flashCards.colActions")]
+    : [t("admin.academics.flashCards.colTitle"), t("admin.academics.flashCards.colSubject"), t("admin.academics.flashCards.colClass"), t("admin.academics.flashCards.colCards"), t("admin.academics.flashCards.colCreatedBy"), t("admin.academics.flashCards.colLastUpdated"), t("admin.academics.flashCards.colStatus"), t("admin.academics.flashCards.colActions")];
   return (
     <Card className="border border-gray-100 shadow-sm overflow-hidden">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-gray-50 border-b border-gray-200">
-              {cols.map(h => <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>)}
+              {cols.map(h => <th key={h} className="px-4 py-3 text-start text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>)}
             </tr></thead>
             <tbody>
               {sets.length === 0 ? (
-                <tr><td colSpan={cols.length} className="px-4 py-16 text-center text-gray-400"><Brain className="w-10 h-10 mx-auto mb-2 text-gray-200" /> Nothing here yet.</td></tr>
+                <tr><td colSpan={cols.length} className="px-4 py-16 text-center text-gray-400"><Brain className="w-10 h-10 mx-auto mb-2 text-gray-200" /> {t("admin.academics.flashCards.emptyNothingHere")}</td></tr>
               ) : sets.map((s, i) => (
                 <tr key={s.id} onClick={() => onOpen(s)} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors cursor-pointer">
                   <td className="px-4 py-3">
@@ -115,13 +117,13 @@ function SetTable({
                       </div>
                     </td>
                   ) : (
-                    <td className="px-4 py-3 text-gray-600">{s.assignedTo?.length ? `${s.assignedTo.length} target${s.assignedTo.length === 1 ? "" : "s"}` : "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">{s.assignedTo?.length ? (s.assignedTo.length === 1 ? t("admin.academics.flashCards.targetSingular", { count: s.assignedTo.length }) : t("admin.academics.flashCards.targetPlural", { count: s.assignedTo.length })) : "—"}</td>
                   )}
                   <td className="px-4 py-3 text-gray-600">{fmtDate(s.lastModified)}</td>
                   {variant === "my" && (
                     <td className="px-4 py-3">
                       <Badge className={cn("text-xs font-semibold border", s.assignedTo?.length ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-gray-100 text-gray-600 border-gray-200")}>
-                        {s.assignedTo?.length ? "Assigned" : "Private"}
+                        {s.assignedTo?.length ? t("admin.academics.flashCards.statusAssigned") : t("admin.academics.flashCards.statusPrivate")}
                       </Badge>
                     </td>
                   )}
@@ -129,11 +131,11 @@ function SetTable({
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => onStudy(s)}>Study Now</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onGame(s)}><Zap className="w-3.5 h-3.5 mr-1.5 text-violet-500" /> Study Arcade</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit(s)}>Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onStudy(s)}>{t("admin.academics.flashCards.actionStudyNow")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onGame(s)}><Zap className="w-3.5 h-3.5 me-1.5 text-violet-500" /> {t("admin.academics.flashCards.actionStudyArcade")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(s)}>{t("admin.academics.flashCards.actionEdit")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => onDelete(s)}>Delete</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => onDelete(s)}>{t("admin.academics.flashCards.actionDelete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -148,6 +150,7 @@ function SetTable({
 }
 
 function SetCard({ s, onStudy, onGame, onOpen }: { s: FlashCardSet; onStudy: () => void; onGame: () => void; onOpen: () => void }) {
+  const { t } = useTranslation();
   return (
     <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={onOpen}>
       <CardContent className="p-5">
@@ -156,14 +159,14 @@ function SetCard({ s, onStudy, onGame, onOpen }: { s: FlashCardSet; onStudy: () 
           <span className={cn("text-xs font-semibold rounded-md px-2 py-1", SUBJECT_COLORS[s.subject] || "bg-gray-100 text-gray-600")}>{s.subject || "—"}</span>
         </div>
         <p className="font-bold text-gray-900">{s.name}</p>
-        <p className="text-xs text-gray-400 mb-3">{s.classId || "—"} · by {s.createdBy}</p>
+        <p className="text-xs text-gray-400 mb-3">{s.classId || "—"} · {t("admin.academics.flashCards.byAuthor", { name: s.createdBy })}</p>
         <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-          <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {s.cards.length} cards</span>
+          <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> {t("admin.academics.flashCards.cardsCount", { count: s.cards.length })}</span>
           {s.assignedTo?.length ? <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {s.assignedTo.length}</span> : null}
         </div>
         <div className="flex gap-2">
-          <Button size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white" onClick={e => { e.stopPropagation(); onStudy(); }}>Study</Button>
-          <Button size="sm" variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50 gap-1" onClick={e => { e.stopPropagation(); onGame(); }}><Zap className="w-3.5 h-3.5" /> Arcade</Button>
+          <Button size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white" onClick={e => { e.stopPropagation(); onStudy(); }}>{t("admin.academics.flashCards.study")}</Button>
+          <Button size="sm" variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50 gap-1" onClick={e => { e.stopPropagation(); onGame(); }}><Zap className="w-3.5 h-3.5" /> {t("admin.academics.flashCards.arcade")}</Button>
         </div>
       </CardContent>
     </Card>
@@ -175,6 +178,7 @@ const GRADE_OPTIONS = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "G
 
 // ─── Component ───────────────────────────────────────────────────────────────
 const FlashCards = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sets, assignedSets, addSet, updateSet, deleteSet } = useFlashCards();
@@ -219,7 +223,7 @@ const FlashCards = () => {
   const openGame = (s: FlashCardSet) => navigate(`/academics/flashcards/game/${s.id}`);
 
   const handleSave = async (publish: boolean) => {
-    if (!form.title.trim()) { toast.error("Set title is required"); return; }
+    if (!form.title.trim()) { toast.error(t("admin.academics.flashCards.toastTitleRequired")); return; }
     const classId = form.grade ? `${form.grade} - ${form.section}` : "";
     const builtCards = cards
       .filter(c => c.q.trim() || c.a.trim())
@@ -229,7 +233,7 @@ const FlashCards = () => {
         question: c.q,
         answer: c.a,
       }));
-    if (builtCards.length === 0) { toast.error("Add at least one flashcard before saving"); return; }
+    if (builtCards.length === 0) { toast.error(t("admin.academics.flashCards.toastAddOneCard")); return; }
 
     if (editingId) {
       await updateSet(editingId, {
@@ -237,7 +241,7 @@ const FlashCards = () => {
         cards: builtCards, assignedTo: form.access === "students" ? ["Assigned"] : undefined,
         studyOptions: form.studyOptions,
       });
-      toast.success(publish ? "Flashcard set updated" : "Draft saved");
+      toast.success(publish ? t("admin.academics.flashCards.toastSetUpdated") : t("admin.academics.flashCards.toastDraftSaved"));
     } else {
       await addSet({
         name: form.title, subject: form.subject, classId, tags: form.tags,
@@ -246,7 +250,7 @@ const FlashCards = () => {
         isAiGenerated: false,
         studyOptions: form.studyOptions,
       });
-      toast.success(publish ? "Flashcard set published!" : "Draft saved");
+      toast.success(publish ? t("admin.academics.flashCards.toastSetPublished") : t("admin.academics.flashCards.toastDraftSaved"));
     }
     if (publish) { setMode("list"); resetWizard(); }
   };
@@ -254,7 +258,7 @@ const FlashCards = () => {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     await deleteSet(deleteTarget.id);
-    toast.success(`Deleted "${deleteTarget.name}"`);
+    toast.success(t("admin.academics.flashCards.toastDeleted", { name: deleteTarget.name }));
     setDeleteTarget(null);
   };
 
@@ -288,24 +292,24 @@ const FlashCards = () => {
 
   // ─── CREATE / EDIT WIZARD ──────────────────────────────────────────────────
   if (mode === "create") {
-    const STEPS = ["Set Details", "Add Flashcards", "Set Options", "Review & Publish"];
+    const STEPS = [t("admin.academics.flashCards.stepSetDetails"), t("admin.academics.flashCards.stepAddFlashcards"), t("admin.academics.flashCards.stepSetOptions"), t("admin.academics.flashCards.stepReviewPublish")];
     return (
       <DashboardLayout>
         <div className="p-6 space-y-5">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <button onClick={() => { setMode("list"); resetWizard(); }} className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50"><ChevronLeft className="w-5 h-5 text-gray-500" /></button>
+              <button onClick={() => { setMode("list"); resetWizard(); }} className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50"><ChevronLeft className="w-5 h-5 text-gray-500 rtl:rotate-180" /></button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{editingId ? "Edit Flashcard Set" : "Create Flashcard Set"}</h1>
-                <p className="text-sm text-gray-500 mt-0.5">Build an engaging flashcard set to help students learn and revise effectively.</p>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{editingId ? t("admin.academics.flashCards.editSetTitle") : t("admin.academics.flashCards.createSetTitle")}</h1>
+                <p className="text-sm text-gray-500 mt-0.5">{t("admin.academics.flashCards.createSetSubtitle")}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-purple-600 font-semibold" onClick={() => handleSave(false)}>Save Draft</Button>
-              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => { setMode("list"); resetWizard(); }}>Cancel</Button>
+              <Button variant="ghost" size="sm" className="text-purple-600 font-semibold" onClick={() => handleSave(false)}>{t("admin.academics.flashCards.saveDraft")}</Button>
+              <Button variant="outline" size="sm" className="border-gray-200" onClick={() => { setMode("list"); resetWizard(); }}>{t("admin.academics.flashCards.cancel")}</Button>
               <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
                 onClick={() => step < 4 ? setStep(step + 1) : handleSave(true)}>
-                {step < 4 ? <>Next: {STEPS[step]} <ArrowRight className="w-3.5 h-3.5" /></> : <>{editingId ? "Save Changes" : "Publish"} <Check className="w-3.5 h-3.5" /></>}
+                {step < 4 ? <>{t("admin.academics.flashCards.nextStep", { step: STEPS[step] })} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" /></> : <>{editingId ? t("admin.academics.flashCards.saveChanges") : t("admin.academics.flashCards.publish")} <Check className="w-3.5 h-3.5" /></>}
               </Button>
             </div>
           </div>
@@ -330,60 +334,60 @@ const FlashCards = () => {
               <CardContent className="p-6">
                 {step === 1 && (
                   <>
-                    <p className="font-bold text-gray-900">1. Set Details</p>
-                    <p className="text-xs text-gray-400 mb-5">Provide basic information about your flashcard set.</p>
+                    <p className="font-bold text-gray-900">{t("admin.academics.flashCards.step1Heading")}</p>
+                    <p className="text-xs text-gray-400 mb-5">{t("admin.academics.flashCards.step1Subtitle")}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-1">
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Flashcard Set Title <span className="text-red-500">*</span></label>
-                        <input value={form.title} maxLength={100} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Enter a title for your flashcard set"
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldTitle")} <span className="text-red-500">*</span></label>
+                        <input value={form.title} maxLength={100} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder={t("admin.academics.flashCards.placeholderTitle")}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-                        <p className="text-[10px] text-gray-400 text-right mt-0.5">{form.title.length}/100</p>
+                        <p className="text-[10px] text-gray-400 text-end mt-0.5">{form.title.length}/100</p>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Subject <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldSubject")} <span className="text-red-500">*</span></label>
                         <Select value={form.subject} onValueChange={v => setForm(f => ({ ...f, subject: v }))}>
-                          <SelectTrigger className="border-gray-200"><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                          <SelectTrigger className="border-gray-200"><SelectValue placeholder={t("admin.academics.flashCards.placeholderSelectSubject")} /></SelectTrigger>
                           <SelectContent>{SUBJECT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Class / Grade <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldClassGrade")} <span className="text-red-500">*</span></label>
                         <Select value={form.grade} onValueChange={v => setForm(f => ({ ...f, grade: v }))}>
-                          <SelectTrigger className="border-gray-200"><SelectValue placeholder="Select Class / Grade" /></SelectTrigger>
+                          <SelectTrigger className="border-gray-200"><SelectValue placeholder={t("admin.academics.flashCards.placeholderSelectClassGrade")} /></SelectTrigger>
                           <SelectContent>{GRADE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Section</label>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldSection")}</label>
                         <Select value={form.section} onValueChange={v => setForm(f => ({ ...f, section: v }))}>
                           <SelectTrigger className="border-gray-200"><SelectValue /></SelectTrigger>
                           <SelectContent>{["All Sections", "A", "B", "C"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Language</label>
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldLanguage")}</label>
                         <Select value={form.language} onValueChange={v => setForm(f => ({ ...f, language: v }))}>
                           <SelectTrigger className="border-gray-200"><SelectValue /></SelectTrigger>
                           <SelectContent>{["English", "Arabic", "Urdu", "French"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Description</label>
-                        <textarea value={form.description} maxLength={300} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe what this flashcard set is about..." rows={3}
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldDescription")}</label>
+                        <textarea value={form.description} maxLength={300} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder={t("admin.academics.flashCards.placeholderDescription")} rows={3}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
-                        <p className="text-[10px] text-gray-400 text-right mt-0.5">{form.description.length}/300</p>
+                        <p className="text-[10px] text-gray-400 text-end mt-0.5">{form.description.length}/300</p>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Cover Image</label>
-                        <button onClick={() => toast.info("Image upload isn't available yet")} className="w-full border-2 border-dashed border-gray-200 rounded-lg p-5 flex flex-col items-center gap-1 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldCoverImage")}</label>
+                        <button onClick={() => toast.info(t("admin.academics.flashCards.toastImageUploadUnavailable"))} className="w-full border-2 border-dashed border-gray-200 rounded-lg p-5 flex flex-col items-center gap-1 hover:border-violet-300 hover:bg-violet-50/30 transition-colors">
                           <ImageIcon className="w-7 h-7 text-violet-400" />
-                          <span className="text-xs font-medium text-gray-600">Drag &amp; drop an image here</span>
-                          <span className="text-[10px] text-gray-400">or click to browse · 1024x576px (JPG, PNG)</span>
+                          <span className="text-xs font-medium text-gray-600">{t("admin.academics.flashCards.dragDropImage")}</span>
+                          <span className="text-[10px] text-gray-400">{t("admin.academics.flashCards.orClickBrowse")}</span>
                         </button>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-gray-600 mb-1 block">Tags (Optional)</label>
-                        <input placeholder="Add tags and press Enter"
+                        <label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.flashCards.fieldTagsOptional")}</label>
+                        <input placeholder={t("admin.academics.flashCards.placeholderTags")}
                           onKeyDown={e => { if (e.key === "Enter" && e.currentTarget.value.trim()) { setForm(f => ({ ...f, tags: [...f.tags, e.currentTarget.value.trim()] })); e.currentTarget.value = ""; } }}
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
                         <div className="flex flex-wrap gap-1.5 mt-2">
@@ -395,15 +399,15 @@ const FlashCards = () => {
                         </div>
                       </div>
                     </div>
-                    <label className="text-xs font-semibold text-gray-600 mt-5 mb-2 block">Who can access this set?</label>
+                    <label className="text-xs font-semibold text-gray-600 mt-5 mb-2 block">{t("admin.academics.flashCards.whoCanAccess")}</label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
-                        { id: "private", icon: Lock, title: "Only Me", desc: "Private set" },
-                        { id: "students", icon: Users, title: "My Students", desc: "Marked as assigned" },
-                        { id: "public", icon: Globe, title: "Public (School Library)", desc: "Visible in Library View" },
+                        { id: "private", icon: Lock, title: t("admin.academics.flashCards.accessOnlyMe"), desc: t("admin.academics.flashCards.accessOnlyMeDesc") },
+                        { id: "students", icon: Users, title: t("admin.academics.flashCards.accessMyStudents"), desc: t("admin.academics.flashCards.accessMyStudentsDesc") },
+                        { id: "public", icon: Globe, title: t("admin.academics.flashCards.accessPublic"), desc: t("admin.academics.flashCards.accessPublicDesc") },
                       ].map(o => (
                         <button key={o.id} onClick={() => setForm(f => ({ ...f, access: o.id as typeof form.access }))}
-                          className={cn("flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all", form.access === o.id ? "border-violet-500 bg-violet-50/40" : "border-gray-100 hover:border-gray-200")}>
+                          className={cn("flex items-center gap-2.5 p-3 rounded-xl border-2 text-start transition-all", form.access === o.id ? "border-violet-500 bg-violet-50/40" : "border-gray-100 hover:border-gray-200")}>
                           <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", form.access === o.id ? "bg-violet-100" : "bg-gray-100")}><o.icon className={cn("w-4 h-4", form.access === o.id ? "text-purple-600" : "text-gray-500")} /></div>
                           <div><p className="text-sm font-semibold text-gray-900">{o.title}</p><p className="text-[11px] text-gray-400">{o.desc}</p></div>
                         </button>
@@ -415,21 +419,21 @@ const FlashCards = () => {
                 {step === 2 && (
                   <>
                     <div className="flex items-center justify-between mb-1">
-                      <p className="font-bold text-gray-900">2. Add Flashcards</p>
-                      <Button size="sm" variant="outline" className="border-gray-200 gap-1.5" onClick={() => setCards(c => [...c, { q: "", a: "" }])}><Plus className="w-3.5 h-3.5" /> Add Card</Button>
+                      <p className="font-bold text-gray-900">{t("admin.academics.flashCards.step2Heading")}</p>
+                      <Button size="sm" variant="outline" className="border-gray-200 gap-1.5" onClick={() => setCards(c => [...c, { q: "", a: "" }])}><Plus className="w-3.5 h-3.5" /> {t("admin.academics.flashCards.addCard")}</Button>
                     </div>
-                    <p className="text-xs text-gray-400 mb-5">Add question &amp; answer pairs. You have {cards.length} card{cards.length !== 1 ? "s" : ""}.</p>
+                    <p className="text-xs text-gray-400 mb-5">{cards.length === 1 ? t("admin.academics.flashCards.cardCountSingular", { count: cards.length }) : t("admin.academics.flashCards.cardCountPlural", { count: cards.length })}</p>
                     <div className="space-y-4">
                       {cards.map((c, i) => (
                         <div key={i} className="rounded-xl border border-gray-100 p-4">
-                          <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-purple-600">Card {i + 1}</span>
+                          <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-purple-600">{t("admin.academics.flashCards.cardNumber", { number: i + 1 })}</span>
                             {cards.length > 1 && <button onClick={() => setCards(cs => cs.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>}
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div><label className="text-[11px] font-semibold text-gray-500 mb-1 block">Front (Question)</label>
-                              <textarea value={c.q} onChange={e => setCards(cs => cs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} rows={2} placeholder="Enter the question..." className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" /></div>
-                            <div><label className="text-[11px] font-semibold text-gray-500 mb-1 block">Back (Answer)</label>
-                              <textarea value={c.a} onChange={e => setCards(cs => cs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder="Enter the answer..." className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" /></div>
+                            <div><label className="text-[11px] font-semibold text-gray-500 mb-1 block">{t("admin.academics.flashCards.fieldFrontQuestion")}</label>
+                              <textarea value={c.q} onChange={e => setCards(cs => cs.map((x, j) => j === i ? { ...x, q: e.target.value } : x))} rows={2} placeholder={t("admin.academics.flashCards.placeholderQuestion")} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" /></div>
+                            <div><label className="text-[11px] font-semibold text-gray-500 mb-1 block">{t("admin.academics.flashCards.fieldBackAnswer")}</label>
+                              <textarea value={c.a} onChange={e => setCards(cs => cs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))} rows={2} placeholder={t("admin.academics.flashCards.placeholderAnswer")} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" /></div>
                           </div>
                         </div>
                       ))}
@@ -439,15 +443,15 @@ const FlashCards = () => {
 
                 {step === 3 && (
                   <>
-                    <p className="font-bold text-gray-900">3. Study &amp; Memory Options</p>
-                    <p className="text-xs text-gray-400 mb-5">These power the live practice screen — memory-science techniques that help students actually <span className="font-semibold text-purple-600">remember</span>, not just skim. Students can still toggle them during a session.</p>
+                    <p className="font-bold text-gray-900">{t("admin.academics.flashCards.step3Heading")}</p>
+                    <p className="text-xs text-gray-400 mb-5">{t("admin.academics.flashCards.step3IntroPart1")} <span className="font-semibold text-purple-600">{t("admin.academics.flashCards.step3IntroRemember")}</span>{t("admin.academics.flashCards.step3IntroPart2")}</p>
                     <div className="space-y-3">
                       {([
-                        { key: "shuffle", icon: Sparkles, t: "Shuffle cards", d: "Randomize order each session so students learn the fact, not the position.", tone: "text-purple-600 bg-blue-50" },
-                        { key: "spacedRepetition", icon: Brain, t: "Spaced repetition (Leitner)", d: "Cards you miss come back again within the session until they stick. The #1 proven memory technique.", tone: "text-purple-600 bg-violet-50" },
-                        { key: "showHints", icon: Lightbulb, t: "Progressive hints", d: "Stuck? Reveal the answer gradually (length → first letters → first word) so recall stays active.", tone: "text-amber-600 bg-amber-50" },
-                        { key: "typeAnswer", icon: Keyboard, t: "Type-to-recall", d: "Ask students to type the answer before flipping — active production beats passive reading for retention. Great for formulas.", tone: "text-emerald-600 bg-emerald-50" },
-                        { key: "gamified", icon: Flame, t: "XP, streaks & combos", d: "Reward correct streaks with points and combos to keep students motivated and coming back.", tone: "text-rose-600 bg-rose-50" },
+                        { key: "shuffle", icon: Sparkles, t: t("admin.academics.flashCards.optShuffleTitle"), d: t("admin.academics.flashCards.optShuffleDesc"), tone: "text-purple-600 bg-blue-50" },
+                        { key: "spacedRepetition", icon: Brain, t: t("admin.academics.flashCards.optSpacedTitle"), d: t("admin.academics.flashCards.optSpacedDesc"), tone: "text-purple-600 bg-violet-50" },
+                        { key: "showHints", icon: Lightbulb, t: t("admin.academics.flashCards.optHintsTitle"), d: t("admin.academics.flashCards.optHintsDesc"), tone: "text-amber-600 bg-amber-50" },
+                        { key: "typeAnswer", icon: Keyboard, t: t("admin.academics.flashCards.optTypeAnswerTitle"), d: t("admin.academics.flashCards.optTypeAnswerDesc"), tone: "text-emerald-600 bg-emerald-50" },
+                        { key: "gamified", icon: Flame, t: t("admin.academics.flashCards.optGamifiedTitle"), d: t("admin.academics.flashCards.optGamifiedDesc"), tone: "text-rose-600 bg-rose-50" },
                       ] as const).map((o) => (
                         <label key={o.key} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 hover:border-violet-200 transition-colors cursor-pointer">
                           <div className="flex items-center gap-3 min-w-0">
@@ -463,29 +467,29 @@ const FlashCards = () => {
                     </div>
                     <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-violet-50/60">
                       <Zap className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-gray-600">Every session also uses <span className="font-semibold">active recall</span> (self-rated confidence), a live <span className="font-semibold">timer</span>, keyboard shortcuts, and rotating <span className="font-semibold">memory-boost tips</span> — all built in.</p>
+                      <p className="text-xs text-gray-600">{t("admin.academics.flashCards.step3FooterPart1")} <span className="font-semibold">{t("admin.academics.flashCards.step3FooterActiveRecall")}</span> {t("admin.academics.flashCards.step3FooterPart2")} <span className="font-semibold">{t("admin.academics.flashCards.step3FooterTimer")}</span>{t("admin.academics.flashCards.step3FooterPart3")} <span className="font-semibold">{t("admin.academics.flashCards.step3FooterTips")}</span> {t("admin.academics.flashCards.step3FooterPart4")}</p>
                     </div>
                   </>
                 )}
 
                 {step === 4 && (
                   <>
-                    <p className="font-bold text-gray-900">4. Review &amp; Publish</p>
-                    <p className="text-xs text-gray-400 mb-5">Review your flashcard set before publishing.</p>
+                    <p className="font-bold text-gray-900">{t("admin.academics.flashCards.step4Heading")}</p>
+                    <p className="text-xs text-gray-400 mb-5">{t("admin.academics.flashCards.step4Subtitle")}</p>
                     <div className="space-y-3 text-sm">
                       {[
-                        ["Title", form.title || "Untitled Set"], ["Subject", form.subject || "—"],
-                        ["Class / Grade", `${form.grade || "—"} ${form.section}`], ["Language", form.language],
-                        ["Total Cards", String(cards.filter(c => c.q.trim() || c.a.trim()).length)],
-                        ["Visibility", form.access === "private" ? "Only Me" : form.access === "students" ? "My Students" : "Public"],
-                        ["Tags", form.tags.join(", ") || "—"],
+                        [t("admin.academics.flashCards.reviewTitle"), form.title || t("admin.academics.flashCards.untitledSet")], [t("admin.academics.flashCards.reviewSubject"), form.subject || "—"],
+                        [t("admin.academics.flashCards.reviewClassGrade"), `${form.grade || "—"} ${form.section}`], [t("admin.academics.flashCards.reviewLanguage"), form.language],
+                        [t("admin.academics.flashCards.reviewTotalCards"), String(cards.filter(c => c.q.trim() || c.a.trim()).length)],
+                        [t("admin.academics.flashCards.reviewVisibility"), form.access === "private" ? t("admin.academics.flashCards.accessOnlyMe") : form.access === "students" ? t("admin.academics.flashCards.accessMyStudents") : t("admin.academics.flashCards.accessPublicShort")],
+                        [t("admin.academics.flashCards.reviewTags"), form.tags.join(", ") || "—"],
                       ].map(([k, v]) => (
-                        <div key={k} className="flex items-center justify-between py-2 border-b border-gray-50"><span className="text-gray-500">{k}</span><span className="font-semibold text-gray-900 text-right">{v}</span></div>
+                        <div key={k} className="flex items-center justify-between py-2 border-b border-gray-50"><span className="text-gray-500">{k}</span><span className="font-semibold text-gray-900 text-end">{v}</span></div>
                       ))}
                     </div>
                     <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-emerald-50/60">
                       <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-gray-600">Everything looks good! Click <span className="font-semibold">{editingId ? "Save Changes" : "Publish"}</span> to make this set available to students.</p>
+                      <p className="text-xs text-gray-600">{t("admin.academics.flashCards.step4FooterPart1")} <span className="font-semibold">{editingId ? t("admin.academics.flashCards.saveChanges") : t("admin.academics.flashCards.publish")}</span> {t("admin.academics.flashCards.step4FooterPart2")}</p>
                     </div>
                   </>
                 )}
@@ -496,30 +500,30 @@ const FlashCards = () => {
             <div className="space-y-5">
               <Card className="border border-gray-100 shadow-sm">
                 <CardContent className="p-5">
-                  <p className="font-bold text-gray-900">Live Preview</p>
-                  <p className="text-xs text-gray-400 mb-4">This is how your flashcard set will appear to students.</p>
+                  <p className="font-bold text-gray-900">{t("admin.academics.flashCards.livePreview")}</p>
+                  <p className="text-xs text-gray-400 mb-4">{t("admin.academics.flashCards.livePreviewSubtitle")}</p>
                   <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-violet-50/50 to-white p-6 text-center">
                     <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center mb-4 shadow-lg shadow-violet-200">
                       <HelpCircle className="w-9 h-9 text-white" />
                     </div>
-                    <p className="text-lg font-bold text-gray-900">{form.title || "Flashcard Set Title"}</p>
-                    <span className="inline-block text-xs font-semibold bg-violet-100 text-violet-700 rounded-md px-2 py-0.5 my-2">{form.subject || "Subject"}</span>
+                    <p className="text-lg font-bold text-gray-900">{form.title || t("admin.academics.flashCards.previewSetTitle")}</p>
+                    <span className="inline-block text-xs font-semibold bg-violet-100 text-violet-700 rounded-md px-2 py-0.5 my-2">{form.subject || t("admin.academics.flashCards.previewSubject")}</span>
                     <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500 my-2">
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {form.grade || "Class / Grade"}</span>
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {form.grade || t("admin.academics.flashCards.fieldClassGrade")}</span>
                       <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> {form.section}</span>
                       <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> {form.language}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">{form.description || "This is a brief description of your flashcard set. It helps students understand what they will learn."}</p>
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-3"><BookOpen className="w-3.5 h-3.5" /> {cards.filter(c => c.q.trim() || c.a.trim()).length} Cards</div>
+                    <p className="text-xs text-gray-500 mt-2">{form.description || t("admin.academics.flashCards.previewDescriptionPlaceholder")}</p>
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mt-3"><BookOpen className="w-3.5 h-3.5" /> {t("admin.academics.flashCards.previewCardsCount", { count: cards.filter(c => c.q.trim() || c.a.trim()).length })}</div>
                   </div>
                 </CardContent>
               </Card>
               <Card className="border border-violet-100 shadow-sm bg-violet-50/40">
                 <CardContent className="p-4">
-                  <p className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-violet-500" /> Tips for a great flashcard set</p>
+                  <p className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-violet-500" /> {t("admin.academics.flashCards.tipsHeading")}</p>
                   <ul className="space-y-1 text-xs text-gray-600">
-                    {["Use a clear and specific title.", "Add a helpful description for better understanding.", "Choose the right subject and class.", "Keep answers short and exam-focused."].map(t => (
-                      <li key={t} className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {t}</li>
+                    {[t("admin.academics.flashCards.tip1"), t("admin.academics.flashCards.tip2"), t("admin.academics.flashCards.tip3"), t("admin.academics.flashCards.tip4")].map(tip => (
+                      <li key={tip} className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {tip}</li>
                     ))}
                   </ul>
                 </CardContent>
@@ -527,7 +531,7 @@ const FlashCards = () => {
               <Card className="border border-amber-100 shadow-sm bg-amber-50/50">
                 <CardContent className="p-4 flex items-start gap-2">
                   <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div><p className="text-sm font-semibold text-gray-800">Save Draft writes immediately</p><p className="text-xs text-gray-500">Use Save Draft any time — it persists what you've entered so far without leaving the editor.</p></div>
+                  <div><p className="text-sm font-semibold text-gray-800">{t("admin.academics.flashCards.saveDraftHeading")}</p><p className="text-xs text-gray-500">{t("admin.academics.flashCards.saveDraftDesc")}</p></div>
                 </CardContent>
               </Card>
             </div>
@@ -545,41 +549,41 @@ const FlashCards = () => {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0"><Brain className="h-5 w-5 text-purple-600" /></div>
-            <div><h1 className="text-2xl font-bold text-slate-900">Flashcards</h1><p className="text-sm text-slate-400">Create, organize and share flashcards for better learning and revision.</p></div>
+            <div><h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.flashCards.pageTitle")}</h1><p className="text-sm text-slate-400">{t("admin.academics.flashCards.pageSubtitle")}</p></div>
           </div>
           <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-sm" onClick={openCreate}>
-            <Plus className="w-4 h-4" /> Create Flashcard Set
+            <Plus className="w-4 h-4" /> {t("admin.academics.flashCards.createSetButton")}
           </Button>
         </div>
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
-          {FC_TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn("relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors", tab === t.id ? "text-purple-600" : "text-gray-400 hover:text-gray-600")}>
-              <t.icon className="w-4 h-4" /> {t.label}
-              {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-purple-600" />}
+          {FC_TABS.map(tb => (
+            <button key={tb.id} onClick={() => setTab(tb.id)}
+              className={cn("relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors", tab === tb.id ? "text-purple-600" : "text-gray-400 hover:text-gray-600")}>
+              <tb.icon className="w-4 h-4" /> {t(tb.labelKey)}
+              {tab === tb.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-purple-600" />}
             </button>
           ))}
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KPI icon={BookOpen} label="Total Sets" value={String(sets.length)} color="text-purple-600" bg="bg-violet-50" />
-          <KPI icon={Brain} label="Total Cards" value={String(totalCards)} color="text-amber-600" bg="bg-amber-50" />
-          <KPI icon={Share2} label="Assigned Sets" value={String(assignedSets.length)} color="text-purple-600" bg="bg-blue-50" />
-          <KPI icon={FolderOpen} label="Subjects Covered" value={String(Object.keys(bySubject).length)} color="text-emerald-600" bg="bg-emerald-50" />
+          <KPI icon={BookOpen} label={t("admin.academics.flashCards.kpiTotalSets")} value={String(sets.length)} color="text-purple-600" bg="bg-violet-50" />
+          <KPI icon={Brain} label={t("admin.academics.flashCards.kpiTotalCards")} value={String(totalCards)} color="text-amber-600" bg="bg-amber-50" />
+          <KPI icon={Share2} label={t("admin.academics.flashCards.kpiAssignedSets")} value={String(assignedSets.length)} color="text-purple-600" bg="bg-blue-50" />
+          <KPI icon={FolderOpen} label={t("admin.academics.flashCards.kpiSubjectsCovered")} value={String(Object.keys(bySubject).length)} color="text-emerald-600" bg="bg-emerald-50" />
         </div>
 
         {/* Filters (for list-style tabs) */}
         {(tab === "my" || tab === "assigned" || tab === "library") && (
           <div className="flex items-end gap-3 flex-wrap">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input placeholder="Search flashcard sets..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 pr-3 h-9 w-64 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input placeholder={t("admin.academics.flashCards.searchPlaceholder")} value={search} onChange={e => setSearch(e.target.value)} className="ps-9 pe-3 h-9 w-64 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
             </div>
-            <Select value={subject} onValueChange={setSubject}><SelectTrigger className="h-9 w-[150px] text-sm border-gray-200"><SelectValue /></SelectTrigger><SelectContent>{["All Subjects", ...SUBJECT_OPTIONS].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-            <Select value={grade} onValueChange={setGrade}><SelectTrigger className="h-9 w-[130px] text-sm border-gray-200"><SelectValue /></SelectTrigger><SelectContent>{["All Grades", ...GRADE_OPTIONS].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+            <Select value={subject} onValueChange={setSubject}><SelectTrigger className="h-9 w-[150px] text-sm border-gray-200"><SelectValue /></SelectTrigger><SelectContent>{["All Subjects", ...SUBJECT_OPTIONS].map(o => <SelectItem key={o} value={o}>{o === "All Subjects" ? t("admin.academics.flashCards.allSubjects") : o}</SelectItem>)}</SelectContent></Select>
+            <Select value={grade} onValueChange={setGrade}><SelectTrigger className="h-9 w-[130px] text-sm border-gray-200"><SelectValue /></SelectTrigger><SelectContent>{["All Grades", ...GRADE_OPTIONS].map(o => <SelectItem key={o} value={o}>{o === "All Grades" ? t("admin.academics.flashCards.allGrades") : o}</SelectItem>)}</SelectContent></Select>
           </div>
         )}
 
@@ -592,15 +596,15 @@ const FlashCards = () => {
               {/* Quick Actions */}
               <Card className="border border-gray-100 shadow-sm">
                 <CardContent className="p-4">
-                  <p className="font-bold text-gray-900 mb-3 text-sm">Quick Actions</p>
+                  <p className="font-bold text-gray-900 mb-3 text-sm">{t("admin.academics.flashCards.quickActions")}</p>
                   <div className="space-y-1.5">
                     {[
-                      { label: "Create Flashcard Set", icon: Plus, color: "text-purple-600", bg: "bg-violet-50", fn: openCreate },
-                      { label: "Browse Library View", icon: Library, color: "text-amber-600", bg: "bg-amber-50", fn: () => setTab("library") },
-                      { label: "View Assigned Sets", icon: Share2, color: "text-emerald-600", bg: "bg-emerald-50", fn: () => setTab("assigned") },
-                      { label: "Group by Subject", icon: LayoutTemplate, color: "text-rose-600", bg: "bg-rose-50", fn: () => setTab("subject") },
+                      { label: t("admin.academics.flashCards.qaCreateSet"), icon: Plus, color: "text-purple-600", bg: "bg-violet-50", fn: openCreate },
+                      { label: t("admin.academics.flashCards.qaBrowseLibrary"), icon: Library, color: "text-amber-600", bg: "bg-amber-50", fn: () => setTab("library") },
+                      { label: t("admin.academics.flashCards.qaViewAssigned"), icon: Share2, color: "text-emerald-600", bg: "bg-emerald-50", fn: () => setTab("assigned") },
+                      { label: t("admin.academics.flashCards.qaGroupBySubject"), icon: LayoutTemplate, color: "text-rose-600", bg: "bg-rose-50", fn: () => setTab("subject") },
                     ].map(a => (
-                      <button key={a.label} onClick={a.fn} className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 transition-colors text-left">
+                      <button key={a.label} onClick={a.fn} className="w-full flex items-center gap-2.5 p-2 rounded-lg border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 transition-colors text-start">
                         <span className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", a.bg)}><a.icon className={cn("w-3.5 h-3.5", a.color)} /></span>
                         <span className="text-sm font-semibold text-gray-900">{a.label}</span>
                       </button>
@@ -612,14 +616,14 @@ const FlashCards = () => {
               {/* Flashcard Usage chart */}
               <Card className="border border-gray-100 shadow-sm">
                 <CardContent className="p-4">
-                  <p className="font-bold text-gray-900 mb-3 text-sm">Cards by Subject</p>
+                  <p className="font-bold text-gray-900 mb-3 text-sm">{t("admin.academics.flashCards.cardsBySubject")}</p>
                   {subjectDistribution.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-8 text-center">Create a set to see the breakdown.</p>
+                    <p className="text-xs text-gray-400 py-8 text-center">{t("admin.academics.flashCards.createSetToSeeBreakdown")}</p>
                   ) : (
                     <div className="flex items-center gap-3">
                       <div className="relative h-28 w-28 shrink-0">
                         <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={subjectDistribution} dataKey="value" cx="50%" cy="50%" innerRadius={32} outerRadius={54} paddingAngle={2}>{subjectDistribution.map((d, i) => <Cell key={i} fill={d.color} />)}</Pie></PieChart></ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><p className="text-base font-bold text-gray-900">{totalCards}</p><p className="text-[9px] text-gray-400">Total Cards</p></div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><p className="text-base font-bold text-gray-900">{totalCards}</p><p className="text-[9px] text-gray-400">{t("admin.academics.flashCards.kpiTotalCards")}</p></div>
                       </div>
                       <div className="flex-1 space-y-1">{subjectDistribution.map(d => (<div key={d.name} className="flex items-center justify-between"><div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: d.color }} /><span className="text-xs text-gray-600">{d.name}</span></div><span className="text-xs font-bold text-gray-900">{d.value}</span></div>))}</div>
                     </div>
@@ -630,11 +634,11 @@ const FlashCards = () => {
               {/* Recently Modified */}
               <Card className="border border-gray-100 shadow-sm">
                 <CardContent className="p-4">
-                  <p className="font-bold text-gray-900 mb-3 text-sm">Recently Modified</p>
+                  <p className="font-bold text-gray-900 mb-3 text-sm">{t("admin.academics.flashCards.recentlyModified")}</p>
                   {recentlyViewed.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-8 text-center">No sets yet.</p>
+                    <p className="text-xs text-gray-400 py-8 text-center">{t("admin.academics.flashCards.noSetsYet")}</p>
                   ) : (
-                    <div className="space-y-2.5">{recentlyViewed.map((s, i) => (<button key={s.id} onClick={() => openEdit(s)} className="w-full flex items-center gap-2.5 text-left group"><span className="w-2 h-2 rounded-sm shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} /><span className="flex-1 text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors truncate">{s.name}</span><span className="text-[11px] text-gray-400 shrink-0">{fmtDate(s.lastModified)}</span></button>))}</div>
+                    <div className="space-y-2.5">{recentlyViewed.map((s, i) => (<button key={s.id} onClick={() => openEdit(s)} className="w-full flex items-center gap-2.5 text-start group"><span className="w-2 h-2 rounded-sm shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} /><span className="flex-1 text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors truncate">{s.name}</span><span className="text-[11px] text-gray-400 shrink-0">{fmtDate(s.lastModified)}</span></button>))}</div>
                   )}
                 </CardContent>
               </Card>
@@ -649,10 +653,10 @@ const FlashCards = () => {
         {tab === "library" && (
           <>
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <p className="text-sm text-gray-500">{filterSet(sets).length} set{filterSet(sets).length === 1 ? "" : "s"} available</p>
+              <p className="text-sm text-gray-500">{filterSet(sets).length === 1 ? t("admin.academics.flashCards.setsAvailableSingular", { count: filterSet(sets).length }) : t("admin.academics.flashCards.setsAvailablePlural", { count: filterSet(sets).length })}</p>
             </div>
             {filterSet(sets).length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-52 text-center text-gray-400"><Library className="w-10 h-10 mb-2 text-gray-200" /> No flashcard sets yet — create one to see it here.</div>
+              <div className="flex flex-col items-center justify-center h-52 text-center text-gray-400"><Library className="w-10 h-10 mb-2 text-gray-200" /> {t("admin.academics.flashCards.emptyLibrary")}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filterSet(sets).map(s => <SetCard key={s.id} s={s} onOpen={() => openEdit(s)} onStudy={() => openPractice(s)} onGame={() => openGame(s)} />)}
@@ -665,19 +669,19 @@ const FlashCards = () => {
         {tab === "subject" && (
           <div className="space-y-5">
             {Object.keys(bySubject).length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-52 text-center text-gray-400"><FolderOpen className="w-10 h-10 mb-2 text-gray-200" /> No flashcard sets yet.</div>
+              <div className="flex flex-col items-center justify-center h-52 text-center text-gray-400"><FolderOpen className="w-10 h-10 mb-2 text-gray-200" /> {t("admin.academics.flashCards.emptyNoSets")}</div>
             ) : Object.entries(bySubject).map(([subj, list]) => (
               <Card key={subj} className="border border-gray-100 shadow-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <span className={cn("text-sm font-bold rounded-md px-2.5 py-1", SUBJECT_COLORS[subj] || "bg-gray-100 text-gray-600")}>{subj}</span>
-                    <span className="text-xs text-gray-400">{list.length} sets · {list.reduce((a, b) => a + b.cards.length, 0)} cards</span>
+                    <span className="text-xs text-gray-400">{t("admin.academics.flashCards.setsAndCardsSummary", { sets: list.length, cards: list.reduce((a, b) => a + b.cards.length, 0) })}</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     {list.map(s => (
-                      <button key={s.id} onClick={() => openEdit(s)} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-violet-200 hover:bg-violet-50/30 text-left transition-colors">
+                      <button key={s.id} onClick={() => openEdit(s)} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-violet-200 hover:bg-violet-50/30 text-start transition-colors">
                         <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center shrink-0"><BookOpen className="w-4 h-4 text-violet-500" /></div>
-                        <div className="min-w-0"><p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p><p className="text-[11px] text-gray-400">{s.cards.length} cards · {s.classId || "—"}</p></div>
+                        <div className="min-w-0"><p className="text-sm font-semibold text-gray-900 truncate">{s.name}</p><p className="text-[11px] text-gray-400">{t("admin.academics.flashCards.cardsCount", { count: s.cards.length })} · {s.classId || "—"}</p></div>
                       </button>
                     ))}
                   </div>
@@ -691,19 +695,19 @@ const FlashCards = () => {
         {tab === "class" && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {byClass.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center h-52 text-center text-gray-400"><GraduationCap className="w-10 h-10 mb-2 text-gray-200" /> No flashcard sets yet.</div>
+              <div className="col-span-full flex flex-col items-center justify-center h-52 text-center text-gray-400"><GraduationCap className="w-10 h-10 mb-2 text-gray-200" /> {t("admin.academics.flashCards.emptyNoSets")}</div>
             ) : byClass.map(([cls, list]) => (
               <Card key={cls} className="border border-gray-100 shadow-sm">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2"><div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center"><GraduationCap className="w-4 h-4 text-indigo-500" /></div><p className="font-bold text-gray-900">{cls}</p></div>
-                    <span className="text-xs font-semibold text-gray-400">{list.length} sets</span>
+                    <span className="text-xs font-semibold text-gray-400">{list.length === 1 ? t("admin.academics.flashCards.setsCountSingular", { count: list.length }) : t("admin.academics.flashCards.setsCountPlural", { count: list.length })}</span>
                   </div>
                   <div className="space-y-2">
                     {list.map(s => (
-                      <button key={s.id} onClick={() => openEdit(s)} className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-left">
+                      <button key={s.id} onClick={() => openEdit(s)} className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-start">
                         <span className="text-sm text-gray-700 truncate">{s.name}</span>
-                        <span className={cn("text-[10px] font-semibold rounded px-1.5 py-0.5 shrink-0 ml-2", SUBJECT_COLORS[s.subject] || "bg-gray-100 text-gray-600")}>{s.subject || "—"}</span>
+                        <span className={cn("text-[10px] font-semibold rounded px-1.5 py-0.5 shrink-0 ms-2", SUBJECT_COLORS[s.subject] || "bg-gray-100 text-gray-600")}>{s.subject || "—"}</span>
                       </button>
                     ))}
                   </div>
@@ -717,12 +721,12 @@ const FlashCards = () => {
       <AlertDialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>This permanently removes the set and its {deleteTarget?.cards.length ?? 0} cards. This cannot be undone.</AlertDialogDescription>
+            <AlertDialogTitle>{t("admin.academics.flashCards.deleteDialogTitle", { name: deleteTarget?.name })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("admin.academics.flashCards.deleteDialogDescription", { count: deleteTarget?.cards.length ?? 0 })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{t("admin.academics.flashCards.cancel")}</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>{t("admin.academics.flashCards.actionDelete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

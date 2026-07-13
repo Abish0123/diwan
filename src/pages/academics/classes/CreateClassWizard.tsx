@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,8 +77,26 @@ const DEFAULT_SUBJECTS = [
   "Music",
 ];
 
+// Display-label keys for semester identifiers (identifiers themselves are stored as data).
+const SEMESTER_LABEL_KEYS: Record<string, string> = {
+  "Semester 1": "admin.academics.createClassWizard.semester1",
+  "Semester 2": "admin.academics.createClassWizard.semester2",
+  "Semester 3": "admin.academics.createClassWizard.semester3",
+  "Semester 4": "admin.academics.createClassWizard.semester4",
+};
+
 // Days of the week and periods for auto-timetable generation
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+// Display-label keys for the day abbreviations shown in the timetable preview
+// (DAYS values themselves are stored as data and must stay in English).
+const DAY_ABBR_LABEL_KEYS: Record<string, string> = {
+  Monday: "admin.academics.createClassWizard.dayMonAbbr",
+  Tuesday: "admin.academics.createClassWizard.dayTueAbbr",
+  Wednesday: "admin.academics.createClassWizard.dayWedAbbr",
+  Thursday: "admin.academics.createClassWizard.dayThuAbbr",
+  Friday: "admin.academics.createClassWizard.dayFriAbbr",
+  Saturday: "admin.academics.createClassWizard.daySatAbbr",
+};
 const PERIODS = [
   { start: "08:00", end: "09:00" },
   { start: "09:00", end: "10:00" },
@@ -87,17 +106,19 @@ const PERIODS = [
   { start: "14:00", end: "15:00" },
 ];
 
-const steps = [
-  { id: 1, title: "Basic Info", description: "Class name & year", icon: GraduationCap },
-  { id: 2, title: "Sections", description: "Setup sections & capacity", icon: LayoutGrid },
-  { id: 3, title: "Semester", description: "Academic semester", icon: Calendar },
-  { id: 4, title: "Subjects", description: "Assign subjects", icon: BookOpen },
-  { id: 5, title: "Teachers", description: "Allocate staff", icon: UserCheck },
-  { id: 6, title: "Students", description: "Assign students", icon: Users },
-  { id: 7, title: "Timetable", description: "Quick schedule setup", icon: Calendar },
+const STEP_DEFS = [
+  { id: 1, titleKey: "admin.academics.createClassWizard.step1Title", descKey: "admin.academics.createClassWizard.step1Desc", icon: GraduationCap },
+  { id: 2, titleKey: "admin.academics.createClassWizard.step2Title", descKey: "admin.academics.createClassWizard.step2Desc", icon: LayoutGrid },
+  { id: 3, titleKey: "admin.academics.createClassWizard.step3Title", descKey: "admin.academics.createClassWizard.step3Desc", icon: Calendar },
+  { id: 4, titleKey: "admin.academics.createClassWizard.step4Title", descKey: "admin.academics.createClassWizard.step4Desc", icon: BookOpen },
+  { id: 5, titleKey: "admin.academics.createClassWizard.step5Title", descKey: "admin.academics.createClassWizard.step5Desc", icon: UserCheck },
+  { id: 6, titleKey: "admin.academics.createClassWizard.step6Title", descKey: "admin.academics.createClassWizard.step6Desc", icon: Users },
+  { id: 7, titleKey: "admin.academics.createClassWizard.step7Title", descKey: "admin.academics.createClassWizard.step7Desc", icon: Calendar },
 ];
 
 export default function CreateClassWizard() {
+  const { t } = useTranslation();
+  const steps = STEP_DEFS.map(s => ({ ...s, title: t(s.titleKey), description: t(s.descKey) }));
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     className: "",
@@ -232,12 +253,18 @@ export default function CreateClassWizard() {
       // Final re-check against the live class list (it may have loaded/changed
       // since step 2 was validated).
       if (duplicateSections.length > 0) {
-        toast.error(`${duplicateSections.map(s => fullClassName(s.name)).join(", ")} already exist${duplicateSections.length === 1 ? "s" : ""} — choose a different section name`);
+        const dupNames = duplicateSections.map(s => fullClassName(s.name)).join(", ");
+        toast.error(
+          duplicateSections.length === 1
+            ? t("admin.academics.createClassWizard.duplicateSectionErrorSingular", { names: dupNames })
+            : t("admin.academics.createClassWizard.duplicateSectionErrorPlural", { names: dupNames })
+        );
         setCurrentStep(2);
         return;
       }
       try {
         for (const section of formData.sections) {
+          // "Unassigned" is stored as data (compared elsewhere as an identifier) — keep as literal English.
           const selectedTeacherName = formData.classTeacher || "Unassigned";
 
           const classId = await addClass({
@@ -271,12 +298,14 @@ export default function CreateClassWizard() {
             }
           }
         }
-        toast.success("Class created successfully!", {
-          description: formData.timetable === "auto" ? "Timetable has been auto-generated." : "You can set up the timetable later.",
+        toast.success(t("admin.academics.createClassWizard.classCreatedSuccess"), {
+          description: formData.timetable === "auto"
+            ? t("admin.academics.createClassWizard.timetableAutoGeneratedDesc")
+            : t("admin.academics.createClassWizard.timetableLaterDesc"),
         });
         navigate("/academics/classes");
       } catch (error) {
-        toast.error("Failed to create class. Please try again.");
+        toast.error(t("admin.academics.createClassWizard.classCreateFailedError"));
         console.error(error);
       }
     }
@@ -314,7 +343,7 @@ export default function CreateClassWizard() {
     const trimmed = newSubjectInput.trim();
     if (!trimmed) return;
     if (formData.subjects.includes(trimmed)) {
-      toast.warning("Subject already added");
+      toast.warning(t("admin.academics.createClassWizard.subjectAlreadyAdded"));
       return;
     }
     setFormData({ ...formData, subjects: [...formData.subjects, trimmed] });
@@ -341,7 +370,7 @@ export default function CreateClassWizard() {
               {/* Class Name Dropdown */}
               <div className="space-y-2">
                 <Label htmlFor="className" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Class Name (Grade)
+                  {t("admin.academics.createClassWizard.classNameLabel")}
                 </Label>
                 <Select
                   value={formData.className}
@@ -361,7 +390,7 @@ export default function CreateClassWizard() {
                   }}
                 >
                   <SelectTrigger className="rounded-xl h-12 border-slate-200 bg-white">
-                    <SelectValue placeholder="Select grade (Pre-KG to Grade 12)" />
+                    <SelectValue placeholder={t("admin.academics.createClassWizard.selectGradePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[280px] overflow-y-auto rounded-xl">
                     {grades.map(grade => (
@@ -376,14 +405,14 @@ export default function CreateClassWizard() {
               {/* Academic Year - Scrollable Select */}
               <div className="space-y-2">
                 <Label htmlFor="academicYear" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Academic Year
+                  {t("admin.academics.createClassWizard.academicYearLabel")}
                 </Label>
                 <Select
                   value={formData.academicYear}
                   onValueChange={(v) => setFormData({ ...formData, academicYear: v })}
                 >
                   <SelectTrigger className="rounded-xl h-12 border-slate-200 bg-white">
-                    <SelectValue placeholder="Select academic year" />
+                    <SelectValue placeholder={t("admin.academics.createClassWizard.selectAcademicYearPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[250px] overflow-y-auto rounded-xl">
                     {ACADEMIC_YEAR_OPTIONS.map(year => (
@@ -410,7 +439,7 @@ export default function CreateClassWizard() {
               {formData.sections.map((section, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <div className="flex-1 space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Section Name</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.sectionNameLabel")}</Label>
                     <Input
                       value={section.name}
                       onChange={(e) => {
@@ -422,7 +451,7 @@ export default function CreateClassWizard() {
                     />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Capacity</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.capacityLabel")}</Label>
                     <Input
                       type="number"
                       value={section.capacity}
@@ -451,13 +480,15 @@ export default function CreateClassWizard() {
                 onClick={addSection}
               >
                 <Plus className="h-4 w-4" />
-                Add Another Section
+                {t("admin.academics.createClassWizard.addAnotherSection")}
               </Button>
               {duplicateSections.length > 0 && (
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-rose-500 flex-shrink-0" />
                   <p className="text-xs text-rose-600 font-semibold">
-                    {duplicateSections.map(s => fullClassName(s.name)).join(", ")} already exist{duplicateSections.length === 1 ? "s" : ""} — choose a different section name.
+                    {duplicateSections.length === 1
+                      ? t("admin.academics.createClassWizard.duplicateSectionInlineSingular", { names: duplicateSections.map(s => fullClassName(s.name)).join(", ") })
+                      : t("admin.academics.createClassWizard.duplicateSectionInlinePlural", { names: duplicateSections.map(s => fullClassName(s.name)).join(", ") })}
                   </p>
                 </div>
               )}
@@ -477,8 +508,8 @@ export default function CreateClassWizard() {
                 <Calendar className="h-8 w-8 text-[#9810fa]" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Select Semester</h3>
-                <p className="text-slate-500 text-sm mt-1">Which semester will this class belong to?</p>
+                <h3 className="text-lg font-bold text-slate-900">{t("admin.academics.createClassWizard.selectSemesterTitle")}</h3>
+                <p className="text-slate-500 text-sm mt-1">{t("admin.academics.createClassWizard.selectSemesterSubtitle")}</p>
               </div>
             </div>
 
@@ -501,7 +532,7 @@ export default function CreateClassWizard() {
                     {sem.split(" ")[1]}
                   </div>
                   <span className={cn("text-sm font-bold", formData.semester === sem ? "text-[#9810fa]" : "text-slate-700")}>
-                    {sem}
+                    {t(SEMESTER_LABEL_KEYS[sem] || sem)}
                   </span>
                 </div>
               ))}
@@ -509,9 +540,9 @@ export default function CreateClassWizard() {
 
             {/* Custom semester input */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Or enter custom semester name</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.customSemesterLabel")}</Label>
               <Input
-                placeholder="e.g. Q1, Term 1, First Half..."
+                placeholder={t("admin.academics.createClassWizard.customSemesterPlaceholder")}
                 value={formData.semester.startsWith("Semester") ? "" : formData.semester}
                 onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                 className="rounded-xl h-11"
@@ -520,7 +551,7 @@ export default function CreateClassWizard() {
 
             <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-              <p className="text-xs text-amber-700 font-medium">You can skip this step — semester can be updated later from class settings.</p>
+              <p className="text-xs text-amber-700 font-medium">{t("admin.academics.createClassWizard.semesterSkipNote")}</p>
             </div>
           </motion.div>
         );
@@ -535,7 +566,7 @@ export default function CreateClassWizard() {
             {/* Selected subjects as tags */}
             {formData.subjects.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Selected Subjects ({formData.subjects.length})</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.selectedSubjectsLabel", { count: formData.subjects.length })}</Label>
                 <div className="flex flex-wrap gap-2 p-3 bg-[#9810fa]/5 rounded-2xl border border-[#9810fa]/20 min-h-[56px]">
                   {formData.subjects.map(s => (
                     <Badge
@@ -553,10 +584,10 @@ export default function CreateClassWizard() {
 
             {/* Add custom subject */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Add Custom Subject</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.addCustomSubjectLabel")}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Type subject name..."
+                  placeholder={t("admin.academics.createClassWizard.typeSubjectNamePlaceholder")}
                   value={newSubjectInput}
                   onChange={e => setNewSubjectInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomSubject(); }}}
@@ -567,8 +598,8 @@ export default function CreateClassWizard() {
                   onClick={addCustomSubject}
                   disabled={!newSubjectInput.trim()}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
+                  <Plus className="h-4 w-4 me-1" />
+                  {t("admin.academics.createClassWizard.addButton")}
                 </Button>
               </div>
             </div>
@@ -576,18 +607,18 @@ export default function CreateClassWizard() {
             {/* Quick-pick from defaults */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Pick</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createClassWizard.quickPickLabel")}</Label>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                   <Input
-                    placeholder="Search..."
+                    placeholder={t("admin.academics.createClassWizard.searchPlaceholder")}
                     value={subjectSearch}
                     onChange={e => setSubjectSearch(e.target.value)}
-                    className="rounded-xl h-8 pl-8 text-xs w-36"
+                    className="rounded-xl h-8 ps-8 text-xs w-36"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto pe-1">
                 {filteredSubjects.map(subject => (
                   <div
                     key={subject}
@@ -599,7 +630,7 @@ export default function CreateClassWizard() {
                   </div>
                 ))}
                 {filteredSubjects.length === 0 && (
-                  <p className="col-span-3 text-center text-xs text-slate-400 py-4">No subjects to add</p>
+                  <p className="col-span-3 text-center text-xs text-slate-400 py-4">{t("admin.academics.createClassWizard.noSubjectsToAdd")}</p>
                 )}
               </div>
             </div>
@@ -615,14 +646,14 @@ export default function CreateClassWizard() {
           >
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
-              <p className="text-xs text-blue-700 font-medium">Teacher assignment is optional — you can assign or change teachers later from the class detail page.</p>
+              <p className="text-xs text-blue-700 font-medium">{t("admin.academics.createClassWizard.teacherOptionalNote")}</p>
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Assign Class Teacher</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createClassWizard.assignClassTeacherLabel")}</Label>
                 <Select value={formData.classTeacher} onValueChange={(v) => setFormData({ ...formData, classTeacher: v })}>
                   <SelectTrigger className="rounded-xl h-12">
-                    <SelectValue placeholder="Select teacher..." />
+                    <SelectValue placeholder={t("admin.academics.createClassWizard.selectTeacherPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {staff && staff.length > 0 ? (
@@ -642,7 +673,7 @@ export default function CreateClassWizard() {
 
               {formData.subjects.length > 0 && (
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Assign Subject Teachers (Optional)</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createClassWizard.assignSubjectTeachersLabel")}</Label>
                   {formData.subjects.map(subject => (
                     <div key={subject} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
                       <span className="text-sm font-bold text-slate-700">{subject}</span>
@@ -656,7 +687,7 @@ export default function CreateClassWizard() {
                         }
                       >
                         <SelectTrigger className="w-[200px] h-9 rounded-lg bg-white">
-                          <SelectValue placeholder="Assign teacher..." />
+                          <SelectValue placeholder={t("admin.academics.createClassWizard.assignTeacherPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {staff && staff.length > 0 ? (
@@ -689,9 +720,9 @@ export default function CreateClassWizard() {
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { id: "auto", title: "Auto-assign", desc: "Based on grade & age", icon: Zap },
-                { id: "manual", title: "Manual Assign", desc: "Select from list", icon: UserCheck },
-                { id: "bulk", title: "Bulk Upload", desc: "CSV / Excel import", icon: LayoutGrid },
+                { id: "auto", title: t("admin.academics.createClassWizard.autoAssignTitle"), desc: t("admin.academics.createClassWizard.autoAssignDesc"), icon: Zap },
+                { id: "manual", title: t("admin.academics.createClassWizard.manualAssignTitle"), desc: t("admin.academics.createClassWizard.manualAssignDesc"), icon: UserCheck },
+                { id: "bulk", title: t("admin.academics.createClassWizard.bulkUploadTitle"), desc: t("admin.academics.createClassWizard.bulkUploadDesc"), icon: LayoutGrid },
               ].map((opt) => (
                 <div
                   key={opt.id}
@@ -723,31 +754,35 @@ export default function CreateClassWizard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-slate-700">
-                      Students available for {formData.className || "this class"}
+                      {t("admin.academics.createClassWizard.studentsAvailableFor", { className: formData.className || t("admin.academics.createClassWizard.thisClassFallback") })}
                     </p>
                     <p className="text-xs text-slate-400 font-medium">
-                      {eligibleStudents.length} student{eligibleStudents.length !== 1 ? "s" : ""} found · {formData.selectedStudents.length} selected
+                      {eligibleStudents.length === 1
+                        ? t("admin.academics.createClassWizard.studentsFoundCountSingular", { count: eligibleStudents.length })
+                        : t("admin.academics.createClassWizard.studentsFoundCountPlural", { count: eligibleStudents.length })}
+                      {" · "}
+                      {t("admin.academics.createClassWizard.selectedCount", { count: formData.selectedStudents.length })}
                     </p>
                   </div>
                   {formData.selectedStudents.length > 0 && (
                     <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none rounded-full font-bold">
-                      {formData.selectedStudents.length} selected
+                      {t("admin.academics.createClassWizard.selectedBadge", { count: formData.selectedStudents.length })}
                     </Badge>
                   )}
                 </div>
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
-                    placeholder="Search students by name or email..."
+                    placeholder={t("admin.academics.createClassWizard.searchStudentsPlaceholder")}
                     value={studentSearch}
                     onChange={e => setStudentSearch(e.target.value)}
-                    className="rounded-xl pl-10 h-11"
+                    className="rounded-xl ps-10 h-11"
                   />
                 </div>
 
-                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-[240px] overflow-y-auto space-y-2 pe-1">
                   {filteredStudents.length > 0 ? (
                     filteredStudents.map(student => {
                       const isSelected = formData.selectedStudents.includes(student.id);
@@ -781,8 +816,8 @@ export default function CreateClassWizard() {
                   ) : (
                     <div className="flex flex-col items-center gap-2 py-8 text-center">
                       <AlertCircle className="h-8 w-8 text-slate-300" />
-                      <p className="text-sm font-bold text-slate-500">No students found for {formData.className}</p>
-                      <p className="text-xs text-slate-400">Students can also be added later from the class detail page</p>
+                      <p className="text-sm font-bold text-slate-500">{t("admin.academics.createClassWizard.noStudentsFoundFor", { className: formData.className })}</p>
+                      <p className="text-xs text-slate-400">{t("admin.academics.createClassWizard.studentsAddedLaterNote")}</p>
                     </div>
                   )}
                 </div>
@@ -793,7 +828,7 @@ export default function CreateClassWizard() {
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
                 <Zap className="h-5 w-5 text-purple-600 flex-shrink-0" />
                 <p className="text-sm font-bold text-blue-900">
-                  Students will be auto-assigned based on grade and enrollment data when class is created.
+                  {t("admin.academics.createClassWizard.autoAssignInfo")}
                 </p>
               </div>
             )}
@@ -801,9 +836,9 @@ export default function CreateClassWizard() {
             {formData.studentAssignment === "bulk" && (
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
                 <LayoutGrid className="h-8 w-8 text-slate-300" />
-                <p className="text-sm font-bold text-slate-600">Upload CSV or Excel File</p>
-                <p className="text-xs text-slate-400">Drag & drop your file here, or click to browse</p>
-                <Button variant="outline" className="rounded-xl mt-1 text-xs font-bold">Browse File</Button>
+                <p className="text-sm font-bold text-slate-600">{t("admin.academics.createClassWizard.uploadFileTitle")}</p>
+                <p className="text-xs text-slate-400">{t("admin.academics.createClassWizard.uploadFileSubtitle")}</p>
+                <Button variant="outline" className="rounded-xl mt-1 text-xs font-bold">{t("admin.academics.createClassWizard.browseFileButton")}</Button>
               </div>
             )}
           </motion.div>
@@ -821,9 +856,9 @@ export default function CreateClassWizard() {
                 <Calendar className="h-10 w-10 text-purple-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Timetable Setup</h3>
+                <h3 className="text-xl font-bold text-slate-900">{t("admin.academics.createClassWizard.timetableSetupTitle")}</h3>
                 <p className="text-slate-500 text-sm max-w-md mx-auto mt-2">
-                  Auto-generate an optimized timetable based on your subjects and teachers, or set it up manually later.
+                  {t("admin.academics.createClassWizard.timetableSetupSubtitle")}
                 </p>
               </div>
             </div>
@@ -845,8 +880,8 @@ export default function CreateClassWizard() {
                   <Zap className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className={cn("font-bold", formData.timetable === "auto" ? "text-[#9810fa]" : "text-slate-900")}>Auto-Generate</h4>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1">Distribute subjects across week</p>
+                  <h4 className={cn("font-bold", formData.timetable === "auto" ? "text-[#9810fa]" : "text-slate-900")}>{t("admin.academics.createClassWizard.autoGenerateTitle")}</h4>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1">{t("admin.academics.createClassWizard.autoGenerateDesc")}</p>
                 </div>
               </div>
 
@@ -866,8 +901,8 @@ export default function CreateClassWizard() {
                   <LayoutGrid className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className={cn("font-bold", formData.timetable === "manual" ? "text-[#9810fa]" : "text-slate-900")}>Manual Setup</h4>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1">Custom Schedule</p>
+                  <h4 className={cn("font-bold", formData.timetable === "manual" ? "text-[#9810fa]" : "text-slate-900")}>{t("admin.academics.createClassWizard.manualSetupTitle")}</h4>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1">{t("admin.academics.createClassWizard.manualSetupDesc")}</p>
                 </div>
               </div>
             </div>
@@ -876,22 +911,22 @@ export default function CreateClassWizard() {
               <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl space-y-3">
                 <div className="flex items-center gap-3">
                   <Zap className="h-5 w-5 text-purple-600" />
-                  <p className="text-sm font-bold text-indigo-900">Preview: Auto-Generated Timetable</p>
+                  <p className="text-sm font-bold text-indigo-900">{t("admin.academics.createClassWizard.previewAutoTimetableTitle")}</p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {DAYS.slice(0, 6).map((day, di) => {
                     const daySubject = formData.subjects[di % formData.subjects.length];
                     return (
                       <div key={day} className="bg-white rounded-xl p-2 text-center border border-indigo-100">
-                        <p className="text-[9px] font-bold uppercase text-indigo-400 tracking-wider">{day.slice(0,3)}</p>
+                        <p className="text-[9px] font-bold uppercase text-indigo-400 tracking-wider">{t(DAY_ABBR_LABEL_KEYS[day] || day)}</p>
                         <p className="text-xs font-bold text-indigo-700 mt-1 truncate">{daySubject}</p>
-                        <p className="text-[9px] text-slate-400 mt-0.5">+{Math.min(formData.subjects.length - 1, 3)} more</p>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{t("admin.academics.createClassWizard.moreSubjectsCount", { count: Math.min(formData.subjects.length - 1, 3) })}</p>
                       </div>
                     );
                   })}
                 </div>
                 <p className="text-xs text-purple-600 font-medium">
-                  {formData.subjects.length} subjects will be distributed across {DAYS.length} days automatically.
+                  {t("admin.academics.createClassWizard.subjectsDistributedNote", { subjectCount: formData.subjects.length, dayCount: DAYS.length })}
                 </p>
               </div>
             )}
@@ -899,7 +934,7 @@ export default function CreateClassWizard() {
             {formData.timetable === "auto" && formData.subjects.length === 0 && (
               <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-600" />
-                <p className="text-sm text-amber-800 font-medium">Please go back and add subjects to enable auto-generate.</p>
+                <p className="text-sm text-amber-800 font-medium">{t("admin.academics.createClassWizard.addSubjectsToEnableAutoGenerate")}</p>
               </div>
             )}
           </motion.div>
@@ -916,17 +951,17 @@ export default function CreateClassWizard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-slate-900">Create New Class</h1>
-            <p className="text-slate-500 font-medium">Follow the steps to build your academic structure.</p>
+            <h1 className="text-3xl font-black text-slate-900">{t("admin.academics.createClassWizard.pageTitle")}</h1>
+            <p className="text-slate-500 font-medium">{t("admin.academics.createClassWizard.pageSubtitle")}</p>
           </div>
           <Button variant="ghost" className="text-slate-500 font-bold" onClick={() => navigate("/academics/classes")}>
-            Cancel
+            {t("admin.academics.createClassWizard.cancelButton")}
           </Button>
         </div>
 
         {/* Steps Progress */}
         <div className="flex items-center justify-between relative px-2">
-          <div className="absolute top-5 left-0 w-full h-0.5 bg-slate-100 z-0" />
+          <div className="absolute top-5 start-0 w-full h-0.5 bg-slate-100 z-0" />
           {steps.map((step) => (
             <div key={step.id} className="relative z-10 flex flex-col items-center gap-2">
               <div className={cn(
@@ -956,7 +991,7 @@ export default function CreateClassWizard() {
                 <CardDescription className="text-slate-500 font-medium">{steps[currentStep - 1].description}</CardDescription>
               </div>
               <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none px-4 py-1 rounded-full font-bold">
-                Step {currentStep} of {steps.length}
+                {t("admin.academics.createClassWizard.stepOfTotal", { current: currentStep, total: steps.length })}
               </Badge>
             </div>
           </CardHeader>
@@ -969,8 +1004,8 @@ export default function CreateClassWizard() {
               className="rounded-xl font-bold text-slate-500 h-12 px-8"
               onClick={handleBack}
             >
-              <ChevronLeft className="h-5 w-5 mr-2" />
-              Back
+              <ChevronLeft className="h-5 w-5 me-2 rtl:rotate-180" />
+              {t("admin.academics.createClassWizard.backButton")}
             </Button>
             <div className="flex items-center gap-3">
               {(currentStep === 3 || currentStep === 5) && (
@@ -979,8 +1014,8 @@ export default function CreateClassWizard() {
                   className="rounded-xl font-bold h-12 px-8 text-slate-500 border-slate-200"
                   onClick={handleSkipStep}
                 >
-                  Skip
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  {t("admin.academics.createClassWizard.skipButton")}
+                  <ChevronRight className="h-4 w-4 ms-1 rtl:rotate-180" />
                 </Button>
               )}
               <Button
@@ -988,8 +1023,8 @@ export default function CreateClassWizard() {
                 onClick={handleNext}
                 disabled={!isStepValid()}
               >
-                {currentStep === steps.length ? "Finish & Create" : "Next Step"}
-                <ChevronRight className="h-5 w-5 ml-2" />
+                {currentStep === steps.length ? t("admin.academics.createClassWizard.finishCreateButton") : t("admin.academics.createClassWizard.nextStepButton")}
+                <ChevronRight className="h-5 w-5 ms-2 rtl:rotate-180" />
               </Button>
             </div>
           </div>

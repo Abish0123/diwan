@@ -18,6 +18,7 @@ function syncToGradebook(studentId: string, subject: string, marks: number, tota
 }
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import {
   ChevronLeft, User, Clock, FileText, Download, CheckCircle2, AlertCircle,
   RotateCcw, Star, MessageSquare, BarChart3, History, Eye,
@@ -41,14 +42,14 @@ function riskColor(pct: number) {
 function riskBg(pct: number) {
   return pct < 20 ? "bg-emerald-50 border-emerald-200" : pct < 40 ? "bg-amber-50 border-amber-200" : "bg-rose-50 border-rose-200";
 }
-function relTime(iso: string) {
+function relTime(iso: string, t: (k: string, o?: any) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff/60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return t("admin.academics.submissionReviewCenter.justNow");
+  if (m < 60) return t("admin.academics.submissionReviewCenter.minutesAgo", { count: m });
   const h = Math.floor(m/60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h/24)}d ago`;
+  if (h < 24) return t("admin.academics.submissionReviewCenter.hoursAgo", { count: h });
+  return t("admin.academics.submissionReviewCenter.daysAgo", { count: Math.floor(h/24) });
 }
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
@@ -75,6 +76,7 @@ type ContentTab = "content"|"analysis"|"history";
 
 /* ─── component ─────────────────────────────────────────────────────────────*/
 export default function SubmissionReviewCenter() {
+  const { t } = useTranslation();
   const { assignmentId } = useParams<{assignmentId:string}>();
   const navigate = useNavigate();
   // Detect if we came from teacher portal so back button goes to the right place
@@ -187,9 +189,9 @@ export default function SubmissionReviewCenter() {
   async function handlePublish() {
     if (!selectedSub || !assignment) return;
     const m = Number(marks);
-    if (!marks) { toast.error("Please enter marks"); return; }
-    if (m > assignment.totalMarks) { toast.error(`Marks cannot exceed ${assignment.totalMarks}`); return; }
-    if (m < 0) { toast.error("Marks cannot be negative"); return; }
+    if (!marks) { toast.error(t("admin.academics.submissionReviewCenter.enterMarksError")); return; }
+    if (m > assignment.totalMarks) { toast.error(t("admin.academics.submissionReviewCenter.marksExceedError", { max: assignment.totalMarks })); return; }
+    if (m < 0) { toast.error(t("admin.academics.submissionReviewCenter.marksNegativeError")); return; }
     setPublishing(true);
     try {
       await smartDb.update("AssignmentSubmission", selectedSub.id, {
@@ -218,15 +220,15 @@ export default function SubmissionReviewCenter() {
         entity: "Assignment",
         type: "assignment_graded",
         assignmentId: assignment.id,
-        title: `Assignment Graded: ${assignment.title}`,
-        message: `You scored ${m}/${assignment.totalMarks}${feedback ? ". " + feedback : ""}`,
+        title: t("admin.academics.submissionReviewCenter.notifGradedTitle", { title: assignment.title }),
+        message: t("admin.academics.submissionReviewCenter.notifGradedMessage", { marks: m, total: assignment.totalMarks }) + (feedback ? ". " + feedback : ""),
         createdAt: new Date().toISOString(), read: false,
         redirectUrl: `/student/assignments?assignmentId=${encodeURIComponent(assignment.id)}`,
       } as any, notifId);
       await refreshSubs();
       setEditMode(false);
-      toast.success("Feedback published · Student notified 🎉");
-    } catch { toast.error("Failed to publish — please try again"); }
+      toast.success(t("admin.academics.submissionReviewCenter.publishSuccessToast"));
+    } catch { toast.error(t("admin.academics.submissionReviewCenter.publishErrorToast")); }
     finally { setPublishing(false); }
   }
 
@@ -246,15 +248,15 @@ export default function SubmissionReviewCenter() {
         entity: "Assignment",
         type: "resubmission_required",
         assignmentId: assignment.id,
-        title: `Resubmission Required: ${assignment.title}`,
-        message: resubNote || "Please resubmit your assignment.",
+        title: t("admin.academics.submissionReviewCenter.notifResubTitle", { title: assignment.title }),
+        message: resubNote || t("admin.academics.submissionReviewCenter.notifResubMessage"),
         createdAt: new Date().toISOString(), read: false,
         redirectUrl: `/student/assignments?assignmentId=${encodeURIComponent(assignment.id)}`,
       } as any, notifId);
       await refreshSubs();
       setShowResubForm(false); setResubNote("");
-      toast.success("Resubmission requested · Student notified");
-    } catch { toast.error("Failed to send resubmission request"); }
+      toast.success(t("admin.academics.submissionReviewCenter.resubRequestSuccessToast"));
+    } catch { toast.error(t("admin.academics.submissionReviewCenter.resubRequestErrorToast")); }
     finally { setResubSending(false); }
   }
 
@@ -263,7 +265,7 @@ export default function SubmissionReviewCenter() {
     if (!selectedSub) return;
     await smartDb.update("AssignmentSubmission", selectedSub.id, { status: "closed" } as any);
     await refreshSubs();
-    toast.success("Submission closed");
+    toast.success(t("admin.academics.submissionReviewCenter.submissionClosedToast"));
   }
 
   /* Save Draft */
@@ -273,7 +275,7 @@ export default function SubmissionReviewCenter() {
       marks: Number(marks)||0, feedback,
     } as any);
     await refreshSubs();
-    toast.success("Draft saved");
+    toast.success(t("admin.academics.submissionReviewCenter.draftSavedToast"));
   }
 
   /* Close Assignment */
@@ -281,12 +283,12 @@ export default function SubmissionReviewCenter() {
     if (!assignment) return;
     await smartDb.update("TeacherAssignment", assignment.id, { status: "Closed" } as any);
     setAssignment(prev => prev ? {...prev, status:"Closed"} : null);
-    toast.success("Assignment closed");
+    toast.success(t("admin.academics.submissionReviewCenter.assignmentClosedToast"));
   }
 
   /* status badge */
   function StatusBadge({ status }: { status?: string }) {
-    if (!status) return <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">Not Submitted</span>;
+    if (!status) return <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{t("admin.academics.submissionReviewCenter.statusNotSubmitted")}</span>;
     const map: Record<string,string> = {
       submitted:                "text-blue-700 bg-blue-50 border border-blue-200",
       graded:                   "text-emerald-700 bg-emerald-50 border border-emerald-200",
@@ -294,11 +296,14 @@ export default function SubmissionReviewCenter() {
       resubmission_requested:   "text-orange-700 bg-orange-50 border border-orange-200",
       resubmitted:              "text-purple-700 bg-purple-50 border border-purple-200",
     };
-    const labels: Record<string,string> = {
-      submitted:"Submitted", graded:"Graded", closed:"Closed",
-      resubmission_requested:"Resubmit Required", resubmitted:"Resubmitted",
+    const labelKeys: Record<string,string> = {
+      submitted:"admin.academics.submissionReviewCenter.statusSubmitted",
+      graded:"admin.academics.submissionReviewCenter.statusGraded",
+      closed:"admin.academics.submissionReviewCenter.statusClosed",
+      resubmission_requested:"admin.academics.submissionReviewCenter.statusResubmitRequired",
+      resubmitted:"admin.academics.submissionReviewCenter.statusResubmitted",
     };
-    return <span className={cn("text-[10px] font-bold rounded-full px-2 py-0.5", map[status]||"bg-slate-100 text-slate-500")}>{labels[status]||status}</span>;
+    return <span className={cn("text-[10px] font-bold rounded-full px-2 py-0.5", map[status]||"bg-slate-100 text-slate-500")}>{labelKeys[status] ? t(labelKeys[status]) : status}</span>;
   }
 
   if (loading) return (
@@ -313,9 +318,9 @@ export default function SubmissionReviewCenter() {
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <AlertCircle className="h-12 w-12 text-slate-300 mb-3"/>
-        <h2 className="text-lg font-bold text-slate-800">Assignment Not Found</h2>
-        <p className="text-slate-400 text-sm mt-1 mb-4">This assignment may have been deleted.</p>
-        <button onClick={() => navigate(backPath)} className="h-10 px-5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">Back to Assignments</button>
+        <h2 className="text-lg font-bold text-slate-800">{t("admin.academics.submissionReviewCenter.assignmentNotFoundTitle")}</h2>
+        <p className="text-slate-400 text-sm mt-1 mb-4">{t("admin.academics.submissionReviewCenter.assignmentNotFoundDesc")}</p>
+        <button onClick={() => navigate(backPath)} className="h-10 px-5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">{t("admin.academics.submissionReviewCenter.backToAssignments")}</button>
       </div>
     </DashboardLayout>
   );
@@ -333,12 +338,12 @@ export default function SubmissionReviewCenter() {
             <div>
               <div className="flex items-center text-sm text-slate-400 mb-1.5 gap-1">
                 <button onClick={() => navigate(backPath)} className="hover:text-purple-600 flex items-center gap-1">
-                  <ChevronLeft className="h-3.5 w-3.5"/> Assignments
+                  <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180"/> {t("admin.academics.submissionReviewCenter.breadcrumbAssignments")}
                 </button>
                 <span>/</span>
                 <span className="text-slate-600 font-medium truncate max-w-[200px]">{assignment.title}</span>
                 <span>/</span>
-                <span className="text-slate-900 font-semibold">Submission Review</span>
+                <span className="text-slate-900 font-semibold">{t("admin.academics.submissionReviewCenter.breadcrumbSubmissionReview")}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 rounded-xl">
@@ -352,21 +357,21 @@ export default function SubmissionReviewCenter() {
                       {assignment.status}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-400">{assignment.subject} · {assignment.grade}{assignment.section ? ` · Section ${assignment.section}` : ""} · {assignment.teacher} · Due {fmtDate(assignment.dueDate||"")}</p>
+                  <p className="text-sm text-slate-400">{assignment.subject} · {assignment.grade}{assignment.section ? ` · ${t("admin.academics.submissionReviewCenter.sectionLabel", { section: assignment.section })}` : ""} · {assignment.teacher} · {t("admin.academics.submissionReviewCenter.dueLabel", { date: fmtDate(assignment.dueDate||"") })}</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button onClick={() => window.print()} className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 font-medium">
-                <Printer className="h-3.5 w-3.5"/> Print
+                <Printer className="h-3.5 w-3.5"/> {t("admin.academics.submissionReviewCenter.print")}
               </button>
               <button onClick={refreshSubs} className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 font-medium">
-                <RefreshCw className="h-3.5 w-3.5"/> Refresh
+                <RefreshCw className="h-3.5 w-3.5"/> {t("admin.academics.submissionReviewCenter.refresh")}
               </button>
               {assignment.status !== "Closed" && (
                 <button onClick={handleCloseAssignment}
                   className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold">
-                  <Archive className="h-3.5 w-3.5"/> Close Assignment
+                  <Archive className="h-3.5 w-3.5"/> {t("admin.academics.submissionReviewCenter.closeAssignment")}
                 </button>
               )}
             </div>
@@ -377,10 +382,10 @@ export default function SubmissionReviewCenter() {
         <div className="shrink-0 px-6 py-4 max-w-[1600px] mx-auto w-full">
           <div className="grid grid-cols-4 gap-4">
             {[
-              { label:"Total Students",  value: totalStudents,  icon: Users,         color:"text-purple-600",    bg:"bg-blue-50" },
-              { label:"Submitted",       value: totalSubmitted, icon: CheckCircle2,  color:"text-emerald-600", bg:"bg-emerald-50" },
-              { label:"Pending Review",  value: pendingReview,  icon: Clock,         color:"text-amber-600",   bg:"bg-amber-50" },
-              { label:"Graded",          value: totalGraded,    icon: Star,          color:"text-purple-600",  bg:"bg-purple-50" },
+              { label:t("admin.academics.submissionReviewCenter.kpiTotalStudents"),  value: totalStudents,  icon: Users,         color:"text-purple-600",    bg:"bg-blue-50" },
+              { label:t("admin.academics.submissionReviewCenter.kpiSubmitted"),       value: totalSubmitted, icon: CheckCircle2,  color:"text-emerald-600", bg:"bg-emerald-50" },
+              { label:t("admin.academics.submissionReviewCenter.kpiPendingReview"),  value: pendingReview,  icon: Clock,         color:"text-amber-600",   bg:"bg-amber-50" },
+              { label:t("admin.academics.submissionReviewCenter.kpiGraded"),          value: totalGraded,    icon: Star,          color:"text-purple-600",  bg:"bg-purple-50" },
             ].map(card => (
               <div key={card.label} className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 shadow-sm">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", card.bg)}>
@@ -404,19 +409,19 @@ export default function SubmissionReviewCenter() {
               {/* Search */}
               <div className="p-3 border-b border-slate-100">
                 <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400"/>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search students…"
-                    className="w-full pl-9 pr-3 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"/>
+                  <Search className="absolute start-3 top-2.5 h-3.5 w-3.5 text-slate-400"/>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("admin.academics.submissionReviewCenter.searchStudentsPlaceholder")}
+                    className="w-full ps-9 pe-3 h-9 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"/>
                 </div>
               </div>
               {/* Filter tabs */}
               <div className="flex border-b border-slate-100 px-2 pt-1.5 gap-0.5 flex-wrap pb-1.5">
                 {([
-                  {key:"all",     label:"All"},
-                  {key:"pending", label:"Pending"},
-                  {key:"graded",  label:"Graded"},
-                  {key:"late",    label:"Late"},
-                  {key:"resubmit",label:"Resubmit"},
+                  {key:"all",     label:t("admin.academics.submissionReviewCenter.filterAll")},
+                  {key:"pending", label:t("admin.academics.submissionReviewCenter.filterPending")},
+                  {key:"graded",  label:t("admin.academics.submissionReviewCenter.filterGraded")},
+                  {key:"late",    label:t("admin.academics.submissionReviewCenter.filterLate")},
+                  {key:"resubmit",label:t("admin.academics.submissionReviewCenter.filterResubmit")},
                 ] as {key:FilterTab;label:string}[]).map(tab => (
                   <button key={tab.key} onClick={() => setFilterTab(tab.key)}
                     className={cn("text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors",
@@ -430,7 +435,7 @@ export default function SubmissionReviewCenter() {
                 {filtered.length === 0 && (
                   <div className="text-center py-10">
                     <User className="h-8 w-8 text-slate-200 mx-auto mb-2"/>
-                    <p className="text-sm text-slate-400">No students found</p>
+                    <p className="text-sm text-slate-400">{t("admin.academics.submissionReviewCenter.noStudentsFound")}</p>
                   </div>
                 )}
                 {filtered.map(st => {
@@ -440,7 +445,7 @@ export default function SubmissionReviewCenter() {
                   const isSelected = selectedId === sId;
                   return (
                     <button key={sId} onClick={() => handleSelectStudent(sId)}
-                      className={cn("w-full text-left rounded-xl p-3 transition-all border",
+                      className={cn("w-full text-start rounded-xl p-3 transition-all border",
                         isSelected ? "border-blue-200 bg-blue-50 shadow-sm" : "border-transparent hover:bg-slate-50")}>
                       <div className="flex items-center gap-2.5">
                         <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm shrink-0",
@@ -453,11 +458,11 @@ export default function SubmissionReviewCenter() {
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <StatusBadge status={sub?.status}/>
-                            {late && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0.5">Late</span>}
+                            {late && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-1.5 py-0.5">{t("admin.academics.submissionReviewCenter.lateBadge")}</span>}
                           </div>
                         </div>
                         {sub?.submittedAt && (
-                          <span className="text-[10px] text-slate-400 shrink-0">{relTime(sub.submittedAt)}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">{relTime(sub.submittedAt, t)}</span>
                         )}
                       </div>
                     </button>
@@ -475,8 +480,8 @@ export default function SubmissionReviewCenter() {
                   <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
                     <Eye className="h-8 w-8 text-slate-300"/>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1">Select a Student</h3>
-                  <p className="text-sm text-slate-400">Choose a student from the list to review their submission.</p>
+                  <h3 className="text-lg font-bold text-slate-800 mb-1">{t("admin.academics.submissionReviewCenter.selectStudentTitle")}</h3>
+                  <p className="text-sm text-slate-400">{t("admin.academics.submissionReviewCenter.selectStudentDesc")}</p>
                 </div>
               )}
 
@@ -492,14 +497,14 @@ export default function SubmissionReviewCenter() {
                         </div>
                         <div>
                           <h2 className="text-lg font-black text-slate-900">{selectedStudent.name||selectedStudent.displayName}</h2>
-                          <p className="text-sm text-slate-400">{selectedStudent.grade||selectedStudent.gradeLevel} {selectedStudent.section ? `· Section ${selectedStudent.section}` : ""} {selectedStudent.studentId ? `· ID: ${selectedStudent.studentId}` : ""}</p>
+                          <p className="text-sm text-slate-400">{selectedStudent.grade||selectedStudent.gradeLevel} {selectedStudent.section ? `· ${t("admin.academics.submissionReviewCenter.sectionLabel", { section: selectedStudent.section })}` : ""} {selectedStudent.studentId ? `· ${t("admin.academics.submissionReviewCenter.idLabel", { id: selectedStudent.studentId })}` : ""}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <StatusBadge status={selectedSub?.status}/>
                         {isLate(selectedSub) && (
                           <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5 flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3"/> Late Submission
+                            <AlertTriangle className="h-3 w-3"/> {t("admin.academics.submissionReviewCenter.lateSubmission")}
                           </span>
                         )}
                       </div>
@@ -507,10 +512,10 @@ export default function SubmissionReviewCenter() {
                     {selectedSub && (
                       <div className="grid grid-cols-4 gap-3 mt-3">
                         {[
-                          { label:"Submitted",      value: fmtDate(selectedSub.submittedAt) },
-                          { label:"Submission Type", value: (assignment.type||"—") },
-                          { label:"Files",          value: `${selectedSub.attachments?.length||0} file(s)` },
-                          { label:"Late",           value: isLate(selectedSub) ? "Yes ⚠️" : "No ✓" },
+                          { label:t("admin.academics.submissionReviewCenter.gridSubmitted"),      value: fmtDate(selectedSub.submittedAt) },
+                          { label:t("admin.academics.submissionReviewCenter.gridSubmissionType"), value: (assignment.type||"—") },
+                          { label:t("admin.academics.submissionReviewCenter.gridFiles"),          value: t("admin.academics.submissionReviewCenter.fileCount", { count: selectedSub.attachments?.length||0 }) },
+                          { label:t("admin.academics.submissionReviewCenter.gridLate"),           value: isLate(selectedSub) ? t("admin.academics.submissionReviewCenter.yesLate") : t("admin.academics.submissionReviewCenter.noLate") },
                         ].map(item => (
                           <div key={item.label} className="bg-white border border-slate-100 rounded-xl px-3 py-2">
                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">{item.label}</p>
@@ -521,7 +526,7 @@ export default function SubmissionReviewCenter() {
                     )}
                     {!selectedSub && (
                       <div className="mt-3 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm text-rose-600 font-medium">
-                        This student has not submitted the assignment yet.
+                        {t("admin.academics.submissionReviewCenter.notSubmittedYet")}
                       </div>
                     )}
                   </div>
@@ -531,9 +536,9 @@ export default function SubmissionReviewCenter() {
                     <>
                       <div className="shrink-0 flex gap-0 border-b border-slate-100 px-6 sticky top-0 bg-white z-10">
                         {([
-                          {key:"content",  label:"Submission Content", icon:FileText},
-                          {key:"analysis", label:"Analysis",           icon:Shield},
-                          {key:"history",  label:"History",            icon:History},
+                          {key:"content",  label:t("admin.academics.submissionReviewCenter.tabSubmissionContent"), icon:FileText},
+                          {key:"analysis", label:t("admin.academics.submissionReviewCenter.tabAnalysis"),           icon:Shield},
+                          {key:"history",  label:t("admin.academics.submissionReviewCenter.tabHistory"),            icon:History},
                         ] as {key:ContentTab;label:string;icon:any}[]).map(tab => (
                           <button key={tab.key} onClick={() => setContentTab(tab.key)}
                             className={cn("flex items-center gap-1.5 text-sm font-semibold px-4 py-3 border-b-2 transition-colors",
@@ -549,21 +554,21 @@ export default function SubmissionReviewCenter() {
                         {contentTab === "content" && (
                           <div className="space-y-5">
                             <div>
-                              <h4 className="text-sm font-bold text-slate-700 mb-2">Text Response</h4>
+                              <h4 className="text-sm font-bold text-slate-700 mb-2">{t("admin.academics.submissionReviewCenter.textResponse")}</h4>
                               {selectedSub.content ? (
                                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                                   {selectedSub.content}
                                 </div>
                               ) : (
                                 <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-                                  No text response submitted
+                                  {t("admin.academics.submissionReviewCenter.noTextResponse")}
                                 </div>
                               )}
                             </div>
                             {selectedSub.attachments?.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-bold text-slate-700 mb-2">
-                                  Attached Files <span className="text-slate-400 font-normal">({selectedSub.attachments.length})</span>
+                                  {t("admin.academics.submissionReviewCenter.attachedFiles")} <span className="text-slate-400 font-normal">({selectedSub.attachments.length})</span>
                                 </h4>
                                 <div className="space-y-2">
                                   {selectedSub.attachments.map((f,i) => (
@@ -582,11 +587,11 @@ export default function SubmissionReviewCenter() {
                                             a.download = f.name;
                                             a.click();
                                           } else {
-                                            toast.error("File not available — student may have submitted before file storage was enabled");
+                                            toast.error(t("admin.academics.submissionReviewCenter.fileNotAvailableToast"));
                                           }
                                         }}
                                         className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-white">
-                                        <Download className="h-3 w-3"/> Download
+                                        <Download className="h-3 w-3"/> {t("admin.academics.submissionReviewCenter.download")}
                                       </button>
                                     </div>
                                   ))}
@@ -601,8 +606,8 @@ export default function SubmissionReviewCenter() {
                           <div className="space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                               {[
-                                { label:"Plagiarism Score", score: plagScore(selectedSub.id), icon:Shield, desc:"Similarity with external sources" },
-                                { label:"AI Detection",     score: aiScore(selectedSub.id),   icon:BarChart3, desc:"AI-generated content likelihood" },
+                                { label:t("admin.academics.submissionReviewCenter.plagiarismScore"), score: plagScore(selectedSub.id), icon:Shield, desc:t("admin.academics.submissionReviewCenter.plagiarismDesc") },
+                                { label:t("admin.academics.submissionReviewCenter.aiDetection"),     score: aiScore(selectedSub.id),   icon:BarChart3, desc:t("admin.academics.submissionReviewCenter.aiDetectionDesc") },
                               ].map(item => (
                                 <div key={item.label} className={cn("border rounded-2xl p-5", riskBg(item.score))}>
                                   <div className="flex items-center justify-between mb-3">
@@ -620,23 +625,23 @@ export default function SubmissionReviewCenter() {
                                       style={{width: `${item.score}%`}}/>
                                   </div>
                                   <p className={cn("text-xs font-bold mt-2", riskColor(item.score))}>
-                                    {item.score < 20 ? "✓ Low Risk" : item.score < 40 ? "⚠ Medium Risk" : "✗ High Risk"}
+                                    {item.score < 20 ? `✓ ${t("admin.academics.submissionReviewCenter.lowRisk")}` : item.score < 40 ? `⚠ ${t("admin.academics.submissionReviewCenter.mediumRisk")}` : `✗ ${t("admin.academics.submissionReviewCenter.highRisk")}`}
                                   </p>
                                 </div>
                               ))}
                             </div>
                             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
                               <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0"/>
-                              <p className="text-xs text-blue-700">Scores are indicative estimates. Always review the actual content before making judgements.</p>
+                              <p className="text-xs text-blue-700">{t("admin.academics.submissionReviewCenter.scoresIndicativeNote")}</p>
                             </div>
                             <div className="flex gap-3">
-                              <button onClick={() => toast.info("Running plagiarism analysis…")}
+                              <button onClick={() => toast.info(t("admin.academics.submissionReviewCenter.runningPlagiarismToast"))}
                                 className="flex-1 h-10 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2">
-                                <Shield className="h-4 w-4"/> Check Plagiarism
+                                <Shield className="h-4 w-4"/> {t("admin.academics.submissionReviewCenter.checkPlagiarism")}
                               </button>
-                              <button onClick={() => toast.info("Running AI content check…")}
+                              <button onClick={() => toast.info(t("admin.academics.submissionReviewCenter.runningAiCheckToast"))}
                                 className="flex-1 h-10 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2">
-                                <BarChart3 className="h-4 w-4"/> AI Content Check
+                                <BarChart3 className="h-4 w-4"/> {t("admin.academics.submissionReviewCenter.aiContentCheck")}
                               </button>
                             </div>
                           </div>
@@ -645,50 +650,50 @@ export default function SubmissionReviewCenter() {
                         {/* History Tab */}
                         {contentTab === "history" && (
                           <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-slate-700">Submission Timeline</h4>
+                            <h4 className="text-sm font-bold text-slate-700">{t("admin.academics.submissionReviewCenter.submissionTimeline")}</h4>
                             <div className="relative">
-                              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"/>
-                              <div className="space-y-4 pl-10">
+                              <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-slate-200"/>
+                              <div className="space-y-4 ps-10">
                                 {[
                                   {
                                     dot: "bg-blue-500",
-                                    label: "Assignment Created",
-                                    detail: `By ${assignment.teacher}`,
+                                    label: t("admin.academics.submissionReviewCenter.timelineAssignmentCreated"),
+                                    detail: t("admin.academics.submissionReviewCenter.byLabel", { name: assignment.teacher }),
                                     time: assignment.dueDate ? fmtDate(assignment.dueDate) : "",
                                   },
                                   {
                                     dot: "bg-emerald-500",
-                                    label: "Submitted",
-                                    detail: `By ${selectedSub.studentName}`,
+                                    label: t("admin.academics.submissionReviewCenter.timelineSubmitted"),
+                                    detail: t("admin.academics.submissionReviewCenter.byLabel", { name: selectedSub.studentName }),
                                     time: fmtDate(selectedSub.submittedAt),
                                   },
                                   ...(selectedSub.status === "resubmission_requested" ? [{
                                     dot: "bg-orange-500",
-                                    label: "Resubmission Requested",
-                                    detail: selectedSub.resubmissionNote || "Please resubmit",
+                                    label: t("admin.academics.submissionReviewCenter.timelineResubmissionRequested"),
+                                    detail: selectedSub.resubmissionNote || t("admin.academics.submissionReviewCenter.pleaseResubmit"),
                                     time: "",
                                   }] : []),
                                   ...(selectedSub.status === "resubmitted" ? [{
                                     dot: "bg-purple-500",
-                                    label: "Resubmitted",
-                                    detail: `By ${selectedSub.studentName}`,
+                                    label: t("admin.academics.submissionReviewCenter.timelineResubmitted"),
+                                    detail: t("admin.academics.submissionReviewCenter.byLabel", { name: selectedSub.studentName }),
                                     time: fmtDate(selectedSub.submittedAt),
                                   }] : []),
                                   ...(selectedSub.status === "graded" || selectedSub.status === "closed" ? [{
                                     dot: "bg-purple-500",
-                                    label: "Graded",
-                                    detail: `Score: ${selectedSub.marks}/${assignment.totalMarks} by ${selectedSub.gradedBy||"Teacher"}`,
+                                    label: t("admin.academics.submissionReviewCenter.timelineGraded"),
+                                    detail: t("admin.academics.submissionReviewCenter.scoreByLabel", { marks: selectedSub.marks, total: assignment.totalMarks, name: selectedSub.gradedBy||t("admin.academics.submissionReviewCenter.defaultTeacherName") }),
                                     time: selectedSub.gradedAt ? fmtDate(selectedSub.gradedAt) : "",
                                   }] : []),
                                   ...(selectedSub.status === "closed" ? [{
                                     dot: "bg-slate-400",
-                                    label: "Closed",
-                                    detail: "Assignment marked complete",
+                                    label: t("admin.academics.submissionReviewCenter.timelineClosed"),
+                                    detail: t("admin.academics.submissionReviewCenter.assignmentMarkedComplete"),
                                     time: "",
                                   }] : []),
                                 ].map((ev, i) => (
                                   <div key={i} className="relative">
-                                    <div className={cn("absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2 border-white", ev.dot)}/>
+                                    <div className={cn("absolute -start-6 top-1.5 w-3 h-3 rounded-full border-2 border-white", ev.dot)}/>
                                     <div className="bg-white border border-slate-100 rounded-xl px-4 py-3">
                                       <div className="flex items-center justify-between">
                                         <p className="text-sm font-bold text-slate-800">{ev.label}</p>
@@ -714,17 +719,17 @@ export default function SubmissionReviewCenter() {
                         {showResubForm && (
                           <div className="mb-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-sm font-bold text-orange-800">Request Resubmission</h4>
+                              <h4 className="text-sm font-bold text-orange-800">{t("admin.academics.submissionReviewCenter.requestResubmissionTitle")}</h4>
                               <button onClick={() => setShowResubForm(false)} className="text-orange-400 hover:text-orange-600">
                                 <X className="h-4 w-4"/>
                               </button>
                             </div>
                             <textarea value={resubNote} onChange={e => setResubNote(e.target.value)} rows={2}
-                              placeholder="Explain what needs to be improved…"
+                              placeholder={t("admin.academics.submissionReviewCenter.resubNotePlaceholder")}
                               className="w-full px-3 py-2 rounded-xl border border-orange-200 bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-300 mb-2"/>
                             <button onClick={handleRequestResubmission} disabled={resubSending}
                               className="h-9 px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold disabled:opacity-60">
-                              {resubSending ? "Sending…" : "Send Resubmission Request"}
+                              {resubSending ? t("admin.academics.submissionReviewCenter.sendingEllipsis") : t("admin.academics.submissionReviewCenter.sendResubmissionRequest")}
                             </button>
                           </div>
                         )}
@@ -735,26 +740,26 @@ export default function SubmissionReviewCenter() {
                             <div className="flex items-center gap-5">
                               <div className="text-center">
                                 <div className="text-3xl font-black text-slate-900">{selectedSub.marks}<span className="text-xl text-slate-400">/{assignment.totalMarks}</span></div>
-                                <p className="text-xs text-slate-400 mt-0.5">Score</p>
+                                <p className="text-xs text-slate-400 mt-0.5">{t("admin.academics.submissionReviewCenter.scoreLabel")}</p>
                               </div>
                               <div className="h-12 w-px bg-slate-200"/>
                               <div>
-                                <p className="text-xs font-semibold text-slate-500 mb-0.5">Teacher Feedback</p>
-                                <p className="text-sm text-slate-700">{selectedSub.feedback || <span className="text-slate-400 italic">No feedback added</span>}</p>
+                                <p className="text-xs font-semibold text-slate-500 mb-0.5">{t("admin.academics.submissionReviewCenter.teacherFeedback")}</p>
+                                <p className="text-sm text-slate-700">{selectedSub.feedback || <span className="text-slate-400 italic">{t("admin.academics.submissionReviewCenter.noFeedbackAdded")}</span>}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <button onClick={() => setShowResubForm(true)}
                                 className="h-9 px-3 rounded-xl border border-orange-200 text-orange-600 text-sm font-semibold hover:bg-orange-50">
-                                <RotateCcw className="h-3.5 w-3.5 inline mr-1"/>Resubmit
+                                <RotateCcw className="h-3.5 w-3.5 inline me-1"/>{t("admin.academics.submissionReviewCenter.resubmit")}
                               </button>
                               <button onClick={handleMarkComplete}
                                 className="h-9 px-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-100">
-                                <Archive className="h-3.5 w-3.5 inline mr-1"/>Close
+                                <Archive className="h-3.5 w-3.5 inline me-1"/>{t("admin.academics.submissionReviewCenter.close")}
                               </button>
                               <button onClick={() => setEditMode(true)}
                                 className="h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold">
-                                <Edit2 className="h-3.5 w-3.5 inline mr-1"/>Edit Grade
+                                <Edit2 className="h-3.5 w-3.5 inline me-1"/>{t("admin.academics.submissionReviewCenter.editGrade")}
                               </button>
                             </div>
                           </div>
@@ -763,7 +768,7 @@ export default function SubmissionReviewCenter() {
                           <div>
                             <div className="flex items-start gap-4 mb-3">
                               <div className="shrink-0">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Marks</label>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">{t("admin.academics.submissionReviewCenter.marksLabel")}</label>
                                 <div className="flex items-center gap-2">
                                   <input type="number" value={marks} onChange={e => setMarks(e.target.value)}
                                     min={0} max={assignment.totalMarks}
@@ -779,13 +784,13 @@ export default function SubmissionReviewCenter() {
                                   )}
                                 </div>
                                 {Number(marks) > assignment.totalMarks && (
-                                  <p className="text-xs text-rose-500 mt-0.5">Cannot exceed {assignment.totalMarks}</p>
+                                  <p className="text-xs text-rose-500 mt-0.5">{t("admin.academics.submissionReviewCenter.cannotExceed", { max: assignment.totalMarks })}</p>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">Feedback</label>
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1">{t("admin.academics.submissionReviewCenter.feedbackLabel")}</label>
                                 <textarea value={feedback} onChange={e => setFeedback(e.target.value)} rows={2}
-                                  placeholder="Good work. Improve diagram labeling…"
+                                  placeholder={t("admin.academics.submissionReviewCenter.feedbackPlaceholder")}
                                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"/>
                               </div>
                             </div>
@@ -793,11 +798,11 @@ export default function SubmissionReviewCenter() {
                               <div className="flex items-center gap-2">
                                 <button onClick={() => setShowResubForm(true)}
                                   className="h-9 px-3 rounded-xl border border-orange-200 text-orange-600 text-sm font-semibold hover:bg-orange-50">
-                                  <RotateCcw className="h-3.5 w-3.5 inline mr-1"/> Request Resubmission
+                                  <RotateCcw className="h-3.5 w-3.5 inline me-1"/> {t("admin.academics.submissionReviewCenter.requestResubmissionButton")}
                                 </button>
                                 <button onClick={() => {
                                     const files = (selectedSub.attachments || []).filter((f: any) => f.url);
-                                    if (!files.length) { toast.error("No downloadable files on this submission"); return; }
+                                    if (!files.length) { toast.error(t("admin.academics.submissionReviewCenter.noDownloadableFilesToast")); return; }
                                     files.forEach((f: any) => {
                                       const a = document.createElement("a");
                                       a.href = f.url;
@@ -806,24 +811,24 @@ export default function SubmissionReviewCenter() {
                                     });
                                   }}
                                   className="h-9 px-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50">
-                                  <Download className="h-3.5 w-3.5 inline mr-1"/> Download Files
+                                  <Download className="h-3.5 w-3.5 inline me-1"/> {t("admin.academics.submissionReviewCenter.downloadFiles")}
                                 </button>
                               </div>
                               <div className="flex items-center gap-2">
                                 {editMode && (
                                   <button onClick={() => { setEditMode(false); if (selectedSub?.marks !== undefined){ setMarks(String(selectedSub.marks)); setFeedback(selectedSub.feedback||""); }}}
                                     className="h-9 px-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50">
-                                    Cancel
+                                    {t("admin.academics.submissionReviewCenter.cancel")}
                                   </button>
                                 )}
                                 <button onClick={handleSaveDraft}
                                   className="h-9 px-4 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50">
-                                  Save Draft
+                                  {t("admin.academics.submissionReviewCenter.saveDraft")}
                                 </button>
                                 <button onClick={handlePublish} disabled={publishing || !marks || Number(marks) > assignment.totalMarks}
                                   className="h-9 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold disabled:opacity-60 flex items-center gap-1.5">
                                   <Send className="h-3.5 w-3.5"/>
-                                  {publishing ? "Publishing…" : "Publish Feedback"}
+                                  {publishing ? t("admin.academics.submissionReviewCenter.publishingEllipsis") : t("admin.academics.submissionReviewCenter.publishFeedback")}
                                 </button>
                               </div>
                             </div>

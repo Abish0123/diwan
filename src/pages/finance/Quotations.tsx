@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { 
   Plus, 
@@ -31,6 +32,12 @@ import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { motion, AnimatePresence } from "motion/react";
 import { CreateQuotationDialog } from "@/components/finance/CreateQuotationDialog";
 
+const QUOTATION_STATUS_LABEL_KEYS: Record<string, string> = {
+  Pending: 'admin.finance.quotations.statusPending',
+  Accepted: 'admin.finance.quotations.statusAccepted',
+  Expired: 'admin.finance.quotations.statusExpired',
+};
+
 interface Quotation {
   id: string;
   quotationId: string;
@@ -43,6 +50,7 @@ interface Quotation {
 }
 
 const Quotations = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -94,10 +102,10 @@ const Quotations = () => {
       });
       setQuotations(prev => prev.map(item => item.id === q.id ? { ...item, status: "Accepted" } : item));
 
-      toast.success(`Quotation ${q.quotationId} converted to invoice!`);
+      toast.success(t('admin.finance.quotations.convertedToast', { id: q.quotationId }));
     } catch (error) {
       console.error("Failed to convert quotation:", error);
-      toast.error("Failed to convert quotation to invoice");
+      toast.error(t('admin.finance.quotations.convertFailedToast'));
     }
   };
 
@@ -125,27 +133,27 @@ const Quotations = () => {
               <FileText className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Quotations</h1>
-              <p className="text-sm text-slate-400">Generate and track price estimates for school services and items.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.quotations.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.finance.quotations.pageSubtitle')}</p>
             </div>
           </motion.div>
-          <Button 
-            className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20" 
+          <Button
+            className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20"
             onClick={() => {
               setSelectedQuotation(null);
               setIsDialogOpen(true);
             }}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            New Quotation
+            <Plus className="h-4 w-4 me-2" />
+            {t('admin.finance.quotations.newQuotation')}
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { label: "Active Quotations", value: activeQuotations, icon: FileText, color: "blue" },
-            { label: "Conversion Rate", value: `${conversionRate}%`, icon: CheckCircle2, color: "green" },
-            { label: "Expired (MTD)", value: expiredCount, icon: XCircle, color: "red" }
+            { label: t('admin.finance.quotations.statActiveQuotations'), value: activeQuotations, icon: FileText, color: "blue" },
+            { label: t('admin.finance.quotations.statConversionRate'), value: `${conversionRate}%`, icon: CheckCircle2, color: "green" },
+            { label: t('admin.finance.quotations.statExpiredMtd'), value: expiredCount, icon: XCircle, color: "red" }
           ].map((stat, i) => (
             <motion.div 
               key={stat.label}
@@ -172,13 +180,13 @@ const Quotations = () => {
           className="premium-card overflow-hidden"
         >
           <div className="p-4 border-b border-border flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <h3 className="text-sm font-bold">Quotation Ledger</h3>
+            <h3 className="text-sm font-bold">{t('admin.finance.quotations.ledgerTitle')}</h3>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  className="pl-9 h-9 text-xs rounded-xl" 
-                  placeholder="Search quotations..." 
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="ps-9 h-9 text-xs rounded-xl"
+                  placeholder={t('admin.finance.quotations.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -192,24 +200,24 @@ const Quotations = () => {
           {isLoading ? (
             <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mb-4 text-primary" />
-              <p className="text-sm font-medium">Synchronizing quotations...</p>
+              <p className="text-sm font-medium">{t('admin.finance.quotations.syncing')}</p>
             </div>
           ) : filteredQuotations.length === 0 ? (
             <div className="p-20 text-center text-muted-foreground">
-              <p>No quotations found. Generate your first one!</p>
+              <p>{t('admin.finance.quotations.emptyState')}</p>
             </div>
           ) : (
             <Table>
               <TableHeader className="bg-secondary/50">
                 <TableRow>
-                  <TableHead>Quotation ID</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Expiry</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colQuotationId')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colEntity')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colItems')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colAmount')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colDate')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colExpiry')}</TableHead>
+                  <TableHead>{t('admin.finance.quotations.colStatus')}</TableHead>
+                  <TableHead className="text-end">{t('admin.finance.quotations.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -239,23 +247,23 @@ const Quotations = () => {
                           q.status === 'Expired' ? 'bg-red-50 text-red-600' : 
                           'bg-blue-50 text-purple-600'
                         }`}>
-                          {q.status}
+                          {t(QUOTATION_STATUS_LABEL_KEYS[q.status] || q.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <div className="flex items-center justify-end gap-1">
                           {q.status === 'Pending' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 text-xs font-semibold text-primary" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs font-semibold text-primary"
                               onClick={() => handleConvert(q)}
                             >
-                              <ArrowRight className="h-3 w-3 mr-1" />
-                              Convert
+                              <ArrowRight className="h-3 w-3 me-1 rtl:rotate-180" />
+                              {t('admin.finance.quotations.convert')}
                             </Button>
                           )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(`Printing quotation ${q.quotationId}`)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(t('admin.finance.quotations.printingToast', { id: q.quotationId }))}>
                             <Printer className="h-4 w-4 text-muted-foreground" />
                           </Button>
                           <Button 

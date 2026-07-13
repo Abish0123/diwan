@@ -7,6 +7,7 @@ import { Sparkles, AlertTriangle, CheckCircle2, Wand2, Loader2 } from "lucide-re
 import { toast } from "sonner";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 import {
   generateConflictFreeSchedule,
   getTimetableInsights,
@@ -15,6 +16,14 @@ import {
 } from "@/lib/aiTimetableGenerator";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_LABEL_KEYS: Record<string, string> = {
+  Mon: "admin.academics.aiTimetableGenerator.dayMon",
+  Tue: "admin.academics.aiTimetableGenerator.dayTue",
+  Wed: "admin.academics.aiTimetableGenerator.dayWed",
+  Thu: "admin.academics.aiTimetableGenerator.dayThu",
+  Fri: "admin.academics.aiTimetableGenerator.dayFri",
+  Sat: "admin.academics.aiTimetableGenerator.daySat",
+};
 
 // Real AI-assisted timetable generation — see src/lib/aiTimetableGenerator.ts
 // for why this is a hybrid (deterministic conflict-free scheduler + a real
@@ -22,6 +31,7 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // from real subject_assignments records, and publishes to the same real
 // `timetable_slots` entity every other timetable view already reads from.
 export default function AITimetableGenerator() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<SubjectAssignment[]>([]);
   const [existingGridJson, setExistingGridJson] = useState<Record<string, ClassGrid>>({});
@@ -47,7 +57,7 @@ export default function AITimetableGenerator() {
         }
       } catch (error) {
         console.error("Failed to load subject assignments:", error);
-        toast.error("Failed to load subject assignments");
+        toast.error(t("admin.academics.aiTimetableGenerator.toastLoadFailed"));
       } finally {
         setLoading(false);
       }
@@ -97,7 +107,7 @@ export default function AITimetableGenerator() {
 
   const handleGenerate = async () => {
     if (selectedClasses.size === 0) {
-      toast.error("Select at least one class to generate a timetable for");
+      toast.error(t("admin.academics.aiTimetableGenerator.toastSelectClass"));
       return;
     }
     setGenerating(true);
@@ -113,7 +123,7 @@ export default function AITimetableGenerator() {
       if (generated.warnings.length) {
         generated.warnings.forEach((w) => toast.warning(w, { duration: 6000 }));
       } else {
-        toast.success(`Generated a conflict-free timetable for ${classes.length} class(es)`);
+        toast.success(t("admin.academics.aiTimetableGenerator.toastGenerateSuccess", { count: classes.length }));
       }
 
       setInsightsLoading(true);
@@ -122,7 +132,7 @@ export default function AITimetableGenerator() {
         .finally(() => setInsightsLoading(false));
     } catch (error) {
       console.error("Timetable generation failed:", error);
-      toast.error("Failed to generate timetable");
+      toast.error(t("admin.academics.aiTimetableGenerator.toastGenerateFailed"));
     } finally {
       setGenerating(false);
     }
@@ -144,10 +154,10 @@ export default function AITimetableGenerator() {
         }),
       });
       setExistingGridJson(merged);
-      toast.success(`Published — live on every class/teacher/student timetable view.`);
+      toast.success(t("admin.academics.aiTimetableGenerator.toastPublishSuccess"));
     } catch (error) {
       console.error("Failed to publish generated timetable:", error);
-      toast.error("Failed to publish");
+      toast.error(t("admin.academics.aiTimetableGenerator.toastPublishFailed"));
     } finally {
       setPublishing(false);
     }
@@ -161,26 +171,26 @@ export default function AITimetableGenerator() {
             <Wand2 className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">AI Timetable Generator</h1>
-            <p className="text-sm text-slate-400">Generates a conflict-free weekly timetable from real subject/teacher assignments, reviewed by AI</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.aiTimetableGenerator.pageTitle")}</h1>
+            <p className="text-sm text-slate-400">{t("admin.academics.aiTimetableGenerator.pageSubtitle")}</p>
           </div>
         </div>
 
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Select Classes</CardTitle>
+              <CardTitle className="text-base">{t("admin.academics.aiTimetableGenerator.selectClassesTitle")}</CardTitle>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={selectAll}>Select All</Button>
-                <Button size="sm" variant="outline" onClick={clearAll}>Clear</Button>
+                <Button size="sm" variant="outline" onClick={selectAll}>{t("admin.academics.aiTimetableGenerator.selectAllButton")}</Button>
+                <Button size="sm" variant="outline" onClick={clearAll}>{t("admin.academics.aiTimetableGenerator.clearButton")}</Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Loading real subject assignments…</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">{t("admin.academics.aiTimetableGenerator.loadingAssignments")}</p>
             ) : availableClasses.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">No subject-teacher assignments found yet — assign subjects to teachers in Academics → Subjects first.</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">{t("admin.academics.aiTimetableGenerator.noAssignmentsFound")}</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableClasses.map(([key, c]) => (
@@ -200,12 +210,12 @@ export default function AITimetableGenerator() {
             )}
             <div className="mt-4 flex gap-2">
               <Button onClick={handleGenerate} disabled={generating || loading || selectedClasses.size === 0}>
-                {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Generate Timetable
+                {generating ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Sparkles className="h-4 w-4 me-2" />}
+                {t("admin.academics.aiTimetableGenerator.generateButton")}
               </Button>
               {result && (
                 <Button variant="outline" onClick={handlePublish} disabled={publishing}>
-                  {publishing ? "Publishing…" : "Publish Live"}
+                  {publishing ? t("admin.academics.aiTimetableGenerator.publishingButton") : t("admin.academics.aiTimetableGenerator.publishLiveButton")}
                 </Button>
               )}
             </div>
@@ -219,7 +229,7 @@ export default function AITimetableGenerator() {
                 {result.warnings.length === 0
                   ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   : <AlertTriangle className="h-4 w-4 text-amber-500" />}
-                Generated Schedule Preview
+                {t("admin.academics.aiTimetableGenerator.schedulePreviewTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -234,15 +244,15 @@ export default function AITimetableGenerator() {
               <div className="rounded-lg bg-violet-50 border border-violet-200 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-4 w-4 text-violet-600" />
-                  <span className="text-sm font-semibold text-violet-800">AI Review</span>
+                  <span className="text-sm font-semibold text-violet-800">{t("admin.academics.aiTimetableGenerator.aiReviewLabel")}</span>
                   {insights && (
                     <Badge variant="outline" className="text-[10px] border-violet-300 text-violet-600">
-                      {insights.generatedVia === "unavailable" ? "AI unavailable" : `via ${insights.generatedVia}`}
+                      {insights.generatedVia === "unavailable" ? t("admin.academics.aiTimetableGenerator.aiUnavailable") : t("admin.academics.aiTimetableGenerator.aiViaSource", { source: insights.generatedVia })}
                     </Badge>
                   )}
                 </div>
                 {insightsLoading ? (
-                  <p className="text-xs text-violet-500">Analyzing generated schedule…</p>
+                  <p className="text-xs text-violet-500">{t("admin.academics.aiTimetableGenerator.analyzingSchedule")}</p>
                 ) : (
                   <p className="text-sm text-violet-700 whitespace-pre-wrap">{insights?.summary}</p>
                 )}
@@ -254,8 +264,8 @@ export default function AITimetableGenerator() {
                   <table className="w-full text-xs border-collapse min-w-[600px]">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="border px-2 py-1.5 text-left">Period</th>
-                        {DAY_LABELS.map((d) => <th key={d} className="border px-2 py-1.5">{d}</th>)}
+                        <th className="border px-2 py-1.5 text-start">{t("admin.academics.aiTimetableGenerator.periodColumnHeader")}</th>
+                        {DAY_LABELS.map((d) => <th key={d} className="border px-2 py-1.5">{t(DAY_LABEL_KEYS[d])}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -269,7 +279,7 @@ export default function AITimetableGenerator() {
                                   <p className="font-semibold text-slate-800">{cell.subject}</p>
                                   <p className="text-[10px] text-slate-400">{cell.teacher}</p>
                                 </div>
-                              ) : <span className="text-slate-300">Free</span>}
+                              ) : <span className="text-slate-300">{t("admin.academics.aiTimetableGenerator.freeSlot")}</span>}
                             </td>
                           ))}
                         </tr>

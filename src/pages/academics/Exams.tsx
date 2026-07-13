@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import jsPDF from "jspdf";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -284,10 +285,10 @@ const slotToRow = (s: ExamSlot): ExamSlot & { durMin: number } => {
   return { ...s, durMin };
 };
 
-const MODE_OPTIONS: { value: ExamMode; label: string; hint: string }[] = [
-  { value: "Offline", label: "Offline", hint: "Paper-based, in a hall/room" },
-  { value: "Online", label: "Online", hint: "Conducted on devices" },
-  { value: "Hybrid", label: "Hybrid", hint: "Mix of paper + online" },
+const MODE_OPTIONS: { value: ExamMode; label: string; hintKey: string }[] = [
+  { value: "Offline", label: "Offline", hintKey: "admin.academics.exams.dialog.modeHintOffline" },
+  { value: "Online", label: "Online", hintKey: "admin.academics.exams.dialog.modeHintOnline" },
+  { value: "Hybrid", label: "Hybrid", hintKey: "admin.academics.exams.dialog.modeHintHybrid" },
 ];
 const modeBadge = (m: ExamMode) =>
   m === "Online" ? "bg-violet-50 text-violet-700 border-violet-200" :
@@ -295,8 +296,8 @@ const modeBadge = (m: ExamMode) =>
   "bg-orange-50 text-orange-700 border-orange-200";
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: BarChart3 },
-  { id: "schedule", label: "Schedule", icon: CalendarDays },
+  { id: "overview", labelKey: "admin.academics.exams.tabs.overview", icon: BarChart3 },
+  { id: "schedule", labelKey: "admin.academics.exams.tabs.schedule", icon: CalendarDays },
 ];
 
 const statusBadge = (s: string) =>
@@ -355,6 +356,7 @@ function EmptyState({ icon: Icon, title, hint, cta, onCta }: { icon: typeof File
 
 // ─── Component ───────────────────────────────────────────────────────────────
 const Exams = () => {
+  const { t } = useTranslation();
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const [tab, setTab] = useState("overview");
   const [year, setYear] = useState("2024-25");
@@ -951,50 +953,50 @@ const Exams = () => {
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Exam &amp; Results</h1>
-              <p className="text-sm text-slate-400">Create exams, manage schedules, publish results and analyze performance across the school.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.exams.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("admin.academics.exams.pageSubtitle")}</p>
             </div>
           </div>
           <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-sm" onClick={openCreate}>
-            <Plus className="w-4 h-4" /> Create Exam
+            <Plus className="w-4 h-4" /> {t("admin.academics.exams.createExam")}
           </Button>
         </div>
 
         <ExamSetupWizard examId={wizardExamId} onExamIdChange={setWizardExamId} step={wizardStep} onStepChange={setWizardStep}>
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn("relative flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors", tab === t.id ? "text-purple-600" : "text-gray-400 hover:text-gray-600")}>
-              <t.icon className="w-4 h-4" /> {t.label}
-              {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-purple-600" />}
+          {TABS.map(tabItem => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+              className={cn("relative flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors", tab === tabItem.id ? "text-purple-600" : "text-gray-400 hover:text-gray-600")}>
+              <tabItem.icon className="w-4 h-4" /> {t(tabItem.labelKey)}
+              {tab === tabItem.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-purple-600" />}
             </button>
           ))}
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-          <KPI icon={FileText} label="Total Exams" value={String(kpiTotal)} sub="All Terms" color="text-purple-600" bg="bg-violet-50" />
-          <KPI icon={CalendarDays} label="Upcoming Exams" value={String(kpiUpcoming)} sub="Scheduled" color="text-purple-600" bg="bg-blue-50" />
-          <KPI icon={CheckCircle2} label="Completed Exams" value={String(kpiCompleted)} sub="This Academic Year" color="text-emerald-600" bg="bg-emerald-50" />
-          <KPI icon={Eye} label="Published Results" value={String(kpiPublished)} sub="Published" color="text-amber-600" bg="bg-amber-50" />
-          <KPI icon={Users} label="Students Appeared" value={kpiAppeared.toLocaleString()} sub="Across All Exams" color="text-rose-600" bg="bg-rose-50" />
-          <KPI icon={TrendingUp} label="Overall Pass Rate" value="—" sub="No results recorded yet" color="text-green-600" bg="bg-green-50" />
+          <KPI icon={FileText} label={t("admin.academics.exams.kpi.totalExams")} value={String(kpiTotal)} sub={t("admin.academics.exams.kpi.allTerms")} color="text-purple-600" bg="bg-violet-50" />
+          <KPI icon={CalendarDays} label={t("admin.academics.exams.kpi.upcomingExams")} value={String(kpiUpcoming)} sub={t("admin.academics.exams.kpi.scheduled")} color="text-purple-600" bg="bg-blue-50" />
+          <KPI icon={CheckCircle2} label={t("admin.academics.exams.kpi.completedExams")} value={String(kpiCompleted)} sub={t("admin.academics.exams.kpi.thisAcademicYear")} color="text-emerald-600" bg="bg-emerald-50" />
+          <KPI icon={Eye} label={t("admin.academics.exams.kpi.publishedResults")} value={String(kpiPublished)} sub={t("admin.academics.exams.kpi.published")} color="text-amber-600" bg="bg-amber-50" />
+          <KPI icon={Users} label={t("admin.academics.exams.kpi.studentsAppeared")} value={kpiAppeared.toLocaleString()} sub={t("admin.academics.exams.kpi.acrossAllExams")} color="text-rose-600" bg="bg-rose-50" />
+          <KPI icon={TrendingUp} label={t("admin.academics.exams.kpi.overallPassRate")} value="—" sub={t("admin.academics.exams.kpi.noResultsYet")} color="text-green-600" bg="bg-green-50" />
         </div>
 
         {/* Filters */}
         {(tab === "overview" || tab === "schedule") && (
           <div className="flex items-end gap-3 flex-wrap bg-gray-50/60 border border-gray-100 rounded-xl px-4 py-3">
-            <FilterSelect label="Academic Year" value={year} onChange={setYear} options={["2024-25", "2023-24"]} />
-            <FilterSelect label="Term" value={term} onChange={setTerm} options={["All Terms", "Final Term", "Mid Term", "Unit Test"]} />
-            <FilterSelect label="Grade" value={grade} onChange={setGrade} options={["All Grades", ...grades]} />
-            <FilterSelect label="Section" value={section} onChange={setSection} options={SECTION_OPTIONS} />
-            <FilterSelect label="Subject" value={subject} onChange={setSubject} options={["All Subjects", ...SUBJECT_OPTIONS.slice(0, 10)]} />
-            <FilterSelect label="Exam Type" value={examType} onChange={setExamType} options={["All Types", ...TYPE_OPTIONS]} />
+            <FilterSelect label={t("admin.academics.exams.filters.academicYear")} value={year} onChange={setYear} options={["2024-25", "2023-24"]} />
+            <FilterSelect label={t("admin.academics.exams.filters.term")} value={term} onChange={setTerm} options={["All Terms", "Final Term", "Mid Term", "Unit Test"]} />
+            <FilterSelect label={t("admin.academics.exams.filters.grade")} value={grade} onChange={setGrade} options={["All Grades", ...grades]} />
+            <FilterSelect label={t("admin.academics.exams.filters.section")} value={section} onChange={setSection} options={SECTION_OPTIONS} />
+            <FilterSelect label={t("admin.academics.exams.filters.subject")} value={subject} onChange={setSubject} options={["All Subjects", ...SUBJECT_OPTIONS.slice(0, 10)]} />
+            <FilterSelect label={t("admin.academics.exams.filters.examType")} value={examType} onChange={setExamType} options={["All Types", ...TYPE_OPTIONS]} />
             <div className="flex-1" />
             <Button variant="outline" size="sm" className="gap-1.5 border-gray-200 h-9 self-end"
-              onClick={() => { setGrade("All Grades"); setSection("All Sections"); setSubject("All Subjects"); setExamType("All Types"); toast.success("Filters cleared"); }}>
-              <X className="w-3.5 h-3.5" /> Clear
+              onClick={() => { setGrade("All Grades"); setSection("All Sections"); setSubject("All Subjects"); setExamType("All Types"); toast.success(t("admin.academics.exams.toast.filtersCleared")); }}>
+              <X className="w-3.5 h-3.5" /> {t("admin.academics.exams.filters.clear")}
             </Button>
             <Button variant="outline" size="icon" className="border-gray-200 h-9 w-9 self-end" onClick={() => setTab("schedule")}>
               <Calendar className="w-4 h-4 text-gray-500" />
@@ -1007,39 +1009,39 @@ const Exams = () => {
           <div className="space-y-5">
             <Card className="border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <p className="font-bold text-gray-900">All Exams <span className="text-gray-400 font-normal">({filtered.length})</span></p>
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> Create Exam</Button>
+                <p className="font-bold text-gray-900">{t("admin.academics.exams.allExams")} <span className="text-gray-400 font-normal">({filtered.length})</span></p>
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> {t("admin.academics.exams.createExam")}</Button>
               </div>
               <ExamTable rows={filtered} onEdit={openEdit} onDelete={setDeleteTarget} onView={openView} nav={navigate} />
             </Card>
 
             <Card className="border border-gray-100 shadow-sm"><CardContent className="p-5">
-              <div className="flex items-center justify-between mb-1"><p className="font-bold text-gray-900">Results &amp; Performance Analytics</p></div>
-              <EmptyState icon={BarChart3} title="No results recorded yet"
-                hint="Subject averages, grade distribution and pass-rate trends will appear here once exam marks are entered and published."
-                cta="Enter Marks" onCta={() => navigate("/exams/marks")} />
+              <div className="flex items-center justify-between mb-1"><p className="font-bold text-gray-900">{t("admin.academics.exams.resultsAnalyticsTitle")}</p></div>
+              <EmptyState icon={BarChart3} title={t("admin.academics.exams.emptyResults.title")}
+                hint={t("admin.academics.exams.emptyResults.hint")}
+                cta={t("admin.academics.exams.emptyResults.cta")} onCta={() => navigate("/exams/marks")} />
             </CardContent></Card>
 
             <Card className="border border-gray-100 shadow-sm"><CardContent className="p-5">
-              <p className="font-bold text-gray-900 mb-4">System Alerts</p>
+              <p className="font-bold text-gray-900 mb-4">{t("admin.academics.exams.systemAlertsTitle")}</p>
               {(() => {
                 const unscheduled = exams.filter(e => e.slots.length === 0 && e.status === "Scheduled").length;
                 const pendingPublish = exams.filter(e => e.slots.length > 0 && !e.publishedToStudents).length;
                 const notAppeared = exams.reduce((a, e) => a + Math.max(0, (e.total || 0) - (e.appeared || 0)), 0);
                 const alerts = [
-                  { icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-50", count: unscheduled, desc: "Have not been scheduled yet", unit: "Exam" },
-                  { icon: Clock, color: "text-amber-500", bg: "bg-amber-50", count: pendingPublish, desc: "Timetable pending to publish", unit: "Exam" },
-                  { icon: Users, color: "text-blue-500", bg: "bg-blue-50", count: notAppeared, desc: "Have not appeared in some exams", unit: "Student" },
+                  { icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-50", count: unscheduled, desc: t("admin.academics.exams.alerts.notScheduled"), unit: t("admin.academics.exams.alerts.unitExamSingular"), unitPlural: t("admin.academics.exams.alerts.unitExamPlural") },
+                  { icon: Clock, color: "text-amber-500", bg: "bg-amber-50", count: pendingPublish, desc: t("admin.academics.exams.alerts.timetablePending"), unit: t("admin.academics.exams.alerts.unitExamSingular"), unitPlural: t("admin.academics.exams.alerts.unitExamPlural") },
+                  { icon: Users, color: "text-blue-500", bg: "bg-blue-50", count: notAppeared, desc: t("admin.academics.exams.alerts.notAppeared"), unit: t("admin.academics.exams.alerts.unitStudentSingular"), unitPlural: t("admin.academics.exams.alerts.unitStudentPlural") },
                 ];
                 if (alerts.every(a => a.count === 0)) {
                   return <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-emerald-50/40">
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50"><CheckCircle2 className="w-4 h-4 text-emerald-500" /></div>
-                    <p className="text-sm font-semibold text-gray-700">All caught up — no scheduling or publishing gaps.</p>
+                    <p className="text-sm font-semibold text-gray-700">{t("admin.academics.exams.alerts.allCaughtUp")}</p>
                   </div>;
                 }
                 return <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {alerts.map(a => (
-                    <div key={a.desc} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100"><div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", a.bg)}><a.icon className={cn("w-4 h-4", a.color)} /></div><div><p className="text-sm font-bold text-gray-900">{a.count} {a.unit}{a.count === 1 ? "" : "s"}</p><p className="text-[11px] text-gray-500">{a.desc}</p></div></div>
+                    <div key={a.desc} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100"><div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", a.bg)}><a.icon className={cn("w-4 h-4", a.color)} /></div><div><p className="text-sm font-bold text-gray-900">{a.count} {a.count === 1 ? a.unit : a.unitPlural}</p><p className="text-[11px] text-gray-500">{a.desc}</p></div></div>
                   ))}
                 </div>;
               })()}
@@ -1051,8 +1053,8 @@ const Exams = () => {
         {tab === "schedule" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div><p className="font-bold text-gray-900 text-lg">Exam Schedule</p><p className="text-xs text-gray-400">Subject-wise exam timetable across all grades</p></div>
-              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> Create Exam</Button>
+              <div><p className="font-bold text-gray-900 text-lg">{t("admin.academics.exams.scheduleTab.title")}</p><p className="text-xs text-gray-400">{t("admin.academics.exams.scheduleTab.subtitle")}</p></div>
+              <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> {t("admin.academics.exams.createExam")}</Button>
             </div>
             {exams.filter(e => totalSlotCount(e) > 0).map(exam => (
               <Card key={exam.id} className="border border-gray-100 shadow-sm overflow-hidden">
@@ -1066,10 +1068,10 @@ const Exams = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="border-gray-200 gap-1.5 text-xs" onClick={() => openView(exam)}>
-                      <Eye className="w-3.5 h-3.5" /> View Details
+                      <Eye className="w-3.5 h-3.5" /> {t("admin.academics.exams.scheduleTab.viewDetails")}
                     </Button>
                     <Button size="sm" className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1.5 text-xs" onClick={() => goToWizardStep(exam.id, "rooms")}>
-                      Continue Setup <ArrowRight className="w-3.5 h-3.5" />
+                      {t("admin.academics.exams.scheduleTab.continueSetup")} <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                     </Button>
                   </div>
                 </div>
@@ -1077,17 +1079,17 @@ const Exams = () => {
                   {getGradePlans(exam).filter(p => p.slots.length > 0).map(plan => (
                     <div key={plan.grade} className="overflow-x-auto">
                       {examGrades(exam).length > 1 && (
-                        <p className="px-5 pt-3 text-[11px] font-bold uppercase tracking-wider text-purple-600">{plan.grade} · Section {plan.sections.length ? plan.sections.join(", ") : plan.section}</p>
+                        <p className="px-5 pt-3 text-[11px] font-bold uppercase tracking-wider text-purple-600">{plan.grade} · {t("admin.academics.exams.scheduleTab.sectionLabel")} {plan.sections.length ? plan.sections.join(", ") : plan.section}</p>
                       )}
                       <table className="w-full text-sm">
-                        <thead><tr className="bg-gray-50 border-b border-gray-200">{["#", "Day", "Date", "Time", "Subject Code", "Subject Name"].map(h => <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>)}</tr></thead>
+                        <thead><tr className="bg-gray-50 border-b border-gray-200">{[t("admin.academics.exams.scheduleTab.colHash"), t("admin.academics.exams.scheduleTab.colDay"), t("admin.academics.exams.scheduleTab.colDate"), t("admin.academics.exams.scheduleTab.colTime"), t("admin.academics.exams.scheduleTab.colSubjectCode"), t("admin.academics.exams.scheduleTab.colSubjectName")].map(h => <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>)}</tr></thead>
                         <tbody>
                           {[...plan.slots].sort((a, b) => a.date.localeCompare(b.date)).map((s, i) => (
                             <tr key={i} className="border-b border-gray-50 hover:bg-blue-50/20">
                               <td className="px-4 py-3"><span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ background: SLOT_COLORS[i % SLOT_COLORS.length] }}>{i + 1}</span></td>
                               <td className="px-4 py-3"><span className="text-xs font-bold text-purple-600 bg-blue-50 px-2 py-0.5 rounded-md">{fmtDay(s.date)}</span></td>
                               <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">{fmtDate(s.date)}</td>
-                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{formatTime12h(s.start)} – {formatTime12h(s.end)} <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-md ml-1">{durationLabel(s.start, s.end)}</span></td>
+                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{formatTime12h(s.start)} – {formatTime12h(s.end)} <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-md ms-1">{durationLabel(s.start, s.end)}</span></td>
                               <td className="px-4 py-3">{s.subjectCode ? <span className="font-mono text-xs font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md">{s.subjectCode}</span> : <span className="text-gray-300">—</span>}</td>
                               <td className="px-4 py-3"><span className="font-semibold text-gray-900">{s.subject}</span></td>
                             </tr>
@@ -1102,9 +1104,9 @@ const Exams = () => {
             {exams.filter(e => totalSlotCount(e) > 0).length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <CalendarDays className="w-12 h-12 mb-3 text-gray-200" />
-                <p className="font-semibold">No exam schedules yet</p>
-                <p className="text-sm mt-1">Create an exam with subject-wise slots to see the timetable here.</p>
-                <Button className="mt-4 bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> Create Exam</Button>
+                <p className="font-semibold">{t("admin.academics.exams.scheduleTab.emptyTitle")}</p>
+                <p className="text-sm mt-1">{t("admin.academics.exams.scheduleTab.emptyHint")}</p>
+                <Button className="mt-4 bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={openCreate}><Plus className="w-4 h-4" /> {t("admin.academics.exams.createExam")}</Button>
               </div>
             )}
           </div>
@@ -1126,7 +1128,7 @@ const Exams = () => {
                   <div>
                     <DialogTitle className="text-base font-bold text-gray-900">{viewTarget.name}</DialogTitle>
                     <DialogDescription className="text-xs text-gray-400 mt-0">
-                      {viewTarget.type} · {examGrades(viewTarget).length > 1 ? `${examGrades(viewTarget).length} grades` : `${viewTarget.grade} · Section ${viewTarget.section}`}
+                      {viewTarget.type} · {examGrades(viewTarget).length > 1 ? t("admin.academics.exams.view.gradesCount", { count: examGrades(viewTarget).length }) : `${viewTarget.grade} · ${t("admin.academics.exams.scheduleTab.sectionLabel")} ${viewTarget.section}`}
                     </DialogDescription>
                   </div>
                 </div>
@@ -1134,11 +1136,11 @@ const Exams = () => {
               </div>
               <div className="flex items-center gap-3 flex-wrap mt-3">
                 {[
-                  { icon: Settings, label: `${viewTarget.mode} Exam`, color: viewTarget.mode === "Online" ? "text-purple-600" : viewTarget.mode === "Hybrid" ? "text-cyan-600" : "text-orange-600", bg: viewTarget.mode === "Online" ? "bg-violet-50" : viewTarget.mode === "Hybrid" ? "bg-cyan-50" : "bg-orange-50" },
+                  { icon: Settings, label: t("admin.academics.exams.view.modeExam", { mode: viewTarget.mode }), color: viewTarget.mode === "Online" ? "text-purple-600" : viewTarget.mode === "Hybrid" ? "text-cyan-600" : "text-orange-600", bg: viewTarget.mode === "Online" ? "bg-violet-50" : viewTarget.mode === "Hybrid" ? "bg-cyan-50" : "bg-orange-50" },
                   { icon: Calendar, label: fmtRange(viewTarget.startDate, viewTarget.endDate), color: "text-purple-600", bg: "bg-blue-50" },
                   ...(viewTarget.venue ? [{ icon: MapPin, label: viewTarget.venue, color: "text-rose-600", bg: "bg-rose-50" }] : []),
-                  { icon: Award, label: `Max ${viewTarget.maxMarks} · Pass ${viewTarget.passingMarks}`, color: "text-purple-600", bg: "bg-indigo-50" },
-                  { icon: Users, label: `${viewTarget.appeared || 0} / ${viewTarget.total || 0} Students`, color: "text-emerald-600", bg: "bg-emerald-50" },
+                  { icon: Award, label: t("admin.academics.exams.view.maxPass", { max: viewTarget.maxMarks, pass: viewTarget.passingMarks }), color: "text-purple-600", bg: "bg-indigo-50" },
+                  { icon: Users, label: t("admin.academics.exams.view.studentsCount", { appeared: viewTarget.appeared || 0, total: viewTarget.total || 0 }), color: "text-emerald-600", bg: "bg-emerald-50" },
                   { icon: GraduationCap, label: examGrades(viewTarget).join(", ") || viewTarget.grade, color: "text-amber-600", bg: "bg-amber-50" },
                 ].map((chip, i) => (
                   <div key={i} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold", chip.bg)}>
@@ -1168,16 +1170,16 @@ const Exams = () => {
                 return (
                   <div className="flex items-center justify-between gap-3 flex-wrap mt-3 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
                     <span className="text-xs text-gray-600">
-                      <b>{activeForPublish.grade}</b> timetable is {isPublished ? <span className="text-emerald-600 font-bold">published</span> : <span className="text-gray-400 font-bold">not published</span>} to students
+                      <b>{activeForPublish.grade}</b> {t("admin.academics.exams.view.timetableIs")} {isPublished ? <span className="text-emerald-600 font-bold">{t("admin.academics.exams.view.published")}</span> : <span className="text-gray-400 font-bold">{t("admin.academics.exams.view.notPublished")}</span>} {t("admin.academics.exams.view.toStudents")}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <Button size="sm" variant="outline" className="border-gray-200 gap-1.5 h-7 text-xs"
                         onClick={() => printExamTimetable(viewTarget, activeForPublish.grade)}>
-                        <Printer className="w-3 h-3" /> Print {activeForPublish.grade}
+                        <Printer className="w-3 h-3" /> {t("admin.academics.exams.view.print")} {activeForPublish.grade}
                       </Button>
                       <Button size="sm" variant="outline" className="border-gray-200 gap-1.5 h-7 text-xs"
-                        onClick={() => { downloadTimetablePDF(viewTarget, activeForPublish.grade); toast.success(`${activeForPublish.grade} timetable PDF downloaded`); }}>
-                        <Download className="w-3 h-3" /> Download {activeForPublish.grade} PDF
+                        onClick={() => { downloadTimetablePDF(viewTarget, activeForPublish.grade); toast.success(t("admin.academics.exams.toast.gradeTimetablePdfDownloaded", { grade: activeForPublish.grade })); }}>
+                        <Download className="w-3 h-3" /> {t("admin.academics.exams.view.downloadPdf", { grade: activeForPublish.grade })}
                       </Button>
                       <Button size="sm" variant={isPublished ? "outline" : "default"} className={isPublished ? "border-gray-200 gap-1.5 h-7 text-xs" : "bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-7 text-xs"}
                         onClick={async () => {
@@ -1186,9 +1188,9 @@ const Exams = () => {
                             if (!ok) return;
                           }
                           setGradePublished(viewTarget.id, activeForPublish.grade, !isPublished);
-                          toast.success(`${activeForPublish.grade} ${isPublished ? "unpublished" : "published"} ${isPublished ? "from" : "to"} students`);
+                          toast.success(isPublished ? t("admin.academics.exams.toast.gradeUnpublishedFromStudents", { grade: activeForPublish.grade }) : t("admin.academics.exams.toast.gradePublishedToStudents", { grade: activeForPublish.grade }));
                         }}>
-                        <Send className="w-3 h-3" /> {isPublished ? "Unpublish" : `Publish ${activeForPublish.grade}`}
+                        <Send className="w-3 h-3" /> {isPublished ? t("admin.academics.exams.view.unpublish") : t("admin.academics.exams.view.publishGrade", { grade: activeForPublish.grade })}
                       </Button>
                     </div>
                   </div>
@@ -1210,14 +1212,14 @@ const Exams = () => {
                 return (
                   <div className="mt-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Marks Entry Progress — {activePlan.grade}</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("admin.academics.exams.view.marksEntryProgress")} — {activePlan.grade}</span>
                       <span className={cn("text-[11px] font-bold", allDone ? "text-emerald-600" : "text-amber-600")}>
-                        {overallGraded}/{overallTotal} students graded
+                        {t("admin.academics.exams.view.studentsGraded", { graded: overallGraded, total: overallTotal })}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {bySubject.map(s => (
-                        <span key={s.subject} title={`${s.graded}/${s.total} students graded`}
+                        <span key={s.subject} title={t("admin.academics.exams.view.studentsGradedTooltip", { graded: s.graded, total: s.total })}
                           className={cn("inline-flex items-center gap-1 text-[10px] font-semibold rounded-md border px-1.5 py-0.5",
                             s.graded === s.total ? "bg-emerald-50 text-emerald-700 border-emerald-200" : s.graded === 0 ? "bg-gray-100 text-gray-400 border-gray-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
                           {s.subject} {s.graded}/{s.total}
@@ -1234,16 +1236,16 @@ const Exams = () => {
                 if (subjects.length === 0) return null;
                 return (
                   <div className="mt-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Library — Reading Material by Subject</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{t("admin.academics.exams.view.libraryHeading")}</span>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {subjects.map(sub => {
                         const count = viewLibraryCounts[sub] || 0;
                         return (
                           <a key={sub} href={`/library?category=${encodeURIComponent(sub)}`}
-                            title={count > 0 ? `${count} real book(s) catalogued under "${sub}"` : "No Library books catalogued under this subject yet"}
+                            title={count > 0 ? t("admin.academics.exams.view.libraryBooksTooltip", { count, subject: sub }) : t("admin.academics.exams.view.libraryNoBooksTooltip")}
                             className={cn("inline-flex items-center gap-1 text-[10px] font-semibold rounded-md border px-1.5 py-0.5 hover:underline",
                               count > 0 ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-gray-100 text-gray-400 border-gray-200")}>
-                            {sub}: {count} book{count === 1 ? "" : "s"}
+                            {sub}: {count === 1 ? t("admin.academics.exams.view.bookSingular", { count }) : t("admin.academics.exams.view.bookPlural", { count })}
                           </a>
                         );
                       })}
@@ -1261,7 +1263,7 @@ const Exams = () => {
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10">
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        {["#", "Code", "Subject", "Date", "Day", "Start", "End", "Duration"].map(h =>
+                        {[t("admin.academics.exams.scheduleTab.colHash"), t("admin.academics.exams.view.colCode"), t("admin.academics.exams.view.colSubject"), t("admin.academics.exams.scheduleTab.colDate"), t("admin.academics.exams.scheduleTab.colDay"), t("admin.academics.exams.view.colStart"), t("admin.academics.exams.view.colEnd"), t("admin.academics.exams.view.colDuration")].map(h =>
                           <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>
                         )}
                       </tr>
@@ -1300,10 +1302,10 @@ const Exams = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                   <CalendarDays className="w-10 h-10 mb-2 text-gray-200" />
-                  <p className="font-semibold">No subject slots scheduled yet{examGrades(viewTarget).length > 1 ? ` for ${activePlan.grade}` : ""}</p>
-                  <p className="text-sm mt-1">Edit this exam to add a subject-wise timetable.</p>
+                  <p className="font-semibold">{examGrades(viewTarget).length > 1 ? t("admin.academics.exams.view.noSlotsForGrade", { grade: activePlan.grade }) : t("admin.academics.exams.view.noSlotsYet")}</p>
+                  <p className="text-sm mt-1">{t("admin.academics.exams.view.editToAddTimetable")}</p>
                   <Button className="mt-4 gap-1.5 bg-purple-600 hover:bg-purple-700 text-white" onClick={() => { const v = viewTarget; setViewTarget(null); openEdit(v); }}>
-                    <Pencil className="w-4 h-4" /> Edit &amp; Add Schedule
+                    <Pencil className="w-4 h-4" /> {t("admin.academics.exams.view.editAndAddSchedule")}
                   </Button>
                 </div>
               );
@@ -1312,17 +1314,17 @@ const Exams = () => {
 
             <DialogFooter className="pt-3 border-t border-gray-100 shrink-0">
               <div className="flex gap-2 mr-auto">
-                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => printExamTimetable(viewTarget!)}><Printer className="w-4 h-4" /> Print</Button>
-                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { downloadTimetablePDF(viewTarget!); toast.success("Timetable PDF downloaded"); }}><Download className="w-4 h-4" /> Download PDF</Button>
-                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { exportExamCSV(viewTarget!); toast.success("Schedule downloaded"); }}><Download className="w-4 h-4" /> Export CSV</Button>
+                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => printExamTimetable(viewTarget!)}><Printer className="w-4 h-4" /> {t("admin.academics.exams.view.print")}</Button>
+                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { downloadTimetablePDF(viewTarget!); toast.success(t("admin.academics.exams.toast.timetablePdfDownloaded")); }}><Download className="w-4 h-4" /> {t("admin.academics.exams.view.downloadPdfPlain")}</Button>
+                <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { exportExamCSV(viewTarget!); toast.success(t("admin.academics.exams.toast.scheduleDownloaded")); }}><Download className="w-4 h-4" /> {t("admin.academics.exams.view.exportCsv")}</Button>
               </div>
-              <Button variant="outline" className="border-gray-200" onClick={() => setViewTarget(null)}>Close</Button>
+              <Button variant="outline" className="border-gray-200" onClick={() => setViewTarget(null)}>{t("admin.academics.exams.view.close")}</Button>
               <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { const v = viewTarget; setViewTarget(null); openEdit(v); }}>
-                <Pencil className="w-4 h-4" /> Edit Exam
+                <Pencil className="w-4 h-4" /> {t("admin.academics.exams.menu.editExam")}
               </Button>
               {viewTarget && totalSlotCount(viewTarget) > 0 && (
                 <Button className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white gap-1.5" onClick={() => { const v = viewTarget!; setViewTarget(null); goToWizardStep(v.id, "rooms"); }}>
-                  Continue Setup <ArrowRight className="w-4 h-4" />
+                  {t("admin.academics.exams.scheduleTab.continueSetup")} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </Button>
               )}
             </DialogFooter>
@@ -1338,10 +1340,10 @@ const Exams = () => {
               <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md shadow-blue-200">
                 <FileText className="w-4 h-4 text-white" />
               </span>
-              {editingId ? "Edit Exam" : "Create Exam"}
+              {editingId ? t("admin.academics.exams.dialog.editTitle") : t("admin.academics.exams.dialog.createTitle")}
             </DialogTitle>
-            <DialogDescription className="text-xs text-gray-400 ml-11">
-              {editingId ? "Update exam details and subject-wise schedule." : "Create a new exam with a complete subject-wise timetable for any grade."}
+            <DialogDescription className="text-xs text-gray-400 ms-11">
+              {editingId ? t("admin.academics.exams.dialog.editDescription") : t("admin.academics.exams.dialog.createDescription")}
             </DialogDescription>
           </DialogHeader>
 
@@ -1349,36 +1351,36 @@ const Exams = () => {
             {/* Basic Info */}
             <div className="py-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-3 flex items-center gap-1.5">
-                <FileText className="w-3 h-3" /> Exam Details
+                <FileText className="w-3 h-3" /> {t("admin.academics.exams.dialog.examDetails")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Name <span className="text-red-500">*</span></Label>
-                  <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Final Term Examination 2025" className="border-gray-200" />
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.examName")} <span className="text-red-500">*</span></Label>
+                  <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={t("admin.academics.exams.dialog.examNamePlaceholder")} className="border-gray-200" />
                 </div>
                 {/* Exam Mode — Online / Offline / Hybrid */}
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Mode</Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.examMode")}</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {MODE_OPTIONS.map(m => (
                       <button key={m.value} type="button" onClick={() => setForm(f => ({ ...f, mode: m.value }))}
                         className={cn("flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition-all",
                           form.mode === m.value ? "border-blue-500 bg-blue-50 ring-1 ring-blue-200" : "border-gray-200 hover:border-blue-200 hover:bg-blue-50/40")}>
                         <span className={cn("text-sm font-bold", form.mode === m.value ? "text-blue-700" : "text-gray-700")}>{m.label}</span>
-                        <span className="text-[10px] text-gray-400 leading-tight">{m.hint}</span>
+                        <span className="text-[10px] text-gray-400 leading-tight">{t(m.hintKey)}</span>
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Type</Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.examType")}</Label>
                   <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
                     <SelectTrigger className="border-gray-200"><SelectValue /></SelectTrigger>
                     <SelectContent>{TYPE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Status</Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.status")}</Label>
                   <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v as ExamStatus }))}>
                     <SelectTrigger className="border-gray-200"><SelectValue /></SelectTrigger>
                     <SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
@@ -1387,7 +1389,7 @@ const Exams = () => {
                 {/* Grades — an exam like "Mid Term - 1" can span several grades under
                     one name; each gets its own sections + subject schedule below. */}
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Grades <span className="text-red-500">*</span></Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.grades")} <span className="text-red-500">*</span></Label>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {grades.map(g => {
                       const checked = selectedGrades.includes(g);
@@ -1401,26 +1403,26 @@ const Exams = () => {
                     })}
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">
-                    {selectedGrades.length === 0 ? "Select every grade sitting this exam." : `${selectedGrades.length} grade${selectedGrades.length === 1 ? "" : "s"} selected — each gets its own sections and subject schedule below.`}
+                    {selectedGrades.length === 0 ? t("admin.academics.exams.dialog.selectEveryGrade") : selectedGrades.length === 1 ? t("admin.academics.exams.dialog.gradesSelectedSingular", { count: selectedGrades.length }) : t("admin.academics.exams.dialog.gradesSelectedPlural", { count: selectedGrades.length })}
                   </p>
                 </div>
                 {/* Venue + marks — most relevant for Offline/Hybrid paper exams */}
                 <div className="col-span-2">
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Venue {form.mode !== "Online" && <span className="text-gray-300 font-normal">(building / campus)</span>}</Label>
-                  <Input value={form.venue} onChange={e => setForm(f => ({ ...f, venue: e.target.value }))} placeholder="e.g. Main Block, Examination Hall" className="border-gray-200" />
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.examVenue")} {form.mode !== "Online" && <span className="text-gray-300 font-normal">{t("admin.academics.exams.dialog.buildingCampus")}</span>}</Label>
+                  <Input value={form.venue} onChange={e => setForm(f => ({ ...f, venue: e.target.value }))} placeholder={t("admin.academics.exams.dialog.venuePlaceholder")} className="border-gray-200" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Maximum Marks</Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.maximumMarks")}</Label>
                   <Input type="number" min={1} value={form.maxMarks || ""} onChange={e => setForm(f => ({ ...f, maxMarks: Number(e.target.value) }))} placeholder="100" className="border-gray-200" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Passing Marks</Label>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.passingMarks")}</Label>
                   <Input type="number" min={0} value={form.passingMarks || ""} onChange={e => setForm(f => ({ ...f, passingMarks: Number(e.target.value) }))} placeholder="40" className="border-gray-200" />
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">Exam Fee (QAR) <span className="text-gray-300 font-normal">(optional)</span></Label>
-                  <Input type="number" min={0} value={form.examFee || ""} onChange={e => setForm(f => ({ ...f, examFee: Number(e.target.value) }))} placeholder="0 — free" className="border-gray-200" />
-                  <p className="text-[10px] text-gray-400 mt-1">A real invoice is generated per student when seats are allocated in Room Allocation.</p>
+                  <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.examFee")} <span className="text-gray-300 font-normal">{t("admin.academics.exams.dialog.optional")}</span></Label>
+                  <Input type="number" min={0} value={form.examFee || ""} onChange={e => setForm(f => ({ ...f, examFee: Number(e.target.value) }))} placeholder={t("admin.academics.exams.dialog.examFeePlaceholder")} className="border-gray-200" />
+                  <p className="text-[10px] text-gray-400 mt-1">{t("admin.academics.exams.dialog.examFeeHint")}</p>
                 </div>
               </div>
             </div>
@@ -1429,14 +1431,14 @@ const Exams = () => {
                 its own tab since different grades sit different subjects/dates. */}
             <div className="py-4 border-t border-gray-100">
               <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500 flex items-center gap-1.5 mb-3">
-                <CalendarDays className="w-3 h-3" /> Grade-wise Schedule
+                <CalendarDays className="w-3 h-3" /> {t("admin.academics.exams.dialog.gradewiseSchedule")}
               </p>
 
               {selectedGrades.length === 0 ? (
                 <div className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center gap-1.5 text-gray-400">
                   <GraduationCap className="w-7 h-7" />
-                  <span className="text-sm font-semibold">Select at least one grade above</span>
-                  <span className="text-xs">Its sections and subject-wise datesheet will be built here</span>
+                  <span className="text-sm font-semibold">{t("admin.academics.exams.dialog.selectGradeAbove")}</span>
+                  <span className="text-xs">{t("admin.academics.exams.dialog.sectionsWillBeBuilt")}</span>
                 </div>
               ) : (
                 <>
@@ -1711,14 +1713,20 @@ function ExamTable({
   nav: (path: string) => void;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const hasResults = (e: Exam) => e.status === "Completed" || e.status === "Published";
+  const TABLE_HEADERS = [
+    t("admin.academics.exams.table.examName"), t("admin.academics.exams.table.type"), t("admin.academics.exams.table.gradeSection"),
+    t("admin.academics.exams.table.subjects"), t("admin.academics.exams.table.examDates"), t("admin.academics.exams.table.appeared"),
+    t("admin.academics.exams.table.status"), t("admin.academics.exams.table.actions"),
+  ];
   return (
     <CardContent className="p-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {["Exam Name", "Type", "Grade / Section", "Subjects", "Exam Dates", "Appeared", "Status", "Actions"].map(h =>
+              {TABLE_HEADERS.map(h =>
                 <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400 whitespace-nowrap">{h}</th>
               )}
             </tr>
@@ -1726,7 +1734,7 @@ function ExamTable({
           <tbody>
             {rows.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-16 text-center text-gray-400">
-                <FileText className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p>No exams match your filters.</p>
+                <FileText className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p>{t("admin.academics.exams.table.noExamsMatch")}</p>
               </td></tr>
             ) : rows.map(e => {
               const rate = e.total > 0 ? ((e.appeared / e.total) * 100).toFixed(1) : "0";
@@ -1743,10 +1751,10 @@ function ExamTable({
                       <div>
                         <span className="font-semibold text-gray-900">{e.name}</span>
                         {totalSlotCount(e) > 0 && (
-                          <span className="ml-2 text-[10px] font-semibold text-purple-600 bg-indigo-50 px-1.5 py-0.5 rounded-md">{totalSlotCount(e)} slots</span>
+                          <span className="ms-2 text-[10px] font-semibold text-purple-600 bg-indigo-50 px-1.5 py-0.5 rounded-md">{t("admin.academics.exams.table.slotsCount", { count: totalSlotCount(e) })}</span>
                         )}
                         {examGrades(e).length > 1 && (
-                          <span className="ml-2 text-[10px] font-semibold text-purple-600 bg-violet-50 px-1.5 py-0.5 rounded-md">{examGrades(e).length} grades</span>
+                          <span className="ms-2 text-[10px] font-semibold text-purple-600 bg-violet-50 px-1.5 py-0.5 rounded-md">{t("admin.academics.exams.table.gradesCount", { count: examGrades(e).length })}</span>
                         )}
                       </div>
                     </div>
@@ -1774,13 +1782,13 @@ function ExamTable({
                     <div className="flex flex-col gap-1 items-start">
                       <span className={cn("inline-flex items-center text-xs font-semibold rounded-full border px-2.5 py-1", statusBadge(e.status))}>{e.status}</span>
                       <div className="flex items-center gap-1">
-                        <span title="Visible to teachers for marks entry" className={cn("inline-flex items-center text-[9px] font-bold rounded-md border px-1.5 py-0.5",
+                        <span title={t("admin.academics.exams.table.visibleToTeachersTooltip")} className={cn("inline-flex items-center text-[9px] font-bold rounded-md border px-1.5 py-0.5",
                           e.publishedToTeachers ? "bg-blue-50 text-purple-600 border-blue-200" : "bg-gray-50 text-gray-400 border-gray-200")}>
-                          Teachers {e.publishedToTeachers ? "✓" : "—"}
+                          {t("admin.academics.exams.table.teachersLabel")} {e.publishedToTeachers ? "✓" : "—"}
                         </span>
-                        <span title="Visible to students/parents" className={cn("inline-flex items-center text-[9px] font-bold rounded-md border px-1.5 py-0.5",
+                        <span title={t("admin.academics.exams.table.visibleToStudentsTooltip")} className={cn("inline-flex items-center text-[9px] font-bold rounded-md border px-1.5 py-0.5",
                           e.publishedToStudents ? "bg-violet-50 text-purple-600 border-violet-200" : "bg-gray-50 text-gray-400 border-gray-200")}>
-                          Students {e.publishedToStudents ? "✓" : "—"}
+                          {t("admin.academics.exams.table.studentsLabel")} {e.publishedToStudents ? "✓" : "—"}
                         </span>
                       </div>
                     </div>
@@ -1792,20 +1800,20 @@ function ExamTable({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 bg-white border border-gray-100 shadow-lg rounded-xl p-1 z-50">
                         <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => onView(e)}>
-                          <Eye className="w-4 h-4 text-blue-500" /> View Timetable
+                          <Eye className="w-4 h-4 text-blue-500" /> {t("admin.academics.exams.menu.viewTimetable")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => onEdit(e)}>
-                          <Pencil className="w-4 h-4 text-gray-500" /> Edit Exam
+                          <Pencil className="w-4 h-4 text-gray-500" /> {t("admin.academics.exams.menu.editExam")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {/* Publish workflow — Teachers first, then Students */}
                         {!e.publishedToTeachers ? (
-                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { updateExam(e.id, { publishedToTeachers: true }); toast.success(`"${e.name}" published to teachers`); }}>
-                            <UserCheck className="w-4 h-4 text-blue-500" /> Publish to Teachers
+                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { updateExam(e.id, { publishedToTeachers: true }); toast.success(t("admin.academics.exams.toast.publishedToTeachers", { name: e.name })); }}>
+                            <UserCheck className="w-4 h-4 text-blue-500" /> {t("admin.academics.exams.menu.publishToTeachers")}
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg text-gray-400" onClick={() => { updateExam(e.id, { publishedToTeachers: false }); toast.info("Unpublished from teachers"); }}>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Teachers Notified
+                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg text-gray-400" onClick={() => { updateExam(e.id, { publishedToTeachers: false }); toast.info(t("admin.academics.exams.toast.unpublishedFromTeachers")); }}>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {t("admin.academics.exams.menu.teachersNotified")}
                           </DropdownMenuItem>
                         )}
                         {!e.publishedToStudents ? (
@@ -1813,36 +1821,36 @@ function ExamTable({
                             const ok = await confirmPublishToStudents(e);
                             if (!ok) return;
                             updateExam(e.id, { publishedToStudents: true });
-                            toast.success(`"${e.name}" published to students & parents`);
+                            toast.success(t("admin.academics.exams.toast.publishedToStudents", { name: e.name }));
                           }}>
-                            <Send className="w-4 h-4 text-violet-500" /> Publish to Students
+                            <Send className="w-4 h-4 text-violet-500" /> {t("admin.academics.exams.menu.publishToStudents")}
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg text-gray-400" onClick={() => { updateExam(e.id, { publishedToStudents: false }); toast.info("Unpublished from students"); }}>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Students Notified
+                          <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg text-gray-400" onClick={() => { updateExam(e.id, { publishedToStudents: false }); toast.info(t("admin.academics.exams.toast.unpublishedFromStudents")); }}>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {t("admin.academics.exams.menu.studentsNotified")}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator />
                         {withResults && (
                           <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => nav("/exams/results")}>
-                            <ClipboardList className="w-4 h-4 text-emerald-500" /> View Results
+                            <ClipboardList className="w-4 h-4 text-emerald-500" /> {t("admin.academics.exams.menu.viewResults")}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => nav("/exams/seating")}>
-                          <MapPin className="w-4 h-4 text-violet-500" /> Room Allocation
+                          <MapPin className="w-4 h-4 text-violet-500" /> {t("admin.academics.exams.menu.roomAllocation")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => printExamTimetable(e)}>
-                          <Printer className="w-4 h-4 text-gray-500" /> Print Timetable
+                          <Printer className="w-4 h-4 text-gray-500" /> {t("admin.academics.exams.menu.printTimetable")}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { downloadTimetablePDF(e); toast.success("Timetable PDF downloaded"); }}>
-                          <Download className="w-4 h-4 text-gray-500" /> Download Timetable (PDF)
+                        <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { downloadTimetablePDF(e); toast.success(t("admin.academics.exams.toast.timetablePdfDownloaded")); }}>
+                          <Download className="w-4 h-4 text-gray-500" /> {t("admin.academics.exams.menu.downloadTimetablePdf")}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { exportExamCSV(e); toast.success("Schedule downloaded"); }}>
-                          <Download className="w-4 h-4 text-gray-500" /> Export to CSV
+                        <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => { exportExamCSV(e); toast.success(t("admin.academics.exams.toast.scheduleDownloaded")); }}>
+                          <Download className="w-4 h-4 text-gray-500" /> {t("admin.academics.exams.menu.exportCsv")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg text-red-600 focus:text-red-600" onClick={() => onDelete(e)}>
-                          <Trash2 className="w-4 h-4" /> Delete
+                          <Trash2 className="w-4 h-4" /> {t("admin.academics.exams.menu.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

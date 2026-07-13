@@ -12,8 +12,17 @@ import {
 } from "lucide-react";
 import { useLiveClasses } from "@/contexts/LiveClassContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useTranslation } from "react-i18next";
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  live: 'admin.academics.liveClassDetails.statusLive',
+  upcoming: 'admin.academics.liveClassDetails.statusUpcoming',
+  ended: 'admin.academics.liveClassDetails.statusEnded',
+  completed: 'admin.academics.liveClassDetails.statusCompleted',
+};
 
 export default function LiveClassDetails() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { liveClasses, loading, deleteLiveClass } = useLiveClasses();
@@ -40,7 +49,7 @@ export default function LiveClassDetails() {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="h-8 w-8 text-[#9810fa] animate-spin mb-4" />
-          <p className="text-slate-500 font-medium">Loading class details...</p>
+          <p className="text-slate-500 font-medium">{t('admin.academics.liveClassDetails.loading')}</p>
         </div>
       </DashboardLayout>
     );
@@ -50,8 +59,8 @@ export default function LiveClassDetails() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-20">
-          <h2 className="text-2xl font-bold mb-4">Class not found</h2>
-          <Button onClick={() => navigate('/academics/live-classes')}>Go Back</Button>
+          <h2 className="text-2xl font-bold mb-4">{t('admin.academics.liveClassDetails.classNotFound')}</h2>
+          <Button onClick={() => navigate('/academics/live-classes')}>{t('admin.academics.liveClassDetails.goBack')}</Button>
         </div>
       </DashboardLayout>
     );
@@ -80,7 +89,7 @@ export default function LiveClassDetails() {
                     'bg-slate-50 text-slate-600 border-slate-100'}
                   font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border
                 `}>
-                  {currentClass.status}
+                  {t(STATUS_LABEL_KEYS[currentClass.status] || currentClass.status)}
                 </Badge>
               </div>
               <p className="text-slate-500 text-sm">{currentClass.subject} • {currentClass.teacher}</p>
@@ -89,26 +98,26 @@ export default function LiveClassDetails() {
           
           <div className="flex items-center gap-2">
             <Button variant="outline" className="rounded-xl border-slate-200">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share Link
+              <Share2 className="h-4 w-4 me-2" />
+              {t('admin.academics.liveClassDetails.shareLink')}
             </Button>
             {currentClass.status === 'live' ? (
-              <Button 
+              <Button
                 onClick={() => navigate(`/academics/live-classes/room/${currentClass.id}`)}
                 className="bg-[#00C853] hover:bg-[#00b34a] text-white rounded-xl"
               >
-                <Play className="h-4 w-4 mr-2" />
-                Join Class
+                <Play className="h-4 w-4 me-2" />
+                {t('admin.academics.liveClassDetails.joinClass')}
               </Button>
             ) : (
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={() => setIsConfirmDeleteOpen(true)}
                 disabled={isDeleting}
                 className="rounded-xl"
               >
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                Delete Class
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <Trash2 className="h-4 w-4 me-2" />}
+                {t('admin.academics.liveClassDetails.deleteClass')}
               </Button>
             )}
           </div>
@@ -117,10 +126,10 @@ export default function LiveClassDetails() {
         <ConfirmDialog
           open={isConfirmDeleteOpen}
           onOpenChange={setIsConfirmDeleteOpen}
-          title="Delete Live Class"
-          description="Are you sure you want to delete this class? This action cannot be undone."
+          title={t('admin.academics.liveClassDetails.deleteDialogTitle')}
+          description={t('admin.academics.liveClassDetails.deleteDialogDescription')}
           onConfirm={handleDelete}
-          confirmText="Delete"
+          confirmText={t('admin.academics.liveClassDetails.deleteConfirmText')}
           variant="destructive"
         />
 
@@ -132,7 +141,7 @@ export default function LiveClassDetails() {
                 <Users className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Students</p>
+                <p className="text-xs text-slate-500 font-medium">{t('admin.academics.liveClassDetails.students')}</p>
                 <p className="text-xl font-bold text-slate-900">{currentClass.studentsCount || 0}</p>
               </div>
             </CardContent>
@@ -143,8 +152,8 @@ export default function LiveClassDetails() {
                 <Clock className="h-5 w-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Duration</p>
-                <p className="text-xl font-bold text-slate-900">60 mins</p>
+                <p className="text-xs text-slate-500 font-medium">{t('admin.academics.liveClassDetails.duration')}</p>
+                <p className="text-xl font-bold text-slate-900">{t('admin.academics.liveClassDetails.durationValue', { count: 60 })}</p>
               </div>
             </CardContent>
           </Card>
@@ -154,7 +163,7 @@ export default function LiveClassDetails() {
                 <CalendarIcon className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Date</p>
+                <p className="text-xs text-slate-500 font-medium">{t('admin.academics.liveClassDetails.date')}</p>
                 <p className="text-xl font-bold text-slate-900">{currentClass.date}</p>
               </div>
             </CardContent>
@@ -165,7 +174,7 @@ export default function LiveClassDetails() {
                 <BarChart3 className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Attendance</p>
+                <p className="text-xs text-slate-500 font-medium">{t('admin.academics.liveClassDetails.attendance')}</p>
                 <p className="text-xl font-bold text-slate-900">85%</p>
               </div>
             </CardContent>
@@ -175,43 +184,43 @@ export default function LiveClassDetails() {
         {/* Tabs Content */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-white border border-slate-200 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">Overview</TabsTrigger>
-            <TabsTrigger value="attendance" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">Attendance</TabsTrigger>
-            <TabsTrigger value="recordings" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">Recordings</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">Notes & Resources</TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">{t('admin.academics.liveClassDetails.tabOverview')}</TabsTrigger>
+            <TabsTrigger value="attendance" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">{t('admin.academics.liveClassDetails.tabAttendance')}</TabsTrigger>
+            <TabsTrigger value="recordings" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">{t('admin.academics.liveClassDetails.tabRecordings')}</TabsTrigger>
+            <TabsTrigger value="notes" className="rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">{t('admin.academics.liveClassDetails.tabNotes')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 rounded-2xl border-slate-200 shadow-sm overflow-hidden">
                 <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                  <CardTitle className="text-lg font-bold">Class Description</CardTitle>
+                  <CardTitle className="text-lg font-bold">{t('admin.academics.liveClassDetails.classDescription')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   <p className="text-slate-600 leading-relaxed">
-                    {currentClass.description || "No description provided for this class."}
+                    {currentClass.description || t('admin.academics.liveClassDetails.noDescription')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
                 <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                  <CardTitle className="text-lg font-bold">Class Settings</CardTitle>
+                  <CardTitle className="text-lg font-bold">{t('admin.academics.liveClassDetails.classSettings')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Auto Attendance</span>
+                    <span className="text-sm text-slate-600">{t('admin.academics.liveClassDetails.autoAttendance')}</span>
                     <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">
-                      {currentClass.autoAttendance ? "Enabled" : "Disabled"}
+                      {currentClass.autoAttendance ? t('admin.academics.liveClassDetails.enabled') : t('admin.academics.liveClassDetails.disabled')}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Recording</span>
-                    <Badge variant="outline" className="text-slate-400 border-slate-200 bg-slate-50">Disabled</Badge>
+                    <span className="text-sm text-slate-600">{t('admin.academics.liveClassDetails.recording')}</span>
+                    <Badge variant="outline" className="text-slate-400 border-slate-200 bg-slate-50">{t('admin.academics.liveClassDetails.disabled')}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-slate-600">Waiting Room</span>
-                    <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">Enabled</Badge>
+                    <span className="text-sm text-slate-600">{t('admin.academics.liveClassDetails.waitingRoom')}</span>
+                    <Badge variant="outline" className="text-emerald-600 border-emerald-100 bg-emerald-50">{t('admin.academics.liveClassDetails.enabled')}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -222,17 +231,17 @@ export default function LiveClassDetails() {
             <Card className="rounded-2xl border-slate-200 shadow-sm">
               <CardContent className="p-0">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900">Attendance Report</h3>
+                  <h3 className="font-bold text-slate-900">{t('admin.academics.liveClassDetails.attendanceReport')}</h3>
                   <Button variant="outline" size="sm" className="rounded-lg">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
+                    <Download className="h-4 w-4 me-2" />
+                    {t('admin.academics.liveClassDetails.exportCsv')}
                   </Button>
                 </div>
                 <div className="p-20 text-center">
                   <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <ClipboardList className="h-8 w-8 text-slate-300" />
                   </div>
-                  <p className="text-slate-500 font-medium">Attendance data will be available after the class ends.</p>
+                  <p className="text-slate-500 font-medium">{t('admin.academics.liveClassDetails.attendanceUnavailable')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -242,8 +251,8 @@ export default function LiveClassDetails() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="col-span-full py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300">
                 <Video className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-slate-900">No recordings available</h3>
-                <p className="text-slate-500 text-sm">Recordings will appear here once the session is completed and processed.</p>
+                <h3 className="text-lg font-bold text-slate-900">{t('admin.academics.liveClassDetails.noRecordings')}</h3>
+                <p className="text-slate-500 text-sm">{t('admin.academics.liveClassDetails.recordingsHint')}</p>
               </div>
             </div>
           </TabsContent>
@@ -252,10 +261,10 @@ export default function LiveClassDetails() {
             <Card className="rounded-2xl border-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-bold text-slate-900">Shared Resources</h3>
-                  <Button className="bg-[#9810fa] hover:bg-[#5b4bc4] text-white rounded-xl" disabled title="Resource upload isn't wired up yet">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Resource
+                  <h3 className="font-bold text-slate-900">{t('admin.academics.liveClassDetails.sharedResources')}</h3>
+                  <Button className="bg-[#9810fa] hover:bg-[#5b4bc4] text-white rounded-xl" disabled title={t('admin.academics.liveClassDetails.resourceUploadNotWired')}>
+                    <Plus className="h-4 w-4 me-2" />
+                    {t('admin.academics.liveClassDetails.addResource')}
                   </Button>
                 </div>
                 {/* Used to show a hardcoded "Class_Syllabus.pdf" that was never a
@@ -267,8 +276,8 @@ export default function LiveClassDetails() {
                     weekly progress). */}
                 <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl bg-slate-50/70 border border-dashed border-slate-200">
                   <FileText className="h-8 w-8 text-slate-300 mb-3" />
-                  <p className="text-sm font-semibold text-slate-600">No resources shared yet</p>
-                  <p className="text-xs text-slate-400 mt-1">Files shared for this class will appear here.</p>
+                  <p className="text-sm font-semibold text-slate-600">{t('admin.academics.liveClassDetails.noResourcesYet')}</p>
+                  <p className="text-xs text-slate-400 mt-1">{t('admin.academics.liveClassDetails.resourcesHint')}</p>
                 </div>
               </CardContent>
             </Card>

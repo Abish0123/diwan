@@ -8,8 +8,20 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
+import { useTranslation } from "react-i18next";
 
 const CERT_TYPES = ["Academic Excellence", "Perfect Attendance", "Sports Achievement", "Cultural Achievement", "Best Student", "Merit Certificate", "Participation", "Special Award"];
+
+const CERT_TYPE_LABEL_KEYS: Record<string, string> = {
+  "Academic Excellence": "admin.academics.certificates.typeAcademicExcellence",
+  "Perfect Attendance": "admin.academics.certificates.typePerfectAttendance",
+  "Sports Achievement": "admin.academics.certificates.typeSportsAchievement",
+  "Cultural Achievement": "admin.academics.certificates.typeCulturalAchievement",
+  "Best Student": "admin.academics.certificates.typeBestStudent",
+  "Merit Certificate": "admin.academics.certificates.typeMeritCertificate",
+  "Participation": "admin.academics.certificates.typeParticipation",
+  "Special Award": "admin.academics.certificates.typeSpecialAward",
+};
 
 const TYPE_COLORS: Record<string, string> = {
   "Academic Excellence": "bg-yellow-100 text-yellow-700",
@@ -37,6 +49,7 @@ interface Certificate {
 }
 
 export default function Certificates() {
+  const { t } = useTranslation();
   const { students } = useStudents();
   const [certs, setCerts] = useState<Certificate[]>([]);
 
@@ -77,8 +90,8 @@ export default function Certificates() {
   }), [certs, searchTerm, gradeFilter, typeFilter]);
 
   async function handleIssue() {
-    if (!fStudentId) { toast.error("Please select a student"); return; }
-    if (!fTitle.trim()) { toast.error("Please enter a certificate title"); return; }
+    if (!fStudentId) { toast.error(t("admin.academics.certificates.selectStudentError")); return; }
+    if (!fTitle.trim()) { toast.error(t("admin.academics.certificates.enterTitleError")); return; }
     const student = students.find(s => (s.id || s.uid) === fStudentId) as any;
     const newCert: Omit<Certificate, "id"> = {
       studentId: fStudentId,
@@ -97,9 +110,9 @@ export default function Certificates() {
       setCerts(prev => [created as Certificate, ...prev]);
       setShowForm(false);
       setFStudentId(""); setFTitle(""); setFDescription("");
-      toast.success("Certificate issued successfully!");
+      toast.success(t("admin.academics.certificates.issueSuccess"));
     } catch {
-      toast.error("Failed to issue certificate");
+      toast.error(t("admin.academics.certificates.issueError"));
     }
   }
 
@@ -107,9 +120,9 @@ export default function Certificates() {
     try {
       await smartDb.delete("Certificate", id);
       setCerts(prev => prev.filter(c => c.id !== id));
-      toast.success("Certificate deleted");
+      toast.success(t("admin.academics.certificates.deleteSuccess"));
     } catch {
-      toast.error("Failed to delete certificate");
+      toast.error(t("admin.academics.certificates.deleteError"));
     }
   }
 
@@ -117,9 +130,9 @@ export default function Certificates() {
     try {
       await smartDb.update("Certificate", id, { printed: true });
       setCerts(prev => prev.map(c => c.id === id ? { ...c, printed: true } : c));
-      toast.success("Marked as printed");
+      toast.success(t("admin.academics.certificates.markPrintedSuccess"));
     } catch {
-      toast.error("Failed to update certificate");
+      toast.error(t("admin.academics.certificates.markPrintedError"));
     }
   }
 
@@ -142,11 +155,11 @@ export default function Certificates() {
 
     doc.setFontSize(28);
     doc.setTextColor(30, 30, 30);
-    doc.text("CERTIFICATE", w / 2, 55, { align: "center" });
+    doc.text(t("admin.academics.certificates.certificateWord"), w / 2, 55, { align: "center" });
 
     doc.setFontSize(11);
     doc.setTextColor(100, 100, 100);
-    doc.text("This certificate is proudly presented to", w / 2, 68, { align: "center" });
+    doc.text(t("admin.academics.certificates.presentedTo"), w / 2, 68, { align: "center" });
 
     doc.setFontSize(22);
     doc.setTextColor(30, 30, 80);
@@ -154,11 +167,11 @@ export default function Certificates() {
 
     doc.setFontSize(12);
     doc.setTextColor(80, 80, 80);
-    doc.text(`${cert.grade}${cert.section ? ` · Section ${cert.section}` : ""}`, w / 2, 92, { align: "center" });
+    doc.text(`${cert.grade}${cert.section ? ` · ${t("admin.academics.certificates.sectionLabel")} ${cert.section}` : ""}`, w / 2, 92, { align: "center" });
 
     doc.setFontSize(14);
     doc.setTextColor(50, 50, 50);
-    doc.text(`For: ${cert.title}`, w / 2, 108, { align: "center" });
+    doc.text(`${t("admin.academics.certificates.forLabel")} ${cert.title}`, w / 2, 108, { align: "center" });
 
     if (cert.description) {
       doc.setFontSize(10);
@@ -178,34 +191,34 @@ export default function Certificates() {
     doc.text(cert.issuedDate, w - 70, lineY + 6, { align: "center" });
 
     doc.save(`${cert.studentName.replace(/\s+/g,"_")}_${cert.type.replace(/\s+/g,"_")}.pdf`);
-    toast.success("Certificate downloaded as PDF");
+    toast.success(t("admin.academics.certificates.downloadPdfSuccess"));
   }
 
   function exportExcel() {
     const rows = filtered.map(c => ({
-      "Certificate ID": c.id,
-      "Student Name": c.studentName,
-      "Grade": c.grade,
-      "Section": c.section,
-      "Type": c.type,
-      "Title": c.title,
-      "Issued Date": c.issuedDate,
-      "Issued By": c.issuedBy,
-      "Description": c.description,
-      "Printed": c.printed ? "Yes" : "No",
+      [t("admin.academics.certificates.colCertificateId")]: c.id,
+      [t("admin.academics.certificates.colStudentName")]: c.studentName,
+      [t("admin.academics.certificates.colGrade")]: c.grade,
+      [t("admin.academics.certificates.colSection")]: c.section,
+      [t("admin.academics.certificates.colType")]: c.type,
+      [t("admin.academics.certificates.colTitle")]: c.title,
+      [t("admin.academics.certificates.colIssuedDate")]: c.issuedDate,
+      [t("admin.academics.certificates.colIssuedBy")]: c.issuedBy,
+      [t("admin.academics.certificates.colDescription")]: c.description,
+      [t("admin.academics.certificates.colPrinted")]: c.printed ? t("admin.academics.certificates.yes") : t("admin.academics.certificates.no"),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Certificates");
     XLSX.writeFile(wb, "certificates.xlsx");
-    toast.success("Exported to Excel");
+    toast.success(t("admin.academics.certificates.exportExcelSuccess"));
   }
 
   const stats = [
-    { label: "Total Issued", value: certs.length, color: "bg-blue-50 text-blue-700", icon: Award },
-    { label: "This Month", value: certs.filter(c => c.issuedDate?.startsWith(new Date().toISOString().slice(0, 7))).length, color: "bg-emerald-50 text-emerald-700", icon: Award },
-    { label: "Printed", value: certs.filter(c => c.printed).length, color: "bg-purple-50 text-purple-700", icon: Printer },
-    { label: "Pending Print", value: certs.filter(c => !c.printed).length, color: "bg-amber-50 text-amber-700", icon: Award },
+    { label: t("admin.academics.certificates.statTotalIssued"), value: certs.length, color: "bg-blue-50 text-blue-700", icon: Award },
+    { label: t("admin.academics.certificates.statThisMonth"), value: certs.filter(c => c.issuedDate?.startsWith(new Date().toISOString().slice(0, 7))).length, color: "bg-emerald-50 text-emerald-700", icon: Award },
+    { label: t("admin.academics.certificates.statPrinted"), value: certs.filter(c => c.printed).length, color: "bg-purple-50 text-purple-700", icon: Printer },
+    { label: t("admin.academics.certificates.statPendingPrint"), value: certs.filter(c => !c.printed).length, color: "bg-amber-50 text-amber-700", icon: Award },
   ];
 
   return (
@@ -218,18 +231,18 @@ export default function Certificates() {
               <Award className="h-5 w-5 text-yellow-600"/>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Certificates</h1>
-              <p className="text-sm text-slate-400">Issue and manage student certificates and awards.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.certificates.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("admin.academics.certificates.pageSubtitle")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={exportExcel}
               className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Download className="h-4 w-4 text-slate-500"/> Export Excel
+              <Download className="h-4 w-4 text-slate-500"/> {t("admin.academics.certificates.exportExcelButton")}
             </button>
             <button onClick={() => setShowForm(true)}
               className="flex items-center gap-2 h-10 px-4 rounded-lg bg-[#9810fa] hover:bg-[#8710dc] text-white text-sm font-semibold">
-              <Plus className="h-4 w-4"/> Issue Certificate
+              <Plus className="h-4 w-4"/> {t("admin.academics.certificates.issueCertificateButton")}
             </button>
           </div>
         </div>
@@ -249,27 +262,27 @@ export default function Certificates() {
         {/* Filters */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-48">
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Search</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("admin.academics.certificates.searchLabel")}</label>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"/>
-              <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search student or title..."
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-yellow-300 bg-white"/>
+              <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"/>
+              <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={t("admin.academics.certificates.searchPlaceholder")}
+                className="w-full h-9 ps-8 pe-3 rounded-lg border border-slate-200 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-yellow-300 bg-white"/>
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Grade</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("admin.academics.certificates.gradeLabel")}</label>
             <select value={gradeFilter} onChange={e => setGradeFilter(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-yellow-300">
-              <option value="all">All Grades</option>
+              <option value="all">{t("admin.academics.certificates.allGrades")}</option>
               {grades.map(g => <option key={g}>{g}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Type</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("admin.academics.certificates.typeLabel")}</label>
             <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-yellow-300">
-              <option value="all">All Types</option>
-              {CERT_TYPES.map(t => <option key={t}>{t}</option>)}
+              <option value="all">{t("admin.academics.certificates.allTypes")}</option>
+              {CERT_TYPES.map(ct => <option key={ct} value={ct}>{t(CERT_TYPE_LABEL_KEYS[ct] || ct)}</option>)}
             </select>
           </div>
         </div>
@@ -277,20 +290,31 @@ export default function Certificates() {
         {/* Table */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-700">{filtered.length} Certificate{filtered.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm font-semibold text-slate-700">
+              {filtered.length === 1 ? t("admin.academics.certificates.countSingular", { count: filtered.length }) : t("admin.academics.certificates.countPlural", { count: filtered.length })}
+            </span>
           </div>
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Award className="h-10 w-10 mb-3 opacity-30"/>
-              <p className="font-medium">No certificates found</p>
-              <p className="text-sm mt-1">Issue a certificate using the button above.</p>
+              <p className="font-medium">{t("admin.academics.certificates.emptyTitle")}</p>
+              <p className="text-sm mt-1">{t("admin.academics.certificates.emptySubtitle")}</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  {["Student", "Grade", "Type", "Title", "Issued Date", "Issued By", "Status", "Actions"].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                  {[
+                    t("admin.academics.certificates.colStudent"),
+                    t("admin.academics.certificates.colGradeHeader"),
+                    t("admin.academics.certificates.colTypeHeader"),
+                    t("admin.academics.certificates.colTitleHeader"),
+                    t("admin.academics.certificates.colIssuedDateHeader"),
+                    t("admin.academics.certificates.colIssuedByHeader"),
+                    t("admin.academics.certificates.colStatus"),
+                    t("admin.academics.certificates.colActions"),
+                  ].map(h => (
+                    <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -301,7 +325,7 @@ export default function Certificates() {
                     <td className="px-4 py-3 text-slate-600">{cert.grade}{cert.section ? ` · ${cert.section}` : ""}</td>
                     <td className="px-4 py-3">
                       <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-md", TYPE_COLORS[cert.type] || "bg-slate-100 text-slate-600")}>
-                        {cert.type}
+                        {t(CERT_TYPE_LABEL_KEYS[cert.type] || cert.type)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{cert.title}</td>
@@ -309,7 +333,7 @@ export default function Certificates() {
                     <td className="px-4 py-3 text-slate-500">{cert.issuedBy}</td>
                     <td className="px-4 py-3">
                       <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-md", cert.printed ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700")}>
-                        {cert.printed ? "Printed" : "Pending"}
+                        {cert.printed ? t("admin.academics.certificates.statusPrinted") : t("admin.academics.certificates.statusPending")}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -347,57 +371,57 @@ export default function Certificates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Issue Certificate</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t("admin.academics.certificates.issueModalTitle")}</h2>
               <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100">
                 <X className="h-4 w-4"/>
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Student <span className="text-rose-500">*</span></label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.studentFieldLabel")} <span className="text-rose-500">*</span></label>
                 <select value={fStudentId} onChange={e => setFStudentId(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:ring-2 focus:ring-yellow-400">
-                  <option value="">Select Student</option>
+                  <option value="">{t("admin.academics.certificates.selectStudentOption")}</option>
                   {students.map((s: any) => (
                     <option key={s.id || s.uid} value={s.id || s.uid}>{s.name} — {s.grade}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Certificate Type</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.certificateTypeLabel")}</label>
                 <select value={fType} onChange={e => setFType(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:ring-2 focus:ring-yellow-400">
-                  {CERT_TYPES.map(t => <option key={t}>{t}</option>)}
+                  {CERT_TYPES.map(ct => <option key={ct} value={ct}>{t(CERT_TYPE_LABEL_KEYS[ct] || ct)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Certificate Title <span className="text-rose-500">*</span></label>
-                <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="e.g. Excellence in Mathematics"
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.certificateTitleLabel")} <span className="text-rose-500">*</span></label>
+                <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={t("admin.academics.certificates.certificateTitlePlaceholder")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-yellow-400"/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Issued Date</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.issuedDateLabel")}</label>
                   <input type="date" value={fIssuedDate} onChange={e => setFIssuedDate(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-yellow-400"/>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Issued By</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.issuedByLabel")}</label>
                   <input value={fIssuedBy} onChange={e => setFIssuedBy(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-yellow-400"/>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                <textarea value={fDescription} onChange={e => setFDescription(e.target.value)} rows={3} placeholder="Optional notes..."
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("admin.academics.certificates.descriptionLabel")}</label>
+                <textarea value={fDescription} onChange={e => setFDescription(e.target.value)} rows={3} placeholder={t("admin.academics.certificates.descriptionPlaceholder")}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-yellow-400 resize-none"/>
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
               <button onClick={() => setShowForm(false)}
-                className="h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                className="h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">{t("admin.academics.certificates.cancelButton")}</button>
               <button onClick={handleIssue}
-                className="h-10 px-6 rounded-lg bg-[#9810fa] hover:bg-[#8710dc] text-white text-sm font-semibold">Issue Certificate</button>
+                className="h-10 px-6 rounded-lg bg-[#9810fa] hover:bg-[#8710dc] text-white text-sm font-semibold">{t("admin.academics.certificates.issueCertificateButton")}</button>
             </div>
           </div>
         </div>
@@ -408,18 +432,18 @@ export default function Certificates() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setPreviewCert(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Certificate Preview</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t("admin.academics.certificates.previewModalTitle")}</h2>
               <button onClick={() => setPreviewCert(null)} className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100">
                 <X className="h-4 w-4"/>
               </button>
             </div>
             <div className="p-10 text-center border-4 border-yellow-400 m-6 rounded-2xl bg-yellow-50/30">
               <Award className="h-12 w-12 text-yellow-500 mx-auto mb-3"/>
-              <div className="text-xs font-bold uppercase tracking-widest text-yellow-600 mb-2">{previewCert.type}</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-yellow-600 mb-2">{t(CERT_TYPE_LABEL_KEYS[previewCert.type] || previewCert.type)}</div>
               <h2 className="text-2xl font-bold text-slate-900 mb-1">{previewCert.title}</h2>
-              <p className="text-slate-500 text-sm mb-4">This certificate is proudly presented to</p>
+              <p className="text-slate-500 text-sm mb-4">{t("admin.academics.certificates.presentedTo")}</p>
               <p className="text-3xl font-bold text-slate-800 mb-1">{previewCert.studentName}</p>
-              <p className="text-sm text-slate-500 mb-4">{previewCert.grade}{previewCert.section ? ` · Section ${previewCert.section}` : ""}</p>
+              <p className="text-sm text-slate-500 mb-4">{previewCert.grade}{previewCert.section ? ` · ${t("admin.academics.certificates.sectionLabel")} ${previewCert.section}` : ""}</p>
               {previewCert.description && <p className="text-sm text-slate-600 mb-6 italic">{previewCert.description}</p>}
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-yellow-200">
                 <div className="text-center">
@@ -435,11 +459,11 @@ export default function Certificates() {
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
               <button onClick={() => downloadPDF(previewCert)}
                 className="flex items-center gap-2 h-10 px-4 rounded-lg border border-blue-200 text-blue-700 text-sm font-semibold hover:bg-blue-50">
-                <FileDown className="h-4 w-4"/> Download PDF
+                <FileDown className="h-4 w-4"/> {t("admin.academics.certificates.downloadPdfButton")}
               </button>
               <button onClick={() => { markPrinted(previewCert.id); setPreviewCert(null); }}
                 className="flex items-center gap-2 h-10 px-4 rounded-lg bg-slate-800 text-white text-sm font-semibold hover:bg-slate-700">
-                <Printer className="h-4 w-4"/> Mark as Printed
+                <Printer className="h-4 w-4"/> {t("admin.academics.certificates.markAsPrintedButton")}
               </button>
             </div>
           </div>

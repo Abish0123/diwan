@@ -30,6 +30,7 @@ import { useGrades } from "@/contexts/CurriculumContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AchievementType = "Academic" | "Sports" | "Arts" | "Leadership" | "Olympiad" | "Attendance" | "Cultural" | "Community" | "Innovation" | "Custom";
@@ -103,6 +104,47 @@ const STATUS_CONFIG: Record<ApprovalStage, { color: string; dot: string }> = {
   "Published":            { color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
 };
 
+const TYPE_LABEL_KEYS: Record<AchievementType, string> = {
+  Academic: "admin.academics.achievements.typeAcademic",
+  Sports: "admin.academics.achievements.typeSports",
+  Arts: "admin.academics.achievements.typeArts",
+  Leadership: "admin.academics.achievements.typeLeadership",
+  Olympiad: "admin.academics.achievements.typeOlympiad",
+  Attendance: "admin.academics.achievements.typeAttendance",
+  Cultural: "admin.academics.achievements.typeCultural",
+  Community: "admin.academics.achievements.typeCommunity",
+  Innovation: "admin.academics.achievements.typeInnovation",
+  Custom: "admin.academics.achievements.typeCustom",
+};
+
+const AWARD_LABEL_KEYS: Record<AwardType, string> = {
+  "Winner": "admin.academics.achievements.awardWinner",
+  "Runner-Up": "admin.academics.achievements.awardRunnerUp",
+  "Participation": "admin.academics.achievements.awardParticipation",
+  "Merit": "admin.academics.achievements.awardMerit",
+  "Excellence": "admin.academics.achievements.awardExcellence",
+  "Custom": "admin.academics.achievements.awardCustom",
+};
+
+const STAGE_LABEL_KEYS: Record<ApprovalStage, string> = {
+  "Draft": "admin.academics.achievements.stageDraft",
+  "Pending Review": "admin.academics.achievements.stagePendingReview",
+  "Coordinator Approval": "admin.academics.achievements.stageCoordinatorApproval",
+  "Principal Approval": "admin.academics.achievements.stagePrincipalApproval",
+  "Published": "admin.academics.achievements.stagePublished",
+};
+
+const TEMPLATE_LABEL_KEYS: Record<CertTemplate, string> = {
+  "Academic Excellence": "admin.academics.achievements.templateAcademicExcellence",
+  "Sports Award": "admin.academics.achievements.templateSportsAward",
+  "Participation": "admin.academics.achievements.templateParticipation",
+  "Leadership": "admin.academics.achievements.templateLeadership",
+  "Cultural Event": "admin.academics.achievements.templateCulturalEvent",
+  "International Competition": "admin.academics.achievements.templateInternationalCompetition",
+  "Attendance Excellence": "admin.academics.achievements.templateAttendanceExcellence",
+  "Custom": "admin.academics.achievements.templateCustom",
+};
+
 const AWARD_COLORS: Record<AwardType, string> = {
   "Winner":       "bg-amber-50 text-amber-700 border-amber-300",
   "Runner-Up":    "bg-gray-50 text-gray-700 border-gray-300",
@@ -129,6 +171,7 @@ const BY_GRADE = [
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Achievements() {
+  const { t } = useTranslation();
   const grades = useGrades();
   const { user } = useAuth();
   const [activeTab, setActiveTab]       = useState<Tab>("Overview");
@@ -182,7 +225,7 @@ export default function Achievements() {
       }
     } catch (error) {
       console.error("Error loading achievements:", error);
-      toast.error("Failed to load achievements — showing sample data");
+      toast.error(t("admin.academics.achievements.toastLoadFailed"));
       setAchievements(SEED_ACHIEVEMENTS);
     } finally {
       setLoaded(true);
@@ -203,10 +246,10 @@ export default function Achievements() {
     try {
       await smartDb.update("Achievement", id, { status: next });
       setAchievements(prev => prev.map(a => a.id === id ? { ...a, status: next } : a));
-      toast.success(`"${current.title}" moved to ${next}`);
+      toast.success(t("admin.academics.achievements.toastMovedToStage", { title: current.title, stage: t(STAGE_LABEL_KEYS[next]) }));
     } catch (error) {
       console.error("Error advancing stage:", error);
-      toast.error("Failed to update approval stage");
+      toast.error(t("admin.academics.achievements.toastAdvanceFailed"));
     }
   }
 
@@ -237,7 +280,7 @@ export default function Achievements() {
 
   async function createAchievement() {
     if (!form.title.trim() || !form.event.trim() || selectedStudents.length === 0) {
-      toast.error("Please fill in Title, Event and select at least one student.");
+      toast.error(t("admin.academics.achievements.toastFillRequired"));
       return;
     }
     try {
@@ -247,7 +290,7 @@ export default function Achievements() {
         setAchievements(prev => prev.map(a => a.id === editingId
           ? { ...a, ...form, students: selectedStudents }
           : a));
-        toast.success(`Achievement "${form.title}" updated!`);
+        toast.success(t("admin.academics.achievements.toastAchievementUpdated", { title: form.title }));
       } else {
         // Create new — generate a unique id even after deletions
         const maxNum = achievements.reduce((m, a) => {
@@ -261,13 +304,13 @@ export default function Achievements() {
         };
         await smartDb.create("Achievement", newAch as unknown as Record<string, unknown>, newAch.id);
         setAchievements(prev => [newAch, ...prev]);
-        toast.success(`Achievement "${form.title}" created — now in Draft.`);
+        toast.success(t("admin.academics.achievements.toastAchievementCreated", { title: form.title }));
       }
       setCreateOpen(false);
       resetForm();
     } catch (error) {
       console.error("Error saving achievement:", error);
-      toast.error(editingId ? "Failed to update achievement" : "Failed to create achievement");
+      toast.error(editingId ? t("admin.academics.achievements.toastUpdateFailed") : t("admin.academics.achievements.toastCreateFailed"));
     }
   }
 
@@ -283,10 +326,10 @@ export default function Achievements() {
       await smartDb.delete("Achievement", id);
       setAchievements(prev => prev.filter(a => a.id !== id));
       if (detailAch?.id === id) setDetailAch(null);
-      toast.success("Achievement deleted");
+      toast.success(t("admin.academics.achievements.toastAchievementDeleted"));
     } catch (error) {
       console.error("Error deleting achievement:", error);
-      toast.error("Failed to delete achievement");
+      toast.error(t("admin.academics.achievements.toastDeleteFailed"));
     }
   }
 
@@ -318,24 +361,24 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
 .verify{font-size:9px;color:#C4B5FD;margin-top:16px;letter-spacing:2px;text-transform:uppercase}
 </style></head>
 <body><div class="cert">
-<div class="hdr"><h1>Student Diwan</h1><p>International School &nbsp;•&nbsp; Certificate of Achievement</p></div>
+<div class="hdr"><h1>Student Diwan</h1><p>${t("admin.academics.achievements.certHeaderSubtitle")}</p></div>
 <div class="body">
-<p class="lbl">Certificate of</p>
-<p class="ctitle">Achievement</p>
-<p style="font-size:12px;color:#6B7280;margin-bottom:6px">This certificate is proudly presented to</p>
+<p class="lbl">${t("admin.academics.achievements.certOfLabel")}</p>
+<p class="ctitle">${t("admin.academics.achievements.certTypeAchievement")}</p>
+<p style="font-size:12px;color:#6B7280;margin-bottom:6px">${t("admin.academics.achievements.presentedToText")}</p>
 <p class="student">${student}</p>
 <p class="grade">${ach.grade} &mdash; ${ach.section}</p>
-<div class="abox"><p class="for">for achieving</p><h3>${ach.title}</h3><p class="ev">${ach.event}</p></div>
+<div class="abox"><p class="for">${t("admin.academics.achievements.forAchievingLabel")}</p><h3>${ach.title}</h3><p class="ev">${ach.event}</p></div>
 <div class="meta">
-<div><strong>${ach.award}</strong>Award</div>
-<div><strong>${ach.date}</strong>Date</div>
-<div><strong>${ach.certNo}</strong>Cert No.</div>
+<div><strong>${t(AWARD_LABEL_KEYS[ach.award])}</strong>${t("admin.academics.achievements.awardLabel")}</div>
+<div><strong>${ach.date}</strong>${t("admin.academics.achievements.dateLabel")}</div>
+<div><strong>${ach.certNo}</strong>${t("admin.academics.achievements.certNoLabel")}</div>
 </div>
 <div class="sigs">
-<div class="sig"><div class="sig-line"></div><p>Class Teacher</p></div>
-<div class="sig"><div class="sig-line"></div><p>Principal</p></div>
+<div class="sig"><div class="sig-line"></div><p>${t("admin.academics.achievements.classTeacherLabel")}</p></div>
+<div class="sig"><div class="sig-line"></div><p>${t("admin.academics.achievements.principalLabel")}</p></div>
 </div>
-<p class="verify">Verify at studentdiwan.com/verify/${ach.certNo}</p>
+<p class="verify">${t("admin.academics.achievements.verifyAtLabel")} studentdiwan.com/verify/${ach.certNo}</p>
 </div></div></body></html>`;
   }
 
@@ -350,14 +393,14 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`Certificate downloaded for ${student}`);
+    toast.success(t("admin.academics.achievements.toastCertDownloaded", { student }));
   }
 
   // Bundles one certificate per student into a single ZIP so "Generate All as
   // ZIP" doesn't trigger N separate browser downloads.
   async function downloadCertificatesZip(ach: Achievement, students: string[]) {
     if (!ach || students.length === 0) {
-      toast.error("No students to generate certificates for");
+      toast.error(t("admin.academics.achievements.toastNoStudentsGenerate"));
       return;
     }
     try {
@@ -376,10 +419,10 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success(`Generated ZIP with ${students.length} certificate(s)`);
+      toast.success(t("admin.academics.achievements.toastZipGenerated", { count: students.length }));
     } catch (error) {
       console.error("Error generating ZIP:", error);
-      toast.error("Failed to generate ZIP archive");
+      toast.error(t("admin.academics.achievements.toastZipFailed"));
     }
   }
 
@@ -398,17 +441,17 @@ body{font-family:Georgia,serif;background:#f5f3ff;display:flex;align-items:cente
           category: "student",
           entity: "Achievement",
           type: "certificate_issued",
-          title: `Certificate Awarded: ${ach.title}`,
-          message: `Congratulations! You have been awarded a certificate for "${ach.title}" (${ach.event}). Certificate No. ${ach.certNo}.`,
+          title: t("admin.academics.achievements.notifCertTitle", { title: ach.title }),
+          message: t("admin.academics.achievements.notifCertMessage", { title: ach.title, event: ach.event, certNo: ach.certNo }),
           createdAt: new Date().toISOString(),
           read: false,
           redirectUrl: "/student/certificates",
         }, `ach_cert_${stamp}_${i}`)
       ));
-      toast.success(`Certificate notification sent to ${students.length} student(s)`);
+      toast.success(t("admin.academics.achievements.toastNotifSent", { count: students.length }));
     } catch (error) {
       console.error("Error sending certificate notification:", error);
-      toast.error("Failed to send certificate notification");
+      toast.error(t("admin.academics.achievements.toastNotifFailed"));
     }
   }
 

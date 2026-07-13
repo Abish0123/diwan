@@ -61,6 +61,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { generateComprehensiveAiReport } from "@/services/geminiService";
+import { useTranslation } from "react-i18next";
 
 interface MonthPoint { name: string; revenue: number; expenses: number; }
 
@@ -78,6 +79,7 @@ interface Transaction {
 }
 
 const FinanceOverview = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isMockSession } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
@@ -168,7 +170,20 @@ const FinanceOverview = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const formatChange = (pct: number | null) => pct === null ? "New" : `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  const formatChange = (pct: number | null) => pct === null ? t('admin.finance.overview.new') : `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+
+  const DATE_RANGE_KEYS: Record<string, string> = {
+    "Last 30 Days": "admin.finance.overview.last30Days",
+    "Last 90 Days": "admin.finance.overview.last90Days",
+    "This Year": "admin.finance.overview.thisYear",
+    "All Time": "admin.finance.overview.allTime",
+  };
+
+  const STAT_TITLE_KEYS: Record<string, string> = {
+    "Total Revenue": "admin.finance.overview.totalRevenue",
+    "Total Expenses": "admin.finance.overview.totalExpenses",
+    "Net Profit": "admin.finance.overview.netProfit",
+  };
 
   const stats = useMemo(() => [
     {
@@ -206,10 +221,12 @@ const FinanceOverview = () => {
     if (statsData.overdueInvoicesCount > 0) {
       insights.push({
         title: "Overdue Fees",
-        description: `${statsData.overdueInvoicesCount} students have overdue fees totaling ${financialSettings.currency}${statsData.pendingFees.toLocaleString()}.`,
+        titleKey: "admin.finance.overview.insightOverdueFeesTitle",
+        description: t('admin.finance.overview.insightOverdueFeesDesc', { count: statsData.overdueInvoicesCount, currency: financialSettings.currency, amount: statsData.pendingFees.toLocaleString() }),
         icon: AlertCircle,
         color: "text-rose-600",
         action: "Send Reminders",
+        actionKey: "admin.finance.overview.sendReminders",
         onClick: () => navigate('/finance/fees')
       });
     }
@@ -217,19 +234,23 @@ const FinanceOverview = () => {
     if (statsData.collectionRate < 80) {
       insights.push({
         title: "Collection Rate Low",
-        description: `Current collection rate is ${statsData.collectionRate}%, which is below the 85% target.`,
+        titleKey: "admin.finance.overview.insightCollectionLowTitle",
+        description: t('admin.finance.overview.insightCollectionLowDesc', { rate: statsData.collectionRate }),
         icon: TrendingDown,
         color: "text-orange-600",
         action: "Review Invoices",
+        actionKey: "admin.finance.overview.reviewInvoices",
         onClick: () => navigate('/finance/transactions')
       });
     } else {
       insights.push({
         title: "Healthy Collection",
-        description: `Collection rate is at a healthy ${statsData.collectionRate}%. Keep it up!`,
+        titleKey: "admin.finance.overview.insightHealthyCollectionTitle",
+        description: t('admin.finance.overview.insightHealthyCollectionDesc', { rate: statsData.collectionRate }),
         icon: CheckCircle2,
         color: "text-emerald-600",
         action: "View Report",
+        actionKey: "admin.finance.overview.viewReport",
         onClick: () => navigate('/finance/statements')
       });
     }
@@ -237,30 +258,32 @@ const FinanceOverview = () => {
     if (statsData.netProfitThisMonth > 0) {
       insights.push({
         title: "Profit Target",
-        description: "You are on track to meet your monthly profit target. Consider reinvesting surplus.",
+        titleKey: "admin.finance.overview.insightProfitTargetTitle",
+        description: t('admin.finance.overview.insightProfitTargetDesc'),
         icon: TrendingUp,
         color: "text-purple-600",
         action: "View Statements",
+        actionKey: "admin.finance.overview.viewStatements",
         onClick: () => navigate('/finance/statements')
       });
     }
 
     return insights;
-  }, [statsData, financialSettings, navigate]);
+  }, [statsData, financialSettings, navigate, t]);
 
   const handleExport = () => {
     if (!statsData.revenueThisMonth && !statsData.pendingFees) {
-      toast.error("No data available to export");
+      toast.error(t('admin.finance.overview.noDataToExport'));
       return;
     }
 
     const csvContent = [
-      ["Metric", "Value"],
-      ["Total Revenue", `${financialSettings.currency}${statsData.revenueThisMonth.toLocaleString()}`],
-      ["Pending Fees", `${financialSettings.currency}${statsData.pendingFees.toLocaleString()}`],
-      ["Collection Rate", `${statsData.collectionRate}%`],
-      ["Overdue Invoices", statsData.overdueInvoicesCount],
-      ["Export Date", new Date().toLocaleString()]
+      [t('admin.finance.overview.csvMetric'), t('admin.finance.overview.csvValue')],
+      [t('admin.finance.overview.totalRevenue'), `${financialSettings.currency}${statsData.revenueThisMonth.toLocaleString()}`],
+      [t('admin.finance.overview.csvPendingFees'), `${financialSettings.currency}${statsData.pendingFees.toLocaleString()}`],
+      [t('admin.finance.overview.csvCollectionRate'), `${statsData.collectionRate}%`],
+      [t('admin.finance.overview.csvOverdueInvoices'), statsData.overdueInvoicesCount],
+      [t('admin.finance.overview.csvExportDate'), new Date().toLocaleString()]
     ].map(e => e.join(",")).join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -273,11 +296,11 @@ const FinanceOverview = () => {
     link.click();
     document.body.removeChild(link);
     
-    toast.success("Financial data exported successfully");
+    toast.success(t('admin.finance.overview.exportSuccess'));
   };
 
   const handleGenerateReport = async () => {
-    toast.loading("AI is generating your financial report...", { id: "finance-report" });
+    toast.loading(t('admin.finance.overview.generatingReport'), { id: "finance-report" });
     
     try {
       const report = await generateComprehensiveAiReport(
@@ -289,15 +312,15 @@ const FinanceOverview = () => {
       // For now, we'll display it in the console and prompt to print, 
       // in a real app we'd open a modal with the Markdown
       console.log("AI Generated Report:", report);
-      toast.success("Strategic Report Generated!", { id: "finance-report" });
-      
+      toast.success(t('admin.finance.overview.reportGenerated'), { id: "finance-report" });
+
       // Open a simple window with the report
       const reportWindow = window.open('', '_blank');
       if (reportWindow) {
         reportWindow.document.write(`
           <html>
             <head>
-              <title>AI Strategic Financial Report</title>
+              <title>${t('admin.finance.overview.aiReportWindowTitle')}</title>
               <style>
                 body { font-family: sans-serif; padding: 40px; line-height: 1.6; color: #1e293b; }
                 h1 { color: #7c3aed; }
@@ -305,15 +328,15 @@ const FinanceOverview = () => {
               </style>
             </head>
             <body>
-              <h1>AI Strategic Financial Report</h1>
+              <h1>${t('admin.finance.overview.aiReportWindowTitle')}</h1>
               <pre>${report}</pre>
-              <button onclick="window.print()">Print Report</button>
+              <button onclick="window.print()">${t('admin.finance.overview.printReport')}</button>
             </body>
           </html>
         `);
       }
     } catch (error) {
-      toast.error("Failed to generate AI report", { id: "finance-report" });
+      toast.error(t('admin.finance.overview.reportFailed'), { id: "finance-report" });
     }
   };
 
@@ -326,40 +349,40 @@ const FinanceOverview = () => {
               <DollarSign className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Finance Overview</h1>
-              <p className="text-sm text-slate-400">Monitor your school's financial health and AI-driven insights.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.overview.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.finance.overview.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="rounded-xl">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dateRange}
+                  <Calendar className="me-2 h-4 w-4" />
+                  {t(DATE_RANGE_KEYS[dateRange] || dateRange)}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
                 {["Last 30 Days", "Last 90 Days", "This Year", "All Time"].map((range) => (
-                  <DropdownMenuItem 
-                    key={range} 
+                  <DropdownMenuItem
+                    key={range}
                     onClick={() => {
                       setDateRange(range);
-                      toast.info(`Filtering data for ${range}`);
+                      toast.info(t('admin.finance.overview.filteringDataFor', { range: t(DATE_RANGE_KEYS[range] || range) }));
                     }}
                     className="rounded-lg"
                   >
-                    {range}
+                    {t(DATE_RANGE_KEYS[range] || range)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl">
-              <Download className="mr-2 h-4 w-4" />
-              Export
+              <Download className="me-2 h-4 w-4" />
+              {t('admin.finance.overview.export')}
             </Button>
             <Button size="sm" className="gradient-primary rounded-xl" onClick={handleGenerateReport}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate Report
+              <Sparkles className="me-2 h-4 w-4" />
+              {t('admin.finance.overview.generateReport')}
             </Button>
           </div>
         </div>
@@ -383,12 +406,12 @@ const FinanceOverview = () => {
                     <Badge variant="secondary" className={`rounded-full ${
                       stat.trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
                     }`}>
-                      {stat.trend === 'up' ? <ArrowUpRight className="mr-1 h-3 w-3" /> : <ArrowDownRight className="mr-1 h-3 w-3" />}
+                      {stat.trend === 'up' ? <ArrowUpRight className="me-1 h-3 w-3" /> : <ArrowDownRight className="me-1 h-3 w-3" />}
                       {stat.change}
                     </Badge>
                   </div>
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t(STAT_TITLE_KEYS[stat.title] || stat.title)}</p>
                     <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
                   </div>
                 </CardContent>
@@ -401,7 +424,7 @@ const FinanceOverview = () => {
           {/* Revenue vs Expense Chart */}
           <Card className="md:col-span-8 border-none shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Revenue vs Expenses</CardTitle>
+              <CardTitle className="text-lg font-semibold">{t('admin.finance.overview.revenueVsExpenses')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -460,7 +483,7 @@ const FinanceOverview = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                AI Insights
+                {t('admin.finance.overview.aiInsights')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -478,30 +501,30 @@ const FinanceOverview = () => {
                         <insight.icon className={`h-4 w-4 ${insight.color}`} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-bold text-slate-900">{insight.title}</p>
+                        <p className="text-sm font-bold text-slate-900">{t(insight.titleKey)}</p>
                         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                           {insight.description}
                         </p>
-                        <Button 
-                          variant="link" 
+                        <Button
+                          variant="link"
                           className="p-0 h-auto text-xs mt-2 text-primary font-bold hover:no-underline flex items-center gap-1 group/btn"
                           onClick={insight.onClick}
                         >
-                          {insight.action}
-                          <ChevronRight className="h-3 w-3 group-hover/btn:translate-x-1 transition-transform" />
+                          {t(insight.actionKey)}
+                          <ChevronRight className="h-3 w-3 group-hover/btn:translate-x-1 transition-transform rtl:rotate-180" />
                         </Button>
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
-              
+
               {aiInsights.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center mb-3">
                     <Info className="h-6 w-6 text-primary/40" />
                   </div>
-                  <p className="text-xs text-muted-foreground">No insights available at the moment.</p>
+                  <p className="text-xs text-muted-foreground">{t('admin.finance.overview.noInsights')}</p>
                 </div>
               )}
             </CardContent>
@@ -516,7 +539,7 @@ const FinanceOverview = () => {
             onClick={() => setRevenueDialogOpen(true)}
           >
             <CreditCard className="h-6 w-6 text-primary" />
-            <span>Collect Fees</span>
+            <span>{t('admin.finance.overview.collectFees')}</span>
           </Button>
           <Button 
             variant="outline" 
@@ -524,7 +547,7 @@ const FinanceOverview = () => {
             onClick={() => setExpenseDialogOpen(true)}
           >
             <TrendingDown className="h-6 w-6 text-rose-500" />
-            <span>Record Expense</span>
+            <span>{t('admin.finance.overview.recordExpense')}</span>
           </Button>
           <Button
             variant="outline"
@@ -532,7 +555,7 @@ const FinanceOverview = () => {
             onClick={() => navigate("/finance/fees")}
           >
             <FileText className="h-6 w-6 text-blue-500" />
-            <span>Generate Invoice</span>
+            <span>{t('admin.finance.overview.generateInvoice')}</span>
           </Button>
           <Button 
             variant="outline" 
@@ -540,7 +563,7 @@ const FinanceOverview = () => {
             onClick={() => navigate("/finance/reconciliation")}
           >
             <Landmark className="h-6 w-6 text-emerald-500" />
-            <span>Reconcile Bank</span>
+            <span>{t('admin.finance.overview.reconcileBank')}</span>
           </Button>
         </div>
 
@@ -548,28 +571,28 @@ const FinanceOverview = () => {
         <Card className="border-none shadow-sm overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-lg font-bold">Recent Transactions</CardTitle>
-              <CardDescription className="text-xs">Your latest financial activities</CardDescription>
+              <CardTitle className="text-lg font-bold">{t('admin.finance.overview.recentTransactions')}</CardTitle>
+              <CardDescription className="text-xs">{t('admin.finance.overview.recentTransactionsSubtitle')}</CardDescription>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-primary font-bold text-xs uppercase tracking-widest"
               onClick={() => navigate("/finance/transactions")}
             >
-              View All <ChevronRight className="h-4 w-4 ml-1" />
+              {t('admin.finance.overview.viewAll')} <ChevronRight className="h-4 w-4 ms-1 rtl:rotate-180" />
             </Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-start text-sm">
                 <thead className="bg-slate-50/50 border-y border-slate-100">
                   <tr>
-                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Entity/Student</th>
-                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</th>
-                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</th>
-                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
-                    <th className="px-6 py-3 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Amount</th>
+                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('admin.finance.overview.colEntityStudent')}</th>
+                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('admin.finance.overview.colCategory')}</th>
+                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('admin.finance.overview.colDate')}</th>
+                    <th className="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('admin.finance.overview.colStatus')}</th>
+                    <th className="px-6 py-3 text-end text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t('admin.finance.overview.colAmount')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -596,7 +619,7 @@ const FinanceOverview = () => {
                                 <ArrowDownRight className="h-4 w-4 text-emerald-600" />
                               )}
                             </div>
-                            <span className="font-bold text-slate-900">{tx.student || tx.entity || "Unknown"}</span>
+                            <span className="font-bold text-slate-900">{tx.student || tx.entity || t('admin.finance.overview.unknown')}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -605,7 +628,7 @@ const FinanceOverview = () => {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-xs text-muted-foreground font-medium">
-                          {tx.date ? format(new Date(tx.date), "MMM dd, yyyy") : "N/A"}
+                          {tx.date ? format(new Date(tx.date), "MMM dd, yyyy") : t('admin.finance.overview.notAvailable')}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5">

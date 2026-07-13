@@ -13,6 +13,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useFlashCards } from '@/hooks/useFlashCards';
 import { smartDb } from '@/lib/localDb';
 import {
@@ -41,6 +42,7 @@ interface SessionRow {
 }
 
 const FlashCardAnalytics: React.FC = () => {
+  const { t } = useTranslation();
   const { setId } = useParams<{ setId: string }>();
   const { sets, analytics } = useFlashCards();
   const navigate = useNavigate();
@@ -87,11 +89,11 @@ const FlashCardAnalytics: React.FC = () => {
     sessions.map((s, i) => ({
       date: s.lastPracticed
         ? new Date(s.lastPracticed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-        : `Session ${i + 1}`,
+        : t('admin.academics.flashCardAnalytics.sessionN', { number: i + 1 }),
       accuracy: typeof s.accuracyRate === 'number' ? s.accuracyRate : 0,
     })), [sessions]);
 
-  if (!set) return <div>Set not found</div>;
+  if (!set) return <div>{t('admin.academics.flashCardAnalytics.setNotFound')}</div>;
 
   return (
     <DashboardLayout>
@@ -100,15 +102,15 @@ const FlashCardAnalytics: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/academics/flashcards')} className="rounded-xl hover:bg-secondary">
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5 rtl:rotate-180" />
             </Button>
             <div>
               <h1 className="text-3xl font-black tracking-tight text-foreground">{set.name}</h1>
-              <p className="text-muted-foreground font-medium">Performance Insights & Learning Progress</p>
+              <p className="text-muted-foreground font-medium">{t('admin.academics.flashCardAnalytics.subtitle')}</p>
             </div>
           </div>
           <Button onClick={() => navigate(`/academics/flashcards/practice/${set.id}`)} className="gradient-primary rounded-xl h-12 px-8 font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20">
-            Start Practice
+            {t('admin.academics.flashCardAnalytics.startPractice')}
           </Button>
         </div>
 
@@ -122,12 +124,12 @@ const FlashCardAnalytics: React.FC = () => {
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Brain className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-xl font-black text-foreground mb-1">No practice sessions recorded yet</h3>
+            <h3 className="text-xl font-black text-foreground mb-1">{t('admin.academics.flashCardAnalytics.noSessionsTitle')}</h3>
             <p className="text-sm text-muted-foreground font-medium max-w-md mb-6">
-              Complete a practice session for this set and your accuracy, time spent and focus areas will appear here.
+              {t('admin.academics.flashCardAnalytics.noSessionsDescription')}
             </p>
             <Button onClick={() => navigate(`/academics/flashcards/practice/${set.id}`)} className="gradient-primary rounded-xl h-11 px-8 font-bold text-xs uppercase tracking-widest">
-              Start Your First Session
+              {t('admin.academics.flashCardAnalytics.startFirstSession')}
             </Button>
           </motion.div>
         ) : (
@@ -136,33 +138,37 @@ const FlashCardAnalytics: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <StatCard
                 icon={Target}
-                label="Accuracy"
+                label={t('admin.academics.flashCardAnalytics.accuracy')}
                 value={`${stats.latest.accuracyRate ?? 0}%`}
                 color="emerald"
-                trend={`Avg ${stats.avgAccuracy}% across ${sessions.length} session${sessions.length === 1 ? '' : 's'}`}
+                trend={sessions.length === 1
+                  ? t('admin.academics.flashCardAnalytics.avgAcrossSessionSingular', { avg: stats.avgAccuracy, count: sessions.length })
+                  : t('admin.academics.flashCardAnalytics.avgAcrossSessionsPlural', { avg: stats.avgAccuracy, count: sessions.length })}
               />
               <StatCard
                 icon={Clock}
-                label="Time Spent"
+                label={t('admin.academics.flashCardAnalytics.timeSpent')}
                 value={`${stats.totalMinutes}m`}
                 color="primary"
-                trend={`Avg ${Math.round((stats.totalMinutes / sessions.length) * 10) / 10}m / session`}
+                trend={t('admin.academics.flashCardAnalytics.avgPerSession', { avg: Math.round((stats.totalMinutes / sessions.length) * 10) / 10 })}
               />
               <StatCard
                 icon={Zap}
-                label="Mastery"
+                label={t('admin.academics.flashCardAnalytics.mastery')}
                 value={stats.mastery ? `${stats.mastery.pct}%` : '—'}
                 color="amber"
-                trend={stats.mastery ? `${stats.mastery.done} of ${stats.mastery.total} cards mastered` : 'Not tracked for this session'}
+                trend={stats.mastery
+                  ? t('admin.academics.flashCardAnalytics.cardsMasteredOf', { done: stats.mastery.done, total: stats.mastery.total })
+                  : t('admin.academics.flashCardAnalytics.notTrackedForSession')}
               />
               <StatCard
                 icon={Repeat}
-                label="Sessions"
+                label={t('admin.academics.flashCardAnalytics.sessions')}
                 value={String(sessions.length)}
                 color="indigo"
                 trend={stats.latest.lastPracticed
-                  ? `Last practiced ${new Date(stats.latest.lastPracticed).toLocaleDateString()}`
-                  : 'Recorded practice sessions'}
+                  ? t('admin.academics.flashCardAnalytics.lastPracticedOn', { date: new Date(stats.latest.lastPracticed).toLocaleDateString() })
+                  : t('admin.academics.flashCardAnalytics.recordedPracticeSessions')}
               />
             </div>
 
@@ -175,8 +181,8 @@ const FlashCardAnalytics: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h3 className="text-lg font-black text-foreground">Learning Curve</h3>
-                    <p className="text-xs text-muted-foreground font-medium">Accuracy per recorded practice session</p>
+                    <h3 className="text-lg font-black text-foreground">{t('admin.academics.flashCardAnalytics.learningCurve')}</h3>
+                    <p className="text-xs text-muted-foreground font-medium">{t('admin.academics.flashCardAnalytics.accuracyPerSession')}</p>
                   </div>
                   {sessions.length >= 2 && (
                     <Badge variant="secondary" className={
@@ -186,7 +192,7 @@ const FlashCardAnalytics: React.FC = () => {
                           ? 'bg-rose-500/10 text-rose-500 border-none font-bold'
                           : 'bg-slate-500/10 text-slate-500 border-none font-bold'
                     }>
-                      {stats.trend === 'improving' ? 'Improving' : stats.trend === 'declining' ? 'Declining' : 'Steady'}
+                      {stats.trend === 'improving' ? t('admin.academics.flashCardAnalytics.trendImproving') : stats.trend === 'declining' ? t('admin.academics.flashCardAnalytics.trendDeclining') : t('admin.academics.flashCardAnalytics.trendSteady')}
                     </Badge>
                   )}
                 </div>
@@ -194,7 +200,7 @@ const FlashCardAnalytics: React.FC = () => {
                   <div className="h-[300px] w-full flex flex-col items-center justify-center text-center">
                     <p className="text-3xl font-black text-foreground">{stats.latest.accuracyRate ?? 0}%</p>
                     <p className="text-xs text-muted-foreground font-medium mt-1">
-                      One session recorded — complete more sessions to see your curve.
+                      {t('admin.academics.flashCardAnalytics.oneSessionRecorded')}
                     </p>
                   </div>
                 ) : (
@@ -247,17 +253,17 @@ const FlashCardAnalytics: React.FC = () => {
                 >
                   <h3 className="text-lg font-black text-foreground mb-4 flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-rose-500" />
-                    Focus Areas
+                    {t('admin.academics.flashCardAnalytics.focusAreas')}
                   </h3>
                   <div className="space-y-3">
                     {stats.weakTopics.map((topic, i) => (
                       <div key={i} className="flex items-start justify-between gap-3">
                         <span className="text-xs font-bold text-foreground leading-snug">{topic}</span>
-                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider shrink-0">Needs review</span>
+                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider shrink-0">{t('admin.academics.flashCardAnalytics.needsReview')}</span>
                       </div>
                     ))}
                     {stats.weakTopics.length === 0 && (
-                      <p className="text-sm text-muted-foreground italic">No weak cards in your latest session — nice work.</p>
+                      <p className="text-sm text-muted-foreground italic">{t('admin.academics.flashCardAnalytics.noWeakCards')}</p>
                     )}
                   </div>
                 </motion.div>
@@ -270,13 +276,13 @@ const FlashCardAnalytics: React.FC = () => {
                 >
                   <h3 className="text-lg font-black text-primary mb-4 flex items-center gap-2">
                     <Brain className="h-5 w-5" />
-                    Insights
+                    {t('admin.academics.flashCardAnalytics.insights')}
                   </h3>
                   <p className="text-xs font-medium text-muted-foreground leading-relaxed mb-4">
                     {stats.weakTopics.length > 0 ? (
-                      <>Your latest session left <span className="text-primary font-bold">{stats.weakTopics.length} card{stats.weakTopics.length === 1 ? '' : 's'}</span> unmastered — a focused review of "{stats.weakTopics[0]}" is the fastest way to raise your {stats.latest.accuracyRate ?? 0}% accuracy.</>
+                      <>{t('admin.academics.flashCardAnalytics.insightsWeakPrefix')} <span className="text-primary font-bold">{stats.weakTopics.length === 1 ? t('admin.academics.flashCardAnalytics.insightsCardSingular', { count: stats.weakTopics.length }) : t('admin.academics.flashCardAnalytics.insightsCardPlural', { count: stats.weakTopics.length })}</span> {t('admin.academics.flashCardAnalytics.insightsWeakSuffix', { topic: stats.weakTopics[0], accuracy: stats.latest.accuracyRate ?? 0 })}</>
                     ) : (
-                      <>You mastered every card in your latest session at <span className="text-primary font-bold">{stats.latest.accuracyRate ?? 0}% accuracy</span>. Keep the streak going with regular short reviews.</>
+                      <>{t('admin.academics.flashCardAnalytics.insightsMasteredPrefix')} <span className="text-primary font-bold">{t('admin.academics.flashCardAnalytics.insightsMasteredAccuracy', { accuracy: stats.latest.accuracyRate ?? 0 })}</span>. {t('admin.academics.flashCardAnalytics.insightsMasteredSuffix')}</>
                     )}
                   </p>
                   <Button
@@ -284,7 +290,7 @@ const FlashCardAnalytics: React.FC = () => {
                     onClick={() => navigate(`/academics/flashcards/practice/${set.id}`)}
                     className="w-full rounded-xl border-primary/20 text-primary font-bold text-[10px] uppercase tracking-widest"
                   >
-                    Practice This Set
+                    {t('admin.academics.flashCardAnalytics.practiceThisSet')}
                   </Button>
                 </motion.div>
               </div>

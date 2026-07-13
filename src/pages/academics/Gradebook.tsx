@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCurriculum } from "@/hooks/useCurriculum";
 import { getBandForGrade, getPeriodLabels, type GradebookCategory } from "@/lib/curriculumConfig";
@@ -45,6 +46,22 @@ const TABS: { key: Tab; label: string; icon: typeof ListChecks }[] = [
   { key: "rankings",  label: "Rankings",  icon: Medal },
 ];
 
+const TAB_LABEL_KEYS: Record<Tab, string> = {
+  marks: "admin.academics.gradebook.tabMarks",
+  results: "admin.academics.gradebook.tabResults",
+  analytics: "admin.academics.gradebook.tabAnalytics",
+  rankings: "admin.academics.gradebook.tabRankings",
+};
+
+const SUBMISSION_STATUS_LABEL_KEYS: Record<GradebookSubmission["status"], string> = {
+  "Draft": "admin.academics.gradebook.statusDraft",
+  "Submitted to Class Teacher": "admin.academics.gradebook.statusSubmittedToClassTeacher",
+  "Returned to Subject Teacher": "admin.academics.gradebook.statusReturnedToSubjectTeacher",
+  "Submitted to Grade Coordinator": "admin.academics.gradebook.statusSubmittedToGradeCoordinator",
+  "Submitted to Principal": "admin.academics.gradebook.statusSubmittedToPrincipal",
+  "Approved by Principal": "admin.academics.gradebook.statusApprovedByPrincipal",
+};
+
 // Fallback columns used only if curriculum band lookup fails
 const FALLBACK_COLUMNS: AssessmentCol[] = [
   { key: "assignments", label: "Assignments", max: 15, weight: 15 },
@@ -53,6 +70,17 @@ const FALLBACK_COLUMNS: AssessmentCol[] = [
   { key: "assessments", label: "Assessments", max: 20, weight: 20 },
   { key: "term_exam",   label: "Term Exam",   max: 45, weight: 45 },
 ];
+
+// English column-key -> translation key, used to render translated labels for
+// the fallback columns (whose `key`/`label` fields are also used as data keys
+// in logic, so the underlying identifiers must stay in English).
+const FALLBACK_COLUMN_LABEL_KEYS: Record<string, string> = {
+  assignments: "admin.academics.gradebook.colAssignments",
+  quizzes: "admin.academics.gradebook.colQuizzes",
+  projects: "admin.academics.gradebook.colProjects",
+  assessments: "admin.academics.gradebook.colAssessments",
+  term_exam: "admin.academics.gradebook.colTermExam",
+};
 
 const GRADE_COLORS: Record<string, string> = {
   "A+": "#10B981", "A": "#6C3BFF", "B+": "#3B82F6", "B": "#8B5CF6", "C": "#F59E0B", "D": "#EF4444", "F": "#DC2626",
@@ -129,6 +157,8 @@ function KPI({ icon: Icon, label, value, sub, bg, ic }: {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Gradebook() {
+  const { t } = useTranslation();
+  const colLabel = (c: AssessmentCol) => FALLBACK_COLUMN_LABEL_KEYS[c.key] ? t(FALLBACK_COLUMN_LABEL_KEYS[c.key]) : c.label;
   const { curriculum } = useCurriculum();
   const { role, user } = useAuth();
   const canConfigureStructure = getRole(role).full === true;
@@ -199,19 +229,19 @@ export default function Gradebook() {
     setDraftCategories(prev => prev.map((c, idx) => idx === i ? { ...c, ...patch } : c));
   };
   const removeDraftCategory = (i: number) => setDraftCategories(prev => prev.filter((_, idx) => idx !== i));
-  const addDraftCategory = () => setDraftCategories(prev => [...prev, { name: "New Category", count: null, marks: 0, isExam: false }]);
+  const addDraftCategory = () => setDraftCategories(prev => [...prev, { name: t('admin.academics.gradebook.newCategoryDefaultName'), count: null, marks: 0, isExam: false }]);
   const handleSaveStructure = async () => {
-    if (draftCategories.length === 0) { toast.error("Add at least one category"); return; }
-    if (draftCategories.some(c => !c.name.trim())) { toast.error("Every category needs a name"); return; }
+    if (draftCategories.length === 0) { toast.error(t('admin.academics.gradebook.toastAddCategory')); return; }
+    if (draftCategories.some(c => !c.name.trim())) { toast.error(t('admin.academics.gradebook.toastCategoryNeedsName')); return; }
     await saveStructure(draftCategories);
     setStructureOpen(false);
-    toast.success(`Gradebook structure updated for ${curriculumBand?.label ?? grade}`);
+    toast.success(t('admin.academics.gradebook.toastStructureUpdated', { band: curriculumBand?.label ?? grade }));
   };
   const handleResetStructure = async () => {
     await resetToDefault();
     setResetConfirmOpen(false);
     setStructureOpen(false);
-    toast.success(`Reset to ${curriculum.shortName} curriculum default`);
+    toast.success(t('admin.academics.gradebook.toastResetDefault', { curriculum: curriculum.shortName }));
   };
   const { students: liveStudents } = useStudents();
 
@@ -293,9 +323,9 @@ export default function Gradebook() {
       const principalName = await getPrincipalName();
       const updated = await gradeCoordinatorApprove(submission, name, principalName || undefined);
       setSubmission(updated);
-      toast.success(principalName ? `Sent to ${principalName} for final approval` : "Approved — no Principal account found to notify");
+      toast.success(principalName ? t('admin.academics.gradebook.toastSentToPrincipal', { principalName }) : t('admin.academics.gradebook.toastApprovedNoPrincipal'));
     } catch {
-      toast.error("Failed to record approval");
+      toast.error(t('admin.academics.gradebook.toastApprovalFailed'));
     } finally {
       setApproving(false);
     }
@@ -308,9 +338,9 @@ export default function Gradebook() {
       const name = (user as any)?.displayName || (user as any)?.name || "Principal";
       const updated = await principalApprove(submission, name);
       setSubmission(updated);
-      toast.success("Final approval recorded — everyone in the chain has been notified");
+      toast.success(t('admin.academics.gradebook.toastFinalApprovalRecorded'));
     } catch {
-      toast.error("Failed to record approval");
+      toast.error(t('admin.academics.gradebook.toastApprovalFailed'));
     } finally {
       setApproving(false);
     }
@@ -453,15 +483,15 @@ export default function Gradebook() {
   // ── Export: UTF-8 BOM so Excel opens it correctly with full column data ──
   const exportCsv = () => {
     const headers = [
-      "Roll No", "Student Name", "Grade", "Section", "Subject", "Term",
-      ...columns.map(c => `${c.label} (Max ${c.max})`),
-      `Total (Max ${max})`, "Percentage (%)", "Grade Letter",
+      t('admin.academics.gradebook.csvRollNo'), t('admin.academics.gradebook.csvStudentName'), t('admin.academics.gradebook.csvGrade'), t('admin.academics.gradebook.csvSection'), t('admin.academics.gradebook.csvSubject'), t('admin.academics.gradebook.csvTerm'),
+      ...columns.map(c => `${colLabel(c)} (Max ${c.max})`),
+      `${t('admin.academics.gradebook.csvTotal')} (Max ${max})`, t('admin.academics.gradebook.csvPercentage'), t('admin.academics.gradebook.csvGradeLetter'),
     ];
     const rows = byRoll.map(s => [
       s.rollNo,
       `"${s.name}"`,
       `"${grade}"`,
-      section === "All" ? "All Sections" : `Section ${section}`,
+      section === "All" ? t('admin.academics.gradebook.allSections') : `${t('admin.academics.gradebook.sectionPrefix')} ${section}`,
       `"${subject}"`,
       `"${term}"`,
       ...columns.map(c => (s.marks[c.key] === "" ? "" : (s.marks[c.key] ?? 0))),
@@ -469,8 +499,8 @@ export default function Gradebook() {
     ].join(","));
 
     const avgRow = [
-      "", '"Class Average"', `"${grade}"`,
-      section === "All" ? "All Sections" : `Section ${section}`,
+      "", `"${t('admin.academics.gradebook.classAverage')}"`, `"${grade}"`,
+      section === "All" ? t('admin.academics.gradebook.allSections') : `${t('admin.academics.gradebook.sectionPrefix')} ${section}`,
       `"${subject}"`, `"${term}"`,
       ...columns.map(c => classAvg.avgPerCol[c.key] ?? 0),
       classAvg.totalAvg, classAvg.pct, gradeFromPct(classAvg.pct),
@@ -484,14 +514,14 @@ export default function Gradebook() {
     a.download = `Gradebook_${subject}_${grade}_${section === "All" ? "AllSections" : "Sec" + section}_${term}.csv`.replace(/ /g, "_");
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    toast.success(`Exported ${byRoll.length} students`);
+    toast.success(t('admin.academics.gradebook.toastExportedStudents', { count: byRoll.length }));
   };
 
   const exportResultsCsv = () => {
-    const headers = ["Roll No", "Student Name", "Grade", "Section", "Term", ...SUBJECTS, "Overall %", "Overall Grade"];
+    const headers = [t('admin.academics.gradebook.csvRollNo'), t('admin.academics.gradebook.csvStudentName'), t('admin.academics.gradebook.csvGrade'), t('admin.academics.gradebook.csvSection'), t('admin.academics.gradebook.csvTerm'), ...SUBJECTS, t('admin.academics.gradebook.csvOverallPct'), t('admin.academics.gradebook.csvOverallGrade')];
     const rows = resultsByRoll.map(s => [
       rollOf.get(s.studentId) ?? "", `"${s.name}"`, `"${grade}"`,
-      section === "All" ? "All Sections" : `Section ${section}`, `"${term}"`,
+      section === "All" ? t('admin.academics.gradebook.allSections') : `${t('admin.academics.gradebook.sectionPrefix')} ${section}`, `"${term}"`,
       ...SUBJECTS.map(subj => { const sg = s.subjects.find(x => x.subject === subj); return sg?.hasData ? Math.round(sg.percentage) : ""; }),
       Math.round(s.overallPercentage), s.overallLetter,
     ].join(","));
@@ -502,10 +532,10 @@ export default function Gradebook() {
     a.download = `Gradebook_Results_${grade}_${section === "All" ? "AllSections" : "Sec" + section}_${term}.csv`.replace(/ /g, "_");
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    toast.success(`Exported ${resultsByRoll.length} students`);
+    toast.success(t('admin.academics.gradebook.toastExportedStudents', { count: resultsByRoll.length }));
   };
 
-  const displaySectionLabel = section === "All" ? "All Sections" : `Section ${section}`;
+  const displaySectionLabel = section === "All" ? t('admin.academics.gradebook.allSections') : `${t('admin.academics.gradebook.sectionPrefix')} ${section}`;
 
   return (
     <DashboardLayout>
@@ -518,40 +548,40 @@ export default function Gradebook() {
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Gradebook</h1>
-              <p className="text-sm text-slate-400">Marks auto-calculated from Assignments, Assessments &amp; Exams — read-only.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.academics.gradebook.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.academics.gradebook.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {canConfigureStructure && (
               <button onClick={openStructureEditor}
                 className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <Settings2 className="h-4 w-4 text-slate-500" /> Configure Structure
+                <Settings2 className="h-4 w-4 text-slate-500" /> {t('admin.academics.gradebook.configureStructure')}
                 {isCustomized && <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />}
               </button>
             )}
             <button onClick={tab === "results" ? exportResultsCsv : exportCsv}
               className="flex items-center gap-2 h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold">
-              <Download className="h-4 w-4" /> Export CSV
+              <Download className="h-4 w-4" /> {t('admin.academics.gradebook.exportCsv')}
             </button>
           </div>
         </div>
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <KPI icon={Users} label="Students" value={String(liveStats.totalStudents)} sub={`${grade} · ${displaySectionLabel}`} bg="bg-violet-50" ic="text-violet-500" />
-          <KPI icon={TrendingUp} label="Class Average" value={`${classAvg.pct}%`} sub={`${subject} · ${term}`} bg="bg-blue-50" ic="text-blue-500" />
-          <KPI icon={CheckCircle2} label="Above 80%" value={String(liveStats.above80)} sub={`${liveStats.above80Pct}% of class`} bg="bg-emerald-50" ic="text-emerald-500" />
-          <KPI icon={AlertTriangle} label="Below 50%" value={String(liveStats.below50)} sub={`${liveStats.below50Pct}% at risk`} bg="bg-rose-50" ic="text-rose-500" />
+          <KPI icon={Users} label={t('admin.academics.gradebook.kpiStudents')} value={String(liveStats.totalStudents)} sub={`${grade} · ${displaySectionLabel}`} bg="bg-violet-50" ic="text-violet-500" />
+          <KPI icon={TrendingUp} label={t('admin.academics.gradebook.kpiClassAverage')} value={`${classAvg.pct}%`} sub={`${subject} · ${term}`} bg="bg-blue-50" ic="text-blue-500" />
+          <KPI icon={CheckCircle2} label={t('admin.academics.gradebook.kpiAbove80')} value={String(liveStats.above80)} sub={t('admin.academics.gradebook.kpiPercentOfClass', { pct: liveStats.above80Pct })} bg="bg-emerald-50" ic="text-emerald-500" />
+          <KPI icon={AlertTriangle} label={t('admin.academics.gradebook.kpiBelow50')} value={String(liveStats.below50)} sub={t('admin.academics.gradebook.kpiPercentAtRisk', { pct: liveStats.below50Pct })} bg="bg-rose-50" ic="text-rose-500" />
         </div>
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-slate-100">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
+          {TABS.map(tb => (
+            <button key={tb.key} onClick={() => setTab(tb.key)}
               className={cn("flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
-                tab === t.key ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
-              <t.icon className="h-3.5 w-3.5" /> {t.label}
+                tab === tb.key ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
+              <tb.icon className="h-3.5 w-3.5" /> {t(TAB_LABEL_KEYS[tb.key])}
             </button>
           ))}
         </div>
@@ -559,29 +589,29 @@ export default function Gradebook() {
         {/* Filter row */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-end gap-3">
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Term</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.academics.gradebook.filterTerm')}</label>
             <select value={term} onChange={e => setTerm(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-violet-300">
               {TERMS.map(o => <option key={o}>{o}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Grade</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.academics.gradebook.filterGrade')}</label>
             <select value={grade} onChange={e => setGrade(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-violet-300">
               {GRADES.map(o => <option key={o}>{o}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Section</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.academics.gradebook.filterSection')}</label>
             <select value={section} onChange={e => setSection(e.target.value)}
               className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-violet-300">
-              {SECTIONS.map(o => <option key={o} value={o}>{o === "All" ? "All Sections" : `Section ${o}`}</option>)}
+              {SECTIONS.map(o => <option key={o} value={o}>{o === "All" ? t('admin.academics.gradebook.allSections') : `${t('admin.academics.gradebook.sectionPrefix')} ${o}`}</option>)}
             </select>
           </div>
           {tab === "marks" && (
             <div>
-              <label className="text-[11px] font-medium text-slate-500 block mb-1">Subject</label>
+              <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.academics.gradebook.filterSubject')}</label>
               <select value={subject} onChange={e => setSubject(e.target.value)}
                 className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-violet-300">
                 {SUBJECTS.map(o => <option key={o}>{o}</option>)}
@@ -590,18 +620,18 @@ export default function Gradebook() {
           )}
           {tab !== "analytics" && (
             <div className="relative flex-1 min-w-[180px]">
-              <label className="text-[11px] font-medium text-slate-500 block mb-1">Search</label>
-              <Search className="absolute left-3 top-1/2 mt-[3px] -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.academics.gradebook.filterSearch')}</label>
+              <Search className="absolute start-3 top-1/2 mt-[3px] -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                className="h-9 pl-9"
-                placeholder="Student name or roll no…"
+                className="h-9 ps-9"
+                placeholder={t('admin.academics.gradebook.searchPlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
           )}
           {search && tab !== "analytics" && (
-            <Button variant="ghost" size="sm" className="h-9" onClick={() => setSearch("")}>Clear</Button>
+            <Button variant="ghost" size="sm" className="h-9" onClick={() => setSearch("")}>{t('admin.academics.gradebook.clear')}</Button>
           )}
         </div>
 
@@ -610,23 +640,23 @@ export default function Gradebook() {
           <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3 flex-wrap">
               <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border", SUBMISSION_STATUS_COLORS[submission.status])}>
-                {submission.status}
+                {t(SUBMISSION_STATUS_LABEL_KEYS[submission.status] ?? submission.status)}
               </span>
               <span className="text-xs text-slate-400">
-                {submission.subjectTeacherName && `Submitted by ${submission.subjectTeacherName}`}
-                {submission.classTeacherName && submission.status !== "Submitted to Class Teacher" && ` · Class Teacher: ${submission.classTeacherName}`}
-                {submission.gradeCoordinatorName && (submission.status === "Submitted to Principal" || submission.status === "Approved by Principal") && ` · Grade Coordinator: ${submission.gradeCoordinatorName}`}
-                {submission.status === "Approved by Principal" && submission.principalName && ` · Approved by ${submission.principalName}`}
+                {submission.subjectTeacherName && t('admin.academics.gradebook.submittedBy', { name: submission.subjectTeacherName })}
+                {submission.classTeacherName && submission.status !== "Submitted to Class Teacher" && ` · ${t('admin.academics.gradebook.classTeacherLabel', { name: submission.classTeacherName })}`}
+                {submission.gradeCoordinatorName && (submission.status === "Submitted to Principal" || submission.status === "Approved by Principal") && ` · ${t('admin.academics.gradebook.gradeCoordinatorLabel', { name: submission.gradeCoordinatorName })}`}
+                {submission.status === "Approved by Principal" && submission.principalName && ` · ${t('admin.academics.gradebook.approvedByLabel', { name: submission.principalName })}`}
               </span>
             </div>
             {canEscalateToPrincipal && submission.status === "Submitted to Grade Coordinator" && (
               <Button size="sm" onClick={handleEscalateToPrincipal} disabled={approving} className="bg-amber-600 hover:bg-amber-700 text-white">
-                <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> {approving ? "Approving…" : "Approve & Send to Principal"}
+                <ShieldCheck className="h-3.5 w-3.5 me-1.5" /> {approving ? t('admin.academics.gradebook.approving') : t('admin.academics.gradebook.approveSendToPrincipal')}
               </Button>
             )}
             {canGiveFinalApproval && submission.status === "Submitted to Principal" && (
               <Button size="sm" onClick={handleFinalApprove} disabled={approving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> {approving ? "Approving…" : "Give Final Approval"}
+                <ShieldCheck className="h-3.5 w-3.5 me-1.5" /> {approving ? t('admin.academics.gradebook.approving') : t('admin.academics.gradebook.giveFinalApproval')}
               </Button>
             )}
           </div>
@@ -636,38 +666,38 @@ export default function Gradebook() {
         {tab === "marks" && !subject && (
           <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-16 text-center">
             <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-200" />
-            <p className="font-semibold text-slate-600">No subject assigned here yet</p>
-            <p className="text-sm text-slate-400 mt-1">No teacher has been assigned a subject for {grade} · {displaySectionLabel} in Subject Allocation.</p>
+            <p className="font-semibold text-slate-600">{t('admin.academics.gradebook.noSubjectAssignedTitle')}</p>
+            <p className="text-sm text-slate-400 mt-1">{t('admin.academics.gradebook.noSubjectAssignedBody', { grade, section: displaySectionLabel })}</p>
           </div>
         )}
         {tab === "marks" && subject && (
           <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/70">
               <span className="font-semibold text-slate-800 text-sm">{subject} · {grade} · {displaySectionLabel} · {term}</span>
-              <span className="text-xs text-slate-400">{filteredByRoll.length} student{filteredByRoll.length !== 1 ? "s" : ""}</span>
+              <span className="text-xs text-slate-400">{filteredByRoll.length === 1 ? t('admin.academics.gradebook.studentCountSingular', { count: filteredByRoll.length }) : t('admin.academics.gradebook.studentCountPlural', { count: filteredByRoll.length })}</span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 w-12">#</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 min-w-[150px]">Student</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 w-12">#</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 min-w-[150px]">{t('admin.academics.gradebook.colStudent')}</th>
                     {columns.map(c => (
                       <th key={c.key} className="px-3 py-3 text-center text-xs font-semibold text-slate-500 whitespace-nowrap">
-                        {c.label} <span className="text-slate-300">/{c.max}</span>
+                        {colLabel(c)} <span className="text-slate-300">/{c.max}</span>
                       </th>
                     ))}
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Total</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colTotal')}</th>
                     <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">%</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Grade</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colGrade')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredByRoll.length === 0 && (
                     <tr>
                       <td colSpan={columns.length + 5} className="px-4 py-14 text-center text-sm text-slate-400">
-                        {search ? `No results for "${search}"` : `No students in ${grade} · ${displaySectionLabel}`}
+                        {search ? t('admin.academics.gradebook.noResultsFor', { search }) : t('admin.academics.gradebook.noStudentsIn', { grade, section: displaySectionLabel })}
                       </td>
                     </tr>
                   )}
@@ -681,7 +711,7 @@ export default function Gradebook() {
                           const v = s.marks[c.key] ?? "";
                           return (
                             <td key={c.key} className="px-3 py-3 text-center text-slate-700">
-                              {v === "" ? <span className="text-slate-300" title="Not marked yet">—</span> : v}
+                              {v === "" ? <span className="text-slate-300" title={t('admin.academics.gradebook.notMarkedYet')}>—</span> : v}
                             </td>
                           );
                         })}
@@ -697,7 +727,7 @@ export default function Gradebook() {
                   {/* Class Average row */}
                   <tr className="bg-violet-50/40 border-t-2 border-violet-100">
                     <td className="px-4 py-3" />
-                    <td className="px-4 py-3 font-bold text-slate-800 text-sm">Class Average</td>
+                    <td className="px-4 py-3 font-bold text-slate-800 text-sm">{t('admin.academics.gradebook.classAverage')}</td>
                     {columns.map(c => (
                       <td key={c.key} className="px-3 py-3 text-center font-semibold text-slate-800">{(classAvg.avgPerCol[c.key] ?? 0).toFixed(1)}</td>
                     ))}
@@ -710,7 +740,7 @@ export default function Gradebook() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">Marks are auto-calculated from assignments, assessments and exams — read-only.</p>
+            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">{t('admin.academics.gradebook.marksAutoCalcFooter')}</p>
           </div>
         )}
 
@@ -718,29 +748,29 @@ export default function Gradebook() {
         {tab === "results" && (
           <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/70">
-              <span className="font-semibold text-slate-800 text-sm">All Subjects · {grade} · {displaySectionLabel} · {term}</span>
-              <span className="text-xs text-slate-400">{filteredResults.length} student{filteredResults.length !== 1 ? "s" : ""}</span>
+              <span className="font-semibold text-slate-800 text-sm">{t('admin.academics.gradebook.allSubjectsHeading')} · {grade} · {displaySectionLabel} · {term}</span>
+              <span className="text-xs text-slate-400">{filteredResults.length === 1 ? t('admin.academics.gradebook.studentCountSingular', { count: filteredResults.length }) : t('admin.academics.gradebook.studentCountPlural', { count: filteredResults.length })}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 w-12">#</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 min-w-[150px]">Student</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 w-12">#</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 min-w-[150px]">{t('admin.academics.gradebook.colStudent')}</th>
                     {SUBJECTS.map(subj => (
                       <th key={subj} className="px-3 py-3 text-center text-xs font-semibold text-slate-500 whitespace-nowrap" title={subj}>
                         {subjectShort(subj)}
                       </th>
                     ))}
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Overall %</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Grade</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colOverallPct')}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colGrade')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredResults.length === 0 && (
                     <tr>
                       <td colSpan={SUBJECTS.length + 4} className="px-4 py-14 text-center text-sm text-slate-400">
-                        {search ? `No results for "${search}"` : `No students in ${grade} · ${displaySectionLabel}`}
+                        {search ? t('admin.academics.gradebook.noResultsFor', { search }) : t('admin.academics.gradebook.noStudentsIn', { grade, section: displaySectionLabel })}
                       </td>
                     </tr>
                   )}

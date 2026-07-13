@@ -61,6 +61,7 @@ import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialSettings } from "@/hooks/useFinancialSettings";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface AutomationTask {
   id: string;
@@ -181,7 +182,15 @@ interface Template {
   content: string;
 }
 
+const CHANNEL_LABEL_KEYS: Record<string, string> = {
+  Email: "admin.finance.automation.channelEmail",
+  WhatsApp: "admin.finance.automation.channelWhatsapp",
+  "Parent App": "admin.finance.automation.channelParentApp",
+  "Finance Alert": "admin.finance.automation.channelFinanceAlert",
+};
+
 const Automation = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const [activeTab, setActiveTab] = useState("recurring");
@@ -273,29 +282,31 @@ const Automation = () => {
         lastModified: now,
         updatedAt: now,
       });
-      setCommTemplates(prev => prev.map(t => t.id === editingTemplate.id ? { ...t, content: templateContent, lastModified: now } : t));
-      toast.success(`Template "${editingTemplate.name}" updated successfully!`);
+      setCommTemplates(prev => prev.map(tpl => tpl.id === editingTemplate.id ? { ...tpl, content: templateContent, lastModified: now } : tpl));
+      toast.success(t('admin.finance.automation.toastTemplateUpdated', { name: editingTemplate.name }));
       setIsEditDialogOpen(false);
     } catch (error) {
       console.error("Failed to update template:", error);
-      toast.error("Failed to update template");
+      toast.error(t('admin.finance.automation.toastTemplateUpdateFailed'));
     }
   };
 
   const handleToggleTaskStatus = async (task: AutomationTask) => {
     if (!user) return;
     const newStatus = task.status === 'Active' ? 'Inactive' : 'Active';
-    setRecurringTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
+    setRecurringTasks(prev => prev.map(item => item.id === task.id ? { ...item, status: newStatus } : item));
     try {
       await smartDb.update("automation_tasks", task.id, {
         status: newStatus,
         updatedAt: new Date().toISOString()
       });
-      toast.success(`${task.name} ${newStatus === 'Active' ? 'activated' : 'deactivated'}`);
+      toast.success(newStatus === 'Active'
+        ? t('admin.finance.automation.toastTaskActivated', { name: task.name })
+        : t('admin.finance.automation.toastTaskDeactivated', { name: task.name }));
     } catch (error) {
       console.error("Failed to update task status:", error);
-      setRecurringTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: task.status } : t));
-      toast.error("Failed to update task status");
+      setRecurringTasks(prev => prev.map(item => item.id === task.id ? { ...item, status: task.status } : item));
+      toast.error(t('admin.finance.automation.toastTaskStatusUpdateFailed'));
     }
   };
 
@@ -308,11 +319,13 @@ const Automation = () => {
         status: newStatus,
         updatedAt: new Date().toISOString()
       });
-      toast.success(`${reminder.name} ${newStatus === 'Active' ? 'activated' : 'deactivated'}`);
+      toast.success(newStatus === 'Active'
+        ? t('admin.finance.automation.toastReminderActivated', { name: reminder.name })
+        : t('admin.finance.automation.toastReminderDeactivated', { name: reminder.name }));
     } catch (error) {
       console.error("Failed to update reminder status:", error);
       setReminderRules(prev => prev.map(r => r.id === reminder.id ? { ...r, status: reminder.status } : r));
-      toast.error("Failed to update reminder status");
+      toast.error(t('admin.finance.automation.toastReminderStatusUpdateFailed'));
     }
   };
 

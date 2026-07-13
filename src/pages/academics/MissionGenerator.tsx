@@ -13,16 +13,18 @@ import type { MissionNarrativeTheme } from "@/types/learningUniverse";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Rocket, Loader2, Check, Sparkles, BookOpen, Wand2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const THEME_OPTIONS: { id: MissionNarrativeTheme; label: string }[] = [
-  { id: "default", label: "Adventure (default)" },
-  { id: "space", label: "Space Exploration" },
-  { id: "detective", label: "Detective Mystery" },
-  { id: "time-travel", label: "Time Travel" },
-  { id: "adventure", label: "Explorer Quest" },
+const THEME_OPTION_KEYS: { id: MissionNarrativeTheme; key: string }[] = [
+  { id: "default", key: "admin.academics.missionGenerator.themeDefault" },
+  { id: "space", key: "admin.academics.missionGenerator.themeSpace" },
+  { id: "detective", key: "admin.academics.missionGenerator.themeDetective" },
+  { id: "time-travel", key: "admin.academics.missionGenerator.themeTimeTravel" },
+  { id: "adventure", key: "admin.academics.missionGenerator.themeAdventure" },
 ];
 
 export default function MissionGenerator() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { missions, createMission, updateMission } = useLearningUniverse();
   const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
@@ -78,10 +80,10 @@ export default function MissionGenerator() {
           status: "published",
         });
       }
-      toast.success(`Mission generated for "${w.topic}"`);
+      toast.success(t('admin.academics.missionGenerator.missionGeneratedToast', { topic: w.topic }));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to generate mission");
+      toast.error(t('admin.academics.missionGenerator.generateFailedToast'));
     } finally {
       setGenerating(g => ({ ...g, [w.weekId]: false }));
     }
@@ -104,8 +106,8 @@ export default function MissionGenerator() {
             <Rocket className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Mission Generator</h1>
-            <p className="text-sm text-slate-400">Turn a published curriculum's chapters into AI-narrated missions for the Learning Universe.</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('admin.academics.missionGenerator.pageTitle')}</h1>
+            <p className="text-sm text-slate-400">{t('admin.academics.missionGenerator.pageSubtitle')}</p>
           </div>
         </div>
 
@@ -113,9 +115,9 @@ export default function MissionGenerator() {
           <CardContent className="p-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Published Curriculum</label>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">{t('admin.academics.missionGenerator.publishedCurriculumLabel')}</label>
                 <Select value={selectedId} onValueChange={setSelectedId}>
-                  <SelectTrigger className="border-gray-200"><SelectValue placeholder={loading ? "Loading…" : "Select a curriculum"} /></SelectTrigger>
+                  <SelectTrigger className="border-gray-200"><SelectValue placeholder={loading ? t('admin.academics.missionGenerator.loadingPlaceholder') : t('admin.academics.missionGenerator.selectCurriculumPlaceholder')} /></SelectTrigger>
                   <SelectContent>
                     {curriculums.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.grade} · {c.subject} ({c.board}, {c.academicYear})</SelectItem>
@@ -123,20 +125,20 @@ export default function MissionGenerator() {
                   </SelectContent>
                 </Select>
                 {!loading && curriculums.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1.5">No published curriculum found — publish one in Curriculum &amp; Planning first.</p>
+                  <p className="text-xs text-amber-600 mt-1.5">{t('admin.academics.missionGenerator.noCurriculumFound')}</p>
                 )}
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">Narrative Theme</label>
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">{t('admin.academics.missionGenerator.narrativeThemeLabel')}</label>
                 <Select value={theme} onValueChange={v => setTheme(v as MissionNarrativeTheme)}>
                   <SelectTrigger className="border-gray-200"><SelectValue /></SelectTrigger>
-                  <SelectContent>{THEME_OPTIONS.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+                  <SelectContent>{THEME_OPTION_KEYS.map(opt => <SelectItem key={opt.id} value={opt.id}>{t(opt.key)}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
             {selected && weeks.length > 0 && (
               <Button onClick={handleGenerateAll} className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5">
-                <Wand2 className="w-4 h-4" /> Generate All Missing Missions ({weeks.filter(w => !missionForWeek(w.weekId)).length})
+                <Wand2 className="w-4 h-4" /> {t('admin.academics.missionGenerator.generateAllMissingMissions', { count: weeks.filter(w => !missionForWeek(w.weekId)).length })}
               </Button>
             )}
           </CardContent>
@@ -147,7 +149,7 @@ export default function MissionGenerator() {
             {weeks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <BookOpen className="w-10 h-10 mb-2 text-gray-200" />
-                <p className="font-semibold">No chapters found in this curriculum yet.</p>
+                <p className="font-semibold">{t('admin.academics.missionGenerator.noChaptersFound')}</p>
               </div>
             ) : weeks.map(w => {
               const mission = missionForWeek(w.weekId);
@@ -158,9 +160,9 @@ export default function MissionGenerator() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-gray-900">{w.topic}</p>
-                        {mission && <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">Mission Ready</Badge>}
+                        {mission && <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">{t('admin.academics.missionGenerator.missionReadyBadge')}</Badge>}
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{w.termName} · {w.unitName} · {w.content.length} content point{w.content.length === 1 ? "" : "s"}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{w.termName} · {w.unitName} · {w.content.length === 1 ? t('admin.academics.missionGenerator.contentPointSingular', { count: w.content.length }) : t('admin.academics.missionGenerator.contentPointPlural', { count: w.content.length })}</p>
                     </div>
                     <Button
                       size="sm"
@@ -170,7 +172,7 @@ export default function MissionGenerator() {
                       className={cn("shrink-0 gap-1.5", !mission && "bg-purple-600 hover:bg-purple-700 text-white")}
                     >
                       {isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : mission ? <Sparkles className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                      {isGenerating ? "Generating…" : mission ? "Regenerate" : "Generate Mission"}
+                      {isGenerating ? t('admin.academics.missionGenerator.generatingButton') : mission ? t('admin.academics.missionGenerator.regenerateButton') : t('admin.academics.missionGenerator.generateMissionButton')}
                     </Button>
                   </CardContent>
                 </Card>

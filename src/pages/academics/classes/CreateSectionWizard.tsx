@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,41 @@ const steps = [
   { id: 6, title: "Timetable", description: "Quick schedule setup", icon: Calendar },
 ];
 
+const STEP_LABEL_KEYS: Record<number, { title: string; description: string }> = {
+  1: { title: "admin.academics.createSectionWizard.stepSectionTitle", description: "admin.academics.createSectionWizard.stepSectionDesc" },
+  2: { title: "admin.academics.createSectionWizard.stepSemesterTitle", description: "admin.academics.createSectionWizard.stepSemesterDesc" },
+  3: { title: "admin.academics.createSectionWizard.stepSubjectsTitle", description: "admin.academics.createSectionWizard.stepSubjectsDesc" },
+  4: { title: "admin.academics.createSectionWizard.stepTeachersTitle", description: "admin.academics.createSectionWizard.stepTeachersDesc" },
+  5: { title: "admin.academics.createSectionWizard.stepStudentsTitle", description: "admin.academics.createSectionWizard.stepStudentsDesc" },
+  6: { title: "admin.academics.createSectionWizard.stepTimetableTitle", description: "admin.academics.createSectionWizard.stepTimetableDesc" },
+};
+
+const SECTION_TYPE_LABEL_KEYS: Record<string, { label: string; desc: string }> = {
+  Regular: { label: "admin.academics.createSectionWizard.sectionTypeRegularLabel", desc: "admin.academics.createSectionWizard.sectionTypeRegularDesc" },
+  Advanced: { label: "admin.academics.createSectionWizard.sectionTypeAdvancedLabel", desc: "admin.academics.createSectionWizard.sectionTypeAdvancedDesc" },
+  "Special Needs": { label: "admin.academics.createSectionWizard.sectionTypeSpecialLabel", desc: "admin.academics.createSectionWizard.sectionTypeSpecialDesc" },
+};
+
+const SUBJECT_LABEL_KEYS: Record<string, string> = {
+  Mathematics: "admin.academics.createSectionWizard.subjectMathematics",
+  Science: "admin.academics.createSectionWizard.subjectScience",
+  English: "admin.academics.createSectionWizard.subjectEnglish",
+  History: "admin.academics.createSectionWizard.subjectHistory",
+  Geography: "admin.academics.createSectionWizard.subjectGeography",
+  Physics: "admin.academics.createSectionWizard.subjectPhysics",
+  Chemistry: "admin.academics.createSectionWizard.subjectChemistry",
+  Biology: "admin.academics.createSectionWizard.subjectBiology",
+  "Computer Science": "admin.academics.createSectionWizard.subjectComputerScience",
+  "Social Studies": "admin.academics.createSectionWizard.subjectSocialStudies",
+  Hindi: "admin.academics.createSectionWizard.subjectHindi",
+  Tamil: "admin.academics.createSectionWizard.subjectTamil",
+  "Art & Craft": "admin.academics.createSectionWizard.subjectArtCraft",
+  "Physical Education": "admin.academics.createSectionWizard.subjectPhysicalEducation",
+  Music: "admin.academics.createSectionWizard.subjectMusic",
+};
+
 export default function CreateSectionWizard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -114,6 +149,7 @@ export default function CreateSectionWizard() {
   const filteredSubjects = DEFAULT_SUBJECTS.filter(s =>
     !formData.subjects.includes(s) && s.toLowerCase().includes(subjectSearch.toLowerCase())
   );
+  const subjectLabel = (s: string) => (SUBJECT_LABEL_KEYS[s] ? t(SUBJECT_LABEL_KEYS[s]) : s);
 
   const nameClean = formData.sectionName.trim();
   const duplicate = existingSections.some(s =>
@@ -134,10 +170,10 @@ export default function CreateSectionWizard() {
     setFormData(f => ({ ...f, subjects: f.subjects.includes(subject) ? f.subjects.filter(s => s !== subject) : [...f.subjects, subject] }));
 
   const addCustomSubject = () => {
-    const t = newSubjectInput.trim();
-    if (!t) return;
-    if (formData.subjects.includes(t)) { toast.warning("Subject already added"); return; }
-    setFormData(f => ({ ...f, subjects: [...f.subjects, t] }));
+    const trimmed = newSubjectInput.trim();
+    if (!trimmed) return;
+    if (formData.subjects.includes(trimmed)) { toast.warning(t("admin.academics.createSectionWizard.toastSubjectAlreadyAdded")); return; }
+    setFormData(f => ({ ...f, subjects: [...f.subjects, trimmed] }));
     setNewSubjectInput("");
   };
 
@@ -170,9 +206,9 @@ export default function CreateSectionWizard() {
     if (currentStep < steps.length) { setCurrentStep(currentStep + 1); return; }
     // Final re-check against the freshly loaded class list — the section list
     // may have changed (or only just finished loading) since step 1.
-    if (classesLoading) { toast.error("Still loading existing sections — try again in a moment"); return; }
+    if (classesLoading) { toast.error(t("admin.academics.createSectionWizard.toastStillLoading")); return; }
     if (duplicate) {
-      toast.error(`Section ${nameClean} already exists in ${grade} — choose a different name`);
+      toast.error(t("admin.academics.createSectionWizard.toastDuplicateSection", { section: nameClean, grade }));
       setCurrentStep(1);
       return;
     }
@@ -202,12 +238,12 @@ export default function CreateSectionWizard() {
         });
         if (formData.timetable === "auto") await generateAutoTimetable(classId);
       }
-      toast.success(`Section ${nameClean} added to ${grade}!`, {
-        description: formData.timetable === "auto" ? "Timetable has been auto-generated." : "You can set up the timetable later.",
+      toast.success(t("admin.academics.createSectionWizard.toastSectionAdded", { section: nameClean, grade }), {
+        description: formData.timetable === "auto" ? t("admin.academics.createSectionWizard.toastTimetableAutoGenerated") : t("admin.academics.createSectionWizard.toastTimetableLater"),
       });
       navigate("/academics/classes", { state: { selectedGrade: grade } });
     } catch (e) {
-      toast.error("Failed to create section. Please try again.");
+      toast.error(t("admin.academics.createSectionWizard.toastCreateFailed"));
       console.error(e);
     } finally { setCreating(false); }
   };
@@ -219,7 +255,7 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             {existingSections.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Existing sections in {grade}</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createSectionWizard.existingSectionsIn", { grade })}</Label>
                 <div className="flex flex-wrap gap-2">
                   {existingSections.map(s => (
                     <Badge key={s} variant="outline" className="rounded-full border-slate-200 text-slate-500 font-bold">{s}</Badge>
@@ -229,14 +265,14 @@ export default function CreateSectionWizard() {
             )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Section Name</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createSectionWizard.sectionNameLabel")}</Label>
                 <Input
                   value={formData.sectionName}
                   onChange={e => setFormData({ ...formData, sectionName: e.target.value })}
                   className="rounded-xl h-12 border-slate-200"
-                  placeholder="e.g. A"
+                  placeholder={t("admin.academics.createSectionWizard.sectionNamePlaceholder")}
                 />
-                {duplicate && <p className="text-xs font-semibold text-rose-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {nameClean} already exists in {grade}</p>}
+                {duplicate && <p className="text-xs font-semibold text-rose-500 flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {t("admin.academics.createSectionWizard.sectionAlreadyExists", { section: nameClean, grade })}</p>}
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {["A", "B", "C", "D", "E", "F"].filter(L => !existingSections.map(s => s.toUpperCase().slice(-1)).includes(L)).map(L => (
                     <button key={L} onClick={() => setFormData({ ...formData, sectionName: L })}
@@ -248,21 +284,21 @@ export default function CreateSectionWizard() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Capacity</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createSectionWizard.capacityLabel")}</Label>
                 <Input type="number" value={formData.capacity}
                   onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
                   className="rounded-xl h-12 border-slate-200" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Section Type</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createSectionWizard.sectionTypeLabel")}</Label>
               <div className="grid grid-cols-3 gap-3">
-                {SECTION_TYPES.map(t => (
-                  <div key={t.id} onClick={() => setFormData({ ...formData, sectionType: t.id })}
+                {SECTION_TYPES.map(st => (
+                  <div key={st.id} onClick={() => setFormData({ ...formData, sectionType: st.id })}
                     className={cn("p-4 rounded-2xl border-2 cursor-pointer transition-all text-center",
-                      formData.sectionType === t.id ? "border-[#9810fa] bg-[#9810fa]/5" : "border-slate-100 bg-slate-50 hover:border-slate-200")}>
-                    <p className={cn("text-sm font-bold", formData.sectionType === t.id ? "text-[#9810fa]" : "text-slate-700")}>{t.label}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{t.desc}</p>
+                      formData.sectionType === st.id ? "border-[#9810fa] bg-[#9810fa]/5" : "border-slate-100 bg-slate-50 hover:border-slate-200")}>
+                    <p className={cn("text-sm font-bold", formData.sectionType === st.id ? "text-[#9810fa]" : "text-slate-700")}>{t(SECTION_TYPE_LABEL_KEYS[st.id]?.label || st.label)}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{t(SECTION_TYPE_LABEL_KEYS[st.id]?.desc || st.desc)}</p>
                   </div>
                 ))}
               </div>
@@ -275,22 +311,27 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="flex flex-col items-center justify-center py-2 text-center space-y-3">
               <div className="h-16 w-16 rounded-full bg-violet-50 flex items-center justify-center"><Calendar className="h-8 w-8 text-[#9810fa]" /></div>
-              <div><h3 className="text-lg font-bold text-slate-900">Select Semester</h3><p className="text-slate-500 text-sm mt-1">Which semester will this section belong to?</p></div>
+              <div><h3 className="text-lg font-bold text-slate-900">{t("admin.academics.createSectionWizard.selectSemesterTitle")}</h3><p className="text-slate-500 text-sm mt-1">{t("admin.academics.createSectionWizard.selectSemesterDesc")}</p></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {["Semester 1", "Semester 2", "Term 1", "Term 2"].map(sem => (
-                <div key={sem} onClick={() => setFormData({ ...formData, semester: sem })}
+              {[
+                { value: "Semester 1", labelKey: "admin.academics.createSectionWizard.semesterOption1" },
+                { value: "Semester 2", labelKey: "admin.academics.createSectionWizard.semesterOption2" },
+                { value: "Term 1", labelKey: "admin.academics.createSectionWizard.termOption1" },
+                { value: "Term 2", labelKey: "admin.academics.createSectionWizard.termOption2" },
+              ].map(sem => (
+                <div key={sem.value} onClick={() => setFormData({ ...formData, semester: sem.value })}
                   className={cn("p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center gap-2 text-center",
-                    formData.semester === sem ? "border-[#9810fa] bg-[#9810fa]/5" : "border-slate-100 bg-slate-50 hover:border-slate-200")}>
+                    formData.semester === sem.value ? "border-[#9810fa] bg-[#9810fa]/5" : "border-slate-100 bg-slate-50 hover:border-slate-200")}>
                   <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center text-lg font-black",
-                    formData.semester === sem ? "bg-[#9810fa] text-white" : "bg-white text-slate-400")}>{sem.split(" ")[1]}</div>
-                  <span className={cn("text-sm font-bold", formData.semester === sem ? "text-[#9810fa]" : "text-slate-700")}>{sem}</span>
+                    formData.semester === sem.value ? "bg-[#9810fa] text-white" : "bg-white text-slate-400")}>{sem.value.split(" ")[1]}</div>
+                  <span className={cn("text-sm font-bold", formData.semester === sem.value ? "text-[#9810fa]" : "text-slate-700")}>{t(sem.labelKey)}</span>
                 </div>
               ))}
             </div>
             <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-              <p className="text-xs text-amber-700 font-medium">You can skip this step — semester can be updated later.</p>
+              <p className="text-xs text-amber-700 font-medium">{t("admin.academics.createSectionWizard.semesterSkipHint")}</p>
             </div>
           </motion.div>
         );
@@ -300,45 +341,45 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             {formData.subjects.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Selected Subjects ({formData.subjects.length})</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createSectionWizard.selectedSubjectsLabel", { count: formData.subjects.length })}</Label>
                 <div className="flex flex-wrap gap-2 p-3 bg-[#9810fa]/5 rounded-2xl border border-[#9810fa]/20 min-h-[56px]">
                   {formData.subjects.map(s => (
                     <Badge key={s} className="bg-[#9810fa] text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-[#5c0fa0]" onClick={() => toggleSubject(s)}>
-                      {s} <X className="h-3 w-3" />
+                      {subjectLabel(s)} <X className="h-3 w-3" />
                     </Badge>
                   ))}
                 </div>
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Add Custom Subject</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createSectionWizard.addCustomSubjectLabel")}</Label>
               <div className="flex gap-2">
-                <Input placeholder="Type subject name..." value={newSubjectInput}
+                <Input placeholder={t("admin.academics.createSectionWizard.typeSubjectNamePlaceholder")} value={newSubjectInput}
                   onChange={e => setNewSubjectInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomSubject(); } }}
                   className="rounded-xl h-11 flex-1" />
                 <Button className="rounded-xl gradient-primary text-white font-bold h-11 px-5 shadow-lg shadow-primary/20" onClick={addCustomSubject} disabled={!newSubjectInput.trim()}>
-                  <Plus className="h-4 w-4 mr-1" /> Add
+                  <Plus className="h-4 w-4 me-1" /> {t("admin.academics.createSectionWizard.addButton")}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Pick</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">{t("admin.academics.createSectionWizard.quickPickLabel")}</Label>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <Input placeholder="Search..." value={subjectSearch} onChange={e => setSubjectSearch(e.target.value)} className="rounded-xl h-8 pl-8 text-xs w-36" />
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input placeholder={t("admin.academics.createSectionWizard.searchPlaceholder")} value={subjectSearch} onChange={e => setSubjectSearch(e.target.value)} className="rounded-xl h-8 ps-8 text-xs w-36" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto pe-1">
                 {filteredSubjects.map(subject => (
                   <div key={subject} onClick={() => toggleSubject(subject)}
                     className="p-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-[#9810fa]/40 hover:bg-[#9810fa]/5 transition-all cursor-pointer flex items-center gap-2">
                     <Plus className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                    <span className="text-xs font-bold text-slate-600 truncate">{subject}</span>
+                    <span className="text-xs font-bold text-slate-600 truncate">{subjectLabel(subject)}</span>
                   </div>
                 ))}
-                {filteredSubjects.length === 0 && <p className="col-span-3 text-center text-xs text-slate-400 py-4">No subjects to add</p>}
+                {filteredSubjects.length === 0 && <p className="col-span-3 text-center text-xs text-slate-400 py-4">{t("admin.academics.createSectionWizard.noSubjectsToAdd")}</p>}
               </div>
             </div>
           </motion.div>
@@ -349,29 +390,29 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
-              <p className="text-xs text-blue-700 font-medium">Teacher assignment is optional — you can change teachers later.</p>
+              <p className="text-xs text-blue-700 font-medium">{t("admin.academics.createSectionWizard.teacherAssignmentOptionalHint")}</p>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Assign Class Teacher</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createSectionWizard.assignClassTeacherLabel")}</Label>
               <Select value={formData.classTeacher} onValueChange={v => setFormData({ ...formData, classTeacher: v })}>
-                <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select teacher..." /></SelectTrigger>
+                <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder={t("admin.academics.createSectionWizard.selectTeacherPlaceholder")} /></SelectTrigger>
                 <SelectContent>
                   {staff && staff.length > 0 ? staff.map(m => <SelectItem key={m.id} value={m.name}>{m.name} ({m.role})</SelectItem>)
-                    : <><SelectItem value="Mr. Sharma">Mr. Sharma</SelectItem><SelectItem value="Ms. Verma">Ms. Verma</SelectItem></>}
+                    : <><SelectItem value="Mr. Sharma">{t("admin.academics.createSectionWizard.fallbackTeacherSharma")}</SelectItem><SelectItem value="Ms. Verma">{t("admin.academics.createSectionWizard.fallbackTeacherVerma")}</SelectItem></>}
                 </SelectContent>
               </Select>
             </div>
             {formData.subjects.length > 0 && (
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Assign Subject Teachers (Optional)</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("admin.academics.createSectionWizard.assignSubjectTeachersLabel")}</Label>
                 {formData.subjects.map(subject => (
                   <div key={subject} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-sm font-bold text-slate-700">{subject}</span>
+                    <span className="text-sm font-bold text-slate-700">{subjectLabel(subject)}</span>
                     <Select value={formData.subjectTeachers[subject] || ""} onValueChange={val => setFormData({ ...formData, subjectTeachers: { ...formData.subjectTeachers, [subject]: val } })}>
-                      <SelectTrigger className="w-[200px] h-9 rounded-lg bg-white"><SelectValue placeholder="Assign teacher..." /></SelectTrigger>
+                      <SelectTrigger className="w-[200px] h-9 rounded-lg bg-white"><SelectValue placeholder={t("admin.academics.createSectionWizard.assignTeacherPlaceholder")} /></SelectTrigger>
                       <SelectContent>
                         {staff && staff.length > 0 ? staff.map(m => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)
-                          : <><SelectItem value="Mr. Rajesh">Mr. Rajesh</SelectItem><SelectItem value="Ms. Priya">Ms. Priya</SelectItem></>}
+                          : <><SelectItem value="Mr. Rajesh">{t("admin.academics.createSectionWizard.fallbackTeacherRajesh")}</SelectItem><SelectItem value="Ms. Priya">{t("admin.academics.createSectionWizard.fallbackTeacherPriya")}</SelectItem></>}
                       </SelectContent>
                     </Select>
                   </div>
@@ -386,9 +427,9 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { id: "auto", title: "Auto-assign", desc: "Based on grade", icon: Zap },
-                { id: "manual", title: "Manual Assign", desc: "Select from list", icon: UserCheck },
-                { id: "bulk", title: "Bulk Upload", desc: "CSV / Excel import", icon: LayoutGrid },
+                { id: "auto", title: t("admin.academics.createSectionWizard.studentAutoAssignTitle"), desc: t("admin.academics.createSectionWizard.studentAutoAssignDesc"), icon: Zap },
+                { id: "manual", title: t("admin.academics.createSectionWizard.studentManualAssignTitle"), desc: t("admin.academics.createSectionWizard.studentManualAssignDesc"), icon: UserCheck },
+                { id: "bulk", title: t("admin.academics.createSectionWizard.studentBulkUploadTitle"), desc: t("admin.academics.createSectionWizard.studentBulkUploadDesc"), icon: LayoutGrid },
               ].map(opt => (
                 <div key={opt.id} onClick={() => setFormData({ ...formData, studentAssignment: opt.id })}
                   className={cn("p-6 rounded-3xl border-2 transition-all cursor-pointer flex flex-col gap-3",
@@ -403,14 +444,14 @@ export default function CreateSectionWizard() {
             {formData.studentAssignment === "manual" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-slate-700">Students available for {grade}</p>
-                  {formData.selectedStudents.length > 0 && <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none rounded-full font-bold">{formData.selectedStudents.length} selected</Badge>}
+                  <p className="text-sm font-bold text-slate-700">{t("admin.academics.createSectionWizard.studentsAvailableFor", { grade })}</p>
+                  {formData.selectedStudents.length > 0 && <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none rounded-full font-bold">{t("admin.academics.createSectionWizard.studentsSelectedCount", { count: formData.selectedStudents.length })}</Badge>}
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input placeholder="Search students..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="rounded-xl pl-10 h-11" />
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input placeholder={t("admin.academics.createSectionWizard.searchStudentsPlaceholder")} value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="rounded-xl ps-10 h-11" />
                 </div>
-                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-[240px] overflow-y-auto space-y-2 pe-1">
                   {filteredStudents.length > 0 ? filteredStudents.map(student => {
                     const sel = formData.selectedStudents.includes(student.id);
                     return (
@@ -425,7 +466,7 @@ export default function CreateSectionWizard() {
                     );
                   }) : (
                     <div className="flex flex-col items-center gap-2 py-8 text-center">
-                      <AlertCircle className="h-8 w-8 text-slate-300" /><p className="text-sm font-bold text-slate-500">No students found</p>
+                      <AlertCircle className="h-8 w-8 text-slate-300" /><p className="text-sm font-bold text-slate-500">{t("admin.academics.createSectionWizard.noStudentsFound")}</p>
                     </div>
                   )}
                 </div>
@@ -434,13 +475,13 @@ export default function CreateSectionWizard() {
             {formData.studentAssignment === "auto" && (
               <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-3">
                 <Zap className="h-5 w-5 text-purple-600 flex-shrink-0" />
-                <p className="text-sm font-bold text-blue-900">Students will be auto-assigned based on grade and enrollment data.</p>
+                <p className="text-sm font-bold text-blue-900">{t("admin.academics.createSectionWizard.studentsAutoAssignedHint")}</p>
               </div>
             )}
             {formData.studentAssignment === "bulk" && (
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
-                <LayoutGrid className="h-8 w-8 text-slate-300" /><p className="text-sm font-bold text-slate-600">Upload CSV or Excel File</p>
-                <Button variant="outline" className="rounded-xl mt-1 text-xs font-bold">Browse File</Button>
+                <LayoutGrid className="h-8 w-8 text-slate-300" /><p className="text-sm font-bold text-slate-600">{t("admin.academics.createSectionWizard.uploadCsvExcelTitle")}</p>
+                <Button variant="outline" className="rounded-xl mt-1 text-xs font-bold">{t("admin.academics.createSectionWizard.browseFileButton")}</Button>
               </div>
             )}
           </motion.div>
@@ -451,10 +492,10 @@ export default function CreateSectionWizard() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
             <div className="flex flex-col items-center justify-center py-4 text-center space-y-3">
               <div className="h-20 w-20 rounded-full bg-indigo-50 flex items-center justify-center"><Calendar className="h-10 w-10 text-purple-600" /></div>
-              <div><h3 className="text-xl font-bold text-slate-900">Timetable Setup</h3><p className="text-slate-500 text-sm max-w-md mx-auto mt-2">Auto-generate an optimized timetable, or set it up manually later.</p></div>
+              <div><h3 className="text-xl font-bold text-slate-900">{t("admin.academics.createSectionWizard.timetableSetupTitle")}</h3><p className="text-slate-500 text-sm max-w-md mx-auto mt-2">{t("admin.academics.createSectionWizard.timetableSetupDesc")}</p></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[{ id: "auto", title: "Auto-Generate", desc: "Distribute subjects across week", icon: Zap }, { id: "manual", title: "Manual Setup", desc: "Custom Schedule", icon: LayoutGrid }].map(opt => (
+              {[{ id: "auto", title: t("admin.academics.createSectionWizard.timetableAutoGenerateTitle"), desc: t("admin.academics.createSectionWizard.timetableAutoGenerateDesc"), icon: Zap }, { id: "manual", title: t("admin.academics.createSectionWizard.timetableManualSetupTitle"), desc: t("admin.academics.createSectionWizard.timetableManualSetupDesc"), icon: LayoutGrid }].map(opt => (
                 <div key={opt.id} onClick={() => setFormData({ ...formData, timetable: opt.id })}
                   className={cn("p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center gap-4", formData.timetable === opt.id ? "border-[#9810fa] bg-[#9810fa]/5" : "border-slate-100 bg-slate-50 hover:border-slate-200")}>
                   <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center", formData.timetable === opt.id ? "bg-[#9810fa] text-white" : "bg-white text-slate-400")}><opt.icon className="h-6 w-6" /></div>
@@ -464,12 +505,12 @@ export default function CreateSectionWizard() {
             </div>
             {formData.timetable === "auto" && formData.subjects.length > 0 && (
               <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl space-y-3">
-                <div className="flex items-center gap-3"><Zap className="h-5 w-5 text-purple-600" /><p className="text-sm font-bold text-indigo-900">Preview: Auto-Generated Timetable</p></div>
+                <div className="flex items-center gap-3"><Zap className="h-5 w-5 text-purple-600" /><p className="text-sm font-bold text-indigo-900">{t("admin.academics.createSectionWizard.timetablePreviewLabel")}</p></div>
                 <div className="grid grid-cols-3 gap-2">
                   {DAYS.slice(0, 6).map((day, di) => (
                     <div key={day} className="bg-white rounded-xl p-2 text-center border border-indigo-100">
                       <p className="text-[9px] font-bold uppercase text-indigo-400 tracking-wider">{day.slice(0, 3)}</p>
-                      <p className="text-xs font-bold text-indigo-700 mt-1 truncate">{formData.subjects[di % formData.subjects.length]}</p>
+                      <p className="text-xs font-bold text-indigo-700 mt-1 truncate">{subjectLabel(formData.subjects[di % formData.subjects.length])}</p>
                     </div>
                   ))}
                 </div>
@@ -489,21 +530,21 @@ export default function CreateSectionWizard() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-1">
-              <span className="hover:text-[#9810fa] cursor-pointer" onClick={() => navigate("/academics/classes")}>Classes</span>
-              <ChevronRight className="h-3 w-3" />
+              <span className="hover:text-[#9810fa] cursor-pointer" onClick={() => navigate("/academics/classes")}>{t("admin.academics.createSectionWizard.breadcrumbClasses")}</span>
+              <ChevronRight className="h-3 w-3 rtl:rotate-180" />
               <span className="hover:text-[#9810fa] cursor-pointer" onClick={() => navigate("/academics/classes", { state: { selectedGrade: grade } })}>{grade}</span>
-              <ChevronRight className="h-3 w-3" />
-              <span className="text-[#9810fa]">Add Section</span>
+              <ChevronRight className="h-3 w-3 rtl:rotate-180" />
+              <span className="text-[#9810fa]">{t("admin.academics.createSectionWizard.breadcrumbAddSection")}</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900">Add Section to {grade}</h1>
-            <p className="text-slate-500 font-medium">Set up a new section — same flow as creating a class, starting from the section.</p>
+            <h1 className="text-3xl font-black text-slate-900">{t("admin.academics.createSectionWizard.pageTitle", { grade })}</h1>
+            <p className="text-slate-500 font-medium">{t("admin.academics.createSectionWizard.pageSubtitle")}</p>
           </div>
-          <Button variant="ghost" className="text-slate-500 font-bold" onClick={() => navigate("/academics/classes", { state: { selectedGrade: grade } })}>Cancel</Button>
+          <Button variant="ghost" className="text-slate-500 font-bold" onClick={() => navigate("/academics/classes", { state: { selectedGrade: grade } })}>{t("admin.academics.createSectionWizard.cancelButton")}</Button>
         </div>
 
         {/* Steps Progress */}
         <div className="flex items-center justify-between relative px-2">
-          <div className="absolute top-5 left-0 w-full h-0.5 bg-slate-100 z-0" />
+          <div className="absolute top-5 start-0 w-full h-0.5 bg-slate-100 z-0" />
           {steps.map(step => (
             <div key={step.id} className="relative z-10 flex flex-col items-center gap-2">
               <div className={cn("h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 border-4",
@@ -511,7 +552,7 @@ export default function CreateSectionWizard() {
                   : currentStep > step.id ? "bg-emerald-500 text-white border-white" : "bg-white text-slate-400 border-slate-50")}>
                 {currentStep > step.id ? <Check className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
               </div>
-              <span className={cn("text-[10px] font-bold uppercase tracking-wider", currentStep === step.id ? "text-[#9810fa]" : "text-slate-400")}>{step.title}</span>
+              <span className={cn("text-[10px] font-bold uppercase tracking-wider", currentStep === step.id ? "text-[#9810fa]" : "text-slate-400")}>{t(STEP_LABEL_KEYS[step.id]?.title || step.title)}</span>
             </div>
           ))}
         </div>
@@ -521,26 +562,26 @@ export default function CreateSectionWizard() {
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl font-black text-slate-900">{steps[currentStep - 1].title}</CardTitle>
-                <CardDescription className="text-slate-500 font-medium">{steps[currentStep - 1].description}</CardDescription>
+                <CardTitle className="text-2xl font-black text-slate-900">{t(STEP_LABEL_KEYS[steps[currentStep - 1].id]?.title || steps[currentStep - 1].title)}</CardTitle>
+                <CardDescription className="text-slate-500 font-medium">{t(STEP_LABEL_KEYS[steps[currentStep - 1].id]?.description || steps[currentStep - 1].description)}</CardDescription>
               </div>
-              <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none px-4 py-1 rounded-full font-bold">Step {currentStep} of {steps.length}</Badge>
+              <Badge className="bg-[#9810fa]/10 text-[#9810fa] border-none px-4 py-1 rounded-full font-bold">{t("admin.academics.createSectionWizard.stepOfTotal", { current: currentStep, total: steps.length })}</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-8">{renderStep()}</CardContent>
           <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
             <Button variant="ghost" className="rounded-xl font-bold text-slate-500 h-12 px-8" onClick={handleBack}>
-              <ChevronLeft className="h-5 w-5 mr-2" /> {currentStep === 1 ? "Cancel" : "Back"}
+              <ChevronLeft className="h-5 w-5 me-2 rtl:rotate-180" /> {currentStep === 1 ? t("admin.academics.createSectionWizard.cancelButton") : t("admin.academics.createSectionWizard.backButton")}
             </Button>
             <div className="flex items-center gap-3">
               {(currentStep === 2 || currentStep === 4) && (
                 <Button variant="outline" className="rounded-xl font-bold h-12 px-8 text-slate-500 border-slate-200" onClick={handleSkip}>
-                  Skip <ChevronRight className="h-4 w-4 ml-1" />
+                  {t("admin.academics.createSectionWizard.skipButton")} <ChevronRight className="h-4 w-4 ms-1 rtl:rotate-180" />
                 </Button>
               )}
               <Button className="rounded-xl gradient-primary text-white font-bold h-12 px-12 shadow-lg shadow-primary/20 disabled:opacity-50" onClick={handleNext} disabled={!isStepValid() || creating}>
-                {creating ? "Creating…" : currentStep === steps.length ? "Finish & Create" : "Next Step"}
-                <ChevronRight className="h-5 w-5 ml-2" />
+                {creating ? t("admin.academics.createSectionWizard.creatingLabel") : currentStep === steps.length ? t("admin.academics.createSectionWizard.finishCreateButton") : t("admin.academics.createSectionWizard.nextStepButton")}
+                <ChevronRight className="h-5 w-5 ms-2 rtl:rotate-180" />
               </Button>
             </div>
           </div>

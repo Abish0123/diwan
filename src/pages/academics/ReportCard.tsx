@@ -10,6 +10,7 @@ import {
   ChevronLeft, Send, Globe, Smartphone, X, RefreshCw, Plus
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useStudents } from "@/contexts/StudentContext";
 import { useClasses } from "@/hooks/useClasses";
@@ -53,6 +54,67 @@ const STEPS: { id: number; label: string; sub: string; icon: typeof Users }[] = 
 
 const EXAMS = ["Mid-Term Exam", "Final Exam", "Unit Test 1", "Unit Test 2", "Annual Exam", "Pre-Board"];
 
+// Display-label lookup maps — the arrays above stay in English because their
+// values are used as real identifiers (state values, stored record fields,
+// equality checks). These maps translate only what gets rendered.
+const STEP_LABEL_KEYS: Record<number, { labelKey: string; subKey: string }> = {
+  1: { labelKey: "admin.academics.reportCard.stepTermExamLabel", subKey: "admin.academics.reportCard.stepTermExamSub" },
+  2: { labelKey: "admin.academics.reportCard.stepGradeLabel", subKey: "admin.academics.reportCard.stepGradeSub" },
+  3: { labelKey: "admin.academics.reportCard.stepSectionLabel", subKey: "admin.academics.reportCard.stepSectionSub" },
+  4: { labelKey: "admin.academics.reportCard.stepStudentsLabel", subKey: "admin.academics.reportCard.stepStudentsSub" },
+  5: { labelKey: "admin.academics.reportCard.stepTemplateLabel", subKey: "admin.academics.reportCard.stepTemplateSub" },
+  6: { labelKey: "admin.academics.reportCard.stepGenerateLabel", subKey: "admin.academics.reportCard.stepGenerateSub" },
+};
+
+const EXAM_LABEL_KEYS: Record<string, string> = {
+  "Mid-Term Exam": "admin.academics.reportCard.examMidTerm",
+  "Final Exam": "admin.academics.reportCard.examFinal",
+  "Unit Test 1": "admin.academics.reportCard.examUnit1",
+  "Unit Test 2": "admin.academics.reportCard.examUnit2",
+  "Annual Exam": "admin.academics.reportCard.examAnnual",
+  "Pre-Board": "admin.academics.reportCard.examPreBoard",
+};
+
+const TERM_LABEL_KEYS: Record<string, string> = {
+  "Term 1": "admin.academics.reportCard.term1",
+  "Term 2": "admin.academics.reportCard.term2",
+  "Term 3": "admin.academics.reportCard.term3",
+  "Annual": "admin.academics.reportCard.termAnnual",
+};
+
+const CLASS_LABEL_KEYS: Record<string, string> = {
+  "Grade 1": "admin.academics.reportCard.grade1",
+  "Grade 2": "admin.academics.reportCard.grade2",
+  "Grade 3": "admin.academics.reportCard.grade3",
+  "Grade 4": "admin.academics.reportCard.grade4",
+  "Grade 5": "admin.academics.reportCard.grade5",
+  "Grade 6": "admin.academics.reportCard.grade6",
+};
+
+const SECTION_LABEL_KEYS: Record<string, string> = {
+  "Section A": "admin.academics.reportCard.sectionA",
+  "Section B": "admin.academics.reportCard.sectionB",
+  "Section C": "admin.academics.reportCard.sectionC",
+  "Section D": "admin.academics.reportCard.sectionD",
+};
+
+const GRADING_LABEL_KEYS: Record<string, string> = {
+  "Percentage": "admin.academics.reportCard.gsPercentage",
+  "GPA": "admin.academics.reportCard.gsGPA",
+  "CBSE 10 Point Scale": "admin.academics.reportCard.gsCBSE",
+  "IB Scale": "admin.academics.reportCard.gsIB",
+  "Letter Grades": "admin.academics.reportCard.gsLetterGrades",
+};
+
+const LANGUAGE_LABEL_KEYS: Record<string, string> = {
+  "English": "admin.academics.reportCard.langEnglish",
+  "Arabic": "admin.academics.reportCard.langArabic",
+  "Hindi": "admin.academics.reportCard.langHindi",
+  "French": "admin.academics.reportCard.langFrench",
+};
+// Shared by SelectField, which renders both Grading System and Language options.
+const SELECT_OPTION_LABEL_KEYS: Record<string, string> = { ...GRADING_LABEL_KEYS, ...LANGUAGE_LABEL_KEYS };
+
 const TEMPLATES: { id: TemplateId; label: string; short: string; color: string }[] = [
   { id: "primary",    label: "Primary School Template",  short: "Primary",    color: "#6C3BFF" },
   { id: "elementary", label: "Elementary Template",       short: "Elementary", color: "#8B5CF6" },
@@ -65,6 +127,19 @@ const TEMPLATES: { id: TemplateId; label: string; short: string; color: string }
   { id: "custom",     label: "Custom Template",           short: "Custom",     color: "#64748B" },
   { id: "bluewood",   label: "Bluewood Enterprise E-Report Card", short: "Bluewood", color: "#0B2E6D" },
 ];
+
+const TEMPLATE_LABEL_KEYS: Record<TemplateId, { labelKey: string; shortKey: string }> = {
+  primary:    { labelKey: "admin.academics.reportCard.templatePrimaryLabel",    shortKey: "admin.academics.reportCard.templatePrimaryShort" },
+  elementary: { labelKey: "admin.academics.reportCard.templateElementaryLabel", shortKey: "admin.academics.reportCard.templateElementaryShort" },
+  cbse:       { labelKey: "admin.academics.reportCard.templateCbseLabel",       shortKey: "admin.academics.reportCard.templateCbseShort" },
+  icse:       { labelKey: "admin.academics.reportCard.templateIcseLabel",       shortKey: "admin.academics.reportCard.templateIcseShort" },
+  british:    { labelKey: "admin.academics.reportCard.templateBritishLabel",    shortKey: "admin.academics.reportCard.templateBritishShort" },
+  ib:         { labelKey: "admin.academics.reportCard.templateIbLabel",         shortKey: "admin.academics.reportCard.templateIbShort" },
+  american:   { labelKey: "admin.academics.reportCard.templateAmericanLabel",   shortKey: "admin.academics.reportCard.templateAmericanShort" },
+  qatar:      { labelKey: "admin.academics.reportCard.templateQatarLabel",      shortKey: "admin.academics.reportCard.templateQatarShort" },
+  custom:     { labelKey: "admin.academics.reportCard.templateCustomLabel",     shortKey: "admin.academics.reportCard.templateCustomShort" },
+  bluewood:   { labelKey: "admin.academics.reportCard.templateBluewoodLabel",   shortKey: "admin.academics.reportCard.templateBluewoodShort" },
+};
 
 // Each template drives a genuinely different report card: colors, header layout,
 // grade scale and board label all change based on the selected template.
@@ -211,6 +286,7 @@ function SelectField({ label, options, value, onChange }: {
   label: string; options: string[]; value: string; onChange: (v: string) => void;
 }) {
   const { theme } = useTheme(); const dark = theme === "dark";
+  const { t } = useTranslation();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       <label style={{ fontSize: 11, fontWeight: 700, color: dark ? "#8B8BA8" : "#64748B",
@@ -226,7 +302,7 @@ function SelectField({ label, options, value, onChange }: {
           onFocus={e => { e.target.style.borderColor = dark ? "#9B59E6" : "#6C3BFF"; e.target.style.background = dark ? "#16162A" : "#fff"; }}
           onBlur={e => { e.target.style.borderColor = dark ? "#2A2A45" : "#E2E8F0"; e.target.style.background = dark ? "#1A1A30" : "#F8FAFC"; }}
         >
-          {options.map(o => <option key={o} value={o}>{o}</option>)}
+          {options.map(o => <option key={o} value={o}>{t(SELECT_OPTION_LABEL_KEYS[o] || o)}</option>)}
         </select>
         <ChevronDown style={{ position: "absolute", right: 10, top: "50%",
           transform: "translateY(-50%)", width: 14, height: 14, color: dark ? "#8B8BA8" : "#64748B", pointerEvents: "none" }} />

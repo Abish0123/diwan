@@ -15,6 +15,7 @@ import {
   BookOpen, GraduationCap, ChevronDown, ChevronRight, Search, Layers, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 function gradeAbbr(g: string) {
   if (g === "Pre-KG") return "PK";
   if (g === "LKG") return "LK";
@@ -46,6 +47,7 @@ function sectionLetterOf(c: any): string {
 }
 
 export default function Subjects() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { classes, updateClass } = useClasses();
   const { students } = useStudents();
@@ -187,7 +189,7 @@ export default function Subjects() {
     try {
       await Promise.all(gradeClasses.map(c => updateClass(c.id, { subjects: names } as any)));
     } catch {
-      toast.error("Could not save subjects to the database");
+      toast.error(t('admin.academics.subjects.saveSubjectsError'));
     }
   }
 
@@ -216,11 +218,11 @@ export default function Subjects() {
   // curriculum's template instead of keeping the old ones.
   function loadCurriculumDefaults() {
     if (!defaultSubjectsForGrade.length) {
-      toast.error(`No subject template defined for ${selectedGrade} under ${curriculum.name}`);
+      toast.error(t('admin.academics.subjects.noTemplateError', { grade: selectedGrade, curriculum: curriculum.name }));
       return;
     }
     persistGradeSubjects(defaultSubjectsForGrade);
-    toast.success(`Loaded ${curriculum.shortName} defaults for ${selectedGrade}`, {
+    toast.success(t('admin.academics.subjects.defaultsLoaded', { curriculum: curriculum.shortName, grade: selectedGrade }), {
       description: defaultSubjectsForGrade.join(', '),
     });
   }
@@ -255,12 +257,12 @@ export default function Subjects() {
       // saving with teacherEmail: undefined silently breaks marks-entry RBAC
       // downstream (the teacher would never see this class in their portal).
       if (!teacherUser && !staffRecord) {
-        toast.error(`"${teacherName}" is not in the staff list — pick a teacher from the staff suggestions to assign ${subject}.`);
+        toast.error(t('admin.academics.subjects.teacherNotInStaffList', { teacherName, subject }));
         return;
       }
       const teacherEmail = teacherUser?.email || staffRecord?.email || undefined;
       if (!teacherEmail) {
-        toast.error(`${teacherName} has no linked account email, so subject access can't be granted. Add an email to their staff record first.`);
+        toast.error(t('admin.academics.subjects.teacherNoEmail', { teacherName }));
         return;
       }
 
@@ -370,7 +372,7 @@ export default function Subjects() {
       }
 
     } catch {
-      toast.error("Could not save teacher assignment");
+      toast.error(t('admin.academics.subjects.saveTeacherAssignmentError'));
     }
   }
 
@@ -389,7 +391,7 @@ export default function Subjects() {
       <div className="flex h-[calc(100vh-112px)] overflow-hidden">
 
         {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-        <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col shadow-sm overflow-hidden">
+        <aside className="w-64 flex-shrink-0 bg-white border-e border-gray-100 flex flex-col shadow-sm overflow-hidden">
 
           {/* Sidebar header */}
           <div className="px-4 pt-4 pb-3 border-b border-gray-100">
@@ -398,18 +400,18 @@ export default function Subjects() {
                 <BookOpen className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 leading-tight">Subjects</h1>
-                <p className="text-sm text-slate-400">Centralized Manager</p>
+                <h1 className="text-2xl font-bold text-slate-900 leading-tight">{t('admin.academics.subjects.pageTitle')}</h1>
+                <p className="text-sm text-slate-400">{t('admin.academics.subjects.centralizedManager')}</p>
               </div>
             </div>
 
             {/* Roll-up pills */}
             <div className="flex items-center gap-1.5">
               <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 border border-violet-100 text-[10px] font-bold text-violet-700">
-                <BookOpen className="w-3 h-3" />{totalSubjects} Subjects
+                <BookOpen className="w-3 h-3" />{t('admin.academics.subjects.subjectsCount', { count: totalSubjects })}
               </span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-700">
-                <Layers className="w-3 h-3" />{filteredByDB.length} Grades
+                <Layers className="w-3 h-3" />{t('admin.academics.subjects.gradesCount', { count: filteredByDB.length })}
               </span>
             </div>
           </div>
@@ -417,13 +419,13 @@ export default function Subjects() {
           {/* Search */}
           <div className="px-3 py-2 border-b border-gray-100">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search grade..."
+                placeholder={t('admin.academics.subjects.searchGradePlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-violet-300 focus:bg-white transition-colors"
+                className="w-full ps-8 pe-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-violet-300 focus:bg-white transition-colors"
               />
             </div>
           </div>
@@ -431,7 +433,7 @@ export default function Subjects() {
           {/* Grade → Section tree */}
           <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
             {filteredGrades.length === 0 && (
-              <p className="px-3 py-4 text-xs text-gray-400 text-center">No grades found</p>
+              <p className="px-3 py-4 text-xs text-gray-400 text-center">{t('admin.academics.subjects.noGradesFound')}</p>
             )}
             {filteredGrades.map((g, gi) => {
               const isCollapsed  = collapsed.has(g);
@@ -444,7 +446,7 @@ export default function Subjects() {
                 <div key={g}>
                   <button
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-left group",
+                      "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-start group",
                       isGradeActive ? "bg-violet-50" : "hover:bg-gray-50"
                     )}
                     onClick={() => {
@@ -468,17 +470,17 @@ export default function Subjects() {
                       isGradeActive ? "text-violet-700" : hasClasses ? "text-gray-700 group-hover:text-gray-900" : "text-gray-400"
                     )}>{g}</span>
                     {!hasClasses && (
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-300 shrink-0">No classes</span>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-300 shrink-0">{t('admin.academics.subjects.noClasses')}</span>
                     )}
                     <span className="text-gray-300">
                       {isCollapsed
-                        ? <ChevronRight className="w-3.5 h-3.5" />
+                        ? <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
                         : <ChevronDown  className="w-3.5 h-3.5" />}
                     </span>
                   </button>
 
                   {!isCollapsed && (
-                    <div className="ml-6 mt-0.5 space-y-0.5 mb-1">
+                    <div className="ms-6 mt-0.5 space-y-0.5 mb-1">
                       {secs.map(sec => {
                         const isActive = selectedGrade === g && selectedSection === sec;
                         return (
@@ -486,7 +488,7 @@ export default function Subjects() {
                             key={sec}
                             onClick={() => select(g, sec)}
                             className={cn(
-                              "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-all group",
+                              "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-start transition-all group",
                               isActive
                                 ? "bg-purple-600 text-white shadow-md shadow-violet-200"
                                 : "hover:bg-violet-50 text-gray-600 hover:text-violet-700"
@@ -499,18 +501,18 @@ export default function Subjects() {
                                 : (SECTION_BADGE[sec] || "bg-gray-100 text-gray-600 border-gray-200")
                             )}>{sec}</span>
                             <span className={cn("text-xs font-semibold", isActive ? "text-white" : "")}>
-                              Section {sec}
+                              {t('admin.academics.subjects.sectionLabel', { section: sec })}
                             </span>
                             {isActive && (
-                              <span className="ml-auto">
-                                <ChevronRight className="w-3 h-3 text-white/70" />
+                              <span className="ms-auto">
+                                <ChevronRight className="w-3 h-3 text-white/70 rtl:rotate-180" />
                               </span>
                             )}
                           </button>
                         );
                       })}
                       {secs.length === 0 && (
-                        <p className="px-3 py-1 text-[10px] text-gray-400">No sections</p>
+                        <p className="px-3 py-1 text-[10px] text-gray-400">{t('admin.academics.subjects.noSections')}</p>
                       )}
                     </div>
                   )}
@@ -523,13 +525,13 @@ export default function Subjects() {
           {selectedGrade && (
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/60">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">
-                Active scope
+                {t('admin.academics.subjects.activeScope')}
               </p>
               <p className="text-xs font-semibold text-violet-700 truncate">
-                {selectedGrade} · Section {selectedSection}
+                {selectedGrade} · {t('admin.academics.subjects.sectionLabel', { section: selectedSection })}
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">
-                {studentCount} student{studentCount !== 1 ? "s" : ""} · {sections.length} section{sections.length !== 1 ? "s" : ""}
+                {studentCount === 1 ? t('admin.academics.subjects.oneStudent') : t('admin.academics.subjects.multipleStudents', { count: studentCount })} · {sections.length === 1 ? t('admin.academics.subjects.oneSection') : t('admin.academics.subjects.multipleSections', { count: sections.length })}
               </p>
             </div>
           )}
@@ -543,25 +545,24 @@ export default function Subjects() {
                 <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-white shadow-sm flex items-center justify-center">
                   <GraduationCap className="w-10 h-10 text-slate-300" />
                 </div>
-                <p className="text-lg font-bold text-slate-700">No classes yet for {selectedGrade}</p>
+                <p className="text-lg font-bold text-slate-700">{t('admin.academics.subjects.noClassesYet', { grade: selectedGrade })}</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  {selectedGrade} is part of the {curriculum.name}, but no class/section has
-                  been created for it yet — subjects are stored per class, so create one first.
+                  {t('admin.academics.subjects.noClassesDescription', { grade: selectedGrade, curriculum: curriculum.name })}
                 </p>
                 {defaultSubjectsForGrade.length > 0 && (
-                  <div className="mt-4 p-3 bg-violet-50 border border-violet-100 rounded-2xl text-left">
+                  <div className="mt-4 p-3 bg-violet-50 border border-violet-100 rounded-2xl text-start">
                     <p className="text-[10px] font-black uppercase tracking-wider text-purple-600 mb-1.5">
-                      {curriculum.shortName} default subjects for {selectedGrade}
+                      {t('admin.academics.subjects.defaultSubjectsFor', { curriculum: curriculum.shortName, grade: selectedGrade })}
                     </p>
                     <p className="text-xs text-violet-800 font-medium">{defaultSubjectsForGrade.join(', ')}</p>
-                    <p className="text-[10px] text-violet-400 mt-1.5">Applied automatically once a class exists for this grade.</p>
+                    <p className="text-[10px] text-violet-400 mt-1.5">{t('admin.academics.subjects.appliedAutomatically')}</p>
                   </div>
                 )}
                 <Button
                   className="rounded-xl h-10 px-5 font-bold text-xs gradient-primary text-white mt-5"
                   onClick={() => navigate('/academics/classes/new')}
                 >
-                  Create a Class for {selectedGrade}
+                  {t('admin.academics.subjects.createClassFor', { grade: selectedGrade })}
                 </Button>
               </div>
             </div>
@@ -575,12 +576,12 @@ export default function Subjects() {
                   </div>
                   <div>
                     <h1 className="text-xl font-black text-slate-900 leading-tight">
-                      {selectedGrade} — Section {selectedSection}
+                      {t('admin.academics.subjects.gradeSectionHeading', { grade: selectedGrade, section: selectedSection })}
                     </h1>
                     <p className="text-xs text-slate-500">
-                      Subjects apply grade-wide to{" "}
-                      {sections.length ? sections.map(s => `Section ${s}`).join(", ") : "all sections"} ·{" "}
-                      {studentCount} student{studentCount !== 1 ? "s" : ""}
+                      {t('admin.academics.subjects.appliesGradeWideTo')}{" "}
+                      {sections.length ? sections.map(s => t('admin.academics.subjects.sectionLabel', { section: s })).join(", ") : t('admin.academics.subjects.allSections')} ·{" "}
+                      {studentCount === 1 ? t('admin.academics.subjects.oneStudent') : t('admin.academics.subjects.multipleStudents', { count: studentCount })}
                     </p>
                   </div>
                 </div>
@@ -589,17 +590,17 @@ export default function Subjects() {
                     variant="outline" size="sm"
                     className="rounded-xl h-9 px-3.5 font-bold text-[11px] border-violet-200 text-violet-700 hover:bg-violet-50 shrink-0"
                     onClick={loadCurriculumDefaults}
-                    title={`Replace ${selectedGrade}'s subjects with the ${curriculum.shortName} curriculum default: ${defaultSubjectsForGrade.join(', ')}`}
+                    title={t('admin.academics.subjects.loadDefaultsTitle', { grade: selectedGrade, curriculum: curriculum.shortName, subjects: defaultSubjectsForGrade.join(', ') })}
                   >
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                    Load {curriculum.shortName} Defaults
+                    <Sparkles className="w-3.5 h-3.5 me-1.5" />
+                    {t('admin.academics.subjects.loadDefaultsButton', { curriculum: curriculum.shortName })}
                   </Button>
                 )}
               </div>
 
               {streamBreakdown.length > 0 && (
                 <div className="mb-5 p-3 bg-white rounded-xl border border-slate-100 flex items-center gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Real Stream Enrollment</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">{t('admin.academics.subjects.realStreamEnrollment')}</p>
                   <div className="flex flex-wrap gap-2">
                     {streamBreakdown.map(([stream, count]) => (
                       <span key={stream} className="px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 text-[11px] font-bold">
@@ -629,9 +630,9 @@ export default function Subjects() {
                 <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-white shadow-sm flex items-center justify-center">
                   <BookOpen className="w-10 h-10 text-slate-300" />
                 </div>
-                <p className="text-lg font-bold text-slate-700">No Grades Available</p>
+                <p className="text-lg font-bold text-slate-700">{t('admin.academics.subjects.noGradesAvailable')}</p>
                 <p className="text-sm text-slate-400 mt-1">
-                  Create classes in Academics → Classes to manage subjects here.
+                  {t('admin.academics.subjects.noGradesAvailableDescription')}
                 </p>
               </div>
             </div>

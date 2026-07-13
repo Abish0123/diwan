@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BookOpen, 
@@ -87,52 +88,52 @@ interface Curriculum {
 import { GoogleGenAI } from "@google/genai";
 
 // --- Constants ---
-const CURRICULUM_TYPES: { id: CurriculumType; name: string; description: string; icon: string; structure: 'unit_based' | 'chapter_based' | 'activity_based' | 'skill_based'; color: string }[] = [
-  { 
-    id: 'CBSE', 
-    name: 'CBSE (Indian)', 
-    description: 'Standard Indian curriculum following NCERT guidelines.', 
-    icon: '🇮🇳', 
+const CURRICULUM_TYPES: { id: CurriculumType; nameKey: string; descriptionKey: string; icon: string; structure: 'unit_based' | 'chapter_based' | 'activity_based' | 'skill_based'; color: string }[] = [
+  {
+    id: 'CBSE',
+    nameKey: 'admin.academics.advancedCurriculum.typeCbseName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeCbseDescription',
+    icon: '🇮🇳',
     structure: 'chapter_based',
     color: 'bg-orange-50 text-orange-600 border-orange-200'
   },
-  { 
-    id: 'IB', 
-    name: 'IB (International)', 
-    description: 'Inquiry-based learning with global perspectives.', 
-    icon: '🌍', 
+  {
+    id: 'IB',
+    nameKey: 'admin.academics.advancedCurriculum.typeIbName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeIbDescription',
+    icon: '🌍',
     structure: 'unit_based',
     color: 'bg-blue-50 text-purple-600 border-blue-200'
   },
-  { 
-    id: 'Cambridge', 
-    name: 'Cambridge', 
-    description: 'Rigorous academic standards with international recognition.', 
-    icon: '🎓', 
+  {
+    id: 'Cambridge',
+    nameKey: 'admin.academics.advancedCurriculum.typeCambridgeName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeCambridgeDescription',
+    icon: '🎓',
     structure: 'unit_based',
     color: 'bg-indigo-50 text-purple-600 border-indigo-200'
   },
-  { 
-    id: 'Montessori', 
-    name: 'Montessori', 
-    description: 'Child-centered, activity-based alternative education.', 
-    icon: '🧠', 
+  {
+    id: 'Montessori',
+    nameKey: 'admin.academics.advancedCurriculum.typeMontessoriName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeMontessoriDescription',
+    icon: '🧠',
     structure: 'activity_based',
     color: 'bg-green-50 text-green-600 border-green-200'
   },
-  { 
-    id: 'AI', 
-    name: 'AI & Future Skills', 
-    description: 'Skill-based curriculum focused on emerging technologies.', 
-    icon: '🚀', 
+  {
+    id: 'AI',
+    nameKey: 'admin.academics.advancedCurriculum.typeAiName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeAiDescription',
+    icon: '🚀',
     structure: 'skill_based',
     color: 'bg-purple-50 text-purple-600 border-purple-200'
   },
-  { 
-    id: 'Hybrid', 
-    name: 'Hybrid (Custom)', 
-    description: 'Mix and match elements from different frameworks.', 
-    icon: '🧬', 
+  {
+    id: 'Hybrid',
+    nameKey: 'admin.academics.advancedCurriculum.typeHybridName',
+    descriptionKey: 'admin.academics.advancedCurriculum.typeHybridDescription',
+    icon: '🧬',
     structure: 'unit_based',
     color: 'bg-slate-50 text-slate-600 border-slate-200'
   }
@@ -387,6 +388,7 @@ function ncertReferenceText(book: NcertBook): string {
 // --- Components ---
 
 const AdvancedCurriculum = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
@@ -480,13 +482,13 @@ const AdvancedCurriculum = () => {
   };
 
   const handleAddUnit = (termId: string) => {
-    const structureLabel = currentCurriculum.curriculumType === 'CBSE' ? 'Chapter' : 
-                          currentCurriculum.curriculumType === 'IB' ? 'Inquiry Unit' : 
-                          currentCurriculum.curriculumType === 'AI' ? 'Skill Module' : 'Unit';
-    
+    const structureLabel = currentCurriculum.curriculumType === 'CBSE' ? t('admin.academics.advancedCurriculum.structureChapter') :
+                          currentCurriculum.curriculumType === 'IB' ? t('admin.academics.advancedCurriculum.structureInquiryUnit') :
+                          currentCurriculum.curriculumType === 'AI' ? t('admin.academics.advancedCurriculum.structureSkillModule') : t('admin.academics.advancedCurriculum.structureUnit');
+
     const newUnit: CurriculumUnit = {
       id: `unit-${Date.now()}`,
-      name: `New ${structureLabel}`,
+      name: t('admin.academics.advancedCurriculum.newUnitName', { label: structureLabel }),
       difficulty: "Medium",
       learningOutcomes: [],
       weeks: [],
@@ -515,7 +517,7 @@ const AdvancedCurriculum = () => {
 
   const handleStartDesigning = () => {
     if (!currentCurriculum.grade || !currentCurriculum.subject || !currentCurriculum.board) {
-      toast.error("Please fill in all context fields");
+      toast.error(t('admin.academics.advancedCurriculum.toastFillContextFields'));
       return;
     }
     setStep("builder");
@@ -530,8 +532,8 @@ const AdvancedCurriculum = () => {
       const available = ncertSubjectsForGrade(currentCurriculum.grade);
       toast.error(
         available.length
-          ? `No NCERT book for ${currentCurriculum.subject} at ${currentCurriculum.grade}. Available: ${available.join(", ")}.`
-          : `Select a grade and subject with an NCERT book first.`
+          ? t('admin.academics.advancedCurriculum.toastNoNcertBookAvailable', { subject: currentCurriculum.subject, grade: currentCurriculum.grade, available: available.join(", ") })
+          : t('admin.academics.advancedCurriculum.toastSelectGradeSubjectFirst')
       );
       return;
     }
@@ -549,12 +551,12 @@ const AdvancedCurriculum = () => {
     setActiveTermId(terms[0].id ?? null);
     if (terms[0].units.length > 0) setActiveUnitId(terms[0].units[0].id ?? null);
     setStep("builder");
-    toast.success(`Loaded ${book.chapters.length} NCERT chapters — ${book.bookTitle}`);
+    toast.success(t('admin.academics.advancedCurriculum.toastNcertLoaded', { count: book.chapters.length, bookTitle: book.bookTitle }));
   };
 
   const handleAiGenerate = async () => {
     if (!currentCurriculum.grade || !currentCurriculum.subject || !currentCurriculum.board) {
-      toast.error("Please fill in all context fields first");
+      toast.error(t('admin.academics.advancedCurriculum.toastFillContextFieldsFirst'));
       return;
     }
 
@@ -601,10 +603,10 @@ const AdvancedCurriculum = () => {
       }
 
       setStep("builder");
-      toast.success("Curriculum generated successfully!");
+      toast.success(t('admin.academics.advancedCurriculum.toastGenerateSuccess'));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to generate curriculum");
+      toast.error(t('admin.academics.advancedCurriculum.toastGenerateFailed'));
     } finally {
       setIsGenerating(false);
     }
@@ -615,10 +617,10 @@ const AdvancedCurriculum = () => {
     try {
       const result = await optimizeCurriculumAI(JSON.stringify(currentCurriculum));
       setOptimizationData(result);
-      toast.success("AI Optimization complete!");
+      toast.success(t('admin.academics.advancedCurriculum.toastOptimizeComplete'));
     } catch (error) {
       console.error(error);
-      toast.error("Optimization failed");
+      toast.error(t('admin.academics.advancedCurriculum.toastOptimizeFailed'));
     } finally {
       setIsOptimizing(false);
     }
@@ -630,11 +632,11 @@ const AdvancedCurriculum = () => {
   // via Save Draft / Publish.
   const applySuggestions = async (toApply: OptimizationSuggestion[], mode: number | "all") => {
     if (!toApply.length) {
-      toast.error("Run AI Optimize first to get suggestions");
+      toast.error(t('admin.academics.advancedCurriculum.toastRunOptimizeFirst'));
       return;
     }
     if (!currentCurriculum.terms?.length) {
-      toast.error("Nothing to optimize yet — add curriculum content first");
+      toast.error(t('admin.academics.advancedCurriculum.toastNothingToOptimize'));
       return;
     }
 
@@ -685,11 +687,11 @@ const AdvancedCurriculum = () => {
       } : prev);
 
       toast.success(mode === "all"
-        ? "All suggestions applied — review the changes, then Save Draft to persist"
-        : "Suggestion applied — review the changes, then Save Draft to persist");
+        ? t('admin.academics.advancedCurriculum.toastAllSuggestionsApplied')
+        : t('admin.academics.advancedCurriculum.toastSuggestionApplied'));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to apply suggestion — please try again");
+      toast.error(t('admin.academics.advancedCurriculum.toastApplySuggestionFailed'));
     } finally {
       setApplyingFix(null);
     }
@@ -717,14 +719,14 @@ const AdvancedCurriculum = () => {
         suggestions = result.suggestions || [];
       } catch (error) {
         console.error(error);
-        toast.error("Optimization failed");
+        toast.error(t('admin.academics.advancedCurriculum.toastOptimizeFailed'));
         return;
       } finally {
         setIsOptimizing(false);
       }
     }
     if (!suggestions.length) {
-      toast.success("No issues found — curriculum already looks optimized");
+      toast.success(t('admin.academics.advancedCurriculum.toastNoIssuesFound'));
       return;
     }
     await applySuggestions(suggestions, "all");
@@ -755,7 +757,7 @@ const AdvancedCurriculum = () => {
     try {
       await saveCurriculum({ id: currentCurriculum.id, terms: updatedTerms });
     } catch {
-      toast.error("Failed to save syllabus progress");
+      toast.error(t('admin.academics.advancedCurriculum.toastSaveSyllabusFailed'));
       return;
     }
     // Real syllabus-progress notification — previously nothing distinguished
@@ -835,10 +837,10 @@ const AdvancedCurriculum = () => {
           } : u)
         } : t)
       }));
-      toast.success("Lesson content generated!");
+      toast.success(t('admin.academics.advancedCurriculum.toastLessonGenerated'));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to generate lesson content");
+      toast.error(t('admin.academics.advancedCurriculum.toastLessonGenerateFailed'));
     } finally {
       setIsGeneratingLesson(false);
     }
@@ -865,9 +867,9 @@ const AdvancedCurriculum = () => {
 
       const id = await saveCurriculum(curriculumToSave);
       setCurrentCurriculum(prev => ({ ...prev, id }));
-      toast.success("Curriculum saved as draft");
+      toast.success(t('admin.academics.advancedCurriculum.toastSavedAsDraft'));
     } catch (error) {
-      toast.error("Failed to save curriculum");
+      toast.error(t('admin.academics.advancedCurriculum.toastSaveFailed'));
     }
   };
 
@@ -891,9 +893,9 @@ const AdvancedCurriculum = () => {
 
       const id = await saveCurriculum(curriculumToSave);
       setCurrentCurriculum(prev => ({ ...prev, id, status: 'published' }));
-      toast.success("Curriculum published — visible to teachers and Learning Universe mission generation");
+      toast.success(t('admin.academics.advancedCurriculum.toastPublished'));
     } catch (error) {
-      toast.error("Failed to publish curriculum");
+      toast.error(t('admin.academics.advancedCurriculum.toastPublishFailed'));
     }
   };
 
@@ -919,8 +921,8 @@ const AdvancedCurriculum = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d12386] to-[#9810fa] text-white mb-4 shadow-lg">
               <Brain className="w-8 h-8" />
             </div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">Universal Curriculum Engine</h1>
-            <p className="text-slate-500 text-lg max-w-2xl mx-auto">Design, generate, and optimize global curricula with AI-powered intelligence.</p>
+            <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">{t('admin.academics.advancedCurriculum.pageTitle')}</h1>
+            <p className="text-slate-500 text-lg max-w-2xl mx-auto">{t('admin.academics.advancedCurriculum.pageSubtitle')}</p>
           </div>
 
           {/* AI Recommendation Banner */}
@@ -934,12 +936,12 @@ const AdvancedCurriculum = () => {
                 <Sparkles className="w-5 h-5 text-[#d12386]" />
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-900">AI Recommendation</p>
-                <p className="text-xs text-slate-600">Based on global trends, we suggest a <span className="font-bold text-[#d12386]">Hybrid: CBSE + AI Skills</span> curriculum for Grade 10.</p>
+                <p className="text-sm font-bold text-slate-900">{t('admin.academics.advancedCurriculum.aiRecommendationTitle')}</p>
+                <p className="text-xs text-slate-600">{t('admin.academics.advancedCurriculum.aiRecommendationTextPrefix')} <span className="font-bold text-[#d12386]">{t('admin.academics.advancedCurriculum.aiRecommendationHighlight')}</span> {t('admin.academics.advancedCurriculum.aiRecommendationTextSuffix')}</p>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="text-[#d12386] hover:bg-[#d12386]/5 font-bold">
-              Apply Suggestion
+              {t('admin.academics.advancedCurriculum.applySuggestion')}
             </Button>
           </motion.div>
 
@@ -948,18 +950,18 @@ const AdvancedCurriculum = () => {
             <div className="lg:col-span-1 space-y-6">
               <Card className="border-none shadow-xl bg-white/80 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Curriculum Context</CardTitle>
-                  <CardDescription>Define the scope of your curriculum</CardDescription>
+                  <CardTitle className="text-lg">{t('admin.academics.advancedCurriculum.curriculumContextTitle')}</CardTitle>
+                  <CardDescription>{t('admin.academics.advancedCurriculum.curriculumContextDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Grade</Label>
-                    <Select 
-                      value={currentCurriculum.grade} 
+                    <Label>{t('admin.academics.advancedCurriculum.gradeLabel')}</Label>
+                    <Select
+                      value={currentCurriculum.grade}
                       onValueChange={(v) => setCurrentCurriculum(prev => ({ ...prev, grade: v }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Grade" />
+                        <SelectValue placeholder={t('admin.academics.advancedCurriculum.selectGradePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Grade 9">Grade 9</SelectItem>
@@ -970,13 +972,13 @@ const AdvancedCurriculum = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Subject</Label>
-                    <Select 
-                      value={currentCurriculum.subject} 
+                    <Label>{t('admin.academics.advancedCurriculum.subjectLabel')}</Label>
+                    <Select
+                      value={currentCurriculum.subject}
                       onValueChange={(v) => setCurrentCurriculum(prev => ({ ...prev, subject: v }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Subject" />
+                        <SelectValue placeholder={t('admin.academics.advancedCurriculum.selectSubjectPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Mathematics">Mathematics</SelectItem>
@@ -988,13 +990,13 @@ const AdvancedCurriculum = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Academic Year</Label>
-                    <Select 
-                      value={currentCurriculum.academicYear} 
+                    <Label>{t('admin.academics.advancedCurriculum.academicYearLabel')}</Label>
+                    <Select
+                      value={currentCurriculum.academicYear}
                       onValueChange={(v) => setCurrentCurriculum(prev => ({ ...prev, academicYear: v }))}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select Year" />
+                        <SelectValue placeholder={t('admin.academics.advancedCurriculum.selectYearPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="2025">2025</SelectItem>
@@ -1003,14 +1005,14 @@ const AdvancedCurriculum = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Reference Material (Optional)</Label>
-                    <Textarea 
-                      placeholder="Paste textbook content or specific guidelines here to guide the AI..."
+                    <Label>{t('admin.academics.advancedCurriculum.referenceMaterialLabel')}</Label>
+                    <Textarea
+                      placeholder={t('admin.academics.advancedCurriculum.referenceMaterialPlaceholder')}
                       className="h-32 bg-slate-50 border-none resize-none"
                       value={currentCurriculum.referenceMaterial}
                       onChange={(e) => setCurrentCurriculum(prev => ({ ...prev, referenceMaterial: e.target.value }))}
                     />
-                    <p className="text-[10px] text-slate-400">The AI will use this text as the primary source for topics and structure.</p>
+                    <p className="text-[10px] text-slate-400">{t('admin.academics.advancedCurriculum.referenceMaterialHint')}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1025,12 +1027,12 @@ const AdvancedCurriculum = () => {
                   <div className="rounded-2xl border border-orange-200 bg-orange-50/60 p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <BookMarked className="w-4 h-4 text-orange-600" />
-                      <p className="text-sm font-bold text-orange-800">NCERT Resource (CBSE)</p>
+                      <p className="text-sm font-bold text-orange-800">{t('admin.academics.advancedCurriculum.ncertResourceTitle')}</p>
                     </div>
                     {book ? (
                       <>
                         <p className="text-xs text-orange-700">
-                          <span className="font-bold">{book.bookTitle}</span> — {book.chapters.length} official chapters ready to load.
+                          <span className="font-bold">{book.bookTitle}</span> — {t('admin.academics.advancedCurriculum.ncertChaptersReady', { count: book.chapters.length })}
                         </p>
                         <a
                           href={book.sourceUrl}
@@ -1038,20 +1040,22 @@ const AdvancedCurriculum = () => {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:underline"
                         >
-                          <ExternalLink className="w-3 h-3" /> View source on ncert.nic.in
+                          <ExternalLink className="w-3 h-3" /> {t('admin.academics.advancedCurriculum.viewSourceOnNcert')}
                         </a>
                         <Button
                           onClick={handleLoadNcert}
                           className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-sm"
                         >
-                          <BookMarked className="w-4 h-4 mr-2" /> Load NCERT Chapters
+                          <BookMarked className="w-4 h-4 mr-2" /> {t('admin.academics.advancedCurriculum.loadNcertChapters')}
                         </Button>
                       </>
                     ) : (
                       <p className="text-xs text-orange-700">
                         {currentCurriculum.grade && currentCurriculum.subject
-                          ? `No NCERT book for ${currentCurriculum.subject} at ${currentCurriculum.grade}.${availableSubjects.length ? ` Available for ${currentCurriculum.grade}: ${availableSubjects.join(", ")}.` : ""}`
-                          : "Select a Grade and Subject to load real NCERT chapters."}
+                          ? (availableSubjects.length
+                              ? t('admin.academics.advancedCurriculum.noNcertBookWithAvailable', { subject: currentCurriculum.subject, grade: currentCurriculum.grade, available: availableSubjects.join(", ") })
+                              : t('admin.academics.advancedCurriculum.noNcertBookForSubjectGrade', { subject: currentCurriculum.subject, grade: currentCurriculum.grade }))
+                          : t('admin.academics.advancedCurriculum.selectGradeSubjectHint')}
                       </p>
                     )}
                   </div>
@@ -1069,22 +1073,22 @@ const AdvancedCurriculum = () => {
                   ) : (
                     <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
                   )}
-                  {isGenerating ? "AI Generating..." : "AI Generate Curriculum"}
+                  {isGenerating ? t('admin.academics.advancedCurriculum.aiGenerating') : t('admin.academics.advancedCurriculum.aiGenerateCurriculum')}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleStartDesigning}
                   className="w-full h-12 border-slate-200 text-slate-600 font-medium"
                 >
-                  Start Designing Manually
+                  {t('admin.academics.advancedCurriculum.startDesigningManually')}
                 </Button>
               </div>
 
               {(dbLoading || curriculums.length > 0) && (
                 <div className="pt-6 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-900 mb-4">Recent Curricula</h4>
+                  <h4 className="text-sm font-bold text-slate-900 mb-4">{t('admin.academics.advancedCurriculum.recentCurricula')}</h4>
                   {dbLoading ? (
-                    <p className="text-xs text-slate-400">Loading saved curricula...</p>
+                    <p className="text-xs text-slate-400">{t('admin.academics.advancedCurriculum.loadingSavedCurricula')}</p>
                   ) : (
                   <div className="space-y-2">
                     {curriculums.slice(0, 3).map((curr) => (
@@ -1130,8 +1134,8 @@ const AdvancedCurriculum = () => {
                       <div className="text-3xl">{type.icon}</div>
                       <Badge className={type.color}>{type.id}</Badge>
                     </div>
-                    <h3 className="font-bold text-slate-900 mb-1">{type.name}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">{type.description}</p>
+                    <h3 className="font-bold text-slate-900 mb-1">{t(type.nameKey)}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">{t(type.descriptionKey)}</p>
                   </motion.div>
                 ))}
               </div>
@@ -1142,9 +1146,9 @@ const AdvancedCurriculum = () => {
     );
   }
 
-  const structureLabel = currentCurriculum.curriculumType === 'CBSE' ? 'Chapter' : 
-                        currentCurriculum.curriculumType === 'IB' ? 'Inquiry Unit' : 
-                        currentCurriculum.curriculumType === 'AI' ? 'Skill Module' : 'Unit';
+  const structureLabel = currentCurriculum.curriculumType === 'CBSE' ? t('admin.academics.advancedCurriculum.structureChapter') :
+                        currentCurriculum.curriculumType === 'IB' ? t('admin.academics.advancedCurriculum.structureInquiryUnit') :
+                        currentCurriculum.curriculumType === 'AI' ? t('admin.academics.advancedCurriculum.structureSkillModule') : t('admin.academics.advancedCurriculum.structureUnit');
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">

@@ -61,6 +61,7 @@ import GradebookPro from "@/components/classes/GradebookPro";
 import ReportCardsPro from "@/components/classes/ReportCardsPro";
 import { userRepository } from "@/repositories/UserRepository";
 import { staffRepository } from "@/repositories/StaffRepository";
+import { useTranslation } from "react-i18next";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DrillLevel = "grades" | "grade" | "section";
@@ -107,6 +108,19 @@ const SECTION_COLORS: Record<string, { bg: string; text: string; light: string; 
 };
 
 const DEFAULT_SECTION_COLOR = { bg: "bg-gray-600", text: "text-gray-700", light: "bg-gray-50", border: "border-gray-200", chart: "#4b5563", chartFill: "#f3f4f6" };
+
+// Lookup maps: identifiers used for logic/matching stay in English; these
+// only supply the i18n key for the rendered label.
+const STAGE_LABEL_KEYS: Record<string, string> = {
+  "Early Years": "admin.academics.classesList.stageEarlyYears",
+  "Primary": "admin.academics.classesList.stagePrimary",
+  "Middle": "admin.academics.classesList.stageMiddle",
+  "Secondary": "admin.academics.classesList.stageSecondary",
+};
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Active": "admin.academics.classesList.statusActive",
+  "Inactive": "admin.academics.classesList.statusInactive",
+};
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 // Grade list itself now comes from the active curriculum (useGrades()) at the
@@ -213,6 +227,7 @@ function initials(name: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ClassesList() {
+  const { t } = useTranslation();
   const { classes, addClass, updateClass, deleteClass, addEnrollment } = useClasses();
   const { students, addStudents } = useStudents();
   const { staff } = useStaff();
@@ -231,7 +246,7 @@ export default function ClassesList() {
   // Export a single grade's classes
   function exportGradeClasses(gradeName: string) {
     const filtered = classes.filter(c => normalizeGrade(c.grade) === gradeName);
-    if (filtered.length === 0) { toast.error("No classes to export in this grade"); return; }
+    if (filtered.length === 0) { toast.error(t('admin.academics.classesList.toastNoClassesToExportGrade')); return; }
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = ["Grade,Section,Teacher,Status,Subjects,Academic Year"];
     [...filtered]
@@ -245,13 +260,13 @@ export default function ClassesList() {
     const a = document.createElement("a");
     a.href = url; a.download = `${gradeName.replace(/\s+/g, "_")}-classes-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${filtered.length} classes for ${gradeName}`);
+    toast.success(t('admin.academics.classesList.toastExportedClassesForGrade', { count: filtered.length, grade: gradeName }));
   }
 
   // Export section roster
   function exportSectionRoster(cls: Class) {
     const secStudents = students.filter(s => matchesGradeSection(s, cls.grade, sectionLabel(cls)));
-    if (secStudents.length === 0) { toast.error("No students in this section to export"); return; }
+    if (secStudents.length === 0) { toast.error(t('admin.academics.classesList.toastNoStudentsToExport')); return; }
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = ["Roll No,Name,Email,Phone,Gender,Status"];
     [...secStudents]
@@ -264,7 +279,7 @@ export default function ClassesList() {
     const a = document.createElement("a");
     a.href = url; a.download = `${normalizeGrade(cls.grade).replace(/\s+/g, "_")}_${sectionLabel(cls).replace(/\s+/g, "_")}-roster.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${secStudents.length} students`);
+    toast.success(t('admin.academics.classesList.toastExportedStudents', { count: secStudents.length }));
   }
 
   // Download student CSV template
@@ -278,13 +293,13 @@ export default function ClassesList() {
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
     a.download = "students-import-template.csv";
     a.click();
-    toast.success("Student roster template downloaded");
+    toast.success(t('admin.academics.classesList.toastStudentTemplateDownloaded'));
   }
 
   // Parse student CSV
   function parseStudentCsv(text: string): { name: string; email: string; gender: string }[] {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (lines.length < 2) throw new Error("File has no data rows.");
+    if (lines.length < 2) throw new Error(t('admin.academics.classesList.errorFileNoDataRows'));
     const header = lines[0].toLowerCase();
     const startIdx = header.includes("name") ? 1 : 0;
     const rows: { name: string; email: string; gender: string }[] = [];
@@ -296,7 +311,7 @@ export default function ClassesList() {
       if (!name) continue;
       rows.push({ name, email, gender });
     }
-    if (rows.length === 0) throw new Error("No valid student rows found.");
+    if (rows.length === 0) throw new Error(t('admin.academics.classesList.errorNoValidStudentRows'));
     return rows;
   }
 
@@ -307,7 +322,7 @@ export default function ClassesList() {
     if (!file) return;
     const name = file.name.toLowerCase();
     if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-      setImportStudentError("Excel detected. Please 'Save As → CSV' in Excel and upload the .csv file. The columns stay the same.");
+      setImportStudentError(t('admin.academics.classesList.errorExcelDetectedStudents'));
       return;
     }
     const reader = new FileReader();
@@ -315,9 +330,9 @@ export default function ClassesList() {
       try {
         const rows = parseStudentCsv(String(reader.result || ""));
         setImportStudentRows(rows);
-        toast.success(`Parsed ${rows.length} students — review and import`);
+        toast.success(t('admin.academics.classesList.toastParsedStudentsReview', { count: rows.length }));
       } catch (err: any) {
-        setImportStudentError(err.message || "Could not parse the file.");
+        setImportStudentError(err.message || t('admin.academics.classesList.errorCouldNotParseFile'));
       }
     };
     reader.readAsText(file);
@@ -354,12 +369,14 @@ export default function ClassesList() {
         } as any);
         created++;
       }
-      toast.success(`Imported ${created} student${created !== 1 ? "s" : ""} into ${importStudentTarget.name}`);
+      toast.success(created === 1
+        ? t('admin.academics.classesList.toastImportedStudentSingular', { name: importStudentTarget.name })
+        : t('admin.academics.classesList.toastImportedStudentPlural', { count: created, name: importStudentTarget.name }));
       setImportStudentTarget(null);
       setImportStudentRows([]);
       setImportStudentError("");
     } catch {
-      toast.error("Import failed — please try again");
+      toast.error(t('admin.academics.classesList.toastImportFailed'));
     } finally {
       setImportingStudents(false);
       if (importStudentFileRef.current) importStudentFileRef.current.value = "";
@@ -386,7 +403,7 @@ export default function ClassesList() {
 
   // Export the grade's computed gradebook (students × subjects) as a CSV download.
   function handleExportGradebook() {
-    if (gradebookRows.length === 0) { toast.error("No gradebook marks to export yet"); return; }
+    if (gradebookRows.length === 0) { toast.error(t('admin.academics.classesList.toastNoGradebookMarks')); return; }
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const cols = ["Roll No", "Student", ...gradebookSubjectCols, "Total", "Max", "Percentage", "Grade"];
     const lines = [cols.map(esc).join(",")];
@@ -400,7 +417,7 @@ export default function ClassesList() {
     a.download = `${(selectedGrade || "grade").replace(/\s+/g, "-")}-gradebook.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported gradebook for ${gradebookRows.length} students`);
+    toast.success(t('admin.academics.classesList.toastExportedGradebook', { count: gradebookRows.length }));
   }
 
   // Dialogs
@@ -434,7 +451,7 @@ export default function ClassesList() {
 
   // Export every grade/section as a CSV (super-admin utility).
   function exportAllClasses() {
-    if (classes.length === 0) { toast.error("No classes to export"); return; }
+    if (classes.length === 0) { toast.error(t('admin.academics.classesList.toastNoClassesToExport')); return; }
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = ["Grade,Section,Teacher,Status,Subjects,Academic Year"];
     [...classes]
@@ -448,7 +465,7 @@ export default function ClassesList() {
     const a = document.createElement("a");
     a.href = url; a.download = `all-classes-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${classes.length} classes`);
+    toast.success(t('admin.academics.classesList.toastExportedClasses', { count: classes.length }));
   }
 
   // Edit grade
@@ -628,7 +645,7 @@ export default function ClassesList() {
     const nameClean = name.trim();
     const existingNames = (gradeMap.get(addSectionGrade) || []).map(c => sectionLabel(c));
     if (existingNames.some(n => n.toLowerCase() === nameClean.toLowerCase())) {
-      toast.error(`${nameClean} already exists in ${addSectionGrade}`);
+      toast.error(t('admin.academics.classesList.toastSectionAlreadyExists', { name: nameClean, grade: addSectionGrade }));
       return;
     }
     const secLetterPreCheck = nameClean.match(/Section\s+([A-Z])/i)?.[1] || nameClean;
@@ -652,9 +669,9 @@ export default function ClassesList() {
       });
       const secLetter = nameClean.match(/Section\s+([A-Z])/i)?.[1] || nameClean;
       await syncTeacherAssignment(teacher, addSectionGrade, secLetter);
-      toast.success(`${nameClean} added to ${addSectionGrade}`);
+      toast.success(t('admin.academics.classesList.toastSectionAdded', { name: nameClean, grade: addSectionGrade }));
       setAddSectionOpen(false);
-    } catch { toast.error("Failed to add section"); }
+    } catch { toast.error(t('admin.academics.classesList.toastAddSectionFailed')); }
     finally { setAddingSec(false); }
   }
 
@@ -663,9 +680,9 @@ export default function ClassesList() {
     setDeleting(true);
     try {
       await deleteClass(deleteTarget.id);
-      toast.success(`${sectionLabel(deleteTarget)} deleted`);
+      toast.success(t('admin.academics.classesList.toastSectionDeleted', { name: sectionLabel(deleteTarget) }));
       setDeleteTarget(null);
-    } catch { toast.error("Failed to delete section"); }
+    } catch { toast.error(t('admin.academics.classesList.toastDeleteSectionFailed')); }
     finally { setDeleting(false); }
   }
 
@@ -693,9 +710,9 @@ export default function ClassesList() {
           });
         }
       }
-      toast.success("School structure initialized: Pre-KG to Grade 12, 3 sections each");
+      toast.success(t('admin.academics.classesList.toastStructureInitialized'));
       setSeedOpen(false);
-    } catch { toast.error("Initialization failed — please try again"); }
+    } catch { toast.error(t('admin.academics.classesList.toastInitializationFailed')); }
     finally { setSeeding(false); }
   }
 
@@ -713,12 +730,12 @@ export default function ClassesList() {
     a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
     a.download = "classes-import-template.csv";
     a.click();
-    toast.success("Template downloaded");
+    toast.success(t('admin.academics.classesList.toastTemplateDownloaded'));
   }
 
   function parseCsv(text: string): { grade: string; section: string; teacher: string }[] {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (lines.length < 2) throw new Error("File has no data rows.");
+    if (lines.length < 2) throw new Error(t('admin.academics.classesList.errorFileNoDataRows'));
     const header = lines[0].toLowerCase();
     const startIdx = /grade/.test(header) ? 1 : 0;
     const rows: { grade: string; section: string; teacher: string }[] = [];
@@ -730,7 +747,7 @@ export default function ClassesList() {
       if (!grade) continue;
       rows.push({ grade, section, teacher });
     }
-    if (rows.length === 0) throw new Error("No valid rows found. Check the Grade column.");
+    if (rows.length === 0) throw new Error(t('admin.academics.classesList.errorNoValidRowsGrade'));
     return rows;
   }
 
@@ -741,11 +758,11 @@ export default function ClassesList() {
     if (!file) return;
     const name = file.name.toLowerCase();
     if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-      setImportError("Excel detected. Please 'Save As → CSV' in Excel and upload the .csv (no extra libraries needed). The columns stay the same.");
+      setImportError(t('admin.academics.classesList.errorExcelDetectedClasses'));
       return;
     }
     if (name.endsWith(".zip")) {
-      setImportError("ZIP detected. Unzip and upload the classes .csv inside it.");
+      setImportError(t('admin.academics.classesList.errorZipDetected'));
       return;
     }
     const reader = new FileReader();
@@ -753,9 +770,9 @@ export default function ClassesList() {
       try {
         const rows = parseCsv(String(reader.result || ""));
         setImportRows(rows);
-        toast.success(`Parsed ${rows.length} rows — review and import`);
+        toast.success(t('admin.academics.classesList.toastParsedRowsReview', { count: rows.length }));
       } catch (err: any) {
-        setImportError(err.message || "Could not parse the file.");
+        setImportError(err.message || t('admin.academics.classesList.errorCouldNotParseFile'));
       }
     };
     reader.readAsText(file);
@@ -783,11 +800,17 @@ export default function ClassesList() {
         } as any);
         created++;
       }
-      toast.success(`Imported ${created} class${created !== 1 ? "es" : ""}${created < importRows.length ? ` (${importRows.length - created} duplicates skipped)` : ""}`);
+      const baseMsg = created === 1
+        ? t('admin.academics.classesList.toastImportedClassSingular')
+        : t('admin.academics.classesList.toastImportedClassPlural', { count: created });
+      const dupSuffix = created < importRows.length
+        ? ` ${t('admin.academics.classesList.toastDuplicatesSkipped', { count: importRows.length - created })}`
+        : "";
+      toast.success(baseMsg + dupSuffix);
       setImportOpen(false);
       setImportRows([]);
       setImportError("");
-    } catch { toast.error("Import failed — please try again"); }
+    } catch { toast.error(t('admin.academics.classesList.toastImportFailed')); }
     finally { setImporting(false); }
   }
 
@@ -800,9 +823,9 @@ export default function ClassesList() {
   async function handleEditGrade() {
     if (!editGradeTarget) return;
     const newName = normalizeGrade(editGradeName.trim());
-    if (!newName) { toast.error("Grade name is required"); return; }
+    if (!newName) { toast.error(t('admin.academics.classesList.toastGradeNameRequired')); return; }
     if (newName === editGradeTarget) { setEditGradeTarget(null); return; }
-    if (gradeMap.has(newName)) { toast.error(`${newName} already exists`); return; }
+    if (gradeMap.has(newName)) { toast.error(t('admin.academics.classesList.toastGradeAlreadyExists', { name: newName })); return; }
     setEditingGrade(true);
     try {
       const sectionsToUpdate = classes.filter(c => normalizeGrade(c.grade) === editGradeTarget);
@@ -810,10 +833,10 @@ export default function ClassesList() {
         const sec = sectionLabel({ ...c, grade: editGradeTarget });
         await updateClass(c.id, { grade: newName, name: `${newName} ${sec}` } as any);
       }
-      toast.success(`Renamed ${editGradeTarget} → ${newName}`);
+      toast.success(t('admin.academics.classesList.toastGradeRenamed', { from: editGradeTarget, to: newName }));
       if (selectedGrade === editGradeTarget) setSelectedGrade(newName);
       setEditGradeTarget(null);
-    } catch { toast.error("Failed to rename grade"); }
+    } catch { toast.error(t('admin.academics.classesList.toastRenameGradeFailed')); }
     finally { setEditingGrade(false); }
   }
 
@@ -826,10 +849,10 @@ export default function ClassesList() {
   async function handleEditSection() {
     if (!editSectionTarget) return;
     const nameClean = editSecName.trim();
-    if (!nameClean) { toast.error("Section name is required"); return; }
+    if (!nameClean) { toast.error(t('admin.academics.classesList.toastSectionNameRequired')); return; }
     const grade = normalizeGrade(editSectionTarget.grade);
     const dupe = (gradeMap.get(grade) || []).some(c => c.id !== editSectionTarget.id && sectionLabel(c).toLowerCase() === nameClean.toLowerCase());
-    if (dupe) { toast.error(`${nameClean} already exists in ${grade}`); return; }
+    if (dupe) { toast.error(t('admin.academics.classesList.toastSectionAlreadyExists', { name: nameClean, grade })); return; }
     const secLetter = nameClean.match(/Section\s+([A-Z])/i)?.[1] || nameClean;
     // Reassigning THIS section's own current teacher to the same section isn't
     // a conflict — only flag it if the picked name resolves to someone whose
@@ -842,9 +865,9 @@ export default function ClassesList() {
     try {
       await updateClass(editSectionTarget.id, { name: `${grade} ${nameClean}`, teacher: editSecTeacher } as any);
       await syncTeacherAssignment(editSecTeacher, grade, secLetter);
-      toast.success("Section updated");
+      toast.success(t('admin.academics.classesList.toastSectionUpdated'));
       setEditSectionTarget(null);
-    } catch { toast.error("Failed to update section"); }
+    } catch { toast.error(t('admin.academics.classesList.toastUpdateSectionFailed')); }
     finally { setEditingSection(false); }
   }
 
@@ -854,11 +877,11 @@ export default function ClassesList() {
     if (sections.length === 0) return;
     try {
       await Promise.all(sections.map(c => updateClass(c.id, { subjects: names } as any)));
-    } catch { toast.error("Could not save subjects to the database"); }
+    } catch { toast.error(t('admin.academics.classesList.toastSaveSubjectsFailed')); }
   }
 
   async function handleAddSemester() {
-    if (!newSemName.trim()) { toast.error("Semester name is required"); return; }
+    if (!newSemName.trim()) { toast.error(t('admin.academics.classesList.toastSemesterNameRequired')); return; }
     if (!selectedSection) return;
     setAddingSem(true);
     try {
@@ -872,13 +895,13 @@ export default function ClassesList() {
       };
       await saveClassSem(selectedSection.id, sem);
       setSectionSemesters(prev => [...prev, sem]);
-      toast.success(`${sem.name} added`);
+      toast.success(t('admin.academics.classesList.toastSemesterAdded', { name: sem.name }));
       setAddSemOpen(false);
       setNewSemName('');
       setNewSemStart('');
       setNewSemEnd('');
       setNewSemStatus('Active');
-    } catch { toast.error("Failed to add semester"); }
+    } catch { toast.error(t('admin.academics.classesList.toastAddSemesterFailed')); }
     finally { setAddingSem(false); }
   }
 
@@ -937,7 +960,9 @@ export default function ClassesList() {
       }
     } catch { /* non-fatal — the visible assignment above already saved */ }
 
-    toast.success(coord ? `${coord.name} assigned as Grade Coordinator for ${assignCoordGrade}` : `Coordinator removed from ${assignCoordGrade}`);
+    toast.success(coord
+      ? t('admin.academics.classesList.toastCoordinatorAssigned', { name: coord.name, grade: assignCoordGrade })
+      : t('admin.academics.classesList.toastCoordinatorRemoved', { grade: assignCoordGrade }));
     setAssignCoordOpen(false);
   }
 
@@ -956,48 +981,48 @@ export default function ClassesList() {
                 <GraduationCap className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Classes</h1>
-                <p className="text-sm text-slate-400">Manage all grades, sections and class structure</p>
+                <h1 className="text-2xl font-bold text-slate-900">{t('admin.academics.classesList.pageTitle')}</h1>
+                <p className="text-sm text-slate-400">{t('admin.academics.classesList.pageSubtitle')}</p>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" className="gap-1.5 border-gray-200 text-gray-600 hover:bg-gray-50"
                 onClick={() => { setImportOpen(true); setImportRows([]); setImportError(""); }}>
-                <Download className="w-4 h-4" /> Import Classes
+                <Download className="w-4 h-4" /> {t('admin.academics.classesList.btnImportClasses')}
               </Button>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className={cn("gap-1.5 border-gray-200 text-gray-600 hover:bg-gray-50", filtersActive && "border-indigo-300 text-purple-600 bg-indigo-50")}>
-                    <SlidersHorizontal className="w-4 h-4" /> Filters{filtersActive && <span className="ml-0.5 w-1.5 h-1.5 rounded-full bg-purple-600" />}
+                    <SlidersHorizontal className="w-4 h-4" /> {t('admin.academics.classesList.btnFilters')}{filtersActive && <span className="ms-0.5 w-1.5 h-1.5 rounded-full bg-purple-600" />}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-60 p-3 space-y-3">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Stage</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{t('admin.academics.classesList.filterStageLabel')}</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {["All Stages", "Early Years", "Primary", "Middle", "Secondary"].map(o => (
                         <button key={o} onClick={() => { setFilterStage(o); setPage(1); }}
                           className={cn("text-xs font-semibold rounded-lg px-2 py-1.5 border transition-colors",
                             filterStage === o ? "bg-purple-600 text-white border-purple-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50")}>
-                          {o === "All Stages" ? "All" : o}
+                          {o === "All Stages" ? t('admin.academics.classesList.filterAll') : STAGE_LABEL_KEYS[o] ? t(STAGE_LABEL_KEYS[o]) : o}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Status</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{t('admin.academics.classesList.filterStatusLabel')}</p>
                     <div className="grid grid-cols-3 gap-1.5">
                       {["All Statuses", "Active", "Inactive"].map(o => (
                         <button key={o} onClick={() => { setFilterStatus(o); setPage(1); }}
                           className={cn("text-xs font-semibold rounded-lg px-2 py-1.5 border transition-colors",
                             filterStatus === o ? "bg-purple-600 text-white border-purple-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50")}>
-                          {o === "All Statuses" ? "All" : o}
+                          {o === "All Statuses" ? t('admin.academics.classesList.filterAll') : STATUS_LABEL_KEYS[o] ? t(STATUS_LABEL_KEYS[o]) : o}
                         </button>
                       ))}
                     </div>
                   </div>
                   {filtersActive && (
-                    <Button variant="ghost" size="sm" className="w-full text-gray-500 hover:text-gray-700" onClick={() => { setFilterStage("All Stages"); setFilterStatus("All Statuses"); setPage(1); }}>Clear filters</Button>
+                    <Button variant="ghost" size="sm" className="w-full text-gray-500 hover:text-gray-700" onClick={() => { setFilterStage("All Stages"); setFilterStatus("All Statuses"); setPage(1); }}>{t('admin.academics.classesList.btnClearFilters')}</Button>
                   )}
                 </PopoverContent>
               </Popover>
@@ -1009,32 +1034,32 @@ export default function ClassesList() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuItem onClick={() => navigate("/academics/classes/new")}>
-                    <Plus className="w-4 h-4 mr-2" /> Add New Grade
+                    <Plus className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuAddNewGrade')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/academics/classes/new-section")}>
-                    <Users className="w-4 h-4 mr-2" /> Add Section
+                    <Users className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuAddSection')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={exportAllClasses}>
-                    <Download className="w-4 h-4 mr-2" /> Export Classes (Excel/CSV)
+                    <Download className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuExportClasses')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setImportOpen(true); setImportRows([]); setImportError(""); }}>
-                    <Download className="w-4 h-4 mr-2" /> Import Classes (Download CSV/Excel template to import)
+                    <Download className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuImportClassesLong')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/timetable")}>
-                    <CalendarDays className="w-4 h-4 mr-2" /> Master Timetable
+                    <CalendarDays className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuMasterTimetable')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.location.reload()}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> Refresh Data
+                    <RefreshCw className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuRefreshData')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSeedOpen(true)} className="text-amber-600 focus:text-amber-600">
-                    <RefreshCw className="w-4 h-4 mr-2" /> Initialize School Structure
+                    <RefreshCw className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuInitializeSchoolStructure')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
                 onClick={() => navigate("/academics/classes/new")}>
-                <Plus className="w-4 h-4" /> Add New Grade
+                <Plus className="w-4 h-4" /> {t('admin.academics.classesList.menuAddNewGrade')}
               </Button>
             </div>
           </div>
@@ -1042,11 +1067,11 @@ export default function ClassesList() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             {[
-              { label: "Total Grades", value: totalGrades, sub: "Active Grades", icon: GraduationCap, color: "text-purple-600", bg: "bg-violet-50", border: "border-violet-100" },
-              { label: "Total Sections", value: totalSections, sub: "Across all grades", icon: BookOpen, color: "text-purple-600", bg: "bg-blue-50", border: "border-blue-100" },
-              { label: "Total Students", value: totalStudents.toLocaleString(), sub: "Enrolled Students", icon: Users, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
-              { label: "Total Teachers", value: totalTeachers, sub: "Active Teachers", icon: UserCheck, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
-              { label: "Avg. Attendance", value: "97.6%", sub: "This Month", icon: Activity, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-100" },
+              { label: t('admin.academics.classesList.statTotalGrades'), value: totalGrades, sub: t('admin.academics.classesList.statActiveGrades'), icon: GraduationCap, color: "text-purple-600", bg: "bg-violet-50", border: "border-violet-100" },
+              { label: t('admin.academics.classesList.statTotalSections'), value: totalSections, sub: t('admin.academics.classesList.statAcrossAllGrades'), icon: BookOpen, color: "text-purple-600", bg: "bg-blue-50", border: "border-blue-100" },
+              { label: t('admin.academics.classesList.statTotalStudents'), value: totalStudents.toLocaleString(), sub: t('admin.academics.classesList.statEnrolledStudents'), icon: Users, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-100" },
+              { label: t('admin.academics.classesList.statTotalTeachers'), value: totalTeachers, sub: t('admin.academics.classesList.statActiveTeachers'), icon: UserCheck, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+              { label: t('admin.academics.classesList.statAvgAttendance'), value: "97.6%", sub: t('admin.academics.classesList.statThisMonth'), icon: Activity, color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-100" },
             ].map(({ label, value, sub, icon: Icon, color, bg, border }) => (
               <Card key={label} className={`border ${border} shadow-sm hover:shadow-md transition-shadow`}>
                 <CardContent className="p-4">
@@ -1062,13 +1087,13 @@ export default function ClassesList() {
           {/* Toolbar */}
           <div className="flex items-center justify-between border-b border-gray-200">
             <button className="px-4 pb-3 text-sm font-semibold text-purple-600 border-b-2 border-purple-600">
-              All Grades
+              {t('admin.academics.classesList.tabAllGrades')}
             </button>
             <div className="relative pb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="Search grades..." value={search}
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input placeholder={t('admin.academics.classesList.placeholderSearchGrades')} value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
-                className="pl-9 w-60 h-8 text-sm border-gray-200" />
+                className="ps-9 w-60 h-8 text-sm border-gray-200" />
             </div>
           </div>
 
@@ -1077,15 +1102,23 @@ export default function ClassesList() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {["Grade","Sections","Students","Grade Coordinator","Academic Year","Status","Action"].map(h => (
-                    <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                  {[
+                    t('admin.academics.classesList.colGrade'),
+                    t('admin.academics.classesList.colSections'),
+                    t('admin.academics.classesList.colStudents'),
+                    t('admin.academics.classesList.colGradeCoordinator'),
+                    t('admin.academics.classesList.colAcademicYear'),
+                    t('admin.academics.classesList.colStatus'),
+                    t('admin.academics.classesList.colAction'),
+                  ].map(h => (
+                    <th key={h} className="px-5 py-3.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {pagedGrades.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-14 text-center text-gray-400">
-                    <GraduationCap className="w-10 h-10 mx-auto mb-2 text-gray-200" />No grades found
+                    <GraduationCap className="w-10 h-10 mx-auto mb-2 text-gray-200" />{t('admin.academics.classesList.emptyNoGradesFound')}
                   </td></tr>
                 ) : pagedGrades.map(([grade, clsList]) => {
                   const academicYear = clsList[0]?.academicYear || "2026-27";
@@ -1111,7 +1144,7 @@ export default function ClassesList() {
                             </Avatar>
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{coord.name}</p>
-                              <p className="text-[10px] text-purple-600 font-medium">Grade Coordinator</p>
+                              <p className="text-[10px] text-purple-600 font-medium">{t('admin.academics.classesList.gradeCoordinatorLabel')}</p>
                             </div>
                             {/* openAssignCoord pre-populates the current coordinator, so
                                 reopening it here reuses the exact same assign flow (and
@@ -1119,21 +1152,21 @@ export default function ClassesList() {
                                 previously an already-assigned grade had no way to change
                                 who held this role short of clearing it first elsewhere. */}
                             <button onClick={e => openAssignCoord(grade, e)}
-                              className="ml-auto opacity-0 group-hover/coord:opacity-100 text-[11px] font-semibold text-purple-600 hover:text-indigo-800 hover:underline flex-shrink-0 transition-opacity">
-                              Change
+                              className="ms-auto opacity-0 group-hover/coord:opacity-100 text-[11px] font-semibold text-purple-600 hover:text-indigo-800 hover:underline flex-shrink-0 transition-opacity">
+                              {t('admin.academics.classesList.btnChange')}
                             </button>
                           </div>
                         ) : (
                           <button onClick={e => openAssignCoord(grade, e)}
                             className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-indigo-800 hover:underline">
-                            <Plus className="w-3.5 h-3.5" /> Assign Coordinator
+                            <Plus className="w-3.5 h-3.5" /> {t('admin.academics.classesList.btnAssignCoordinator')}
                           </button>
                         )}
                       </td>
                       <td className="px-5 py-4 text-gray-600">{academicYear}</td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Active
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t('admin.academics.classesList.statusActive')}
                         </span>
                       </td>
                       <td className="px-5 py-4" onClick={e => e.stopPropagation()}>
@@ -1141,7 +1174,7 @@ export default function ClassesList() {
                           <Button size="sm" variant="outline"
                             className="h-8 text-xs px-3 border-gray-200 hover:border-indigo-300 hover:text-purple-600"
                             onClick={() => openGrade(grade)}>
-                            View <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                            {t('admin.academics.classesList.btnView')} <ChevronRight className="w-3.5 h-3.5 ms-1 rtl:rotate-180" />
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -1150,11 +1183,11 @@ export default function ClassesList() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
-                              <DropdownMenuItem onClick={e => openEditGrade(grade, e as any)}>Edit Grade</DropdownMenuItem>
-                              <DropdownMenuItem onClick={e => openAddSection(grade, e as any)}>Add Section</DropdownMenuItem>
+                              <DropdownMenuItem onClick={e => openEditGrade(grade, e as any)}>{t('admin.academics.classesList.menuEditGrade')}</DropdownMenuItem>
+                              <DropdownMenuItem onClick={e => openAddSection(grade, e as any)}>{t('admin.academics.classesList.menuAddSection')}</DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={e => openAssignCoord(grade, e as any)}>
-                                <Shield className="w-4 h-4 mr-2 text-indigo-500" /> Assign Grade Coordinator
+                                <Shield className="w-4 h-4 mr-2 text-indigo-500" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1170,15 +1203,15 @@ export default function ClassesList() {
           {/* Pagination */}
           {sortedGrades.length > 0 && (
             <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>Showing {Math.min((page - 1) * PAGE_SIZE + 1, sortedGrades.length)} to {Math.min(page * PAGE_SIZE, sortedGrades.length)} of {sortedGrades.length} grades</span>
+              <span>{t('admin.academics.classesList.paginationShowing', { from: Math.min((page - 1) * PAGE_SIZE + 1, sortedGrades.length), to: Math.min(page * PAGE_SIZE, sortedGrades.length), total: sortedGrades.length })}</span>
               <div className="flex items-center gap-1">
-                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-200" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-200" disabled={page === 1} onClick={() => setPage(p => p - 1)}><ChevronLeft className="w-4 h-4 rtl:rotate-180" /></Button>
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
                   <Button key={p} size="sm" variant={page === p ? "default" : "outline"}
                     className={cn("h-8 w-8 p-0 border-gray-200", page === p && "bg-purple-600 hover:bg-purple-700 border-purple-600")}
                     onClick={() => setPage(p)}>{p}</Button>
                 ))}
-                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-200" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-200" disabled={page === totalPages || totalPages === 0} onClick={() => setPage(p => p + 1)}><ChevronRight className="w-4 h-4 rtl:rotate-180" /></Button>
               </div>
             </div>
           )}
@@ -1198,18 +1231,16 @@ export default function ClassesList() {
         <AlertDialog open={seedOpen} onOpenChange={setSeedOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Initialize School Structure</AlertDialogTitle>
+              <AlertDialogTitle>{t('admin.academics.classesList.dialogInitTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                This will <strong>delete all existing classes</strong> and create a fresh K-12 structure:
-                Pre-KG, LKG, UKG, and Grade 1–12 (15 grades), each with Section A, B, and C — 45 classes total.
-                This cannot be undone.
+                {t('admin.academics.classesList.dialogInitDescPrefix')} <strong>{t('admin.academics.classesList.dialogInitDescBold')}</strong> {t('admin.academics.classesList.dialogInitDescSuffix')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={seeding}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={seeding}>{t('admin.academics.classesList.btnCancel')}</AlertDialogCancel>
               <AlertDialogAction onClick={handleSeedData} disabled={seeding}
                 className="bg-amber-600 hover:bg-amber-700">
-                {seeding ? "Initializing…" : "Yes, Initialize"}
+                {seeding ? t('admin.academics.classesList.btnInitializing') : t('admin.academics.classesList.btnYesInitialize')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1219,20 +1250,20 @@ export default function ClassesList() {
         <Dialog open={importOpen} onOpenChange={setImportOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Import Classes</DialogTitle>
-              <DialogDescription>Bulk-create grades &amp; sections from a spreadsheet file.</DialogDescription>
+              <DialogTitle>{t('admin.academics.classesList.dialogImportClassesTitle')}</DialogTitle>
+              <DialogDescription>{t('admin.academics.classesList.dialogImportClassesDesc')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-sm">
-                <p className="font-semibold text-gray-700 mb-1">Required file format</p>
-                <ul className="text-gray-500 text-[13px] space-y-0.5 list-disc pl-4">
-                  <li>Accepted: <b>.csv</b> (recommended). Excel users: <i>Save As → CSV</i>. ZIP: unzip first.</li>
-                  <li>Columns (in order): <b>Grade</b>, <b>Section</b>, <b>Homeroom Teacher</b>, <b>Academic Year</b></li>
-                  <li>Grade examples: <code>Pre-KG, LKG, UKG, Grade 1 … Grade 12</code></li>
-                  <li>One row per section. Duplicates are skipped automatically.</li>
+                <p className="font-semibold text-gray-700 mb-1">{t('admin.academics.classesList.requiredFileFormat')}</p>
+                <ul className="text-gray-500 text-[13px] space-y-0.5 list-disc ps-4">
+                  <li>{t('admin.academics.classesList.importClassesFormatAccepted')}</li>
+                  <li>{t('admin.academics.classesList.importClassesFormatColumns')}</li>
+                  <li>{t('admin.academics.classesList.importClassesFormatExamples')}</li>
+                  <li>{t('admin.academics.classesList.importFormatDuplicates')}</li>
                 </ul>
                 <Button variant="link" size="sm" className="px-0 h-auto mt-1 text-purple-600" onClick={downloadImportTemplate}>
-                  <Download className="w-3.5 h-3.5 mr-1" /> Download CSV template
+                  <Download className="w-3.5 h-3.5 mr-1" /> {t('admin.academics.classesList.btnDownloadCsvTemplate')}
                 </Button>
               </div>
 
@@ -1240,18 +1271,18 @@ export default function ClassesList() {
               <button onClick={() => importFileRef.current?.click()}
                 className="w-full border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center gap-1 hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
                 <Download className="w-7 h-7 text-indigo-400" />
-                <span className="text-sm font-medium text-gray-600">Click to choose a file</span>
-                <span className="text-[11px] text-gray-400">CSV, Excel (.xlsx → save as CSV) or ZIP</span>
+                <span className="text-sm font-medium text-gray-600">{t('admin.academics.classesList.clickToChooseFile')}</span>
+                <span className="text-[11px] text-gray-400">{t('admin.academics.classesList.fileTypesClasses')}</span>
               </button>
 
               {importError && <p className="text-sm text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2.5">{importError}</p>}
 
               {importRows.length > 0 && (
                 <div className="rounded-xl border border-gray-100 overflow-hidden">
-                  <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {importRows.length} rows ready to import</div>
+                  <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {t('admin.academics.classesList.rowsReadyToImport', { count: importRows.length })}</div>
                   <div className="max-h-40 overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="text-left px-3 py-1.5">Grade</th><th className="text-left px-3 py-1.5">Section</th><th className="text-left px-3 py-1.5">Teacher</th></tr></thead>
+                      <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colGrade')}</th><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colSections')}</th><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colTeacher')}</th></tr></thead>
                       <tbody>{importRows.slice(0, 50).map((r, i) => (<tr key={i} className="border-t border-gray-50"><td className="px-3 py-1.5 font-medium text-gray-700">{r.grade}</td><td className="px-3 py-1.5 text-gray-600">{r.section}</td><td className="px-3 py-1.5 text-gray-500">{r.teacher || "—"}</td></tr>))}</tbody>
                     </table>
                   </div>
@@ -1259,9 +1290,9 @@ export default function ClassesList() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>Cancel</Button>
+              <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>{t('admin.academics.classesList.btnCancel')}</Button>
               <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleConfirmImport} disabled={importing || importRows.length === 0}>
-                {importing ? "Importing…" : `Import ${importRows.length || ""} Classes`}
+                {importing ? t('admin.academics.classesList.btnImporting') : t('admin.academics.classesList.btnImportClassesCount', { count: importRows.length || 0 })}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1271,18 +1302,18 @@ export default function ClassesList() {
         <Dialog open={!!editGradeTarget} onOpenChange={o => !o && setEditGradeTarget(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Edit Grade</DialogTitle>
-              <DialogDescription>Rename this grade across all of its sections.</DialogDescription>
+              <DialogTitle>{t('admin.academics.classesList.dialogEditGradeTitle')}</DialogTitle>
+              <DialogDescription>{t('admin.academics.classesList.dialogEditGradeDesc')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold text-gray-500">Grade Name</Label>
-              <Input value={editGradeName} onChange={e => setEditGradeName(e.target.value)} placeholder="e.g. Grade 1"
+              <Label className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.labelGradeName')}</Label>
+              <Input value={editGradeName} onChange={e => setEditGradeName(e.target.value)} placeholder={t('admin.academics.classesList.placeholderGradeExample')}
                 onKeyDown={e => { if (e.key === "Enter") handleEditGrade(); }} />
-              <p className="text-[11px] text-gray-400">{(gradeMap.get(editGradeTarget || "") || []).length} section(s) will be updated.</p>
+              <p className="text-[11px] text-gray-400">{t('admin.academics.classesList.sectionsWillBeUpdated', { count: (gradeMap.get(editGradeTarget || "") || []).length })}</p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditGradeTarget(null)} disabled={editingGrade}>Cancel</Button>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleEditGrade} disabled={editingGrade}>{editingGrade ? "Saving…" : "Save"}</Button>
+              <Button variant="outline" onClick={() => setEditGradeTarget(null)} disabled={editingGrade}>{t('admin.academics.classesList.btnCancel')}</Button>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleEditGrade} disabled={editingGrade}>{editingGrade ? t('admin.academics.classesList.btnSaving') : t('admin.academics.classesList.btnSave')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1316,7 +1347,7 @@ export default function ClassesList() {
       return (
         <DashboardLayout>
           <AccessDenied
-            detail={coordAssignedGrade ? `You're assigned to ${coordAssignedGrade}.` : "You haven't been assigned a grade yet — contact your administrator."}
+            detail={coordAssignedGrade ? t('admin.academics.classesList.accessDeniedAssignedTo', { grade: coordAssignedGrade }) : t('admin.academics.classesList.accessDeniedNotAssigned')}
           />
         </DashboardLayout>
       );
@@ -1330,7 +1361,7 @@ export default function ClassesList() {
     // were actually assigned (broken avatar initials, misleading label).
     const secTeacher = (selectedSection.teacher && selectedSection.teacher !== "Unassigned")
       ? selectedSection.teacher
-      : "Not Assigned";
+      : t('admin.academics.classesList.notAssigned');
     const secStudents = students.filter(s => matchesGradeSection(s, selectedSection.grade, sectionLabel(selectedSection)));
     const secSubjectsCount = selectedSection.subjects?.length || 0;
 
@@ -1442,7 +1473,7 @@ export default function ClassesList() {
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[11px] font-bold uppercase tracking-wide text-orange-400">Class Teacher</span>
               <div className="flex items-center gap-1.5">
-                <Avatar className="w-5 h-5 shrink-0"><AvatarFallback className="bg-orange-500 text-white text-[9px] font-bold">{secTeacher !== "Not Assigned" ? initials(secTeacher) : "?"}</AvatarFallback></Avatar>
+                <Avatar className="w-5 h-5 shrink-0"><AvatarFallback className="bg-orange-500 text-white text-[9px] font-bold">{secTeacher !== t('admin.academics.classesList.notAssigned') ? initials(secTeacher) : "?"}</AvatarFallback></Avatar>
                 <span className="font-semibold text-orange-700 text-xs truncate">{secTeacher}</span>
               </div>
             </div>
@@ -1793,7 +1824,7 @@ export default function ClassesList() {
     { id: "gradebook", label: "Gradebook", icon: ClipboardCheck },
     { id: "reportcards", label: "Report Cards", icon: FileText },
   ];
-  const gradeClassData = { name: selectedGrade || "", grade: selectedGrade || "", status: "Active", academicYear: gradeSections[0]?.academicYear || "2026-27", teacher: gradeTeacher || "Not Assigned" };
+  const gradeClassData = { name: selectedGrade || "", grade: selectedGrade || "", status: "Active", academicYear: gradeSections[0]?.academicYear || "2026-27", teacher: gradeTeacher || t('admin.academics.classesList.notAssigned') };
   // Grade-wide datesheets: every exam of this grade across ALL its sections,
   // pulled from the shared store (synced with central /exams + each section).
   const gradeDatesheets = allExams
@@ -2726,9 +2757,9 @@ export default function ClassesList() {
                     promoted++;
                   }
                 }
-                toast.success(`${promoted} students promoted to ${nextGrade || "Graduation"}`);
+                toast.success(t('admin.academics.classesList.toastStudentsPromoted', { count: promoted, grade: nextGrade || t('admin.academics.classesList.graduation') }));
               } catch {
-                toast.error("Promotion failed — please try again");
+                toast.error(t('admin.academics.classesList.toastPromotionFailed'));
               }
               setPromoteOpen(false);
             }}>

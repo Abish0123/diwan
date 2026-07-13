@@ -18,6 +18,7 @@ import { useGrades } from "@/contexts/CurriculumContext";
 import { notifyClassPublish } from "@/lib/classPublishNotify";
 import { useTeacherClass } from "@/hooks/useTeacherClass";
 import { useMySubjects } from "@/hooks/useMySubjects";
+import { useTranslation } from "react-i18next";
 
 const SUBJECTS = [
   "Mathematics","Science","English","History","Computer Science","Art","Physical Education",
@@ -29,6 +30,44 @@ const ASSIGNMENT_TYPES = [
   "Notebook Work","Reading Assignment","Writing Assignment","Art & Craft Activity",
   "Practical Work","Group Activity","Assessment","Homework","Essay","Lab Report",
 ];
+
+// Lookup maps: SUBJECTS/ASSIGNMENT_TYPES values remain the original English
+// identifiers for data/logic purposes; these maps supply translated labels
+// purely for rendering.
+const SUBJECT_LABEL_KEYS: Record<string, string> = {
+  "Mathematics": "admin.academics.createAssignment.subjectMathematics",
+  "Science": "admin.academics.createAssignment.subjectScience",
+  "English": "admin.academics.createAssignment.subjectEnglish",
+  "History": "admin.academics.createAssignment.subjectHistory",
+  "Computer Science": "admin.academics.createAssignment.subjectComputerScience",
+  "Art": "admin.academics.createAssignment.subjectArt",
+  "Physical Education": "admin.academics.createAssignment.subjectPhysicalEducation",
+  "Arabic": "admin.academics.createAssignment.subjectArabic",
+  "Islamic Studies": "admin.academics.createAssignment.subjectIslamicStudies",
+  "Social Studies": "admin.academics.createAssignment.subjectSocialStudies",
+  "Biology": "admin.academics.createAssignment.subjectBiology",
+  "Physics": "admin.academics.createAssignment.subjectPhysics",
+  "Chemistry": "admin.academics.createAssignment.subjectChemistry",
+};
+
+const ASSIGNMENT_TYPE_LABEL_KEYS: Record<string, string> = {
+  "Worksheet": "admin.academics.createAssignment.typeWorksheet",
+  "Project": "admin.academics.createAssignment.typeProject",
+  "Quiz": "admin.academics.createAssignment.typeQuiz",
+  "Lab Activity": "admin.academics.createAssignment.typeLabActivity",
+  "Research Work": "admin.academics.createAssignment.typeResearchWork",
+  "Presentation": "admin.academics.createAssignment.typePresentation",
+  "Notebook Work": "admin.academics.createAssignment.typeNotebookWork",
+  "Reading Assignment": "admin.academics.createAssignment.typeReadingAssignment",
+  "Writing Assignment": "admin.academics.createAssignment.typeWritingAssignment",
+  "Art & Craft Activity": "admin.academics.createAssignment.typeArtCraftActivity",
+  "Practical Work": "admin.academics.createAssignment.typePracticalWork",
+  "Group Activity": "admin.academics.createAssignment.typeGroupActivity",
+  "Assessment": "admin.academics.createAssignment.typeAssessment",
+  "Homework": "admin.academics.createAssignment.typeHomework",
+  "Essay": "admin.academics.createAssignment.typeEssay",
+  "Lab Report": "admin.academics.createAssignment.typeLabReport",
+};
 
 function uid() { return `asgn_${Date.now()}_${Math.random().toString(36).slice(2,6)}`; }
 
@@ -45,6 +84,7 @@ export default function CreateAssignment() {
   const { assignmentId } = useParams<{ assignmentId?: string }>();
   const isEditMode = !!assignmentId;
   const grades = useGrades();
+  const { t } = useTranslation();
 
   // Teacher portal uses /teacher/assignments/* paths
   const isTeacherContext = location.pathname.startsWith("/teacher/");
@@ -117,7 +157,7 @@ export default function CreateAssignment() {
     setLoadingEdit(true);
     smartDb.getAll("TeacherAssignment", undefined).then((list: any[]) => {
       const existing = (list || []).find((a: any) => a.id === assignmentId);
-      if (!existing) { toast.error("Assignment not found"); navigate(backPath); return; }
+      if (!existing) { toast.error(t('admin.academics.createAssignment.toastNotFound')); navigate(backPath); return; }
       setTitle(existing.title || "");
       setSubject(existing.subject || "");
       setGrade(existing.grade || "");
@@ -142,7 +182,7 @@ export default function CreateAssignment() {
           setEditorEmpty(false);
         }
       }, 150);
-    }).catch(() => toast.error("Failed to load assignment"))
+    }).catch(() => toast.error(t('admin.academics.createAssignment.toastLoadFailed')))
       .finally(() => setLoadingEdit(false));
   }, [assignmentId]);
 
@@ -208,25 +248,25 @@ export default function CreateAssignment() {
   // ─── Link helpers ──────────────────────────────────────────────────────────
   function handleAddLink() {
     const url = linkInput.trim();
-    if (!url) { toast.error("Please enter a URL"); return; }
+    if (!url) { toast.error(t('admin.academics.createAssignment.toastEnterUrl')); return; }
     const finalUrl = url.startsWith("http") ? url : `https://${url}`;
     setLinks(prev => [...prev, { url: finalUrl, label: finalUrl }]);
     setLinkInput("");
-    toast.success("Link added");
+    toast.success(t('admin.academics.createAssignment.toastLinkAdded'));
   }
 
   // ─── Save helpers ──────────────────────────────────────────────────────────
   async function saveAssignment(status: "Active" | "Draft") {
-    if (!title.trim())  { toast.error("Assignment title is required"); return; }
-    if (!subject)       { toast.error("Please select a subject"); return; }
-    if (!grade)         { toast.error("Please select a grade"); return; }
-    if (!dueDate)       { toast.error("Due date is required"); return; }
-    if (!totalMarks)    { toast.error("Total marks is required"); return; }
+    if (!title.trim())  { toast.error(t('admin.academics.createAssignment.toastTitleRequired')); return; }
+    if (!subject)       { toast.error(t('admin.academics.createAssignment.toastSelectSubject')); return; }
+    if (!grade)         { toast.error(t('admin.academics.createAssignment.toastSelectGrade')); return; }
+    if (!dueDate)       { toast.error(t('admin.academics.createAssignment.toastDueDateRequired')); return; }
+    if (!totalMarks)    { toast.error(t('admin.academics.createAssignment.toastTotalMarksRequired')); return; }
     // Strict mapping: a teacher may only create assignments for grade/subject/
     // section combos they are actually assigned to teach.
     if (isTeacherContext && !isEditMode) {
       const allowed = myCombos.some(c => c.grade === grade && c.subject === subject && (!section || c.section === section));
-      if (!allowed) { toast.error("You are not assigned to teach this subject for the selected grade/section"); return; }
+      if (!allowed) { toast.error(t('admin.academics.createAssignment.toastNotAssigned')); return; }
     }
     // If scheduling, override status to "Upcoming" until publish time
     const effectiveStatus: "Active" | "Draft" | "Upcoming" = (status === "Active" && scheduleEnabled) ? "Upcoming" : status;
@@ -246,11 +286,11 @@ export default function CreateAssignment() {
       };
       if (isEditMode && assignmentId) {
         await smartDb.update("TeacherAssignment", assignmentId, data as any);
-        toast.success("Assignment updated successfully!");
+        toast.success(t('admin.academics.createAssignment.toastUpdated'));
       } else {
         const id = uid();
         await smartDb.create("TeacherAssignment", { ...data, id, createdAt: new Date().toISOString() } as any, id);
-        toast.success(effectiveStatus === "Draft" ? "Assignment saved as draft" : effectiveStatus === "Upcoming" ? `Assignment scheduled for ${new Date(assignDate).toLocaleString()}` : "Assignment published successfully!");
+        toast.success(effectiveStatus === "Draft" ? t('admin.academics.createAssignment.toastSavedDraft') : effectiveStatus === "Upcoming" ? t('admin.academics.createAssignment.toastScheduled', { date: new Date(assignDate).toLocaleString() }) : t('admin.academics.createAssignment.toastPublished'));
         // Notify students, their parents, the section's real class teacher,
         // and school leadership when the assignment is published (not
         // draft/scheduled) — previously only ever reached students filtered
@@ -270,7 +310,7 @@ export default function CreateAssignment() {
       }
       setTimeout(() => navigate(backPath), 1200);
     } catch (err) {
-      toast.error("Failed to save assignment. Please try again.");
+      toast.error(t('admin.academics.createAssignment.toastSaveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -306,6 +346,8 @@ export default function CreateAssignment() {
     </select>
   );
 
+  const submissionTypeLabel = (val: string) => val === "file" ? t('admin.academics.createAssignment.submissionFileUpload') : val === "text" ? t('admin.academics.createAssignment.submissionTextEntry') : val === "offline" ? t('admin.academics.createAssignment.submissionOfflinePhysical') : "—";
+
   if (loadingEdit) return (
     <DashboardLayout>
       <div className="flex items-center justify-center h-full">
@@ -323,9 +365,9 @@ export default function CreateAssignment() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full max-w-[1500px] mx-auto">
             <div>
               <div className="flex items-center text-sm font-medium text-purple-600 mb-2">
-                <span className="hover:underline cursor-pointer" onClick={() => navigate(backPath)}>Assignments</span>
-                <ChevronRight className="w-4 h-4 mx-1"/>
-                <span className="text-slate-600">{isEditMode ? "Edit Assignment" : "Create New Assignment"}</span>
+                <span className="hover:underline cursor-pointer" onClick={() => navigate(backPath)}>{t('admin.academics.createAssignment.breadcrumbAssignments')}</span>
+                <ChevronRight className="w-4 h-4 mx-1 rtl:rotate-180"/>
+                <span className="text-slate-600">{isEditMode ? t('admin.academics.createAssignment.breadcrumbEdit') : t('admin.academics.createAssignment.breadcrumbCreate')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl border ${isEditMode ? "bg-amber-50 border-amber-100" : "bg-purple-50 border-purple-100"}`}>
@@ -333,10 +375,10 @@ export default function CreateAssignment() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    {isEditMode ? "Edit Assignment" : "Create New Assignment"}
+                    {isEditMode ? t('admin.academics.createAssignment.headingEdit') : t('admin.academics.createAssignment.headingCreate')}
                   </h1>
                   <p className="text-slate-500 text-sm mt-0.5 font-medium">
-                    {isEditMode ? "Update the assignment details and save changes." : "Add assignment details and publish it for your students."}
+                    {isEditMode ? t('admin.academics.createAssignment.subheadingEdit') : t('admin.academics.createAssignment.subheadingCreate')}
                   </p>
                 </div>
               </div>
@@ -344,18 +386,18 @@ export default function CreateAssignment() {
             <div className="flex items-center gap-3 w-full md:w-auto">
               <Button variant="outline" onClick={() => navigate(isEditMode ? `${backPath}/${assignmentId}/submissions` : backPath)} disabled={isSaving}
                 className="border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-semibold w-full md:w-auto rounded-xl h-11 px-6 shadow-sm">
-                Cancel
+                {t('admin.academics.createAssignment.buttonCancel')}
               </Button>
               {!isEditMode && (
                 <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}
                   className="border-purple-200 text-purple-700 bg-white hover:bg-purple-50 font-semibold w-full md:w-auto rounded-xl h-11 px-6 shadow-sm">
-                  {isSaving ? "Saving…" : "Save as Draft"}
+                  {isSaving ? t('admin.academics.createAssignment.buttonSaving') : t('admin.academics.createAssignment.buttonSaveAsDraft')}
                 </Button>
               )}
               <Button onClick={handlePublish} disabled={isSaving}
                 className={`text-white shadow-md font-semibold w-full md:w-auto rounded-xl h-11 px-6 ${isEditMode ? "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20" : "bg-purple-600 hover:bg-purple-700 shadow-purple-500/20"}`}>
-                <Plus className="w-4 h-4 mr-2"/>
-                {isSaving ? "Saving…" : isEditMode ? "Save Changes" : "Publish Assignment"}
+                <Plus className="w-4 h-4 me-2"/>
+                {isSaving ? t('admin.academics.createAssignment.buttonSaving') : isEditMode ? t('admin.academics.createAssignment.buttonSaveChanges') : t('admin.academics.createAssignment.buttonPublish')}
               </Button>
             </div>
           </div>
@@ -374,42 +416,42 @@ export default function CreateAssignment() {
                   <CardContent className="p-8 space-y-6">
                     <div className="flex items-center border-b border-slate-100 pb-4">
                       <SectionBadge number={1}/>
-                      <h2 className="text-lg font-bold text-slate-900">Assignment Information</h2>
+                      <h2 className="text-lg font-bold text-slate-900">{t('admin.academics.createAssignment.sectionInfoTitle')}</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <div className="lg:col-span-2">
-                        <FieldLabel required>Assignment Title</FieldLabel>
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelTitle')}</FieldLabel>
                         <Input
                           value={title} onChange={e => setTitle(e.target.value)}
-                          placeholder="Enter assignment title"
+                          placeholder={t('admin.academics.createAssignment.placeholderTitle')}
                           className="rounded-xl border-slate-300 focus-visible:ring-purple-600 h-11 bg-slate-50/50"/>
                       </div>
                       <div>
-                        <FieldLabel required>Class / Grade</FieldLabel>
-                        <StyledSelect value={grade} onChange={(v: string) => { setGrade(v); setSubject(""); setSection(""); }} placeholder="Select Grade" required>
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelGrade')}</FieldLabel>
+                        <StyledSelect value={grade} onChange={(v: string) => { setGrade(v); setSubject(""); setSection(""); }} placeholder={t('admin.academics.createAssignment.placeholderGrade')} required>
                           {(isTeacherContext ? assignedGrades : grades).map(g => <option key={g} value={g}>{g}</option>)}
                         </StyledSelect>
                         {isTeacherContext && assignedGrades.length === 0 && (
-                          <p className="text-[11px] text-rose-500 mt-1">No subject assigned to you yet — contact admin.</p>
+                          <p className="text-[11px] text-rose-500 mt-1">{t('admin.academics.createAssignment.noSubjectAssigned')}</p>
                         )}
                       </div>
                       <div>
-                        <FieldLabel required>Subject</FieldLabel>
-                        <StyledSelect value={subject} onChange={(v: string) => { setSubject(v); setSection(""); }} placeholder="Select Subject" required
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelSubject')}</FieldLabel>
+                        <StyledSelect value={subject} onChange={(v: string) => { setSubject(v); setSection(""); }} placeholder={t('admin.academics.createAssignment.placeholderSubject')} required
                           disabled={isTeacherContext && !grade}>
-                          {(isTeacherContext ? assignedSubjectsForGrade : SUBJECTS).map(s => <option key={s} value={s}>{s}</option>)}
+                          {(isTeacherContext ? assignedSubjectsForGrade : SUBJECTS).map(s => <option key={s} value={s}>{isTeacherContext ? s : t(SUBJECT_LABEL_KEYS[s] || s)}</option>)}
                         </StyledSelect>
                       </div>
                       <div>
-                        <FieldLabel>Section</FieldLabel>
-                        <StyledSelect value={section} onChange={setSection} placeholder="All Sections"
+                        <FieldLabel>{t('admin.academics.createAssignment.labelSection')}</FieldLabel>
+                        <StyledSelect value={section} onChange={setSection} placeholder={t('admin.academics.createAssignment.placeholderAllSections')}
                           disabled={isTeacherContext && !subject}>
-                          {(isTeacherContext ? assignedSectionsForGradeSubject : SECTIONS).map(s => <option key={s} value={s}>Section {s}</option>)}
+                          {(isTeacherContext ? assignedSectionsForGradeSubject : SECTIONS).map(s => <option key={s} value={s}>{t('admin.academics.createAssignment.sectionOption', { section: s })}</option>)}
                         </StyledSelect>
                       </div>
                       <div>
-                        <FieldLabel>Assigned Teacher</FieldLabel>
+                        <FieldLabel>{t('admin.academics.createAssignment.labelAssignedTeacher')}</FieldLabel>
                         {isTeacherContext ? (
                           // A teacher creates assignments as themselves — this
                           // was an editable dropdown that let them accidentally
@@ -420,12 +462,12 @@ export default function CreateAssignment() {
                             className="rounded-xl border-slate-300 h-11 bg-slate-100 text-slate-600"
                           />
                         ) : (
-                          <StyledSelect value={teacher} onChange={setTeacher} placeholder="Select Teacher">
+                          <StyledSelect value={teacher} onChange={setTeacher} placeholder={t('admin.academics.createAssignment.placeholderTeacher')}>
                             {(teachers.length > 0 ? teachers : [
                               "Ms. Aisha Rahman","Mr. Saif Sulaiman","Ms. Priya Nair",
                               "Mr. Ahmed Al-Farsi","Ms. Fatima Hassan","Mr. Omar Khalid",
                               "Ms. Sara Ali","Mr. Yusuf Ibrahim",
-                            ]).map(t => <option key={t} value={t}>{t}</option>)}
+                            ]).map(tName => <option key={tName} value={tName}>{tName}</option>)}
                           </StyledSelect>
                         )}
                       </div>
@@ -433,7 +475,7 @@ export default function CreateAssignment() {
 
                     {/* Rich Text Editor */}
                     <div>
-                      <FieldLabel required>Description / Instructions</FieldLabel>
+                      <FieldLabel required>{t('admin.academics.createAssignment.labelInstructions')}</FieldLabel>
                       <div className="border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-purple-600 focus-within:border-transparent transition-all shadow-sm">
                         {/* Toolbar */}
                         <div className="bg-slate-50/80 border-b border-slate-200 px-3 py-2.5 flex flex-wrap items-center gap-1">
@@ -477,7 +519,7 @@ export default function CreateAssignment() {
                             className="h-9 w-9 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              const url = prompt("Enter URL:");
+                              const url = prompt(t('admin.academics.createAssignment.promptEnterUrl'));
                               if (url) execFormat("createLink", url);
                             }}>
                             <LinkIcon className="w-4 h-4"/>
@@ -486,7 +528,7 @@ export default function CreateAssignment() {
                             className="h-9 w-9 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              const url = prompt("Enter image URL:");
+                              const url = prompt(t('admin.academics.createAssignment.promptEnterImageUrl'));
                               if (url) execFormat("insertImage", url);
                             }}>
                             <ImageIcon className="w-4 h-4"/>
@@ -496,8 +538,8 @@ export default function CreateAssignment() {
                         {/* Editable area */}
                         <div className="relative">
                           {editorEmpty && (
-                            <div className="absolute top-3 left-3 text-slate-400 text-sm pointer-events-none select-none">
-                              Enter assignment instructions, guidelines, and details...
+                            <div className="absolute top-3 start-3 text-slate-400 text-sm pointer-events-none select-none">
+                              {t('admin.academics.createAssignment.editorPlaceholder')}
                             </div>
                           )}
                           <div
@@ -520,40 +562,40 @@ export default function CreateAssignment() {
                   <CardContent className="p-8 space-y-6">
                     <div className="flex items-center border-b border-slate-100 pb-4">
                       <SectionBadge number={2}/>
-                      <h2 className="text-lg font-bold text-slate-900">Assignment Settings</h2>
+                      <h2 className="text-lg font-bold text-slate-900">{t('admin.academics.createAssignment.sectionSettingsTitle')}</h2>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <FieldLabel required>Assignment Type</FieldLabel>
-                        <StyledSelect value={assignmentType} onChange={setAssignmentType} placeholder="Select Type" required>
-                          {ASSIGNMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelAssignmentType')}</FieldLabel>
+                        <StyledSelect value={assignmentType} onChange={setAssignmentType} placeholder={t('admin.academics.createAssignment.placeholderType')} required>
+                          {ASSIGNMENT_TYPES.map(atype => <option key={atype} value={atype}>{t(ASSIGNMENT_TYPE_LABEL_KEYS[atype] || atype)}</option>)}
                         </StyledSelect>
                       </div>
                       <div>
-                        <FieldLabel required>Total Marks</FieldLabel>
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelTotalMarks')}</FieldLabel>
                         <Input
                           type="number" value={totalMarks} onChange={e => setTotalMarks(e.target.value)}
-                          placeholder="Enter total marks"
+                          placeholder={t('admin.academics.createAssignment.placeholderTotalMarks')}
                           className="rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600"/>
                       </div>
                       <div>
-                        <FieldLabel>Passing Score (%)</FieldLabel>
+                        <FieldLabel>{t('admin.academics.createAssignment.labelPassingScore')}</FieldLabel>
                         <div className="relative">
                           <Input
                             type="number" min={0} max={100} value={passingScore} onChange={e => setPassingScore(e.target.value)}
-                            placeholder="e.g. 60"
-                            className="rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600 pr-9"/>
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">%</span>
+                            placeholder={t('admin.academics.createAssignment.placeholderPassingScore')}
+                            className="rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600 pe-9"/>
+                          <span className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium pointer-events-none">%</span>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1">Minimum percentage required to pass</p>
+                        <p className="text-[11px] text-slate-400 mt-1">{t('admin.academics.createAssignment.hintPassingScore')}</p>
                       </div>
                       <div>
-                        <FieldLabel required>Submission Type</FieldLabel>
-                        <StyledSelect value={submissionType} onChange={setSubmissionType} placeholder="Select Submission Type" required>
-                          <option value="file">File Upload</option>
-                          <option value="text">Text Submission</option>
-                          <option value="offline">Offline (Physical)</option>
+                        <FieldLabel required>{t('admin.academics.createAssignment.labelSubmissionType')}</FieldLabel>
+                        <StyledSelect value={submissionType} onChange={setSubmissionType} placeholder={t('admin.academics.createAssignment.placeholderSubmissionType')} required>
+                          <option value="file">{t('admin.academics.createAssignment.submissionFileUpload')}</option>
+                          <option value="text">{t('admin.academics.createAssignment.submissionTextSubmission')}</option>
+                          <option value="offline">{t('admin.academics.createAssignment.submissionOffline')}</option>
                         </StyledSelect>
                       </div>
                     </div>
@@ -568,25 +610,25 @@ export default function CreateAssignment() {
                             scheduleEnabled ? "translate-x-4" : "translate-x-1")}/>
                         </button>
                         <div>
-                          <p className="text-sm font-semibold text-slate-700">Schedule for later</p>
+                          <p className="text-sm font-semibold text-slate-700">{t('admin.academics.createAssignment.scheduleForLater')}</p>
                           <p className="text-xs text-slate-400">
-                            {scheduleEnabled ? "Assignment will be published at the specified date & time." : "Assignment publishes immediately when you click Publish."}
+                            {scheduleEnabled ? t('admin.academics.createAssignment.scheduleEnabledHint') : t('admin.academics.createAssignment.scheduleDisabledHint')}
                           </p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <FieldLabel required>{scheduleEnabled ? "Scheduled Publish Date & Time" : "Assign Date & Time"}</FieldLabel>
+                          <FieldLabel required>{scheduleEnabled ? t('admin.academics.createAssignment.labelScheduledPublish') : t('admin.academics.createAssignment.labelAssignDate')}</FieldLabel>
                           <Input
                             type="datetime-local" value={assignDate} onChange={e => setAssignDate(e.target.value)}
                             className="rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600"/>
                           {scheduleEnabled && (
-                            <p className="text-xs text-purple-600 mt-1">Assignment will go live at this time automatically.</p>
+                            <p className="text-xs text-purple-600 mt-1">{t('admin.academics.createAssignment.hintScheduledGoLive')}</p>
                           )}
                         </div>
                         <div>
-                          <FieldLabel required>Due Date & Time</FieldLabel>
+                          <FieldLabel required>{t('admin.academics.createAssignment.labelDueDate')}</FieldLabel>
                           <Input
                             type="datetime-local" value={dueDate} onChange={e => setDueDate(e.target.value)}
                             className="rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600"/>
@@ -601,19 +643,19 @@ export default function CreateAssignment() {
                   <CardContent className="p-8 space-y-6">
                     <div className="flex items-center border-b border-slate-100 pb-4">
                       <SectionBadge number={3}/>
-                      <h2 className="text-lg font-bold text-slate-900">Attachments & Resources</h2>
+                      <h2 className="text-lg font-bold text-slate-900">{t('admin.academics.createAssignment.sectionAttachmentsTitle')}</h2>
                     </div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       <div className="space-y-3">
-                        <Label className="text-slate-800 font-semibold">Upload Attachments</Label>
+                        <Label className="text-slate-800 font-semibold">{t('admin.academics.createAssignment.labelUploadAttachments')}</Label>
                         <div
                           onClick={() => fileInputRef.current?.click()}
                           onDragOver={e => e.preventDefault()}
                           onDrop={e => { e.preventDefault(); if (e.dataTransfer.files) handleFiles(e.dataTransfer.files); }}
                           className="border-2 border-dashed border-purple-200 bg-purple-50/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-purple-50 transition-colors cursor-pointer group h-36">
                           <UploadCloud className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform"/>
-                          <p className="text-sm text-slate-600 mb-1">Drag & drop or <span className="text-purple-600 font-bold">browse files</span></p>
-                          <p className="text-[11px] text-slate-400 font-medium">PDF, DOC, PPT, XLS, JPG, PNG (Max 50MB)</p>
+                          <p className="text-sm text-slate-600 mb-1">{t('admin.academics.createAssignment.dragDropPrefix')} <span className="text-purple-600 font-bold">{t('admin.academics.createAssignment.browseFiles')}</span></p>
+                          <p className="text-[11px] text-slate-400 font-medium">{t('admin.academics.createAssignment.fileTypesHint')}</p>
                         </div>
                         <input
                           type="file"
@@ -627,10 +669,10 @@ export default function CreateAssignment() {
                             {attachments.map((f, i) => (
                               <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-xs border border-slate-100">
                                 <span className="text-slate-600 truncate flex-1">{f.name}</span>
-                                <span className="text-slate-400 ml-2">{(f.size / 1024).toFixed(0)} KB</span>
+                                <span className="text-slate-400 ms-2">{t('admin.academics.createAssignment.fileSizeKb', { size: (f.size / 1024).toFixed(0) })}</span>
                                 <button
                                   onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
-                                  className="ml-3 text-slate-400 hover:text-rose-500 transition-colors">
+                                  className="ms-3 text-slate-400 hover:text-rose-500 transition-colors">
                                   <Trash2 className="w-3.5 h-3.5"/>
                                 </button>
                               </div>
@@ -639,21 +681,21 @@ export default function CreateAssignment() {
                         )}
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-slate-800 font-semibold">Add Resource Links <span className="text-slate-400 font-normal">(Optional)</span></Label>
+                        <Label className="text-slate-800 font-semibold">{t('admin.academics.createAssignment.labelResourceLinks')} <span className="text-slate-400 font-normal">{t('admin.academics.createAssignment.optionalLabel')}</span></Label>
                         <div className="flex gap-2">
                           <div className="relative flex-1">
-                            <LinkIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"/>
+                            <LinkIcon className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2"/>
                             <Input
                               value={linkInput}
                               onChange={e => setLinkInput(e.target.value)}
                               onKeyDown={e => e.key === "Enter" && handleAddLink()}
                               placeholder="https://youtube.com/watch?v=..."
-                              className="pl-10 rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600"/>
+                              className="ps-10 rounded-xl border-slate-300 h-11 bg-slate-50/50 focus-visible:ring-purple-600"/>
                           </div>
-                          <Button onClick={handleAddLink} variant="outline" className="h-11 px-6 rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 font-semibold">Add</Button>
+                          <Button onClick={handleAddLink} variant="outline" className="h-11 px-6 rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 font-semibold">{t('admin.academics.createAssignment.buttonAdd')}</Button>
                         </div>
                         {links.length === 0 ? (
-                          <p className="text-sm text-slate-400 italic pt-1">No links added yet.</p>
+                          <p className="text-sm text-slate-400 italic pt-1">{t('admin.academics.createAssignment.noLinksYet')}</p>
                         ) : (
                           <div className="space-y-1.5">
                             {links.map((link, i) => (

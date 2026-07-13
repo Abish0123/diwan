@@ -11,6 +11,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useFlashCards } from '@/hooks/useFlashCards';
 import type { FlashCard } from '@/types/flashcard';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function shuffle<T>(arr: T[]): T[] {
@@ -38,13 +39,13 @@ const WRONG_PENALTY = 4;
 const RIGHT_BONUS = 1;
 const SPEED_WINDOW = 7000;
 
-const MODES: { id: Mode; icon: typeof Rocket; title: string; blurb: string; tone: string; grades: string }[] = [
-  { id: 'match', icon: Grid3x3, title: 'Memory Match', blurb: 'Flip tiles to pair up every question with its answer. Visual, low-pressure — no typing needed.', tone: 'from-sky-500 to-cyan-600', grades: 'Best for Grade 1–5' },
-  { id: 'boss', icon: Swords, title: 'Boss Battle', blurb: 'Answer right to attack the boss, get it wrong and it hits back. Defeat it before your HP runs out!', tone: 'from-red-500 to-rose-600', grades: 'Grade 3–9' },
-  { id: 'builder', icon: Hammer, title: 'Formula Builder', blurb: 'Tap scrambled pieces to reconstruct the exact answer from scratch — the gold standard for locking in formulas.', tone: 'from-emerald-500 to-teal-600', grades: 'Grade 5–12 · Best for formulas' },
-  { id: 'blitz', icon: Rocket, title: 'Blitz', blurb: '60 seconds. Tap the right answer as fast as you can. Speed & combos = big points.', tone: 'from-violet-500 to-purple-600', grades: 'All grades' },
-  { id: 'type', icon: Keyboard, title: 'Type It', blurb: 'Type the exact answer. Active recall — no options to lean on.', tone: 'from-amber-500 to-orange-600', grades: 'Grade 4–12' },
-  { id: 'survival', icon: Heart, title: 'Survival', blurb: '3 lives, no clock, ever-rising speed. How long a streak can you hold?', tone: 'from-pink-500 to-fuchsia-600', grades: 'Grade 3–12' },
+const MODES: { id: Mode; icon: typeof Rocket; titleKey: string; blurbKey: string; tone: string; gradesKey: string }[] = [
+  { id: 'match', icon: Grid3x3, titleKey: 'admin.academics.flashCardGame.modes.match.title', blurbKey: 'admin.academics.flashCardGame.modes.match.blurb', tone: 'from-sky-500 to-cyan-600', gradesKey: 'admin.academics.flashCardGame.modes.match.grades' },
+  { id: 'boss', icon: Swords, titleKey: 'admin.academics.flashCardGame.modes.boss.title', blurbKey: 'admin.academics.flashCardGame.modes.boss.blurb', tone: 'from-red-500 to-rose-600', gradesKey: 'admin.academics.flashCardGame.modes.boss.grades' },
+  { id: 'builder', icon: Hammer, titleKey: 'admin.academics.flashCardGame.modes.builder.title', blurbKey: 'admin.academics.flashCardGame.modes.builder.blurb', tone: 'from-emerald-500 to-teal-600', gradesKey: 'admin.academics.flashCardGame.modes.builder.grades' },
+  { id: 'blitz', icon: Rocket, titleKey: 'admin.academics.flashCardGame.modes.blitz.title', blurbKey: 'admin.academics.flashCardGame.modes.blitz.blurb', tone: 'from-violet-500 to-purple-600', gradesKey: 'admin.academics.flashCardGame.modes.blitz.grades' },
+  { id: 'type', icon: Keyboard, titleKey: 'admin.academics.flashCardGame.modes.type.title', blurbKey: 'admin.academics.flashCardGame.modes.type.blurb', tone: 'from-amber-500 to-orange-600', gradesKey: 'admin.academics.flashCardGame.modes.type.grades' },
+  { id: 'survival', icon: Heart, titleKey: 'admin.academics.flashCardGame.modes.survival.title', blurbKey: 'admin.academics.flashCardGame.modes.survival.blurb', tone: 'from-pink-500 to-fuchsia-600', gradesKey: 'admin.academics.flashCardGame.modes.survival.grades' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -54,6 +55,7 @@ const MODES: { id: Mode; icon: typeof Rocket; title: string; blurb: string; tone
 interface MatchTile { key: string; cardId: string; kind: 'q' | 'a'; text: string; }
 
 function MemoryMatchGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: string; onExit: () => void }) {
+  const { t } = useTranslation();
   const pairCount = Math.max(2, Math.min(8, cards.length));
   const [tiles] = useState<MatchTile[]>(() => {
     const chosen = shuffle(cards).slice(0, pairCount);
@@ -115,12 +117,12 @@ function MemoryMatchGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: 
     return (
       <div className="max-w-lg mx-auto flex flex-col items-center text-center py-8">
         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="h-20 w-20 rounded-full bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center mb-4 shadow-xl shadow-sky-200"><Trophy className="h-10 w-10 text-white" /></motion.div>
-        <h2 className="text-2xl font-black text-slate-900">All Matched!</h2>
+        <h2 className="text-2xl font-black text-slate-900">{t('admin.academics.flashCardGame.match.allMatched')}</h2>
         <div className="flex gap-1 my-3">{[1, 2, 3].map(i => <Star key={i} className={cn('h-8 w-8', i <= stars ? 'text-amber-400 fill-amber-400' : 'text-slate-200')} />)}</div>
-        <p className="text-slate-500 mb-6">{moves} moves · {elapsed}s{best && (best.moves === moves && best.time === elapsed) && ' · New Best! 🎉'}</p>
+        <p className="text-slate-500 mb-6">{t('admin.academics.flashCardGame.match.movesTime', { moves, elapsed })}{best && (best.moves === moves && best.time === elapsed) && ` · ${t('admin.academics.flashCardGame.match.newBest')}`}</p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">Back</Button>
-          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-sky-600 hover:bg-sky-700 text-white"><RotateCcw className="h-4 w-4 mr-1" /> Play Again</Button>
+          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">{t('admin.academics.flashCardGame.common.back')}</Button>
+          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-sky-600 hover:bg-sky-700 text-white"><RotateCcw className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.common.playAgain')}</Button>
         </div>
       </div>
     );
@@ -129,13 +131,13 @@ function MemoryMatchGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onExit} className="rounded-xl -ml-2 h-9"><X className="h-5 w-5" /></Button>
+        <Button variant="ghost" onClick={onExit} className="rounded-xl -ms-2 h-9"><X className="h-5 w-5" /></Button>
         <div className="flex items-center gap-2 text-sm font-bold text-slate-500">
-          <span className="flex items-center gap-1"><Timer className="h-4 w-4" /> {elapsed}s</span>
+          <span className="flex items-center gap-1"><Timer className="h-4 w-4" /> {t('admin.academics.flashCardGame.match.seconds', { elapsed })}</span>
           <span>·</span>
-          <span>{moves} moves</span>
+          <span>{t('admin.academics.flashCardGame.match.movesCount', { moves })}</span>
           <span>·</span>
-          <span>{matched.size}/{pairCount} pairs</span>
+          <span>{t('admin.academics.flashCardGame.match.pairsCount', { count: matched.size, total: pairCount })}</span>
         </div>
       </div>
       <div className={cn('grid gap-2.5', cols)}>
@@ -158,7 +160,7 @@ function MemoryMatchGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: 
           );
         })}
       </div>
-      <p className="text-center text-[11px] text-slate-400">Blue tiles are questions, green tiles are answers — find the matching pair.</p>
+      <p className="text-center text-[11px] text-slate-400">{t('admin.academics.flashCardGame.match.hint')}</p>
     </div>
   );
 }
@@ -178,6 +180,7 @@ function tokenize(answer: string): string[] {
 }
 
 function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: string; onExit: () => void }) {
+  const { t } = useTranslation();
   const [order] = useState(() => shuffle(cards.map((_, i) => i)));
   const [idx, setIdx] = useState(0);
   const [target, setTarget] = useState<string[]>([]);
@@ -240,13 +243,13 @@ function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setI
     return (
       <div className="max-w-lg mx-auto flex flex-col items-center text-center py-8">
         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="h-20 w-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4 shadow-xl shadow-emerald-200"><Hammer className="h-10 w-10 text-white" /></motion.div>
-        <h2 className="text-2xl font-black text-slate-900">Set Complete!</h2>
-        <p className="text-3xl font-black text-emerald-600 mt-2">{score.toLocaleString()} pts</p>
-        {score >= highScore && score > 0 && <p className="text-amber-500 font-bold text-xs uppercase tracking-widest mt-1">★ New High Score!</p>}
-        <p className="text-slate-500 my-3">{order.length} formulas rebuilt from scratch</p>
+        <h2 className="text-2xl font-black text-slate-900">{t('admin.academics.flashCardGame.builder.setComplete')}</h2>
+        <p className="text-3xl font-black text-emerald-600 mt-2">{t('admin.academics.flashCardGame.builder.pointsSuffix', { score: score.toLocaleString() })}</p>
+        {score >= highScore && score > 0 && <p className="text-amber-500 font-bold text-xs uppercase tracking-widest mt-1">{t('admin.academics.flashCardGame.builder.newHighScore')}</p>}
+        <p className="text-slate-500 my-3">{t('admin.academics.flashCardGame.builder.rebuiltCount', { count: order.length })}</p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">Back</Button>
-          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white"><RotateCcw className="h-4 w-4 mr-1" /> Play Again</Button>
+          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">{t('admin.academics.flashCardGame.common.back')}</Button>
+          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white"><RotateCcw className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.common.playAgain')}</Button>
         </div>
       </div>
     );
@@ -255,13 +258,13 @@ function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setI
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onExit} className="rounded-xl -ml-2 h-9"><X className="h-5 w-5" /></Button>
+        <Button variant="ghost" onClick={onExit} className="rounded-xl -ms-2 h-9"><X className="h-5 w-5" /></Button>
         <div className="flex items-center gap-3 text-sm font-bold text-slate-500">
-          <span>{score.toLocaleString()} pts</span><span>·</span><span>{idx + 1}/{order.length}</span>
+          <span>{t('admin.academics.flashCardGame.builder.pointsSuffix', { score: score.toLocaleString() })}</span><span>·</span><span>{idx + 1}/{order.length}</span>
         </div>
       </div>
       <div className="rounded-2xl border-2 border-emerald-100 bg-white shadow-sm p-6 text-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Rebuild the answer for</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">{t('admin.academics.flashCardGame.builder.rebuildPrompt')}</span>
         <p className="text-xl font-bold text-slate-900 mt-2">{current?.question}</p>
       </div>
       <motion.div animate={shake ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ duration: 0.3 }}
@@ -275,7 +278,7 @@ function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setI
             {built[i] || '•'}
           </span>
         ))}
-        {cardDone && <Check className="h-6 w-6 text-emerald-500 self-center ml-2" />}
+        {cardDone && <Check className="h-6 w-6 text-emerald-500 self-center ms-2" />}
       </motion.div>
       <div className="flex flex-wrap justify-center gap-2">
         {pieces.map(p => (
@@ -287,7 +290,7 @@ function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setI
           </button>
         ))}
       </div>
-      {mistakes > 0 && !cardDone && <p className="text-center text-xs text-rose-500 font-semibold">{mistakes} mistake{mistakes === 1 ? '' : 's'} on this one — keep going!</p>}
+      {mistakes > 0 && !cardDone && <p className="text-center text-xs text-rose-500 font-semibold">{mistakes === 1 ? t('admin.academics.flashCardGame.builder.mistakeSingular', { count: mistakes }) : t('admin.academics.flashCardGame.builder.mistakePlural', { count: mistakes })}</p>}
     </div>
   );
 }
@@ -298,6 +301,7 @@ function FormulaBuilderGame({ cards, setId, onExit }: { cards: FlashCard[]; setI
 // stakes + a visible "win condition" keep kids engaged far longer.
 // ═══════════════════════════════════════════════════════════════════════════
 function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: string; onExit: () => void }) {
+  const { t } = useTranslation();
   const answerPool = useMemo(() => Array.from(new Set(cards.map(c => c.answer).filter(Boolean))), [cards]);
   const BOSS_MAX = 100, PLAYER_MAX = 100;
   const dmgPerHit = Math.max(8, Math.round(BOSS_MAX / cards.length));
@@ -365,11 +369,11 @@ function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: s
           className={cn('h-20 w-20 rounded-full flex items-center justify-center mb-4 shadow-xl', win ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-200' : 'bg-gradient-to-br from-slate-500 to-slate-700 shadow-slate-300')}>
           {win ? <Trophy className="h-10 w-10 text-white" /> : <Skull className="h-10 w-10 text-white" />}
         </motion.div>
-        <h2 className="text-2xl font-black text-slate-900">{win ? 'Boss Defeated!' : 'The Boss Won This Time'}</h2>
-        <p className="text-slate-500 my-3">{win ? 'Great recall under pressure — you crushed it.' : "Don't worry — study up and come back stronger."}</p>
+        <h2 className="text-2xl font-black text-slate-900">{win ? t('admin.academics.flashCardGame.boss.defeated') : t('admin.academics.flashCardGame.boss.playerLost')}</h2>
+        <p className="text-slate-500 my-3">{win ? t('admin.academics.flashCardGame.boss.winMessage') : t('admin.academics.flashCardGame.boss.loseMessage')}</p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">Back</Button>
-          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white"><RotateCcw className="h-4 w-4 mr-1" /> Rematch</Button>
+          <Button variant="outline" onClick={onExit} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest">{t('admin.academics.flashCardGame.common.back')}</Button>
+          <Button onClick={() => window.location.reload()} className="rounded-xl h-11 px-5 font-bold text-xs uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white"><RotateCcw className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.boss.rematch')}</Button>
         </div>
       </div>
     );
@@ -378,13 +382,13 @@ function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: s
   const isFormula = question?.card.type === 'formula';
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      <Button variant="ghost" onClick={onExit} className="rounded-xl -ml-2 h-9"><X className="h-5 w-5" /></Button>
+      <Button variant="ghost" onClick={onExit} className="rounded-xl -ms-2 h-9"><X className="h-5 w-5" /></Button>
 
       {/* Boss */}
       <div className="rounded-2xl border-2 border-red-100 bg-gradient-to-br from-red-50/60 to-white p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-black uppercase tracking-widest text-red-500 flex items-center gap-1.5"><Skull className="h-4 w-4" /> Boss</span>
-          <span className="text-xs font-bold text-slate-500">{bossHp}/{BOSS_MAX} HP</span>
+          <span className="text-xs font-black uppercase tracking-widest text-red-500 flex items-center gap-1.5"><Skull className="h-4 w-4" /> {t('admin.academics.flashCardGame.boss.bossLabel')}</span>
+          <span className="text-xs font-bold text-slate-500">{t('admin.academics.flashCardGame.boss.hpStatus', { current: bossHp, max: BOSS_MAX })}</span>
         </div>
         <div className="h-4 rounded-full bg-red-100 overflow-hidden mb-2"><motion.div className="h-full bg-gradient-to-r from-red-500 to-rose-600 rounded-full" animate={{ width: `${(bossHp / BOSS_MAX) * 100}%` }} /></div>
         <motion.div animate={bossHit ? { scale: [1, 1.15, 1], rotate: [0, -4, 4, 0] } : {}} className="flex justify-center py-2">
@@ -396,7 +400,7 @@ function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: s
       <motion.div animate={feedback === 'wrong' ? { x: [0, -8, 8, -5, 5, 0] } : {}} transition={{ duration: 0.3 }}
         className={cn('rounded-2xl border-2 shadow-sm p-5 text-center', feedback === 'right' ? 'border-emerald-300 bg-emerald-50' : feedback === 'wrong' ? 'border-rose-300 bg-rose-50' : 'border-slate-100 bg-white')}>
         <p className={cn('text-slate-900 font-bold', isFormula ? 'font-mono text-lg' : 'text-xl')}>{question?.card.question}</p>
-        {feedback === 'wrong' && <p className="mt-2 text-sm text-rose-600 font-semibold">Answer: {question?.card.answer}</p>}
+        {feedback === 'wrong' && <p className="mt-2 text-sm text-rose-600 font-semibold">{t('admin.academics.flashCardGame.answerReveal', { answer: question?.card.answer })}</p>}
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -405,7 +409,7 @@ function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: s
           const showWrong = feedback === 'wrong' && picked === i;
           return (
             <button key={i} disabled={!!feedback} onClick={() => pick(i)}
-              className={cn('flex items-center gap-2.5 p-3.5 rounded-xl border-2 text-left font-semibold text-sm transition-all',
+              className={cn('flex items-center gap-2.5 p-3.5 rounded-xl border-2 text-start font-semibold text-sm transition-all',
                 showRight ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : showWrong ? 'border-rose-400 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white hover:border-red-300 hover:bg-red-50/40 text-slate-800')}>
               <span className={cn('w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0', showRight ? 'bg-emerald-500 text-white' : showWrong ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500')}>{i + 1}</span>
               <span className={cn('flex-1', isFormula && 'font-mono')}>{opt}</span>
@@ -417,8 +421,8 @@ function BossBattleGame({ cards, setId, onExit }: { cards: FlashCard[]; setId: s
       {/* Player */}
       <div className="rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-blue-50/60 to-white p-3.5">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-black uppercase tracking-widest text-blue-500 flex items-center gap-1.5"><Heart className="h-4 w-4" /> You{combo >= 3 && <span className="text-orange-500 flex items-center gap-0.5"><Flame className="h-3.5 w-3.5" /> ×{Math.floor(combo / 3) + 1} combo</span>}</span>
-          <span className="text-xs font-bold text-slate-500">{playerHp}/{PLAYER_MAX} HP</span>
+          <span className="text-xs font-black uppercase tracking-widest text-blue-500 flex items-center gap-1.5"><Heart className="h-4 w-4" /> {t('admin.academics.flashCardGame.boss.youLabel')}{combo >= 3 && <span className="text-orange-500 flex items-center gap-0.5"><Flame className="h-3.5 w-3.5" /> {t('admin.academics.flashCardGame.boss.comboX', { count: Math.floor(combo / 3) + 1 })}</span>}</span>
+          <span className="text-xs font-bold text-slate-500">{t('admin.academics.flashCardGame.boss.hpStatus', { current: playerHp, max: PLAYER_MAX })}</span>
         </div>
         <motion.div className="h-3 rounded-full bg-blue-100 overflow-hidden" animate={playerHit ? { x: [0, -4, 4, 0] } : {}}>
           <motion.div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full" animate={{ width: `${(playerHp / PLAYER_MAX) * 100}%` }} />
@@ -445,6 +449,7 @@ interface FlashCardGameProps {
 }
 
 const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
+  const { t } = useTranslation();
   const { setId } = useParams<{ setId: string }>();
   const { sets } = useFlashCards();
   const navigate = useNavigate();
@@ -591,10 +596,10 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
 
   // ── Guards ────────────────────────────────────────────────────────────────
   if (!set) return (
-    <DashboardLayout><div className="p-6 text-center"><h2 className="text-2xl font-bold">Set not found</h2><Button onClick={() => navigate('/academics/flashcards')} className="mt-4">Back to Flashcards</Button></div></DashboardLayout>
+    <DashboardLayout><div className="p-6 text-center"><h2 className="text-2xl font-bold">{t('admin.academics.flashCardGame.setNotFound')}</h2><Button onClick={() => navigate('/academics/flashcards')} className="mt-4">{t('admin.academics.flashCardGame.backToFlashcards')}</Button></div></DashboardLayout>
   );
   if (cards.length === 0) return (
-    <DashboardLayout><div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6"><Brain className="h-12 w-12 text-violet-200 mb-3" /><h2 className="text-xl font-bold">No cards to play with yet</h2><Button onClick={() => navigate('/academics/flashcards')} className="mt-4">Back to Flashcards</Button></div></DashboardLayout>
+    <DashboardLayout><div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6"><Brain className="h-12 w-12 text-violet-200 mb-3" /><h2 className="text-xl font-bold">{t('admin.academics.flashCardGame.noCardsYet')}</h2><Button onClick={() => navigate('/academics/flashcards')} className="mt-4">{t('admin.academics.flashCardGame.backToFlashcards')}</Button></div></DashboardLayout>
   );
 
   const accuracy = answered ? Math.round((correct / answered) * 100) : 0;
@@ -605,30 +610,30 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
     return (
       <DashboardLayout>
         <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
-          <Button variant="ghost" onClick={() => navigate('/academics/flashcards')} className="rounded-xl -ml-2"><ChevronLeft className="h-5 w-5 mr-1" /> Back</Button>
+          <Button variant="ghost" onClick={() => navigate('/academics/flashcards')} className="rounded-xl -ms-2"><ChevronLeft className="h-5 w-5 me-1 rtl:rotate-180" /> {t('admin.academics.flashCardGame.common.back')}</Button>
           <div className="text-center">
             <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 items-center justify-center shadow-lg shadow-violet-200 mb-3"><Sparkles className="h-8 w-8 text-white" /></div>
-            <h1 className="text-3xl font-black text-slate-900">Study Arcade</h1>
-            <p className="text-slate-500 mt-1">{set.name} · {cards.length} cards · {set.subject}</p>
+            <h1 className="text-3xl font-black text-slate-900">{t('admin.academics.flashCardGame.studyArcade')}</h1>
+            <p className="text-slate-500 mt-1">{t('admin.academics.flashCardGame.setSummary', { name: set.name, count: cards.length, subject: set.subject })}</p>
           </div>
           <div className="grid gap-3">
             {MODES.map(m => (
               <button key={m.id} onClick={() => start(m.id)}
-                className="group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 hover:border-violet-300 hover:shadow-md transition-all text-left bg-white">
+                className="group flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 hover:border-violet-300 hover:shadow-md transition-all text-start bg-white">
                 <div className={cn('w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-sm', m.tone)}><m.icon className="h-7 w-7 text-white" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-black text-slate-900 text-lg">{m.title}</p>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500 bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5">{m.grades}</span>
+                    <p className="font-black text-slate-900 text-lg">{t(m.titleKey)}</p>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-violet-500 bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5">{t(m.gradesKey)}</span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">{m.blurb}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{t(m.blurbKey)}</p>
                 </div>
                 <Rocket className="h-5 w-5 text-slate-300 group-hover:text-violet-500 transition-colors shrink-0" />
               </button>
             ))}
           </div>
           {answerPool.length < 4 && (
-            <p className="text-center text-xs text-amber-600 flex items-center justify-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> Tip: this set is small, so multiple-choice options repeat — <b>Formula Builder</b> gives the best challenge.</p>
+            <p className="text-center text-xs text-amber-600 flex items-center justify-center gap-1.5"><Sparkles className="h-3.5 w-3.5" /> {t('admin.academics.flashCardGame.smallSetTipPrefix')} <b>{t('admin.academics.flashCardGame.modes.builder.title')}</b> {t('admin.academics.flashCardGame.smallSetTipSuffix')}</p>
           )}
         </div>
       </DashboardLayout>
@@ -657,19 +662,19 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
             className={cn('h-24 w-24 rounded-full flex items-center justify-center mb-5 shadow-2xl', newRecord ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-300' : 'bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-300')}>
             {newRecord ? <Crown className="h-12 w-12 text-white" /> : <Trophy className="h-12 w-12 text-white" />}
           </motion.div>
-          {newRecord && <motion.p initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-amber-500 font-black uppercase tracking-widest text-sm mb-1">★ New High Score! ★</motion.p>}
+          {newRecord && <motion.p initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-amber-500 font-black uppercase tracking-widest text-sm mb-1">{t('admin.academics.flashCardGame.newHighScoreBanner')}</motion.p>}
           <h2 className="text-4xl font-black text-slate-900">{score.toLocaleString()}</h2>
-          <p className="text-slate-500 font-medium mb-6">points · {MODES.find(m => m.id === mode)?.title} mode</p>
+          <p className="text-slate-500 font-medium mb-6">{t('admin.academics.flashCardGame.pointsModeSuffix', { mode: t(MODES.find(m => m.id === mode)?.titleKey || '') })}</p>
 
           <div className="grid grid-cols-3 gap-4 w-full mb-6">
-            <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-4"><Flame className="h-5 w-5 text-orange-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-orange-600">{bestCombo}</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Best Combo</p></div>
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4"><Target className="h-5 w-5 text-emerald-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-emerald-600">{accuracy}%</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Accuracy</p></div>
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4"><Check className="h-5 w-5 text-blue-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-purple-600">{correct}</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correct</p></div>
+            <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-4"><Flame className="h-5 w-5 text-orange-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-orange-600">{bestCombo}</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.flashCardGame.stats.bestCombo')}</p></div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4"><Target className="h-5 w-5 text-emerald-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-emerald-600">{accuracy}%</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.flashCardGame.stats.accuracy')}</p></div>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4"><Check className="h-5 w-5 text-blue-500 mx-auto mb-1" /><h3 className="text-2xl font-black text-purple-600">{correct}</h3><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.flashCardGame.stats.correct')}</p></div>
           </div>
 
           {missed.length > 0 && (
-            <div className="w-full rounded-2xl border border-rose-100 bg-rose-50/40 p-4 mb-6 text-left">
-              <p className="text-xs font-black uppercase tracking-wider text-rose-500 mb-2 flex items-center gap-1.5"><Brain className="h-4 w-4" /> Cards to lock in ({missed.length})</p>
+            <div className="w-full rounded-2xl border border-rose-100 bg-rose-50/40 p-4 mb-6 text-start">
+              <p className="text-xs font-black uppercase tracking-wider text-rose-500 mb-2 flex items-center gap-1.5"><Brain className="h-4 w-4" /> {t('admin.academics.flashCardGame.cardsToLockIn', { count: missed.length })}</p>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {missed.map(c => (
                   <div key={c.id} className="flex items-center justify-between gap-3 text-sm bg-white rounded-lg px-3 py-1.5 border border-rose-100">
@@ -682,9 +687,9 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
           )}
 
           <div className="flex flex-wrap gap-3 justify-center">
-            <Button variant="outline" onClick={() => setPhase('menu')} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest"><Gauge className="h-4 w-4 mr-1" /> Change Mode</Button>
-            {missed.length > 0 && <Button onClick={() => navigate(`/academics/flashcards/practice/${setId}`)} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest bg-amber-500 hover:bg-amber-600 text-white"><Brain className="h-4 w-4 mr-1" /> Study Missed</Button>}
-            <Button onClick={() => start(mode)} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest bg-purple-600 hover:bg-purple-700 text-white"><RotateCcw className="h-4 w-4 mr-1" /> Play Again</Button>
+            <Button variant="outline" onClick={() => setPhase('menu')} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest"><Gauge className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.changeMode')}</Button>
+            {missed.length > 0 && <Button onClick={() => navigate(`/academics/flashcards/practice/${setId}`)} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest bg-amber-500 hover:bg-amber-600 text-white"><Brain className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.studyMissed')}</Button>}
+            <Button onClick={() => start(mode)} className="rounded-xl h-12 px-5 font-bold text-xs uppercase tracking-widest bg-purple-600 hover:bg-purple-700 text-white"><RotateCcw className="h-4 w-4 me-1" /> {t('admin.academics.flashCardGame.common.playAgain')}</Button>
           </div>
         </div>
       </DashboardLayout>
@@ -701,12 +706,12 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
         {/* HUD */}
         <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" onClick={() => setPhase('menu')} className="rounded-xl -ml-2 h-9"><X className="h-5 w-5" /></Button>
+          <Button variant="ghost" onClick={() => setPhase('menu')} className="rounded-xl -ms-2 h-9"><X className="h-5 w-5" /></Button>
           <div className="flex items-center gap-2">
-            <div className="rounded-xl bg-violet-50 border border-violet-100 px-3 py-1.5 text-center min-w-[84px]"><p className="text-lg font-black text-violet-700 leading-none">{score.toLocaleString()}</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</p></div>
+            <div className="rounded-xl bg-violet-50 border border-violet-100 px-3 py-1.5 text-center min-w-[84px]"><p className="text-lg font-black text-violet-700 leading-none">{score.toLocaleString()}</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.flashCardGame.stats.score')}</p></div>
             {mode === 'survival'
               ? <div className="rounded-xl bg-rose-50 border border-rose-100 px-3 py-1.5 flex items-center gap-1">{Array.from({ length: SURVIVAL_LIVES }).map((_, i) => <Heart key={i} className={cn('h-4 w-4', i < lives ? 'text-rose-500 fill-rose-500' : 'text-slate-200')} />)}</div>
-              : <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-center min-w-[64px]"><p className={cn('text-lg font-black leading-none tabular-nums', timeLeft <= 10 ? 'text-rose-600' : 'text-slate-800')}>{Math.ceil(timeLeft)}</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Sec</p></div>}
+              : <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-center min-w-[64px]"><p className={cn('text-lg font-black leading-none tabular-nums', timeLeft <= 10 ? 'text-rose-600' : 'text-slate-800')}>{Math.ceil(timeLeft)}</p><p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.flashCardGame.stats.sec')}</p></div>}
           </div>
         </div>
 
@@ -721,7 +726,7 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
             {combo >= 2 && (
               <motion.div key={combo} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}
                 className={cn('flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-black', mult >= 4 ? 'bg-rose-100 text-rose-600' : mult >= 2 ? 'bg-orange-100 text-orange-600' : 'bg-amber-100 text-amber-600')}>
-                <Flame className="h-4 w-4" /> {combo} streak · ×{mult}
+                <Flame className="h-4 w-4" /> {t('admin.academics.flashCardGame.comboStreak', { combo, mult })}
               </motion.div>
             )}
           </AnimatePresence>
@@ -737,9 +742,9 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
           <motion.div animate={feedback === 'wrong' ? { x: [0, -10, 10, -6, 6, 0] } : {}} transition={{ duration: 0.4 }}
             className={cn('rounded-2xl border-2 shadow-lg p-6 min-h-[150px] flex flex-col items-center justify-center text-center transition-colors',
               feedback === 'right' ? 'border-emerald-300 bg-emerald-50' : feedback === 'wrong' ? 'border-rose-300 bg-rose-50' : 'border-violet-100 bg-white')}>
-            <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-2">Question {answered + 1}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-2">{t('admin.academics.flashCardGame.questionNumber', { number: answered + 1 })}</span>
             <p className={cn('text-slate-900 font-bold', isFormula ? 'font-mono text-xl' : 'text-2xl')}>{question?.card.question}</p>
-            {feedback === 'wrong' && <p className="mt-3 text-sm text-rose-600 font-semibold">Answer: {question?.card.answer}</p>}
+            {feedback === 'wrong' && <p className="mt-3 text-sm text-rose-600 font-semibold">{t('admin.academics.flashCardGame.answerReveal', { answer: question?.card.answer })}</p>}
           </motion.div>
         </div>
 
@@ -748,11 +753,11 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
             <div className="flex gap-2">
               <input autoFocus value={typed} disabled={lockRef.current}
                 onChange={e => setTyped(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submitTyped(); }}
-                placeholder="Type the answer, then Enter…"
+                placeholder={t('admin.academics.flashCardGame.typedPlaceholder')}
                 className="flex-1 px-4 py-3 text-base border-2 border-slate-200 rounded-xl focus:outline-none focus:border-violet-400" />
-              <Button onClick={submitTyped} disabled={lockRef.current} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-auto px-5 font-bold">Go</Button>
+              <Button onClick={submitTyped} disabled={lockRef.current} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-auto px-5 font-bold">{t('admin.academics.flashCardGame.goButton')}</Button>
             </div>
-            <p className="text-center text-[11px] text-slate-400">Punctuation & capitalisation are ignored.</p>
+            <p className="text-center text-[11px] text-slate-400">{t('admin.academics.flashCardGame.typedHint')}</p>
           </div>
         ) : (
           <>
@@ -764,7 +769,7 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
                 const showWrong = feedback === 'wrong' && isPicked;
                 return (
                   <button key={i} disabled={hidden || lockRef.current} onClick={() => pickOption(i)}
-                    className={cn('flex items-center gap-3 p-4 rounded-xl border-2 text-left font-semibold transition-all',
+                    className={cn('flex items-center gap-3 p-4 rounded-xl border-2 text-start font-semibold transition-all',
                       hidden ? 'opacity-0 pointer-events-none' :
                       showRight ? 'border-emerald-400 bg-emerald-50 text-emerald-700' :
                       showWrong ? 'border-rose-400 bg-rose-50 text-rose-700' :
@@ -782,15 +787,15 @@ const FlashCardGame: React.FC<FlashCardGameProps> = ({ onComplete }) => {
               <button onClick={useFifty} disabled={usedFifty || combo < 5}
                 className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors',
                   usedFifty || combo < 5 ? 'border-slate-200 text-slate-300 cursor-not-allowed' : 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100')}>
-                <Wand2 className="h-3.5 w-3.5" /> 50/50 {combo < 5 ? '(streak 5+ to unlock)' : usedFifty ? '(used)' : '· F'}
+                <Wand2 className="h-3.5 w-3.5" /> {t('admin.academics.flashCardGame.fiftyFifty.label')} {combo < 5 ? t('admin.academics.flashCardGame.fiftyFifty.locked') : usedFifty ? t('admin.academics.flashCardGame.fiftyFifty.used') : t('admin.academics.flashCardGame.fiftyFifty.keyHint')}
               </button>
             </div>
           </>
         )}
 
         <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 font-medium">
-          {mode === 'type' ? <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Enter to submit</span> : <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> Keys 1–4 to answer · F for 50/50</span>}
-          <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {mode === 'survival' ? 'Survive!' : `+${RIGHT_BONUS}s right · −${WRONG_PENALTY}s wrong`}</span>
+          {mode === 'type' ? <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('admin.academics.flashCardGame.hints.enterToSubmit')}</span> : <span className="flex items-center gap-1"><Keyboard className="h-3 w-3" /> {t('admin.academics.flashCardGame.hints.keysToAnswer')}</span>}
+          <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {mode === 'survival' ? t('admin.academics.flashCardGame.hints.survive') : t('admin.academics.flashCardGame.hints.timeAdjust', { right: RIGHT_BONUS, wrong: WRONG_PENALTY })}</span>
         </div>
       </div>
     </DashboardLayout>

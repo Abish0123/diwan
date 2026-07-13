@@ -8,6 +8,7 @@ import { smartDb } from "@/lib/localDb";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { JitsiEmbed } from "@/components/live-class/JitsiEmbed";
+import { useTranslation } from "react-i18next";
 import {
   Video, MoreVertical, Clock, Users, CalendarDays, BookOpen,
   Wifi, PenTool, Hand, Circle, MoreHorizontal, Presentation,
@@ -41,6 +42,7 @@ type Tab = "details" | "materials" | "whiteboard" | "polls" | "qa" | "recording"
 const normGrade = (g: string) => (g || "").toLowerCase().replace("grade ", "").trim();
 
 export default function LiveClassRoom() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -82,7 +84,7 @@ export default function LiveClassRoom() {
       });
       setRoster(filtered.map((s: any) => ({
         id: s.id || s.uid || "",
-        name: s.name || s.studentName || s.displayName || "Student",
+        name: s.name || s.studentName || s.displayName || t("admin.academics.liveClassRoom.defaultStudentName"),
         grade: s.grade || s.gradeLevel || "",
         section: s.section || "",
       })).filter((s: RosterStudent) => s.id));
@@ -113,7 +115,7 @@ export default function LiveClassRoom() {
       present: next,
       markedBy: user?.uid || "",
       updatedAt: new Date().toISOString(),
-    }, attendanceRowId).catch(() => toast.error("Failed to save attendance"));
+    }, attendanceRowId).catch(() => toast.error(t("admin.academics.liveClassRoom.failedToSaveAttendance")));
   }, [attendanceRowId, id, user?.uid]);
 
   const toggleAttendance = useCallback((studentId: string) => {
@@ -173,30 +175,30 @@ export default function LiveClassRoom() {
     [liveClasses, id]);
 
   const endClass = () => {
-    toast.success("Class ended. Attendance has been saved.");
+    toast.success(t("admin.academics.liveClassRoom.classEndedAttendanceSaved"));
     navigate("/academics/live-classes");
   };
 
   const sendChat = () => {
     if (!chatInput.trim()) return;
-    setChat(c => [...c, { who: "You", me: true, text: chatInput.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) }]);
+    setChat(c => [...c, { who: t("admin.academics.liveClassRoom.you"), me: true, text: chatInput.trim(), time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) }]);
     setChatInput("");
   };
 
   const KPIS = [
-    { icon: Clock,         bg: "bg-purple-50",  ic: "text-purple-500",  label: "Time Elapsed",  value: fmt(timer),            sub: endTime ? `until ${endTime}` : "" },
-    { icon: Users,         bg: "bg-emerald-50", ic: "text-emerald-500", label: "Students Present", value: `${joined} / ${totalStudents}`, sub: totalStudents ? `${Math.round((joined / totalStudents) * 100)}%` : "no roster" },
-    { icon: CalendarDays,  bg: "bg-amber-50",   ic: "text-amber-500",   label: "Started At",    value: startTime || "—",      sub: classDate || "" },
-    { icon: BookOpen,      bg: "bg-blue-50",    ic: "text-blue-500",    label: "Subject",       value: subject,               sub: chapter !== "—" ? chapter.split(":")[0] : "" },
-    { icon: Wifi,          bg: "bg-teal-50",    ic: "text-teal-500",    label: "Class Status",  value: currentClass?.status ? String(currentClass.status).replace(/^\w/, (c: string) => c.toUpperCase()) : "Live", sub: "Session" },
+    { icon: Clock,         bg: "bg-purple-50",  ic: "text-purple-500",  label: t("admin.academics.liveClassRoom.timeElapsed"),  value: fmt(timer),            sub: endTime ? t("admin.academics.liveClassRoom.untilTime", { time: endTime }) : "" },
+    { icon: Users,         bg: "bg-emerald-50", ic: "text-emerald-500", label: t("admin.academics.liveClassRoom.studentsPresent"), value: `${joined} / ${totalStudents}`, sub: totalStudents ? `${Math.round((joined / totalStudents) * 100)}%` : t("admin.academics.liveClassRoom.noRoster") },
+    { icon: CalendarDays,  bg: "bg-amber-50",   ic: "text-amber-500",   label: t("admin.academics.liveClassRoom.startedAt"),    value: startTime || "—",      sub: classDate || "" },
+    { icon: BookOpen,      bg: "bg-blue-50",    ic: "text-blue-500",    label: t("admin.academics.liveClassRoom.subject"),       value: subject,               sub: chapter !== "—" ? chapter.split(":")[0] : "" },
+    { icon: Wifi,          bg: "bg-teal-50",    ic: "text-teal-500",    label: t("admin.academics.liveClassRoom.classStatus"),  value: currentClass?.status ? String(currentClass.status).replace(/^\w/, (c: string) => c.toUpperCase()) : t("admin.academics.liveClassRoom.live"), sub: t("admin.academics.liveClassRoom.session") },
   ];
 
   // Mic/camera/screen-share are handled by Jitsi's own in-call toolbar now —
   // these only stay here for app-level features Jitsi doesn't cover.
   const CONTROLS = [
-    { key: "hand",  label: "Raise Hand", icon: Hand, active: handRaised, onClick: () => { setHandRaised(h => !h); if (!handRaised) toast.success("Hand raised"); } },
-    { key: "rec",   label: recording ? "Stop Rec" : "Record", icon: Circle, active: recording, danger: recording, onClick: () => { setRecording(r => !r); toast[recording ? "info" : "success"](recording ? "Recording stopped" : "Recording started"); } },
-    { key: "more",  label: "More", icon: MoreHorizontal, onClick: () => toast.info("More options") },
+    { key: "hand",  label: t("admin.academics.liveClassRoom.raiseHand"), icon: Hand, active: handRaised, onClick: () => { setHandRaised(h => !h); if (!handRaised) toast.success(t("admin.academics.liveClassRoom.handRaised")); } },
+    { key: "rec",   label: recording ? t("admin.academics.liveClassRoom.stopRec") : t("admin.academics.liveClassRoom.record"), icon: Circle, active: recording, danger: recording, onClick: () => { setRecording(r => !r); toast[recording ? "info" : "success"](recording ? t("admin.academics.liveClassRoom.recordingStopped") : t("admin.academics.liveClassRoom.recordingStarted")); } },
+    { key: "more",  label: t("admin.academics.liveClassRoom.more"), icon: MoreHorizontal, onClick: () => toast.info(t("admin.academics.liveClassRoom.moreOptions")) },
   ];
 
   if (loading) {
@@ -204,16 +206,16 @@ export default function LiveClassRoom() {
       <DashboardLayout>
         <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
           <Loader2 className="h-10 w-10 text-purple-600 animate-spin mb-3" />
-          <p className="text-sm font-medium">Connecting to classroom…</p>
+          <p className="text-sm font-medium">{t("admin.academics.liveClassRoom.connectingToClassroom")}</p>
         </div>
       </DashboardLayout>
     );
   }
 
   const TABS: { k: Tab; label: string }[] = [
-    { k: "details", label: "Class Details" }, { k: "materials", label: "Materials" },
-    { k: "whiteboard", label: "Whiteboard" }, { k: "polls", label: "Polls" },
-    { k: "qa", label: "Q&A" }, { k: "recording", label: "Recording" },
+    { k: "details", label: t("admin.academics.liveClassRoom.classDetails") }, { k: "materials", label: t("admin.academics.liveClassRoom.materials") },
+    { k: "whiteboard", label: t("admin.academics.liveClassRoom.whiteboard") }, { k: "polls", label: t("admin.academics.liveClassRoom.polls") },
+    { k: "qa", label: t("admin.academics.liveClassRoom.qa") }, { k: "recording", label: t("admin.academics.liveClassRoom.recording") },
   ];
 
   const classLabel = [grade, section].filter(Boolean).join(" - ") || "—";
@@ -230,9 +232,9 @@ export default function LiveClassRoom() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">{title || "Live Class"}</h1>
+                <h1 className="text-2xl font-bold text-slate-900">{title || t("admin.academics.liveClassRoom.liveClass")}</h1>
                 <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {t("admin.academics.liveClassRoom.live")}
                 </span>
               </div>
               <p className="text-sm text-slate-400">{classLabel} &nbsp;|&nbsp; {subject} &nbsp;|&nbsp; {chapter}</p>
@@ -241,9 +243,9 @@ export default function LiveClassRoom() {
           <div className="flex items-center gap-2">
             <button onClick={endClass}
               className="flex items-center gap-2 h-10 px-4 rounded-lg border border-rose-200 text-sm font-semibold text-rose-600 hover:bg-rose-50">
-              <PhoneOff className="h-4 w-4" /> End Class
+              <PhoneOff className="h-4 w-4" /> {t("admin.academics.liveClassRoom.endClass")}
             </button>
-            <button onClick={() => toast.info("Class options")}
+            <button onClick={() => toast.info(t("admin.academics.liveClassRoom.classOptions"))}
               className="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">
               <MoreVertical className="h-4 w-4" />
             </button>
@@ -280,16 +282,16 @@ export default function LiveClassRoom() {
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-white"
-                title="Open this call in a new tab via Jitsi Meet"
+                title={t("admin.academics.liveClassRoom.openThisCallInNewTab")}
               >
-                Open in Jitsi Meet <ExternalLink className="h-3 w-3" />
+                {t("admin.academics.liveClassRoom.openInJitsiMeet")} <ExternalLink className="h-3 w-3" />
               </a>
             </div>
 
             <div className="flex-1 min-h-[420px]">
               <JitsiEmbed
                 roomName={jitsiRoom}
-                displayName={user?.displayName || "Teacher"}
+                displayName={user?.displayName || t("admin.academics.liveClassRoom.teacher")}
                 className="h-full w-full"
                 onLeave={endClass}
               />
@@ -308,11 +310,11 @@ export default function LiveClassRoom() {
                   <span className="text-[8px] text-slate-400">{c.label}</span>
                 </button>
               ))}
-              <button onClick={endClass} title="End Class" className="flex flex-col items-center gap-1 group ml-1">
+              <button onClick={endClass} title={t("admin.academics.liveClassRoom.endClass")} className="flex flex-col items-center gap-1 group ms-1">
                 <span className="px-3.5 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center group-hover:bg-rose-600 transition-colors">
                   <PhoneOff className="h-4 w-4" />
                 </span>
-                <span className="text-[8px] text-slate-400">End Class</span>
+                <span className="text-[8px] text-slate-400">{t("admin.academics.liveClassRoom.endClass")}</span>
               </button>
             </div>
           </div>
@@ -322,30 +324,30 @@ export default function LiveClassRoom() {
             {/* Participants / attendance */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-sm">Class Participants ({joined}/{totalStudents})</h3>
+                <h3 className="font-bold text-slate-900 text-sm">{t("admin.academics.liveClassRoom.classParticipantsCount", { joined, total: totalStudents })}</h3>
               </div>
               <div className="px-4 py-2.5 flex items-center gap-2 border-b border-slate-50">
                 <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <input placeholder="Search participants..."
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input placeholder={t("admin.academics.liveClassRoom.searchParticipants")}
                     value={participantSearch}
                     onChange={e => setParticipantSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 h-8 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
+                    className="w-full ps-8 pe-3 h-8 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
                 </div>
-                <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50" title="Filter">
+                <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50" title={t("admin.academics.liveClassRoom.filter")}>
                   <Filter className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="divide-y divide-slate-50 max-h-[240px] overflow-y-auto">
                 {rosterLoading ? (
                   <div className="px-4 py-6 flex items-center justify-center text-slate-400 text-xs">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading roster…
+                    <Loader2 className="h-4 w-4 animate-spin me-2" /> {t("admin.academics.liveClassRoom.loadingRoster")}
                   </div>
                 ) : filteredRoster.length === 0 ? (
                   <div className="px-4 py-6 text-center text-xs text-slate-400">
                     {roster.length === 0
-                      ? (grade ? `No students found for ${classLabel}.` : "This class has no grade assigned yet.")
-                      : "No participants match your search."}
+                      ? (grade ? t("admin.academics.liveClassRoom.noStudentsFoundFor", { classLabel }) : t("admin.academics.liveClassRoom.noGradeAssignedYet"))
+                      : t("admin.academics.liveClassRoom.noParticipantsMatchSearch")}
                   </div>
                 ) : filteredRoster.map(p => {
                   const isPresent = !!present[p.id];
@@ -356,13 +358,13 @@ export default function LiveClassRoom() {
                         checked={isPresent}
                         onChange={() => toggleAttendance(p.id)}
                         className="h-3.5 w-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-400 cursor-pointer"
-                        title={isPresent ? "Mark absent" : "Mark present"}
+                        title={isPresent ? t("admin.academics.liveClassRoom.markAbsent") : t("admin.academics.liveClassRoom.markPresent")}
                       />
                       <Avatar name={p.name} className="w-8 h-8 text-[10px]" />
                       <span className="flex-1 text-xs font-semibold text-slate-800 truncate">{p.name}</span>
                       <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded",
                         isPresent ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
-                        {isPresent ? "Present" : "Absent"}
+                        {isPresent ? t("admin.academics.liveClassRoom.present") : t("admin.academics.liveClassRoom.absent")}
                       </span>
                     </div>
                   );
@@ -373,12 +375,12 @@ export default function LiveClassRoom() {
             {/* Live Chat */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm flex flex-col flex-1 min-h-[260px]">
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">💬 Live Chat</h3>
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">💬 {t("admin.academics.liveClassRoom.liveChat")}</h3>
                 <MoreVertical className="h-4 w-4 text-slate-400" />
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {chat.length === 0 && (
-                  <p className="text-center text-xs text-slate-300 pt-8">No messages yet</p>
+                  <p className="text-center text-xs text-slate-300 pt-8">{t("admin.academics.liveClassRoom.noMessagesYet")}</p>
                 )}
                 {chat.map((m, i) => (
                   <div key={i} className={cn("flex gap-2", m.me && "flex-row-reverse")}>
@@ -398,7 +400,7 @@ export default function LiveClassRoom() {
               <div className="p-3 border-t border-slate-50 flex items-center gap-2">
                 <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && sendChat()}
-                  placeholder="Type a message..."
+                  placeholder={t("admin.academics.liveClassRoom.typeAMessage")}
                   className="flex-1 h-9 px-3 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-200" />
                 <button onClick={sendChat} className="w-9 h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center">
                   <Send className="h-4 w-4" />
@@ -424,14 +426,14 @@ export default function LiveClassRoom() {
             <div className="p-5 grid grid-cols-3 gap-5">
               {/* Class Information */}
               <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-3">Class Information</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-3">{t("admin.academics.liveClassRoom.classInformation")}</h4>
                 <div className="space-y-3">
                   {[
-                    { icon: Users,        label: "Class", value: classLabel },
-                    { icon: BookOpen,     label: "Subject", value: subject },
-                    { icon: FileText,     label: "Topic", value: chapter },
-                    { icon: Clock,        label: "Duration", value: startTime && endTime ? `${startTime} - ${endTime}` : "—" },
-                    { icon: CalendarDays, label: "Date", value: classDate || "—" },
+                    { icon: Users,        label: t("admin.academics.liveClassRoom.classLabel"), value: classLabel },
+                    { icon: BookOpen,     label: t("admin.academics.liveClassRoom.subject"), value: subject },
+                    { icon: FileText,     label: t("admin.academics.liveClassRoom.topic"), value: chapter },
+                    { icon: Clock,        label: t("admin.academics.liveClassRoom.duration"), value: startTime && endTime ? `${startTime} - ${endTime}` : "—" },
+                    { icon: CalendarDays, label: t("admin.academics.liveClassRoom.date"), value: classDate || "—" },
                   ].map(r => (
                     <div key={r.label} className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
@@ -448,24 +450,24 @@ export default function LiveClassRoom() {
 
               {/* Attendance summary */}
               <div>
-                <h4 className="font-bold text-slate-900 text-sm mb-3">Attendance</h4>
+                <h4 className="font-bold text-slate-900 text-sm mb-3">{t("admin.academics.liveClassRoom.attendance")}</h4>
                 {totalStudents === 0 ? (
-                  <p className="text-xs text-slate-400">No roster loaded for this class yet.</p>
+                  <p className="text-xs text-slate-400">{t("admin.academics.liveClassRoom.noRosterLoadedYet")}</p>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      <span className="text-xs text-slate-600">{joined} marked present</span>
+                      <span className="text-xs text-slate-600">{t("admin.academics.liveClassRoom.markedPresentCount", { count: joined })}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Circle className="h-4 w-4 text-rose-400 flex-shrink-0" />
-                      <span className="text-xs text-slate-600">{totalStudents - joined} not yet marked</span>
+                      <span className="text-xs text-slate-600">{t("admin.academics.liveClassRoom.notYetMarkedCount", { count: totalStudents - joined })}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
                       <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${totalStudents ? Math.round((joined / totalStudents) * 100) : 0}%` }} />
                     </div>
                     <p className="text-[10px] text-slate-400">
-                      Toggle the checkboxes in the participants panel — attendance saves automatically.
+                      {t("admin.academics.liveClassRoom.toggleCheckboxesHint")}
                     </p>
                   </div>
                 )}
@@ -474,10 +476,10 @@ export default function LiveClassRoom() {
               {/* Upcoming Live Classes */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-slate-900 text-sm">Upcoming Live Classes</h4>
+                  <h4 className="font-bold text-slate-900 text-sm">{t("admin.academics.liveClassRoom.upcomingLiveClasses")}</h4>
                 </div>
                 {upcomingClasses.length === 0 ? (
-                  <p className="text-xs text-slate-400">No upcoming classes scheduled.</p>
+                  <p className="text-xs text-slate-400">{t("admin.academics.liveClassRoom.noUpcomingClassesScheduled")}</p>
                 ) : (
                   <div className="space-y-2.5">
                     {upcomingClasses.map((c: any) => (
@@ -507,20 +509,20 @@ export default function LiveClassRoom() {
               {tab === "recording" && <Circle className="h-10 w-10 mb-2 opacity-30" />}
               <p className="text-sm font-semibold capitalize">{TABS.find(t => t.k === tab)?.label}</p>
               <p className="text-xs mt-1">
-                {tab === "polls" ? "Launch a live poll for your students" :
-                 tab === "qa" ? "Student questions will appear here" :
-                 tab === "recording" ? (recording ? "Recording in progress…" : "Start recording to capture this session") :
-                 tab === "whiteboard" ? "Open the whiteboard from the control bar" :
-                 "Share study materials with this class from the Study Materials module"}
+                {tab === "polls" ? t("admin.academics.liveClassRoom.launchLivePollHint") :
+                 tab === "qa" ? t("admin.academics.liveClassRoom.studentQuestionsHint") :
+                 tab === "recording" ? (recording ? t("admin.academics.liveClassRoom.recordingInProgress") : t("admin.academics.liveClassRoom.startRecordingHint")) :
+                 tab === "whiteboard" ? t("admin.academics.liveClassRoom.openWhiteboardHint") :
+                 t("admin.academics.liveClassRoom.shareStudyMaterialsHint")}
               </p>
               {tab === "materials" && (
                 <button onClick={() => navigate("/teacher/study-materials")} className="mt-3 h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5">
-                  <Download className="h-3.5 w-3.5" /> Open Study Materials
+                  <Download className="h-3.5 w-3.5" /> {t("admin.academics.liveClassRoom.openStudyMaterials")}
                 </button>
               )}
               {tab === "polls" && (
-                <button onClick={() => toast.success("Poll created")} className="mt-3 h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold">
-                  Create Poll
+                <button onClick={() => toast.success(t("admin.academics.liveClassRoom.pollCreated"))} className="mt-3 h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold">
+                  {t("admin.academics.liveClassRoom.createPoll")}
                 </button>
               )}
             </div>

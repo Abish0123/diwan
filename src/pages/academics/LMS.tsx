@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,8 @@ const LESSON_TYPES = ["video", "pdf", "quiz", "assignment", "worksheet", "live"]
 
 const normGrade = (g: string) => (g || "").toLowerCase().replace("grade ", "").trim();
 
+// Note: relativeTime is a plain helper outside the component (no hook access),
+// so its strings are left as English JS constants (cannot call t() here).
 function relativeTime(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -73,7 +76,19 @@ function LessonTypeIcon({ type }: { type: string }) {
 const EMPTY_FORM = { name: "", subject: "", grade: "", teacher: "", description: "" };
 const EMPTY_LESSON = { title: "", type: "video", duration: "", description: "" };
 
+// Lookup map: keeps LESSON_TYPES values (used as logic identifiers) untouched
+// while providing translated labels for display.
+const LESSON_TYPE_LABEL_KEYS: Record<string, string> = {
+  video: "admin.academics.lms.lessonTypeVideo",
+  pdf: "admin.academics.lms.lessonTypePdf",
+  quiz: "admin.academics.lms.lessonTypeQuiz",
+  assignment: "admin.academics.lms.lessonTypeAssignment",
+  worksheet: "admin.academics.lms.lessonTypeWorksheet",
+  live: "admin.academics.lms.lessonTypeLive",
+};
+
 export default function LMS() {
+  const { t } = useTranslation();
   const [courses, setCourses] = useState<LmsCourse[]>([]);
   const [roster, setRoster] = useState<RosterStudent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +121,7 @@ export default function LMS() {
       setCourses(normalized);
     } catch (error) {
       console.error("Error loading LMS courses:", error);
-      toast.error("Failed to load courses");
+      toast.error(t('admin.academics.lms.toastLoadCoursesFailed'));
     }
   }, []);
 
@@ -125,7 +140,7 @@ export default function LMS() {
         if (cancelled) return;
         setRoster((students || []).map((s: any) => ({
           id: s.id || s.uid || "",
-          name: s.name || s.studentName || s.displayName || "Student",
+          name: s.name || s.studentName || s.displayName || t('admin.academics.lms.defaultStudentName'),
           grade: s.grade || s.gradeLevel || "",
           section: s.section || "",
         })).filter((s: RosterStudent) => s.id));
@@ -150,12 +165,12 @@ export default function LMS() {
     const enrolledIds = new Set<string>();
     courses.forEach(c => studentsForGrade(c.grade).forEach(s => enrolledIds.add(s.id)));
     return [
-      { label: "Total Courses", value: String(courses.length), icon: BookOpen, color: "text-purple-600 bg-blue-50" },
-      { label: "Total Enrolled", value: String(enrolledIds.size), icon: Users, color: "text-purple-600 bg-purple-50" },
-      { label: "Total Lessons", value: String(totalLessons), icon: Play, color: "text-green-600 bg-green-50" },
-      { label: "Published Lessons", value: String(publishedLessons), icon: GraduationCap, color: "text-orange-600 bg-orange-50" },
+      { label: t('admin.academics.lms.statTotalCourses'), value: String(courses.length), icon: BookOpen, color: "text-purple-600 bg-blue-50" },
+      { label: t('admin.academics.lms.statTotalEnrolled'), value: String(enrolledIds.size), icon: Users, color: "text-purple-600 bg-purple-50" },
+      { label: t('admin.academics.lms.statTotalLessons'), value: String(totalLessons), icon: Play, color: "text-green-600 bg-green-50" },
+      { label: t('admin.academics.lms.statPublishedLessons'), value: String(publishedLessons), icon: GraduationCap, color: "text-orange-600 bg-orange-50" },
     ];
-  }, [courses, studentsForGrade]);
+  }, [courses, studentsForGrade, t]);
 
   const builderCourse = courses.find(c => c.id === builderCourseId) || courses[0];
 
@@ -179,7 +194,7 @@ export default function LMS() {
 
   async function saveCourse() {
     if (!courseForm.name || !courseForm.subject || !courseForm.grade || !courseForm.teacher) {
-      toast.error("Please fill in course name, subject, grade and teacher");
+      toast.error(t('admin.academics.lms.toastFillRequiredFields'));
       return;
     }
     setSaving(true);
@@ -187,7 +202,7 @@ export default function LMS() {
     try {
       if (editingCourseId) {
         await smartDb.update("lms_courses", editingCourseId, { ...courseForm, updatedAt: now });
-        toast.success(`Course "${courseForm.name}" updated`);
+        toast.success(t('admin.academics.lms.toastCourseUpdated', { name: courseForm.name }));
       } else {
         const id = `lms_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         await smartDb.create("lms_courses", {
@@ -198,7 +213,7 @@ export default function LMS() {
           createdAt: now,
           updatedAt: now,
         }, id);
-        toast.success(`Course "${courseForm.name}" created`);
+        toast.success(t('admin.academics.lms.toastCourseCreated', { name: courseForm.name }));
       }
       setCourseDialogOpen(false);
       setCourseForm(EMPTY_FORM);
@@ -206,23 +221,23 @@ export default function LMS() {
       await loadCourses();
     } catch (error) {
       console.error("Error saving course:", error);
-      toast.error("Failed to save course");
+      toast.error(t('admin.academics.lms.toastSaveCourseFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteCourse(course: LmsCourse) {
-    if (!window.confirm(`Delete course "${course.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t('admin.academics.lms.confirmDeleteCourse', { name: course.name }))) return;
     try {
       await smartDb.delete("lms_courses", course.id);
-      toast.success(`Course "${course.name}" deleted`);
+      toast.success(t('admin.academics.lms.toastCourseDeleted', { name: course.name }));
       setCourseDialogOpen(false);
       setEditingCourseId(null);
       await loadCourses();
     } catch (error) {
       console.error("Error deleting course:", error);
-      toast.error("Failed to delete course");
+      toast.error(t('admin.academics.lms.toastDeleteCourseFailed'));
     }
   }
 
@@ -236,7 +251,7 @@ export default function LMS() {
     const course = courses.find(c => c.id === lessonCourseId);
     if (!course) return;
     if (!lessonForm.title.trim()) {
-      toast.error("Please enter a lesson title");
+      toast.error(t('admin.academics.lms.toastEnterLessonTitle'));
       return;
     }
     setSaving(true);
@@ -253,13 +268,13 @@ export default function LMS() {
         lessons: [...course.lessons, lesson],
         updatedAt: new Date().toISOString(),
       });
-      toast.success(`Lesson "${lesson.title}" added to ${course.name}`);
+      toast.success(t('admin.academics.lms.toastLessonAdded', { lesson: lesson.title, course: course.name }));
       setLessonDialogOpen(false);
       setLessonForm(EMPTY_LESSON);
       await loadCourses();
     } catch (error) {
       console.error("Error adding lesson:", error);
-      toast.error("Failed to add lesson");
+      toast.error(t('admin.academics.lms.toastAddLessonFailed'));
     } finally {
       setSaving(false);
     }
@@ -272,28 +287,33 @@ export default function LMS() {
       await loadCourses();
     } catch (error) {
       console.error("Error updating lessons:", error);
-      toast.error("Failed to update lessons");
+      toast.error(t('admin.academics.lms.toastUpdateLessonsFailed'));
     }
   }
 
   function toggleLessonPublished(course: LmsCourse, lessonId: string) {
     const lessons = course.lessons.map(l => l.id === lessonId ? { ...l, published: !l.published } : l);
     const lesson = course.lessons.find(l => l.id === lessonId);
-    persistLessons(course, lessons, lesson?.published ? `"${lesson.title}" moved to draft` : `"${lesson?.title}" published`);
+    persistLessons(course, lessons, lesson?.published
+      ? t('admin.academics.lms.toastLessonMovedToDraft', { title: lesson.title })
+      : t('admin.academics.lms.toastLessonPublished', { title: lesson?.title }));
   }
 
   function deleteLesson(course: LmsCourse, lessonId: string) {
     const lesson = course.lessons.find(l => l.id === lessonId);
-    persistLessons(course, course.lessons.filter(l => l.id !== lessonId), `Lesson "${lesson?.title}" removed`);
+    persistLessons(course, course.lessons.filter(l => l.id !== lessonId), t('admin.academics.lms.toastLessonRemoved', { title: lesson?.title }));
   }
 
   function publishAllLessons(course: LmsCourse) {
     const drafts = course.lessons.filter(l => !l.published).length;
     if (drafts === 0) {
-      toast.info("All lessons are already published");
+      toast.info(t('admin.academics.lms.toastAllLessonsPublished'));
       return;
     }
-    persistLessons(course, course.lessons.map(l => ({ ...l, published: true })), `${drafts} lesson${drafts === 1 ? "" : "s"} published`);
+    const message = drafts === 1
+      ? t('admin.academics.lms.toastDraftsPublishedSingular', { count: drafts })
+      : t('admin.academics.lms.toastDraftsPublishedPlural', { count: drafts });
+    persistLessons(course, course.lessons.map(l => ({ ...l, published: true })), message);
   }
 
   // Progress rows: real students enrolled in each course's grade. There is no
@@ -313,16 +333,16 @@ export default function LMS() {
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Learning Management System</h1>
-              <p className="text-sm text-slate-400">Create courses, upload lessons, and track student completion</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.academics.lms.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.academics.lms.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={openCreateCourse} className="bg-purple-600 hover:bg-purple-700 text-white">
-              <Plus className="h-4 w-4 mr-2" /> New Course
+              <Plus className="h-4 w-4 me-2" /> {t('admin.academics.lms.newCourseButton')}
             </Button>
             <Button variant="outline" onClick={() => setMoodleOpen(true)}>
-              Import from Moodle
+              {t('admin.academics.lms.importFromMoodleButton')}
             </Button>
           </div>
         </div>
@@ -345,24 +365,24 @@ export default function LMS() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="bg-gray-100">
-            <TabsTrigger value="courses">My Courses</TabsTrigger>
-            <TabsTrigger value="builder">Course Builder</TabsTrigger>
-            <TabsTrigger value="progress">Student Progress</TabsTrigger>
+            <TabsTrigger value="courses">{t('admin.academics.lms.tabMyCourses')}</TabsTrigger>
+            <TabsTrigger value="builder">{t('admin.academics.lms.tabCourseBuilder')}</TabsTrigger>
+            <TabsTrigger value="progress">{t('admin.academics.lms.tabStudentProgress')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="courses" className="mt-4">
             {loading ? (
               <div className="flex items-center justify-center py-16 text-gray-400">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading courses…
+                <Loader2 className="h-6 w-6 animate-spin me-2" /> {t('admin.academics.lms.loadingCourses')}
               </div>
             ) : courses.length === 0 ? (
               <Card className="border border-dashed border-gray-300">
                 <CardContent className="py-16 flex flex-col items-center text-center">
                   <BookOpen className="h-10 w-10 text-gray-300 mb-3" />
-                  <h3 className="font-semibold text-gray-900">No courses yet</h3>
-                  <p className="text-sm text-gray-500 mt-1 mb-4">Create your first course to start building lessons.</p>
+                  <h3 className="font-semibold text-gray-900">{t('admin.academics.lms.noCoursesTitle')}</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">{t('admin.academics.lms.noCoursesDescription')}</p>
                   <Button onClick={openCreateCourse} className="bg-purple-600 hover:bg-purple-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" /> New Course
+                    <Plus className="h-4 w-4 me-2" /> {t('admin.academics.lms.newCourseButton')}
                   </Button>
                 </CardContent>
               </Card>
@@ -387,21 +407,21 @@ export default function LMS() {
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div className="bg-gray-50 rounded p-2">
                             <p className="text-sm font-semibold text-gray-900">{course.lessons.length}</p>
-                            <p className="text-xs text-gray-500">Lessons</p>
+                            <p className="text-xs text-gray-500">{t('admin.academics.lms.lessonsLabel')}</p>
                           </div>
                           <div className="bg-gray-50 rounded p-2">
                             <p className="text-sm font-semibold text-gray-900">{enrolled}</p>
-                            <p className="text-xs text-gray-500">Students</p>
+                            <p className="text-xs text-gray-500">{t('admin.academics.lms.studentsLabel')}</p>
                           </div>
                           <div className="bg-gray-50 rounded p-2">
                             <p className="text-sm font-semibold text-gray-900">{published}</p>
-                            <p className="text-xs text-gray-500">Published</p>
+                            <p className="text-xs text-gray-500">{t('admin.academics.lms.publishedLabel')}</p>
                           </div>
                         </div>
 
                         <div>
                           <div className="flex justify-between text-xs text-gray-500 mb-1">
-                            <span>Lessons Published</span>
+                            <span>{t('admin.academics.lms.lessonsPublishedLabel')}</span>
                             <span>{course.lessons.length ? `${publishedPct}%` : "—"}</span>
                           </div>
                           <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -412,17 +432,17 @@ export default function LMS() {
                           </div>
                         </div>
 
-                        <p className="text-xs text-gray-400">Last updated: {relativeTime(course.updatedAt || course.createdAt)}</p>
+                        <p className="text-xs text-gray-400">{t('admin.academics.lms.lastUpdatedLabel', { time: relativeTime(course.updatedAt || course.createdAt) })}</p>
 
                         <div className="flex gap-2 pt-1">
                           <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => openEditCourse(course)}>
-                            <Edit2 className="h-3 w-3 mr-1" /> Edit Course
+                            <Edit2 className="h-3 w-3 me-1" /> {t('admin.academics.lms.editCourseButton')}
                           </Button>
                           <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => setTab("progress")}>
-                            <Users className="h-3 w-3 mr-1" /> View Students
+                            <Users className="h-3 w-3 me-1" /> {t('admin.academics.lms.viewStudentsButton')}
                           </Button>
                           <Button size="sm" className="flex-1 text-xs bg-purple-600 hover:bg-purple-700 text-white" onClick={() => openAddLesson(course.id)}>
-                            <Plus className="h-3 w-3 mr-1" /> Add Lesson
+                            <Plus className="h-3 w-3 me-1" /> {t('admin.academics.lms.addLessonButton')}
                           </Button>
                         </div>
                       </CardContent>
@@ -438,8 +458,8 @@ export default function LMS() {
               <Card className="border border-dashed border-gray-300">
                 <CardContent className="py-16 flex flex-col items-center text-center">
                   <BookOpen className="h-10 w-10 text-gray-300 mb-3" />
-                  <h3 className="font-semibold text-gray-900">No course to build yet</h3>
-                  <p className="text-sm text-gray-500 mt-1">Create a course first, then add lessons here.</p>
+                  <h3 className="font-semibold text-gray-900">{t('admin.academics.lms.noCourseToBuildTitle')}</h3>
+                  <p className="text-sm text-gray-500 mt-1">{t('admin.academics.lms.noCourseToBuildDescription')}</p>
                 </CardContent>
               </Card>
             ) : builderCourse && (
@@ -458,11 +478,11 @@ export default function LMS() {
                         </SelectContent>
                       </Select>
                       <p className="text-sm text-gray-500">
-                        {builderCourse.description || `${builderCourse.subject} · ${builderCourse.grade} · ${builderCourse.teacher}`}
+                        {builderCourse.description || t('admin.academics.lms.courseMetaSummary', { subject: builderCourse.subject, grade: builderCourse.grade, teacher: builderCourse.teacher })}
                       </p>
                     </div>
                     <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => publishAllLessons(builderCourse)}>
-                      Publish Course
+                      {t('admin.academics.lms.publishCourseButton')}
                     </Button>
                   </div>
                 </CardHeader>
@@ -471,13 +491,13 @@ export default function LMS() {
                     <div className="w-full flex items-center justify-between px-4 py-3 bg-gray-50">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4 text-purple-600" />
-                        <span className="font-medium text-gray-900 text-sm">Lessons</span>
-                        <Badge variant="secondary" className="text-xs">{builderCourse.lessons.length} lessons</Badge>
+                        <span className="font-medium text-gray-900 text-sm">{t('admin.academics.lms.lessonsLabel')}</span>
+                        <Badge variant="secondary" className="text-xs">{t('admin.academics.lms.lessonsCountBadge', { count: builderCourse.lessons.length })}</Badge>
                       </div>
                     </div>
                     {builderCourse.lessons.length === 0 ? (
                       <div className="px-4 py-8 text-center text-sm text-gray-400">
-                        No lessons yet — add the first lesson below.
+                        {t('admin.academics.lms.noLessonsYet')}
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-100">
@@ -490,12 +510,12 @@ export default function LMS() {
                               {lesson.description && <span className="block text-xs text-gray-400 truncate">{lesson.description}</span>}
                             </div>
                             {lesson.duration && <span className="text-xs text-gray-400">{lesson.duration}</span>}
-                            <button onClick={() => toggleLessonPublished(builderCourse, lesson.id)} title="Toggle publish state">
+                            <button onClick={() => toggleLessonPublished(builderCourse, lesson.id)} title={t('admin.academics.lms.togglePublishTitle')}>
                               <Badge
                                 variant={lesson.published ? "default" : "secondary"}
                                 className={cn("text-xs cursor-pointer", lesson.published ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" : "hover:bg-gray-200")}
                               >
-                                {lesson.published ? "Published" : "Draft"}
+                                {lesson.published ? t('admin.academics.lms.publishedBadge') : t('admin.academics.lms.draftBadge')}
                               </Badge>
                             </button>
                             <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-gray-400 hover:text-red-600" onClick={() => deleteLesson(builderCourse, lesson.id)}>
@@ -512,7 +532,7 @@ export default function LMS() {
                         className="text-purple-600 hover:text-blue-700 hover:bg-blue-50 text-xs"
                         onClick={() => openAddLesson(builderCourse.id)}
                       >
-                        <Plus className="h-3 w-3 mr-1" /> Add Lesson
+                        <Plus className="h-3 w-3 me-1" /> {t('admin.academics.lms.addLessonButton')}
                       </Button>
                     </div>
                   </div>
@@ -524,9 +544,9 @@ export default function LMS() {
           <TabsContent value="progress" className="mt-4">
             <Card className="border border-gray-200">
               <CardHeader className="border-b border-gray-100 pb-3">
-                <CardTitle className="text-base font-semibold text-gray-900">Student Progress Overview</CardTitle>
+                <CardTitle className="text-base font-semibold text-gray-900">{t('admin.academics.lms.studentProgressOverviewTitle')}</CardTitle>
                 <p className="text-xs text-gray-400 font-normal">
-                  Students enrolled by grade. Per-lesson progress tracking is not recorded yet.
+                  {t('admin.academics.lms.studentProgressOverviewSubtitle')}
                 </p>
               </CardHeader>
               <CardContent className="p-0">
@@ -535,20 +555,20 @@ export default function LMS() {
                     <Users className="h-8 w-8 mb-2 text-gray-300" />
                     <p className="text-sm">
                       {courses.length === 0
-                        ? "Create a course to see its enrolled students here."
-                        : "No students found for the grades covered by your courses."}
+                        ? t('admin.academics.lms.emptyProgressNoCourses')
+                        : t('admin.academics.lms.emptyProgressNoStudents')}
                     </p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
-                        <TableHead className="text-xs font-semibold text-gray-600">Student Name</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600">Grade</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600">Course</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 text-center">Lessons</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 text-center">Quiz Score</TableHead>
-                        <TableHead className="text-xs font-semibold text-gray-600 text-center">Completion</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600">{t('admin.academics.lms.tableHeaderStudentName')}</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600">{t('admin.academics.lms.tableHeaderGrade')}</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600">{t('admin.academics.lms.tableHeaderCourse')}</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600 text-center">{t('admin.academics.lms.tableHeaderLessons')}</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600 text-center">{t('admin.academics.lms.tableHeaderQuizScore')}</TableHead>
+                        <TableHead className="text-xs font-semibold text-gray-600 text-center">{t('admin.academics.lms.tableHeaderCompletion')}</TableHead>
                         <TableHead className="text-xs font-semibold text-gray-600"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -566,7 +586,7 @@ export default function LMS() {
                           <TableCell className="text-center text-sm text-gray-400">—</TableCell>
                           <TableCell className="text-center">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-500">
-                              Not started
+                              {t('admin.academics.lms.notStartedBadge')}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -574,9 +594,9 @@ export default function LMS() {
                               size="sm"
                               variant="outline"
                               className="text-xs h-7"
-                              onClick={() => toast.info(`Reminder sent to ${student.name}`)}
+                              onClick={() => toast.info(t('admin.academics.lms.toastReminderSent', { name: student.name }))}
                             >
-                              Send Reminder
+                              {t('admin.academics.lms.sendReminderButton')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -594,62 +614,62 @@ export default function LMS() {
       <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCourseId ? "Edit Course" : "Create New Course"}</DialogTitle>
+            <DialogTitle>{editingCourseId ? t('admin.academics.lms.editCourseDialogTitle') : t('admin.academics.lms.createCourseDialogTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="course-name">Course Name</Label>
+              <Label htmlFor="course-name">{t('admin.academics.lms.courseNameLabel')}</Label>
               <Input
                 id="course-name"
-                placeholder="e.g. Advanced Mathematics"
+                placeholder={t('admin.academics.lms.courseNamePlaceholder')}
                 value={courseForm.name}
                 onChange={(e) => setCourseForm(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Subject</Label>
+              <Label>{t('admin.academics.lms.subjectLabel')}</Label>
               <Select value={courseForm.subject} onValueChange={(v) => setCourseForm(prev => ({ ...prev, subject: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select subject" />
+                  <SelectValue placeholder={t('admin.academics.lms.selectSubjectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Math">Math</SelectItem>
-                  <SelectItem value="Science">Science</SelectItem>
-                  <SelectItem value="English">English</SelectItem>
-                  <SelectItem value="Arabic">Arabic</SelectItem>
-                  <SelectItem value="Islamic Studies">Islamic Studies</SelectItem>
-                  <SelectItem value="Social Studies">Social Studies</SelectItem>
-                  <SelectItem value="ICT">ICT</SelectItem>
+                  <SelectItem value="Math">{t('admin.academics.lms.subjectMath')}</SelectItem>
+                  <SelectItem value="Science">{t('admin.academics.lms.subjectScience')}</SelectItem>
+                  <SelectItem value="English">{t('admin.academics.lms.subjectEnglish')}</SelectItem>
+                  <SelectItem value="Arabic">{t('admin.academics.lms.subjectArabic')}</SelectItem>
+                  <SelectItem value="Islamic Studies">{t('admin.academics.lms.subjectIslamicStudies')}</SelectItem>
+                  <SelectItem value="Social Studies">{t('admin.academics.lms.subjectSocialStudies')}</SelectItem>
+                  <SelectItem value="ICT">{t('admin.academics.lms.subjectIct')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Grade</Label>
+              <Label>{t('admin.academics.lms.gradeLabel')}</Label>
               <Select value={courseForm.grade} onValueChange={(v) => setCourseForm(prev => ({ ...prev, grade: v }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select grade" />
+                  <SelectValue placeholder={t('admin.academics.lms.selectGradePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: 12 }, (_, i) => (
-                    <SelectItem key={i + 1} value={`Grade ${i + 1}`}>Grade {i + 1}</SelectItem>
+                    <SelectItem key={i + 1} value={`Grade ${i + 1}`}>{t('admin.academics.lms.gradeOption', { number: i + 1 })}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="course-teacher">Teacher</Label>
+              <Label htmlFor="course-teacher">{t('admin.academics.lms.teacherLabel')}</Label>
               <Input
                 id="course-teacher"
-                placeholder="e.g. Mr. Ahmed Al-Rashid"
+                placeholder={t('admin.academics.lms.teacherPlaceholder')}
                 value={courseForm.teacher}
                 onChange={(e) => setCourseForm(prev => ({ ...prev, teacher: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="course-description">Description (optional)</Label>
+              <Label htmlFor="course-description">{t('admin.academics.lms.courseDescriptionLabel')}</Label>
               <Textarea
                 id="course-description"
-                placeholder="What does this course cover?"
+                placeholder={t('admin.academics.lms.courseDescriptionPlaceholder')}
                 value={courseForm.description}
                 onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
@@ -666,14 +686,14 @@ export default function LMS() {
                   if (course) deleteCourse(course);
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-1" /> Delete
+                <Trash2 className="h-4 w-4 me-1" /> {t('admin.academics.lms.deleteButton')}
               </Button>
             ) : <span />}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setCourseDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setCourseDialogOpen(false)}>{t('admin.academics.lms.cancelButton')}</Button>
               <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveCourse} disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {editingCourseId ? "Save Changes" : "Create Course"}
+                {saving && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+                {editingCourseId ? t('admin.academics.lms.saveChangesButton') : t('admin.academics.lms.createCourseButton')}
               </Button>
             </div>
           </DialogFooter>
@@ -685,46 +705,48 @@ export default function LMS() {
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>
-              Add Lesson{lessonCourseId ? ` — ${courses.find(c => c.id === lessonCourseId)?.name ?? ""}` : ""}
+              {lessonCourseId
+                ? t('admin.academics.lms.addLessonDialogTitleWithCourse', { course: courses.find(c => c.id === lessonCourseId)?.name ?? "" })
+                : t('admin.academics.lms.addLessonDialogTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="lesson-title">Lesson Title</Label>
+              <Label htmlFor="lesson-title">{t('admin.academics.lms.lessonTitleLabel')}</Label>
               <Input
                 id="lesson-title"
-                placeholder="e.g. Linear Equations"
+                placeholder={t('admin.academics.lms.lessonTitlePlaceholder')}
                 value={lessonForm.title}
                 onChange={(e) => setLessonForm(prev => ({ ...prev, title: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label>{t('admin.academics.lms.typeLabel')}</Label>
               <Select value={lessonForm.type} onValueChange={(v) => setLessonForm(prev => ({ ...prev, type: v }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {LESSON_TYPES.map(t => (
-                    <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                  {LESSON_TYPES.map(lt => (
+                    <SelectItem key={lt} value={lt}>{t(LESSON_TYPE_LABEL_KEYS[lt] || lt)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lesson-duration">Duration (optional)</Label>
+              <Label htmlFor="lesson-duration">{t('admin.academics.lms.lessonDurationLabel')}</Label>
               <Input
                 id="lesson-duration"
-                placeholder="e.g. 20 min"
+                placeholder={t('admin.academics.lms.lessonDurationPlaceholder')}
                 value={lessonForm.duration}
                 onChange={(e) => setLessonForm(prev => ({ ...prev, duration: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="lesson-description">Description (optional)</Label>
+              <Label htmlFor="lesson-description">{t('admin.academics.lms.lessonDescriptionLabel')}</Label>
               <Textarea
                 id="lesson-description"
-                placeholder="Short summary of this lesson"
+                placeholder={t('admin.academics.lms.lessonDescriptionPlaceholder')}
                 value={lessonForm.description}
                 onChange={(e) => setLessonForm(prev => ({ ...prev, description: e.target.value }))}
                 rows={2}
@@ -732,10 +754,10 @@ export default function LMS() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setLessonDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setLessonDialogOpen(false)}>{t('admin.academics.lms.cancelButton')}</Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={saveLesson} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Add Lesson
+              {saving && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+              {t('admin.academics.lms.addLessonButton')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -745,12 +767,12 @@ export default function LMS() {
       <Dialog open={moodleOpen} onOpenChange={setMoodleOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Import from Moodle</DialogTitle>
+            <DialogTitle>{t('admin.academics.lms.importFromMoodleDialogTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-500">Paste your Moodle backup (.mbz) URL below to queue an import.</p>
+            <p className="text-sm text-gray-500">{t('admin.academics.lms.moodleImportDescription')}</p>
             <div className="space-y-1.5">
-              <Label htmlFor="moodle-url">Moodle Backup URL</Label>
+              <Label htmlFor="moodle-url">{t('admin.academics.lms.moodleBackupUrlLabel')}</Label>
               <Input
                 id="moodle-url"
                 placeholder="https://moodle.example.com/backup.mbz"
@@ -760,17 +782,17 @@ export default function LMS() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setMoodleOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setMoodleOpen(false)}>{t('admin.academics.lms.cancelButton')}</Button>
             <Button onClick={() => {
               if (!moodleUrl.trim()) {
-                toast.error("Please enter a Moodle backup URL");
+                toast.error(t('admin.academics.lms.toastEnterMoodleUrl'));
                 return;
               }
-              toast.success("Import queued — courses will appear within 24 hours");
+              toast.success(t('admin.academics.lms.toastImportQueued'));
               setMoodleUrl('');
               setMoodleOpen(false);
             }}>
-              Import
+              {t('admin.academics.lms.importButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -33,10 +33,17 @@ import { useLiveClasses, LiveClassStatus } from "@/contexts/LiveClassContext";
 import { useClasses } from "@/hooks/useClasses";
 import { useStaff } from "@/contexts/StaffContext";
 import { useGrades } from "@/contexts/CurriculumContext";
+import { useTranslation } from "react-i18next";
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  live: "admin.academics.liveClasses.statusLive",
+  upcoming: "admin.academics.liveClasses.statusUpcoming",
+  completed: "admin.academics.liveClasses.statusCompleted",
+};
 
 export default function LiveClasses() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { liveClasses, loading, addLiveClass, updateLiveClass } = useLiveClasses();
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,8 +181,8 @@ export default function LiveClasses() {
               <Video className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Live Classes</h1>
-              <p className="text-sm text-slate-400">Manage and schedule your virtual learning sessions</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.academics.liveClasses.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.academics.liveClasses.pageSubtitle')}</p>
             </div>
           </div>
 
@@ -185,7 +192,7 @@ export default function LiveClasses() {
                 try {
                   const promises = liveClasses.map(c => updateLiveClass(c.id, { status: 'live' }));
                   await Promise.all(promises);
-                  toast.success("All classes are now live!");
+                  toast.success(t('admin.academics.liveClasses.toastAllLive'));
                 } catch (error) {
                   console.error("Error making classes live:", error);
                 }
@@ -193,31 +200,31 @@ export default function LiveClasses() {
               variant="outline"
               className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
             >
-              <Play className="h-4 w-4 mr-2" />
-              Make All Live
+              <Play className="h-4 w-4 me-2" />
+              {t('admin.academics.liveClasses.makeAllLive')}
             </Button>
             <Dialog open={isScheduleModalOpen} onOpenChange={setIsScheduleModalOpen}>
               <DialogTrigger asChild>
                 <Button className="gradient-primary text-white shadow-lg shadow-purple-200">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule Class
+                  <Plus className="h-4 w-4 me-2" />
+                  {t('admin.academics.liveClasses.scheduleClass')}
                 </Button>
               </DialogTrigger>
             <DialogContent className="sm:max-w-[480px] rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold">Schedule New Class</DialogTitle>
+                <DialogTitle className="text-xl font-bold">{t('admin.academics.liveClasses.scheduleNewClass')}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleScheduleClass} className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="grade">Grade</Label>
-                    <Select 
-                      required 
+                    <Label htmlFor="grade">{t('admin.academics.liveClasses.gradeLabel')}</Label>
+                    <Select
+                      required
                       value={selectedGrade}
                       onValueChange={(val) => setSelectedGrade(val)}
                     >
                       <SelectTrigger className="rounded-xl h-11">
-                        <SelectValue placeholder="Select Grade" />
+                        <SelectValue placeholder={t('admin.academics.liveClasses.selectGradePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableGrades.map((grade) => (
@@ -227,33 +234,33 @@ export default function LiveClasses() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="section">Section</Label>
-                    <Select 
-                      required 
+                    <Label htmlFor="section">{t('admin.academics.liveClasses.sectionLabel')}</Label>
+                    <Select
+                      required
                       value={selectedSection}
                       onValueChange={(val) => setSelectedSection(val)}
                       disabled={!selectedGrade}
                     >
                       <SelectTrigger className="rounded-xl h-11">
-                        <SelectValue placeholder="Select Section" />
+                        <SelectValue placeholder={t('admin.academics.liveClasses.selectSectionPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableSections.map((sec) => (
-                          <SelectItem key={sec} value={sec}>Sec {sec}</SelectItem>
+                          <SelectItem key={sec} value={sec}>{t('admin.academics.liveClasses.sectionPrefix')} {sec}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
+                    <Label htmlFor="subject">{t('admin.academics.liveClasses.subjectLabel')}</Label>
                     {availableSubjects.length > 0 ? (
-                      <Select 
-                        required 
+                      <Select
+                        required
                         value={formData.subject}
                         onValueChange={(val) => setFormData({ ...formData, subject: val })}
                       >
                         <SelectTrigger className="rounded-xl h-11">
-                          <SelectValue placeholder="Select Subject" />
+                          <SelectValue placeholder={t('admin.academics.liveClasses.selectSubjectPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableSubjects.map((sub) => (
@@ -262,10 +269,10 @@ export default function LiveClasses() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Input 
-                        id="subject" 
-                        placeholder="e.g. Algebra" 
-                        required 
+                      <Input
+                        id="subject"
+                        placeholder={t('admin.academics.liveClasses.subjectPlaceholderExample')}
+                        required
                         className="rounded-xl h-11"
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
@@ -273,14 +280,14 @@ export default function LiveClasses() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="teacher">Teacher</Label>
-                    <Select 
-                      required 
+                    <Label htmlFor="teacher">{t('admin.academics.liveClasses.teacherLabel')}</Label>
+                    <Select
+                      required
                       value={formData.teacher}
                       onValueChange={(val) => setFormData({ ...formData, teacher: val })}
                     >
                       <SelectTrigger className="rounded-xl h-11">
-                        <SelectValue placeholder="Select Teacher" />
+                        <SelectValue placeholder={t('admin.academics.liveClasses.selectTeacherPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {staff && staff.length > 0 ? (
@@ -298,85 +305,85 @@ export default function LiveClasses() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input 
-                      id="date" 
-                      type="date" 
-                      required 
+                    <Label htmlFor="date">{t('admin.academics.liveClasses.dateLabel')}</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      required
                       className="rounded-xl h-11"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="startTime">Start Time</Label>
-                    <Input 
-                      id="startTime" 
-                      type="time" 
-                      required 
+                    <Label htmlFor="startTime">{t('admin.academics.liveClasses.startTimeLabel')}</Label>
+                    <Input
+                      id="startTime"
+                      type="time"
+                      required
                       className="rounded-xl h-11"
                       value={formData.startTime}
                       onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endTime">End Time</Label>
-                    <Input 
-                      id="endTime" 
-                      type="time" 
-                      required 
+                    <Label htmlFor="endTime">{t('admin.academics.liveClasses.endTimeLabel')}</Label>
+                    <Input
+                      id="endTime"
+                      type="time"
+                      required
                       className="rounded-xl h-11"
                       value={formData.endTime}
                       onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     />
                   </div>
                   <div className="col-span-2 space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Input 
-                      id="description" 
-                      placeholder="Brief overview of the class" 
+                    <Label htmlFor="description">{t('admin.academics.liveClasses.descriptionLabel')}</Label>
+                    <Input
+                      id="description"
+                      placeholder={t('admin.academics.liveClasses.descriptionPlaceholder')}
                       className="rounded-xl h-11"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                   </div>
-                  
+
                   <div className="col-span-2 flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
                     <div className="space-y-0.5">
-                      <Label className="text-sm font-bold">Auto Attendance</Label>
-                      <p className="text-[11px] text-slate-500">Mark students present automatically</p>
+                      <Label className="text-sm font-bold">{t('admin.academics.liveClasses.autoAttendanceLabel')}</Label>
+                      <p className="text-[11px] text-slate-500">{t('admin.academics.liveClasses.autoAttendanceDescription')}</p>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={formData.autoAttendance}
                       onCheckedChange={(val) => setFormData({ ...formData, autoAttendance: val })}
                     />
                   </div>
-                  
+
                   <div className="col-span-2 flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 opacity-60">
                     <div className="space-y-0.5">
-                      <Label className="text-sm font-bold">Record Session</Label>
-                      <p className="text-[11px] text-slate-500">Coming soon</p>
+                      <Label className="text-sm font-bold">{t('admin.academics.liveClasses.recordSessionLabel')}</Label>
+                      <p className="text-[11px] text-slate-500">{t('admin.academics.liveClasses.comingSoon')}</p>
                     </div>
                     <Switch disabled />
                   </div>
                 </div>
-                
+
                 <DialogFooter className="pt-4 gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsScheduleModalOpen(false)} 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsScheduleModalOpen(false)}
                     className="rounded-xl h-11 flex-1"
                     disabled={isSubmitting}
                   >
-                    Cancel
+                    {t('admin.academics.liveClasses.cancel')}
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="gradient-primary text-white rounded-xl h-11 flex-1"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create & Generate Link"}
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('admin.academics.liveClasses.createAndGenerateLink')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -388,47 +395,47 @@ export default function LiveClasses() {
         {/* Filters and Search */}
         <div className="flex flex-col sm:flex-row gap-4 items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Search by class or teacher..." 
-              className="pl-10 rounded-xl border-slate-200 focus:ring-purple-500 h-10"
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder={t('admin.academics.liveClasses.searchPlaceholder')}
+              className="ps-10 rounded-xl border-slate-200 focus:ring-purple-500 h-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            <Button 
-              variant={filter === "all" ? "default" : "ghost"} 
-              size="sm" 
+            <Button
+              variant={filter === "all" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setFilter("all")}
               className={filter === "all" ? "bg-[#9810fa] text-white" : "text-slate-600"}
             >
-              All
+              {t('admin.academics.liveClasses.filterAll')}
             </Button>
-            <Button 
-              variant={filter === "today" ? "default" : "ghost"} 
-              size="sm" 
+            <Button
+              variant={filter === "today" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setFilter("today")}
               className={filter === "today" ? "bg-[#9810fa] text-white" : "text-slate-600"}
             >
-              Live
+              {t('admin.academics.liveClasses.filterLive')}
             </Button>
-            <Button 
-              variant={filter === "upcoming" ? "default" : "ghost"} 
-              size="sm" 
+            <Button
+              variant={filter === "upcoming" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setFilter("upcoming")}
               className={filter === "upcoming" ? "bg-[#9810fa] text-white" : "text-slate-600"}
             >
-              Upcoming
+              {t('admin.academics.liveClasses.filterUpcoming')}
             </Button>
-            <Button 
-              variant={filter === "past" ? "default" : "ghost"} 
-              size="sm" 
+            <Button
+              variant={filter === "past" ? "default" : "ghost"}
+              size="sm"
               onClick={() => setFilter("past")}
               className={filter === "past" ? "bg-[#9810fa] text-white" : "text-slate-600"}
             >
-              Past
+              {t('admin.academics.liveClasses.filterPast')}
             </Button>
           </div>
         </div>
@@ -437,7 +444,7 @@ export default function LiveClasses() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-8 w-8 text-[#9810fa] animate-spin mb-4" />
-            <p className="text-slate-500 font-medium">Loading classes...</p>
+            <p className="text-slate-500 font-medium">{t('admin.academics.liveClasses.loadingClasses')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -467,8 +474,8 @@ export default function LiveClasses() {
                             'bg-slate-50 text-slate-600 border-slate-100'}
                           font-bold text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border
                         `}>
-                          {cls.status === 'live' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 inline-block" />}
-                          {cls.status}
+                          {cls.status === 'live' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 me-1.5 inline-block" />}
+                          {t(STATUS_LABEL_KEYS[cls.status] || cls.status)}
                         </Badge>
                       </div>
 
@@ -490,42 +497,42 @@ export default function LiveClasses() {
 
                       <div className="flex items-center gap-2 pt-4 border-t border-slate-100">
                         {cls.status === 'live' ? (
-                          <Button 
+                          <Button
                             onClick={() => navigate(`/academics/live-classes/room/${cls.id}`)}
                             className="flex-1 bg-[#00C853] hover:bg-[#00b34a] text-white font-bold rounded-xl h-10"
                           >
-                            Join Now
+                            {t('admin.academics.liveClasses.joinNow')}
                           </Button>
                         ) : cls.status === 'upcoming' ? (
                           <div className="flex flex-1 gap-2">
-                            <Button 
+                            <Button
                               onClick={async () => {
                                 try {
                                   await updateLiveClass(cls.id, { status: 'live' });
-                                  toast.success("Class is now live!");
+                                  toast.success(t('admin.academics.liveClasses.toastClassLive'));
                                 } catch (error) {
                                   console.error("Error starting class:", error);
                                 }
                               }}
                               className="flex-1 bg-[#9810fa] hover:bg-[#5b4bc4] text-white font-bold rounded-xl h-10"
                             >
-                              Start Class
+                              {t('admin.academics.liveClasses.startClass')}
                             </Button>
-                            <Button 
+                            <Button
                               variant="outline"
                               disabled
                               className="flex-1 border-slate-200 text-slate-400 font-bold rounded-xl h-10"
                             >
-                              Join Later
+                              {t('admin.academics.liveClasses.joinLater')}
                             </Button>
                           </div>
                         ) : (
-                          <Button 
+                          <Button
                             variant="outline"
                             disabled={cls.status === 'completed'}
                             className="flex-1 border-slate-200 text-slate-600 font-bold rounded-xl h-10"
                           >
-                            {cls.status === 'completed' ? 'Ended' : 'Join Later'}
+                            {cls.status === 'completed' ? t('admin.academics.liveClasses.ended') : t('admin.academics.liveClasses.joinLater')}
                           </Button>
                         )}
                         <Button
@@ -541,7 +548,7 @@ export default function LiveClasses() {
                             variant="ghost"
                             size="icon"
                             asChild
-                            title="Open this call directly in Jitsi Meet"
+                            title={t('admin.academics.liveClasses.openInJitsiTitle')}
                             className="h-10 w-10 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600"
                           >
                             <a
@@ -568,19 +575,19 @@ export default function LiveClasses() {
             <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
               <Video className="h-8 w-8 text-slate-300" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">No classes found</h3>
-            <p className="text-slate-500 text-sm mb-6">Try adjusting your filters or search query</p>
-            <Button 
-              variant="outline" 
+            <h3 className="text-lg font-bold text-slate-900">{t('admin.academics.liveClasses.noClassesFound')}</h3>
+            <p className="text-slate-500 text-sm mb-6">{t('admin.academics.liveClasses.noClassesHint')}</p>
+            <Button
+              variant="outline"
               onClick={() => {
                 // The seeding is automatic in the context, but we can provide a manual trigger if needed
                 // For now, let's just show a message or refresh
-                toast.info("Checking for available data...");
+                toast.info(t('admin.academics.liveClasses.toastCheckingData'));
                 window.location.reload();
               }}
               className="rounded-xl border-slate-200"
             >
-              Refresh Data
+              {t('admin.academics.liveClasses.refreshData')}
             </Button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { smartDb } from "@/lib/localDb";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,21 @@ interface CertRequest {
 type Tab = "Pending" | "Approved" | "Issued" | "Rejected" | "All";
 const TABS: Tab[] = ["Pending", "Approved", "Issued", "Rejected", "All"];
 
+const TAB_LABEL_KEYS: Record<Tab, string> = {
+  Pending: "admin.academics.certificateRequests.tabPending",
+  Approved: "admin.academics.certificateRequests.tabApproved",
+  Issued: "admin.academics.certificateRequests.tabIssued",
+  Rejected: "admin.academics.certificateRequests.tabRejected",
+  All: "admin.academics.certificateRequests.tabAll",
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Pending: "admin.academics.certificateRequests.statusPending",
+  Approved: "admin.academics.certificateRequests.statusApproved",
+  Issued: "admin.academics.certificateRequests.statusIssued",
+  Rejected: "admin.academics.certificateRequests.statusRejected",
+};
+
 function statusBadge(status: string) {
   if (status === "Issued" || status === "Approved") return "bg-emerald-50 text-emerald-700";
   if (status === "Rejected") return "bg-rose-50 text-rose-700";
@@ -35,6 +51,7 @@ function statusBadge(status: string) {
 // actually be approved; this closes that loop using the same generic
 // smartDb CRUD the student page already writes through.
 export default function CertificateRequests() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<CertRequest[]>([]);
   const [tab, setTab] = useState<Tab>("Pending");
   const [q, setQ] = useState("");
@@ -54,9 +71,13 @@ export default function CertificateRequests() {
       if (status === "Approved") patch.approvedAt = Date.now();
       await smartDb.update("CertificateRequest", r.id, patch);
       setRequests(prev => prev.map(x => x.id === r.id ? { ...x, ...patch } as CertRequest : x));
-      toast.success(`${r.title} marked "${status}" for ${r.studentName || "this student"}`);
+      toast.success(t("admin.academics.certificateRequests.statusUpdateToast", {
+        title: r.title,
+        status: t(STATUS_LABEL_KEYS[status] || status),
+        student: r.studentName || t("admin.academics.certificateRequests.thisStudent"),
+      }));
     } catch {
-      toast.error("Could not update this request. Please try again.");
+      toast.error(t("admin.academics.certificateRequests.updateErrorToast"));
     } finally {
       setBusyId(null);
     }
@@ -85,8 +106,8 @@ export default function CertificateRequests() {
             <FileCheck className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Certificate Requests</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Review and attest student certificate requests (enrollment, conduct, fee clearance, transfer).</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.certificateRequests.pageTitle")}</h1>
+            <p className="text-sm text-slate-400 mt-0.5">{t("admin.academics.certificateRequests.pageSubtitle")}</p>
           </div>
         </div>
 
@@ -94,7 +115,7 @@ export default function CertificateRequests() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {(["Pending", "Approved", "Issued", "Rejected"] as const).map(k => (
             <div key={k} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-              <p className="text-xs font-semibold text-slate-500">{k}</p>
+              <p className="text-xs font-semibold text-slate-500">{t(TAB_LABEL_KEYS[k])}</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{counts[k]}</p>
             </div>
           ))}
@@ -103,18 +124,18 @@ export default function CertificateRequests() {
         {/* Tabs + search */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1 border-b border-slate-100">
-            {TABS.map(t => (
-              <button key={t} onClick={() => setTab(t)}
+            {TABS.map(tb => (
+              <button key={tb} onClick={() => setTab(tb)}
                 className={cn("px-3.5 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
-                  tab === t ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
-                {t}
+                  tab === tb ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
+                {t(TAB_LABEL_KEYS[tb])}
               </button>
             ))}
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search student, certificate, or code…"
-              className="pl-8 pr-3 h-9 w-64 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder={t("admin.academics.certificateRequests.searchPlaceholder")}
+              className="ps-8 pe-3 h-9 w-64 text-sm rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-200" />
           </div>
         </div>
 
@@ -124,17 +145,21 @@ export default function CertificateRequests() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Student</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Certificate</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Submitted</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Code</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">Action</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">{t("admin.academics.certificateRequests.colStudent")}</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("admin.academics.certificateRequests.colCertificate")}</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("admin.academics.certificateRequests.colSubmitted")}</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("admin.academics.certificateRequests.colCode")}</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("admin.academics.certificateRequests.colStatus")}</th>
+                  <th className="text-start text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-3">{t("admin.academics.certificateRequests.colAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">No {tab !== "All" ? tab.toLowerCase() : ""} certificate requests.</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">
+                    {tab !== "All"
+                      ? t("admin.academics.certificateRequests.emptyStateFiltered", { tab: t(TAB_LABEL_KEYS[tab]).toLowerCase() })
+                      : t("admin.academics.certificateRequests.emptyStateAll")}
+                  </td></tr>
                 )}
                 {filtered.map(r => (
                   <tr key={r.id} className="hover:bg-slate-50/40 transition-colors">
@@ -143,7 +168,7 @@ export default function CertificateRequests() {
                     <td className="px-4 py-3.5 text-slate-500">{r.date}</td>
                     <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{r.code}</td>
                     <td className="px-4 py-3.5">
-                      <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg", statusBadge(r.status))}>{r.status}</span>
+                      <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg", statusBadge(r.status))}>{t(STATUS_LABEL_KEYS[r.status] || r.status)}</span>
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5">
@@ -151,22 +176,22 @@ export default function CertificateRequests() {
                           <>
                             <button onClick={() => setStatus(r, "Approved")} disabled={busyId === r.id}
                               className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-60">
-                              <Check className="h-3.5 w-3.5" /> Approve
+                              <Check className="h-3.5 w-3.5" /> {t("admin.academics.certificateRequests.approveButton")}
                             </button>
                             <button onClick={() => setStatus(r, "Rejected")} disabled={busyId === r.id}
                               className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold disabled:opacity-60">
-                              <X className="h-3.5 w-3.5" /> Reject
+                              <X className="h-3.5 w-3.5" /> {t("admin.academics.certificateRequests.rejectButton")}
                             </button>
                           </>
                         )}
                         {r.status === "Approved" && (
                           <button onClick={() => setStatus(r, "Issued")} disabled={busyId === r.id}
                             className="flex items-center gap-1 h-8 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold disabled:opacity-60">
-                            <Send className="h-3.5 w-3.5" /> Mark Issued
+                            <Send className="h-3.5 w-3.5" /> {t("admin.academics.certificateRequests.markIssuedButton")}
                           </button>
                         )}
                         {(r.status === "Issued" || r.status === "Rejected") && (
-                          <span className="flex items-center gap-1 text-xs text-slate-400"><Clock className="h-3.5 w-3.5" /> No further action</span>
+                          <span className="flex items-center gap-1 text-xs text-slate-400"><Clock className="h-3.5 w-3.5" /> {t("admin.academics.certificateRequests.noFurtherAction")}</span>
                         )}
                       </div>
                     </td>
