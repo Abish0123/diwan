@@ -6,6 +6,7 @@ import { HELP_CENTER, getPopularArticles, searchArticles } from "@/lib/helpCente
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
   const Icon = (Icons as unknown as Record<string, Icons.LucideIcon>)[name] || Icons.HelpCircle;
@@ -20,6 +21,7 @@ export default function HelpHome() {
   const totalArticles = HELP_CENTER.reduce((n, c) => n + c.articles.length, 0);
 
   return (
+    <DashboardLayout>
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
       <div className="text-center space-y-4">
         <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -100,5 +102,6 @@ export default function HelpHome() {
         </section>
       )}
     </div>
+    </DashboardLayout>
   );
 }

@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { ChevronRight } from "lucide-react";
 import { getArticle, getCategory } from "@/lib/helpCenter";
 import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 export default function HelpArticle() {
   const { categoryId, slug } = useParams<{ categoryId: string; slug: string }>();
@@ -13,6 +14,7 @@ export default function HelpArticle() {
   if (!category || !article) return <Navigate to="/help" replace />;
 
   return (
+    <DashboardLayout>
     <div className="mx-auto max-w-3xl px-4 py-10">
       <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground mb-6">
         <Link to="/help" className="hover:text-foreground">Help Center</Link>
@@ -39,5 +41,6 @@ export default function HelpArticle() {
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content}</ReactMarkdown>
       </article>
     </div>
+    </DashboardLayout>
   );
 }

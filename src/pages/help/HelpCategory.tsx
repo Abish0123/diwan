@@ -4,6 +4,7 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { getCategory } from "@/lib/helpCenter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
   const Icon = (Icons as unknown as Record<string, Icons.LucideIcon>)[name] || Icons.HelpCircle;
@@ -17,6 +18,7 @@ export default function HelpCategory() {
   if (!category) return <Navigate to="/help" replace />;
 
   return (
+    <DashboardLayout>
     <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/help" className="hover:text-foreground">Help Center</Link>
@@ -55,5 +57,6 @@ export default function HelpCategory() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }
