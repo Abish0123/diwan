@@ -183,6 +183,10 @@ describe("SKIP_TAGS — script/style/code/pre are never translated", () => {
   it("does not translate text inside a <script> tag", async () => {
     const { startAutoTranslate, stopAutoTranslate } = await import("./autoTranslate");
     const script = document.createElement("script");
+    // Use type="text/plain" so jsdom does not try to execute the content as
+    // JavaScript (which would throw "Save is not defined").  The skip-tag
+    // logic in autoTranslate checks the tag name only, so type is irrelevant.
+    script.type = "text/plain";
     script.textContent = "Save";
     document.body.appendChild(script);
 
