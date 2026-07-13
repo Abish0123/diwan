@@ -6210,5 +6210,40 @@
         "contactHr": "Contact HR"
       }
     }
+  },
+  "login": {
+    "welcomeBack": "Welcome Back",
+    "selectPortal": "Select your portal to continue",
+    "staffPortal": "Staff Portal",
+    "staffSubtitle": "Teachers, Admin & Support",
+    "studentPortal": "Student Portal",
+    "studentSubtitle": "Access classes, results & assignments",
+    "parentPortal": "Parent Portal",
+    "parentSubtitle": "Monitor your child's progress",
+    "adminSignIn": "Admin Sign-in",
+    "adminQ": "Admin?",
+    "signIn": "Sign in",
+    "signInTo": "Sign in to {{portal}}",
+    "signingInTo": "SIGNING IN TO",
+    "emailLabel": "Email or Login ID",
+    "passwordLabel": "Password",
+    "forgotPassword": "Forgot Password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "orContinueWith": "or continue with",
+    "allPortals": "All Portals",
+    "resetPassword": "Reset Password",
+    "resetDesc": "Enter your email address and we will send you a link to reset your password.",
+    "sendResetLink": "Send Reset Link",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "tagline": "Manage Your Institution, Beautifully",
+    "taglineBody": "The all-in-one ERP for modern schools — streamline administration, empower teachers, and engage students in one connected experience.",
+    "featureAI": "AI-Powered",
+    "featureSync": "Real-time Sync",
+    "featureSecure": "Secure Access",
+    "featureMulti": "Multi-Portal",
+    "copyright": "© 2026 Student Diwan. All rights reserved.",
+    "privacyTerms": "Privacy · Terms"
   }
 }

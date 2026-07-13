@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, BookOpen, ShieldCheck, Sparkles, TrendingUp, Bell, Lock, Zap, Mail, Sun, Moon } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -88,6 +90,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { loginWithEmail, login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState<Step>("portal");
   const [portal, setPortal] = useState<Portal>("staff");
@@ -216,18 +219,18 @@ export default function Login() {
                     <Sparkles className="w-3 h-3" /> Student Diwan
                   </span>
                   <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
-                    Manage Your Institution, Beautifully
+                    {t('login.tagline')}
                   </h1>
                   <p className="text-white/80 text-lg leading-relaxed mt-4">
-                    The all-in-one ERP for modern schools — streamline administration, empower teachers, and engage students in one connected experience.
+                    {t('login.taglineBody')}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {[
-                    { icon: Zap, label: "AI-Powered" },
-                    { icon: TrendingUp, label: "Real-time Sync" },
-                    { icon: Lock, label: "Secure Access" },
-                    { icon: Users, label: "Multi-Portal" },
+                    { icon: Zap, label: t('login.featureAI') },
+                    { icon: TrendingUp, label: t('login.featureSync') },
+                    { icon: Lock, label: t('login.featureSecure') },
+                    { icon: Users, label: t('login.featureMulti') },
                   ].map(({ icon: Icon, label }) => (
                     <span key={label} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 text-white text-xs rounded-full font-semibold backdrop-blur-sm ring-1 ring-white/10">
                       <Icon className="w-3 h-3" /> {label}
@@ -259,8 +262,8 @@ export default function Login() {
           </div>
 
           <div className="relative z-10 flex items-center justify-between">
-            <span className="text-white/50 text-xs">© 2026 Student Diwan. All rights reserved.</span>
-            <span className="text-white/40 text-xs font-medium">Privacy · Terms</span>
+            <span className="text-white/50 text-xs">{t('login.copyright')}</span>
+            <span className="text-white/40 text-xs font-medium">{t('login.privacyTerms')}</span>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -271,18 +274,21 @@ export default function Login() {
         <div className="hidden lg:block absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-fuchsia-200/40 to-indigo-200/40 blur-3xl pointer-events-none" />
         <div className="hidden lg:block absolute bottom-0 left-0 w-72 h-72 rounded-full bg-gradient-to-tr from-pink-100/50 to-violet-100/50 blur-3xl pointer-events-none" />
 
-        {/* Theme toggle — the rest of the app only exposes this inside the
-            dashboard sidebar, leaving no way to switch themes before signing
-            in at all. */}
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          aria-pressed={theme === "dark"}
-          className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 h-10 w-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
-        >
-          {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
-        </button>
+        {/* Top-right controls: language switcher + theme toggle */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm px-1">
+            <LanguageSwitcher />
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-pressed={theme === "dark"}
+            className="h-10 w-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" aria-hidden="true" /> : <Moon className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        </div>
 
         <div className="w-full max-w-[440px] py-6 relative z-10">
           <AnimatePresence mode="wait">
@@ -297,8 +303,8 @@ export default function Login() {
                   </div>
                 </div>
 
-                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
-                <p className="text-slate-600 mb-8">Select your portal to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-3xl font-extrabold text-slate-900 mb-1 tracking-tight outline-none">{t('login.welcomeBack')}</h2>
+                <p className="text-slate-600 mb-8">{t('login.selectPortal')}</p>
 
                 <div className="flex flex-col gap-3">
                   {PORTALS.map((p) => {
@@ -325,12 +331,12 @@ export default function Login() {
                 </div>
 
                 <p className="text-center text-sm text-slate-600 mt-8">
-                  Admin?{" "}
+                  {t('login.adminQ')}{" "}
                   <button
                     onClick={() => { setPortal("staff"); setEmail("educationleadershipexpo@gmail.com"); setPassword("admin123"); setStep("login"); }}
                     className="text-purple-600 font-semibold hover:underline"
                   >
-                    Admin Sign-in
+                    {t('login.adminSignIn')}
                   </button>
                 </p>
               </motion.div>
@@ -340,7 +346,7 @@ export default function Login() {
             {step === "login" && (
               <motion.div key="login" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}>
                 <button type="button" onClick={() => setStep("portal")} className="flex items-center gap-1.5 text-slate-600 hover:text-slate-800 text-sm font-medium mb-8 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded">
-                  <ArrowLeft className="w-4 h-4" aria-hidden="true" /> All Portals
+                  <ArrowLeft className="w-4 h-4" aria-hidden="true" /> {t('login.allPortals')}
                 </button>
 
                 {/* Portal badge */}
@@ -349,17 +355,17 @@ export default function Login() {
                     <current.icon className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-0.5">Signing in to</p>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-0.5">{t('login.signingInTo')}</p>
                     <p className="font-bold text-slate-900 text-sm leading-none">{current.label}</p>
                   </div>
                 </div>
 
-                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold text-slate-900 mb-1 tracking-tight outline-none">Welcome Back</h2>
-                <p className="text-slate-600 text-sm mb-7">Enter your credentials to continue</p>
+                <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold text-slate-900 mb-1 tracking-tight outline-none">{t('login.welcomeBack')}</h2>
+                <p className="text-slate-600 text-sm mb-7">{t('login.selectPortal')}</p>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email or Login ID</Label>
+                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">{t('login.emailLabel')}</Label>
                     <Input
                       id="email"
                       type="text"
@@ -375,13 +381,13 @@ export default function Login() {
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                      <Label htmlFor="password" className="text-sm font-medium text-slate-700">{t('login.passwordLabel')}</Label>
                       <button
                         type="button"
                         onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
                         className={`text-xs font-semibold ${col.text} hover:underline`}
                       >
-                        Forgot Password?
+                        {t('login.forgotPassword')}
                       </button>
                     </div>
                     <div className="relative">
@@ -397,7 +403,7 @@ export default function Login() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                         aria-pressed={showPassword}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
                       >
@@ -407,14 +413,14 @@ export default function Login() {
                   </div>
 
                   <Button type="submit" disabled={isLoading} className={`w-full h-12 ${col.btn} text-white font-semibold rounded-xl transition-all duration-200 shadow-lg mt-2 border-0`}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : `Sign in to ${current.label}`}
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('login.signInTo', { portal: current.label })}
                   </Button>
                 </form>
 
                 {/* Google sign-in */}
                 <div className="relative my-5">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></div>
-                  <div className="relative flex justify-center text-xs"><span className="bg-slate-50 px-3 text-slate-400">or continue with</span></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-slate-50 px-3 text-slate-400">{t('login.orContinueWith')}</span></div>
                 </div>
                 <Button
                   type="button"
@@ -443,15 +449,15 @@ export default function Login() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-violet-600" />
-              Reset your password
+              {t('login.resetPassword')}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <p className="text-sm text-slate-500">
-              Enter the email on your account and we'll send you a link to set a new password.
+              {t('login.resetDesc')}
             </p>
             <div className="space-y-1.5">
-              <Label htmlFor="forgot-email" className="text-sm font-medium text-slate-700">Email</Label>
+              <Label htmlFor="forgot-email" className="text-sm font-medium text-slate-700">{t('login.emailLabel')}</Label>
               <Input
                 id="forgot-email"
                 type="email"
@@ -464,10 +470,10 @@ export default function Login() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
-                Cancel
+                {t('login.cancel')}
               </Button>
               <Button type="submit" disabled={forgotSending} className="bg-violet-600 hover:bg-violet-700 text-white">
-                {forgotSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Reset Link"}
+                {forgotSending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('login.sendResetLink')}
               </Button>
             </DialogFooter>
           </form>

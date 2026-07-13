@@ -6210,5 +6210,40 @@
         "contactHr": "تواصل مع الموارد البشرية"
       }
     }
+  },
+  "login": {
+    "welcomeBack": "مرحبًا بعودتك",
+    "selectPortal": "اختر البوابة للمتابعة",
+    "staffPortal": "بوابة الموظفين",
+    "staffSubtitle": "المعلمون والإداريون والدعم",
+    "studentPortal": "بوابة الطلاب",
+    "studentSubtitle": "الوصول إلى الفصول والنتائج والواجبات",
+    "parentPortal": "بوابة أولياء الأمور",
+    "parentSubtitle": "متابعة تقدم طفلك",
+    "adminSignIn": "دخول المدير",
+    "adminQ": "مدير؟",
+    "signIn": "تسجيل الدخول",
+    "signInTo": "تسجيل الدخول إلى {{portal}}",
+    "signingInTo": "تسجيل الدخول إلى",
+    "emailLabel": "البريد الإلكتروني أو معرّف الدخول",
+    "passwordLabel": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "orContinueWith": "أو تابع باستخدام",
+    "allPortals": "جميع البوابات",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "resetDesc": "أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "sending": "جارٍ الإرسال…",
+    "cancel": "إلغاء",
+    "tagline": "أدر مؤسستك بأناقة",
+    "taglineBody": "نظام ERP متكامل للمدارس الحديثة — يبسّط الإدارة ويمكّن المعلمين ويشرك الطلاب في تجربة متصلة واحدة.",
+    "featureAI": "مدعوم بالذكاء الاصطناعي",
+    "featureSync": "مزامنة فورية",
+    "featureSecure": "وصول آمن",
+    "featureMulti": "متعدد البوابات",
+    "copyright": "© 2026 Student Diwan. جميع الحقوق محفوظة.",
+    "privacyTerms": "الخصوصية · الشروط"
   }
 }

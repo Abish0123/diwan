@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './i18n'
+import { LanguageProvider } from './contexts/LanguageContext.tsx'
 
 // Every /api/data/* request now requires a signed session token (server.ts's
 // requireAuth middleware) — but the app has ~34 call sites that fetch it
@@ -116,6 +117,8 @@ if ("serviceWorker" in navigator) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </React.StrictMode>,
 )
