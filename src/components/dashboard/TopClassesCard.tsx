@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Trophy, ArrowRight } from "lucide-react";
 import { TopClass } from "@/hooks/useDashboardOverview";
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function TopClassesCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const maxScore = Math.max(...data.map((d) => d.avgScore), 1);
 
@@ -21,7 +23,7 @@ export function TopClassesCard({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Top Performing Classes</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.topClasses")}</h3>
           <Trophy className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button

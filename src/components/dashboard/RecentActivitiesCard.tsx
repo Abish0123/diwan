@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Activity, ArrowRight, Shield, AlertTriangle, Info } from "lucide-react";
 import { ActivityRow } from "@/hooks/useDashboardOverview";
@@ -16,6 +17,7 @@ const TYPE_STYLE = {
 } as const;
 
 export function RecentActivitiesCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -27,7 +29,7 @@ export function RecentActivitiesCard({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Recent Activities</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.recentActivities")}</h3>
           <Activity className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button

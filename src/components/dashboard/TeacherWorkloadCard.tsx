@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from "recharts";
 import { Briefcase, ArrowRight } from "lucide-react";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function TeacherWorkloadCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const total = data.full + data.medium + data.low;
   const chartData = [{ name: "load", value: data.avgLoadPct, fill: "#9810fa" }];
@@ -24,7 +26,7 @@ export function TeacherWorkloadCard({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Teacher Workload Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.teacherWorkload")}</h3>
           <Briefcase className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button
@@ -68,7 +70,7 @@ export function TeacherWorkloadCard({ data, loading }: Props) {
               <span className="text-2xl font-extrabold text-foreground leading-none tabular-nums">
                 <CountUpNumber value={data.avgLoadPct} suffix="%" />
               </span>
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">Average Load</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">{t("dashboard.cards.averageLoad")}</span>
             </div>
           </motion.div>
           <div className="flex items-center justify-center gap-4 mt-2 pt-3 border-t border-border">

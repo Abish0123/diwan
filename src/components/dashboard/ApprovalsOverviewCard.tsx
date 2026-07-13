@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
 import { ApprovalChip } from "@/hooks/useDashboardOverview";
@@ -20,6 +21,7 @@ const TONE_STYLE = {
 // with real data. Every chip here is a real, currently-actionable queue
 // (Leave, Purchase Orders, Admissions) the admin already has a page for.
 export function ApprovalsOverviewCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -31,7 +33,7 @@ export function ApprovalsOverviewCard({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Approvals Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.approvalsOverview")}</h3>
           <ClipboardCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button

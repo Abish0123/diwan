@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGradeCoordinator } from "@/hooks/useGradeCoordinator";
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
 import { getRole } from "@/lib/roles";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
   const { role } = useAuth();
@@ -51,19 +52,20 @@ const AdminIndex = () => {
 
   const { user, role } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   // Reflect the real backend store rather than a hardcoded "Local Mode".
-  const [dbLabel, setDbLabel] = useState<{ live: boolean; text: string }>({ live: false, text: "Connecting…" });
+  const [dbLive, setDbLive] = useState<{ live: boolean; key: string }>({ live: false, key: "connecting" });
   useEffect(() => {
     let active = true;
     fetch("/api/health")
       .then((r) => r.json())
       .then((d) => {
         if (!active) return;
-        if (d.dbMode === "mysql") setDbLabel({ live: true, text: "Cloud MySQL" });
-        else setDbLabel({ live: false, text: "Local Mode" });
+        if (d.dbMode === "mysql") setDbLive({ live: true, key: "cloudMysql" });
+        else setDbLive({ live: false, key: "localMode" });
       })
-      .catch(() => { if (active) setDbLabel({ live: false, text: "Local Mode" }); });
+      .catch(() => { if (active) setDbLive({ live: false, key: "localMode" }); });
     return () => { active = false; };
   }, []);
 
@@ -85,28 +87,28 @@ const AdminIndex = () => {
         >
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-              👋 Good Morning, Admin
+              👋 {t("dashboard.goodMorning", { name: user?.name?.split(" ")[0] || "Admin" })}
             </h2>
             <p className="text-xs text-muted-foreground font-bold tracking-[0.15em] uppercase opacity-70 flex items-center gap-2">
-              Bluewood School <span className="h-1 w-1 rounded-full bg-muted-foreground/30" /> {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              {t("dashboard.schoolName")} <span className="h-1 w-1 rounded-full bg-muted-foreground/30" /> {new Date().toLocaleDateString(i18n.language === "ar" ? "ar-EG" : "en-GB", { day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
-              dbLabel.live
+              dbLive.live
                 ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                 : "bg-orange-50 border-orange-100 text-orange-700"
             }`}>
-              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${dbLabel.live ? "bg-emerald-500" : "bg-orange-500"}`} />
-              {dbLabel.text}
+              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${dbLive.live ? "bg-emerald-500" : "bg-orange-500"}`} />
+              {t(`dashboard.${dbLive.key}`)}
             </div>
             <Button
               className="h-10 rounded-xl gradient-primary border-none font-bold text-[11px] shadow-lg shadow-primary/20"
               onClick={() => navigate("/ai-center?module=ask")}
             >
-              <Sparkles className="mr-2 h-4 w-4" aria-hidden="true" />
-              AI Command
+              <Sparkles className="me-2 h-4 w-4" aria-hidden="true" />
+              {t("dashboard.aiCommand")}
             </Button>
           </div>
         </motion.div>
@@ -126,56 +128,56 @@ const AdminIndex = () => {
           ) : (
           <>
           <StaticKpiCard
-            title="Total Students"
+            title={t("dashboard.totalStudents")}
             value={totalStudents || 0}
             icon={Users}
             trend="12.5%"
             trendType="up"
-            description="this month"
+            description={t("dashboard.thisMonth")}
             iconClassName="bg-indigo-50 text-purple-600"
             trendSeries={cumulativeCountTrend(students as any, totalStudents || 0)}
             accentColor="#4f46e5"
           />
           <StaticKpiCard
-            title="Attendance Today"
+            title={t("dashboard.attendanceToday")}
             value={`${overview.attendanceBreakdown.presentPct}%`}
             icon={UserCheck}
-            trend={overview.attendanceBreakdown.presentPct >= 90 ? "On track" : "Review"}
+            trend={overview.attendanceBreakdown.presentPct >= 90 ? t("dashboard.onTrack") : t("dashboard.review")}
             trendType={overview.attendanceBreakdown.presentPct >= 90 ? "up" : "neutral"}
-            description={overview.attendanceBreakdown.date ? `as of ${overview.attendanceBreakdown.date}` : "no data yet"}
+            description={overview.attendanceBreakdown.date ? t("dashboard.asOf", { date: overview.attendanceBreakdown.date }) : t("dashboard.noDataYet")}
             iconClassName="bg-emerald-50 text-emerald-600"
             trendSeries={overview.attendanceTrend}
             accentColor="#10b981"
           />
           <StaticKpiCard
-            title="Total Staff"
+            title={t("dashboard.totalStaff")}
             value={staff.length || 0}
             icon={GraduationCap}
             trend="5%"
             trendType="up"
-            description="vs last month"
+            description={t("dashboard.vsLastMonth")}
             iconClassName="bg-purple-50 text-purple-600"
             trendSeries={cumulativeCountTrend(staff as any, staff.length || 0)}
             accentColor="#9810fa"
           />
           <StaticKpiCard
-            title={`Fee Collection (${currencySymbol})`}
+            title={t("dashboard.feeCollection", { currency: currencySymbol })}
             value={overview.feeOverview.collected}
             icon={DollarSign}
             trend={`${overview.feeOverview.collectedPct}%`}
             trendType="up"
-            description="this month"
+            description={t("dashboard.thisMonth")}
             iconClassName="bg-blue-50 text-blue-600"
             trendSeries={overview.feeTrend}
             accentColor="#3b82f6"
           />
           <StaticKpiCard
-            title="Pending Tasks"
+            title={t("dashboard.pendingTasks")}
             value={overview.pendingTasksCount}
             icon={ClipboardList}
-            trend={overview.pendingTasksCount > 0 ? "Action needed" : "All clear"}
+            trend={overview.pendingTasksCount > 0 ? t("dashboard.actionNeeded") : t("dashboard.allClear")}
             trendType={overview.pendingTasksCount > 0 ? "down" : "up"}
-            description="awaiting review"
+            description={t("dashboard.awaitingReview")}
             iconClassName="bg-rose-50 text-rose-600"
             accentColor="#f43f5e"
           />

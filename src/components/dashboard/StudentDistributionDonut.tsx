@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import { Users, ArrowRight } from "lucide-react";
@@ -23,6 +24,7 @@ function renderActiveShape(props: unknown) {
 }
 
 export function StudentDistributionDonut({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const total = data.reduce((s, d) => s + d.students, 0);
   const slices = data.map((d, i) => ({ ...d, color: COLORS[i % COLORS.length] }));
@@ -38,7 +40,7 @@ export function StudentDistributionDonut({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Student Distribution by Grade</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.studentDistribution")}</h3>
           <Users className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button
@@ -102,7 +104,7 @@ export function StudentDistributionDonut({ data, loading }: Props) {
               <span className="text-xl font-extrabold text-foreground leading-none tabular-nums">
                 <CountUpNumber value={total} animateOnMount duration={DRAW_DURATION_MS} />
               </span>
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">Total</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">{t("dashboard.cards.total")}</span>
             </div>
           </div>
           <div className="space-y-1.5 mt-3 pt-3 border-t border-border max-h-[100px] overflow-y-auto">

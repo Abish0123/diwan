@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { CalendarDays, ArrowRight, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +15,7 @@ interface UpcomingEvent {
 }
 
 export function UpcomingEventsCard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export function UpcomingEventsCard() {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Upcoming Events</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.upcomingEvents")}</h3>
           <CalendarDays className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button

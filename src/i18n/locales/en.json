@@ -1,9 +1,18 @@
 {
   "login": {
     "portals": {
-      "staff": { "label": "Staff Portal", "subtitle": "Teachers, Admin & Support" },
-      "student": { "label": "Student Portal", "subtitle": "Access classes, results & assignments" },
-      "parent": { "label": "Parent Portal", "subtitle": "Monitor your child's progress" }
+      "staff": {
+        "label": "Staff Portal",
+        "subtitle": "Teachers, Admin & Support"
+      },
+      "student": {
+        "label": "Student Portal",
+        "subtitle": "Access classes, results & assignments"
+      },
+      "parent": {
+        "label": "Parent Portal",
+        "subtitle": "Monitor your child's progress"
+      }
     },
     "hero": {
       "staff": {
@@ -212,7 +221,44 @@
     "addInventory": "Add Inventory Item",
     "createEvent": "Create Event",
     "aiInsights": "AI Insights",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "goodMorning": "Good Morning, {{name}}",
+    "schoolName": "Bluewood School",
+    "aiCommand": "AI Command",
+    "cloudMysql": "Cloud MySQL",
+    "localMode": "Local Mode",
+    "connecting": "Connecting…",
+    "attendanceToday": "Attendance Today",
+    "feeCollection": "Fee Collection ({{currency}})",
+    "pendingTasks": "Pending Tasks",
+    "thisMonth": "this month",
+    "vsLastMonth": "vs last month",
+    "onTrack": "On track",
+    "review": "Review",
+    "asOf": "as of {{date}}",
+    "noDataYet": "no data yet",
+    "actionNeeded": "Action needed",
+    "allClear": "All clear",
+    "awaitingReview": "awaiting review",
+    "cards": {
+      "attendanceOverview": "Attendance Overview",
+      "present": "Present",
+      "feeCollectionOverview": "Fee Collection Overview",
+      "collected": "Collected",
+      "studentDistribution": "Student Distribution by Grade",
+      "total": "Total",
+      "topClasses": "Top Performing Classes",
+      "teacherWorkload": "Teacher Workload Overview",
+      "averageLoad": "Average Load",
+      "recentActivities": "Recent Activities",
+      "upcomingEvents": "Upcoming Events",
+      "approvalsOverview": "Approvals Overview",
+      "performanceOverview": "Performance Overview",
+      "overallCompletion": "Overall Completion",
+      "averageScore": "Average Score",
+      "quickAccess": "Quick Access",
+      "admissionsFunnel": "Admissions Pipeline"
+    }
   },
   "students": {
     "title": "Students",

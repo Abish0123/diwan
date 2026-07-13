@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Sector, Customized } from "recharts";
 import { UserCheck, ArrowRight } from "lucide-react";
@@ -23,6 +24,7 @@ function renderActiveShape(props: unknown) {
 }
 
 export function AttendanceOverviewCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const slices = [
@@ -54,7 +56,7 @@ export function AttendanceOverviewCard({ data, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Attendance Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.attendanceOverview")}</h3>
           <UserCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button
@@ -152,7 +154,7 @@ export function AttendanceOverviewCard({ data, loading }: Props) {
               >
                 <CountUpNumber value={data.presentPct} animateOnMount duration={DRAW_DURATION_MS} suffix="%" />
               </span>
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">Present</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-1">{t("dashboard.cards.present")}</span>
               {isFull && (
                 <span
                   className="absolute h-16 w-16 rounded-full border-2 border-emerald-400"

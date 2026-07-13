@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Users, UserPlus, UserCheck, Calendar, FileText, ClipboardList, Award, DollarSign, Briefcase, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +17,7 @@ const ACTIONS = [
 ];
 
 export function QuickAccessGrid() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -25,7 +27,7 @@ export function QuickAccessGrid() {
       transition={{ delay: 0.65, duration: 0.4 }}
       className="premium-card p-5"
     >
-      <h3 className="text-sm font-bold text-foreground font-heading mb-4">Quick Access</h3>
+      <h3 className="text-sm font-bold text-foreground font-heading mb-4">{t("dashboard.cards.quickAccess")}</h3>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
         {ACTIONS.map((action, i) => (
           <motion.button

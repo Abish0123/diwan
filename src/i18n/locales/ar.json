@@ -1,9 +1,18 @@
 {
   "login": {
     "portals": {
-      "staff": { "label": "بوابة الموظفين", "subtitle": "المعلمون والإدارة والدعم" },
-      "student": { "label": "بوابة الطالب", "subtitle": "الوصول إلى الفصول والنتائج والواجبات" },
-      "parent": { "label": "بوابة ولي الأمر", "subtitle": "تابع تقدم طفلك" }
+      "staff": {
+        "label": "بوابة الموظفين",
+        "subtitle": "المعلمون والإدارة والدعم"
+      },
+      "student": {
+        "label": "بوابة الطالب",
+        "subtitle": "الوصول إلى الفصول والنتائج والواجبات"
+      },
+      "parent": {
+        "label": "بوابة ولي الأمر",
+        "subtitle": "تابع تقدم طفلك"
+      }
     },
     "hero": {
       "staff": {
@@ -212,7 +221,44 @@
     "addInventory": "إضافة عنصر مخزون",
     "createEvent": "إنشاء فعالية",
     "aiInsights": "رؤى الذكاء الاصطناعي",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "goodMorning": "صباح الخير، {{name}}",
+    "schoolName": "مدرسة بلوود",
+    "aiCommand": "أوامر الذكاء الاصطناعي",
+    "cloudMysql": "قاعدة بيانات سحابية",
+    "localMode": "الوضع المحلي",
+    "connecting": "جارٍ الاتصال…",
+    "attendanceToday": "حضور اليوم",
+    "feeCollection": "تحصيل الرسوم ({{currency}})",
+    "pendingTasks": "المهام المعلقة",
+    "thisMonth": "هذا الشهر",
+    "vsLastMonth": "مقارنة بالشهر الماضي",
+    "onTrack": "على المسار الصحيح",
+    "review": "بحاجة لمراجعة",
+    "asOf": "حتى {{date}}",
+    "noDataYet": "لا توجد بيانات بعد",
+    "actionNeeded": "إجراء مطلوب",
+    "allClear": "كل شيء على ما يرام",
+    "awaitingReview": "بانتظار المراجعة",
+    "cards": {
+      "attendanceOverview": "نظرة عامة على الحضور",
+      "present": "حاضر",
+      "feeCollectionOverview": "نظرة عامة على تحصيل الرسوم",
+      "collected": "المحصَّل",
+      "studentDistribution": "توزيع الطلاب حسب الصف",
+      "total": "الإجمالي",
+      "topClasses": "الفصول الأعلى أداءً",
+      "teacherWorkload": "نظرة عامة على عبء المعلمين",
+      "averageLoad": "متوسط العبء",
+      "recentActivities": "الأنشطة الأخيرة",
+      "upcomingEvents": "الفعاليات القادمة",
+      "approvalsOverview": "نظرة عامة على الموافقات",
+      "performanceOverview": "نظرة عامة على الأداء",
+      "overallCompletion": "نسبة الإنجاز الكلية",
+      "averageScore": "متوسط الدرجات",
+      "quickAccess": "وصول سريع",
+      "admissionsFunnel": "مسار القبول"
+    }
   },
   "students": {
     "title": "الطلاب",

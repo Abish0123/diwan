@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { Award, ArrowRight, TrendingUp, Users2, Building2, Sparkles } from "lucide-react";
@@ -14,6 +15,7 @@ interface CycleRow { id: string; type?: string; title?: string; startedAt?: stri
 // viewer would want without navigating into HR at all. Same real data
 // source (computeCycleAnalytics), just condensed to 4 headline figures.
 export function PerformanceOverviewCard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [cards, setCards] = useState<AnalyticsScorecard[]>([]);
   const [allStaff, setAllStaff] = useState<Staff[]>([]);
@@ -50,7 +52,7 @@ export function PerformanceOverviewCard() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.4 }} className="premium-card p-5">
         <div className="flex items-center gap-2 mb-3">
           <Award className="h-4 w-4 text-primary" aria-hidden="true" />
-          <h3 className="text-sm font-bold text-foreground font-heading">Performance Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.performanceOverview")}</h3>
         </div>
         <div className="h-[110px] flex items-center justify-center text-xs text-muted-foreground text-center px-4">
           No active appraisal cycle yet.
@@ -74,7 +76,7 @@ export function PerformanceOverviewCard() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Award className="h-4 w-4 text-primary" aria-hidden="true" />
-          <h3 className="text-sm font-bold text-foreground font-heading">Performance Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.performanceOverview")}</h3>
         </div>
         <button type="button" onClick={() => navigate("/hr/appraisal")} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1">
           Analytics <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -83,11 +85,11 @@ export function PerformanceOverviewCard() {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-purple-50 p-3">
-          <p className="text-[10px] font-bold text-purple-500 uppercase tracking-wide">Overall Completion</p>
+          <p className="text-[10px] font-bold text-purple-500 uppercase tracking-wide">{t("dashboard.cards.overallCompletion")}</p>
           <p className="text-xl font-black text-purple-700 mt-0.5">{a.completionPct}%</p>
         </div>
         <div className="rounded-xl bg-emerald-50 p-3">
-          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">Average Score</p>
+          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">{t("dashboard.cards.averageScore")}</p>
           <p className="text-xl font-black text-emerald-700 mt-0.5">{a.gradedCount ? `${a.avgScore}%` : "—"}</p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3">

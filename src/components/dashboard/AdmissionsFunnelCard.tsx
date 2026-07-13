@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Users, FileCheck, Gift, GraduationCap, ArrowRight } from "lucide-react";
 import { FunnelStage } from "@/hooks/useDashboardOverview";
@@ -12,6 +13,7 @@ const ICONS = [UserPlus, Users, FileCheck, Gift, GraduationCap];
 const COLORS = ["text-blue-600 bg-blue-50", "text-violet-600 bg-violet-50", "text-amber-600 bg-amber-50", "text-fuchsia-600 bg-fuchsia-50", "text-emerald-600 bg-emerald-50"];
 
 export function AdmissionsFunnelCard({ data, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -22,7 +24,7 @@ export function AdmissionsFunnelCard({ data, loading }: Props) {
       className="premium-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-foreground font-heading">Application Pipeline (Admissions)</h3>
+        <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.admissionsFunnel")}</h3>
         <button
           type="button"
           onClick={() => navigate("/admissions")}

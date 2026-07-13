@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { DollarSign, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FeeOverview } from "@/hooks/useDashboardOverview";
@@ -14,6 +15,7 @@ interface Props {
 const BAR_DURATION_MS = 900;
 
 export function FeeCollectionOverviewCard({ data, currency, loading }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const ready = !loading && data.totalFees > 0;
@@ -32,7 +34,7 @@ export function FeeCollectionOverviewCard({ data, currency, loading }: Props) {
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-foreground font-heading">Fee Collection Overview</h3>
+          <h3 className="text-sm font-bold text-foreground font-heading">{t("dashboard.cards.feeCollectionOverview")}</h3>
           <DollarSign className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         </div>
         <button
@@ -63,7 +65,7 @@ export function FeeCollectionOverviewCard({ data, currency, loading }: Props) {
           <p className="text-3xl font-extrabold text-foreground tracking-tight tabular-nums">
             {currency} <CountUpNumber value={data.collected} animateOnMount duration={BAR_DURATION_MS} />
           </p>
-          <p className="text-xs text-muted-foreground font-medium mt-0.5">Collected</p>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">{t("dashboard.cards.collected")}</p>
 
           <div className="relative h-2 w-full rounded-full bg-slate-100 mt-4 overflow-visible">
             <div
