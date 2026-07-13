@@ -20,6 +20,13 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   define: {
     "process.env.GEMINI_API_KEY": JSON.stringify(process.env.GEMINI_API_KEY || ""),
+    // Vercel's serverless invocation model (api/index.ts calling the Express
+    // app directly, per-request, with no persistent httpServer) means the
+    // Socket.IO server in server.ts never actually attaches there — only the
+    // traditional `httpServer.listen()` path does. Surfacing that at build
+    // time lets the client skip trying to open a socket connection that can
+    // never succeed, instead of retrying in a tight, connection-starving loop.
+    "import.meta.env.VITE_IS_VERCEL": JSON.stringify(!!process.env.VERCEL),
   },
   resolve: {
     alias: {
