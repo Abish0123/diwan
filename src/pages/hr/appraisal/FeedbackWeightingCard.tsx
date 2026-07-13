@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -12,6 +13,7 @@ import {
 const WEIGHTING_ID = "current";
 
 export function FeedbackWeightingCard() {
+  const { t } = useTranslation();
   const [weighting, setWeighting] = useState<FeedbackWeighting>(DEFAULT_FEEDBACK_WEIGHTING);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +29,7 @@ export function FeedbackWeightingCard() {
 
   async function handleSave() {
     if (total !== 100) {
-      toast.error(`Weights must total 100% — currently ${total}%.`);
+      toast.error(t("admin.hr.appraisal.weightingCard.totalMustBe100", { total }));
       return;
     }
     setSaving(true);
@@ -35,9 +37,9 @@ export function FeedbackWeightingCard() {
       const existing = await smartDb.getOne("FeedbackWeighting", WEIGHTING_ID);
       if (existing) await smartDb.update("FeedbackWeighting", WEIGHTING_ID, weighting);
       else await smartDb.create("FeedbackWeighting", weighting, WEIGHTING_ID);
-      toast.success("Saved — this weighting now applies to how Final Performance Score is calculated.");
+      toast.success(t("admin.hr.appraisal.weightingCard.saveSuccess"));
     } catch {
-      toast.error("Failed to save weighting");
+      toast.error(t("admin.hr.appraisal.weightingCard.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -52,15 +54,15 @@ export function FeedbackWeightingCard() {
     setWeighting(next);
   }
 
-  if (loading) return <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+  if (loading) return <div className="h-32 flex items-center justify-center text-sm text-muted-foreground">{t("admin.hr.appraisal.weightingCard.loading")}</div>;
 
   return (
     <Card>
       <CardContent className="p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><Scale className="h-4 w-4 text-purple-600" /> Feedback Weighting</h3>
-            <p className="text-xs text-slate-400 mt-0.5">How each source contributes to the Final Performance Score. Student and Parent feedback are deliberately capped low — inputs, not deciding factors.</p>
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><Scale className="h-4 w-4 text-purple-600" /> {t("admin.hr.appraisal.weightingCard.title")}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{t("admin.hr.appraisal.weightingCard.description")}</p>
           </div>
         </div>
 
@@ -69,21 +71,21 @@ export function FeedbackWeightingCard() {
             <div key={key} className="flex items-center gap-3">
               <span className="w-44 text-sm font-medium text-slate-700 shrink-0">{label}</span>
               <Slider value={[weighting[key]]} min={0} max={100} step={1} onValueChange={([v]) => setWeighting((w) => ({ ...w, [key]: v }))} className="flex-1" />
-              <span className="w-10 text-right text-sm font-bold text-slate-800">{weighting[key]}%</span>
+              <span className="w-10 text-end text-sm font-bold text-slate-800">{weighting[key]}%</span>
             </div>
           ))}
         </div>
 
         <div className={`flex items-center justify-between rounded-xl px-4 py-2.5 font-bold text-sm ${total === 100 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-          <span>Total</span>
+          <span>{t("admin.hr.appraisal.weightingCard.totalLabel")}</span>
           <div className="flex items-center gap-2">
             <span>{total}%</span>
-            {total !== 100 && <Button size="sm" variant="outline" onClick={normalize}>Normalize to 100%</Button>}
+            {total !== 100 && <Button size="sm" variant="outline" onClick={normalize}>{t("admin.hr.appraisal.weightingCard.normalizeButton")}</Button>}
           </div>
         </div>
 
         <Button onClick={handleSave} disabled={saving || total !== 100} className="w-full bg-purple-600 hover:bg-purple-700">
-          {saving ? "Saving…" : "Save Weighting"}
+          {saving ? t("admin.hr.appraisal.weightingCard.savingButton") : t("admin.hr.appraisal.weightingCard.saveButton")}
         </Button>
       </CardContent>
     </Card>

@@ -379,11 +379,11 @@ const Automation = () => {
   const handleSaveReminder = async () => {
     if (!user) return;
     if (!reminderForm.name.trim()) {
-      toast.error("Please enter a name for the reminder rule");
+      toast.error(t('admin.finance.automation.toastReminderNameRequired'));
       return;
     }
     if (reminderForm.channels.length === 0) {
-      toast.error("Please select at least one channel");
+      toast.error(t('admin.finance.automation.toastChannelRequired'));
       return;
     }
 
@@ -402,7 +402,7 @@ const Automation = () => {
           updatedAt: now,
         });
         setReminderRules(prev => prev.map(r => r.id === editingReminder.id ? { ...r, ...reminderForm } : r));
-        toast.success(`Reminder rule "${reminderForm.name}" updated successfully!`);
+        toast.success(t('admin.finance.automation.toastReminderRuleUpdated', { name: reminderForm.name }));
       } else {
         const created = await smartDb.create("reminder_rules", {
           name: reminderForm.name,
@@ -416,13 +416,13 @@ const Automation = () => {
           updatedAt: now,
         });
         setReminderRules(prev => [...prev, created as ReminderRule]);
-        toast.success("New reminder rule added!");
+        toast.success(t('admin.finance.automation.toastReminderRuleAdded'));
       }
       setIsReminderDialogOpen(false);
       setEditingReminder(null);
     } catch (error) {
       console.error("Failed to save reminder rule:", error);
-      toast.error("Failed to save reminder rule");
+      toast.error(t('admin.finance.automation.toastReminderRuleSaveFailed'));
     } finally {
       setIsSavingReminder(false);
     }
@@ -446,10 +446,10 @@ const Automation = () => {
           updatedAt: now
         });
         setRecurringTasks(prev => [...prev, created as AutomationTask]);
-        toast.success("New recurring task added!");
+        toast.success(t('admin.finance.automation.toastRecurringTaskAdded'));
       } catch (error) {
         console.error("Failed to create recurring task:", error);
-        toast.error("Failed to create recurring task");
+        toast.error(t('admin.finance.automation.toastRecurringTaskCreateFailed'));
       }
     } else if (activeTab === 'reminders') {
       handleOpenCreateReminder();
@@ -465,16 +465,16 @@ const Automation = () => {
           updatedAt: now
         });
         setCommTemplates(prev => [...prev, created as Template]);
-        toast.success("New template created!");
+        toast.success(t('admin.finance.automation.toastTemplateCreated'));
       } catch (error) {
         console.error("Failed to create template:", error);
-        toast.error("Failed to create template");
+        toast.error(t('admin.finance.automation.toastTemplateCreateFailed'));
       }
     }
   };
 
   const formatDate = (timestamp: Timestamp | Date | string | null) => {
-    if (!timestamp) return "N/A";
+    if (!timestamp) return t('admin.finance.automation.notAvailable');
     if (timestamp instanceof Timestamp) {
       return timestamp.toDate().toLocaleDateString();
     }
@@ -513,14 +513,14 @@ const Automation = () => {
               <Zap className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Finance Automation</h1>
-              <p className="text-sm text-slate-400">Automate recurring invoices, payment reminders, and financial notifications.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.automation.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.finance.automation.pageSubtitle')}</p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20 font-bold text-xs" onClick={handleNewAutomation}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Automation
+              <Plus className="h-4 w-4 me-2" />
+              {t('admin.finance.automation.newAutomation')}
             </Button>
           </motion.div>
         </motion.div>
@@ -529,16 +529,16 @@ const Automation = () => {
           <motion.div variants={itemVariants}>
             <TabsList className="bg-transparent p-0 h-auto gap-1 mb-6 justify-start flex-wrap">
               <TabsTrigger value="recurring" className="flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Recurring
+                <RefreshCcw className="h-4 w-4 me-2" />
+                {t('admin.finance.automation.tabRecurring')}
               </TabsTrigger>
               <TabsTrigger value="reminders" className="flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-                <Bell className="h-4 w-4 mr-2" />
-                Reminders
+                <Bell className="h-4 w-4 me-2" />
+                {t('admin.finance.automation.tabReminders')}
               </TabsTrigger>
               <TabsTrigger value="templates" className="flex items-center px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-                <Mail className="h-4 w-4 mr-2" />
-                Templates
+                <Mail className="h-4 w-4 me-2" />
+                {t('admin.finance.automation.tabTemplates')}
               </TabsTrigger>
             </TabsList>
           </motion.div>
@@ -553,12 +553,12 @@ const Automation = () => {
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                     <RefreshCcw className="h-4 w-4 text-primary" />
                   </div>
-                  <h3 className="text-sm font-bold">Recurring Financial Tasks</h3>
+                  <h3 className="text-sm font-bold">{t('admin.finance.automation.recurringFinancialTasks')}</h3>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input className="pl-10 h-10 text-xs rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all" placeholder="Search recurring..." />
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Input className="ps-10 h-10 text-xs rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all" placeholder={t('admin.finance.automation.searchRecurringPlaceholder')} />
                   </div>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                     <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl border-border bg-card hover:bg-secondary transition-all">
@@ -571,12 +571,12 @@ const Automation = () => {
                 <Table>
                   <TableHeader className="bg-secondary/50">
                     <TableRow className="hover:bg-transparent border-border/50">
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Task Name</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Category</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Frequency</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Next Run</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                      <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colTaskName')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colCategory')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colFrequency')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colNextRun')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colStatus')}</TableHead>
+                      <TableHead className="text-end text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -586,7 +586,7 @@ const Automation = () => {
                           <TableCell colSpan={6} className="text-center py-20 text-muted-foreground">
                             <div className="flex flex-col items-center justify-center">
                               <RefreshCcw className="h-10 w-10 mb-3 opacity-20" />
-                              <p className="text-sm font-medium">No recurring tasks found.</p>
+                              <p className="text-sm font-medium">{t('admin.finance.automation.noRecurringTasksFound')}</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -622,7 +622,7 @@ const Automation = () => {
                                 )}>{rec.status}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-end">
                               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="inline-block">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-secondary">
                                   <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -649,12 +649,12 @@ const Automation = () => {
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
                     <Bell className="h-4 w-4 text-amber-500" />
                   </div>
-                  <h3 className="text-sm font-bold">Automated Reminders</h3>
+                  <h3 className="text-sm font-bold">{t('admin.finance.automation.automatedReminders')}</h3>
                 </div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold border-border bg-card hover:bg-secondary transition-all" onClick={handleOpenCreateReminder}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    Add Reminder
+                    <Plus className="h-3.5 w-3.5 me-1.5" />
+                    {t('admin.finance.automation.addReminder')}
                   </Button>
                 </motion.div>
               </div>
@@ -662,11 +662,11 @@ const Automation = () => {
                 <Table>
                   <TableHeader className="bg-secondary/50">
                     <TableRow className="hover:bg-transparent border-border/50">
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Reminder Rule</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Trigger</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Channels</TableHead>
-                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                      <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colReminderRule')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colTrigger')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colChannels')}</TableHead>
+                      <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colStatus')}</TableHead>
+                      <TableHead className="text-end text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.colActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -676,7 +676,7 @@ const Automation = () => {
                           <TableCell colSpan={5} className="text-center py-20 text-muted-foreground">
                             <div className="flex flex-col items-center justify-center">
                               <Bell className="h-10 w-10 mb-3 opacity-20" />
-                              <p className="text-sm font-medium">No reminder rules found.</p>
+                              <p className="text-sm font-medium">{t('admin.finance.automation.noReminderRulesFound')}</p>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -709,7 +709,7 @@ const Automation = () => {
                                     channel === 'WhatsApp' ? "bg-green-50 text-green-600" :
                                     channel === 'Parent App' ? "bg-purple-50 text-purple-600" :
                                     "bg-amber-50 text-amber-600"
-                                  )} title={channel}>
+                                  )} title={t(CHANNEL_LABEL_KEYS[channel] || channel)}>
                                     {channel === 'Email' ? <Mail className="h-3.5 w-3.5" /> :
                                      channel === 'WhatsApp' ? <MessageSquare className="h-3.5 w-3.5" /> :
                                      channel === 'Parent App' ? <Bell className="h-3.5 w-3.5" /> :
@@ -725,7 +725,7 @@ const Automation = () => {
                                 className="data-[state=checked]:bg-primary"
                               />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-end">
                               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="inline-block">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-secondary" onClick={() => handleOpenEditReminder(rem)}>
                                   <Settings className="h-4 w-4 text-muted-foreground" />
@@ -758,7 +758,7 @@ const Automation = () => {
                     whileHover={{ y: -5, scale: 1.02 }}
                     className="premium-card p-5 hover:border-primary/50 transition-all cursor-pointer group relative overflow-hidden"
                   >
-                    <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-0 end-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-white/80 backdrop-blur-sm shadow-sm">
                           <MoreVertical className="h-4 w-4" />
@@ -775,7 +775,7 @@ const Automation = () => {
                       </div>
                       <div>
                         <h4 className="text-[14px] font-bold text-foreground group-hover:text-primary transition-colors">{tmp.name}</h4>
-                        <p className="text-[10px] text-muted-foreground font-medium">Last modified: {formatDate(tmp.lastModified)}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium">{t('admin.finance.automation.lastModified', { date: formatDate(tmp.lastModified) })}</p>
                       </div>
                     </div>
 
@@ -784,7 +784,7 @@ const Automation = () => {
                         <p className="text-[11px] text-muted-foreground line-clamp-3 italic leading-relaxed">
                           "{tmp.content}"
                         </p>
-                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+                        <div className="absolute bottom-0 start-0 end-0 h-8 bg-gradient-to-t from-white to-transparent" />
                       </div>
                       
                       <div className="flex items-center justify-between pt-2">
@@ -801,7 +801,7 @@ const Automation = () => {
                               handleEditTemplate(tmp);
                             }}
                           >
-                            Edit Template
+                            {t('admin.finance.automation.editTemplateButton')}
                           </Button>
                         </motion.div>
                       </div>
@@ -818,8 +818,8 @@ const Automation = () => {
                   <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-3 transition-transform group-hover:scale-110 group-hover:bg-primary/10">
                     <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  <p className="text-sm font-bold text-foreground">New Template</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Create custom Email/SMS communication</p>
+                  <p className="text-sm font-bold text-foreground">{t('admin.finance.automation.newTemplateCard')}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">{t('admin.finance.automation.newTemplateCardDesc')}</p>
                 </motion.div>
               </AnimatePresence>
             </motion.div>
@@ -836,37 +836,37 @@ const Automation = () => {
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
-                  <DialogTitle className="text-xl font-bold text-foreground">Edit Template</DialogTitle>
+                  <DialogTitle className="text-xl font-bold text-foreground">{t('admin.finance.automation.editTemplateTitle')}</DialogTitle>
                 </div>
                 <DialogDescription className="text-sm font-medium">
-                  Modify the content of your automated <span className="text-primary font-bold">{editingTemplate?.type.toLowerCase()}</span> template.
+                  {t('admin.finance.automation.editTemplateDescPrefix')} <span className="text-primary font-bold">{editingTemplate?.type.toLowerCase()}</span> {t('admin.finance.automation.editTemplateDescSuffix')}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Template Name</Label>
+                  <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.templateNameLabel')}</Label>
                   <Input id="name" defaultValue={editingTemplate?.name} className="rounded-xl h-11 border-border bg-secondary/30 focus-visible:ring-primary/20 transition-all font-bold" />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="content" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Message Content</Label>
+                  <Label htmlFor="content" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.messageContentLabel')}</Label>
                   <div className="relative">
-                    <Textarea 
-                      id="content" 
-                      value={templateContent} 
+                    <Textarea
+                      id="content"
+                      value={templateContent}
                       onChange={(e) => setTemplateContent(e.target.value)}
-                      className="min-h-[250px] rounded-xl border-border bg-secondary/30 focus-visible:ring-primary/20 transition-all font-mono text-[13px] p-4 leading-relaxed" 
-                      placeholder="Type your message here..."
+                      className="min-h-[250px] rounded-xl border-border bg-secondary/30 focus-visible:ring-primary/20 transition-all font-mono text-[13px] p-4 leading-relaxed"
+                      placeholder={t('admin.finance.automation.typeMessagePlaceholder')}
                     />
-                    <div className="absolute bottom-3 right-3">
+                    <div className="absolute bottom-3 end-3">
                       <Badge variant="outline" className="bg-white/80 backdrop-blur-sm text-[10px] font-bold border-border/50">
-                        {templateContent.length} chars
+                        {t('admin.finance.automation.charsCount', { count: templateContent.length })}
                       </Badge>
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
                     <p className="text-[11px] text-primary/80 font-medium leading-relaxed">
-                      <span className="font-bold">Pro Tip:</span> Use tags like <code className="bg-white px-1 rounded text-primary">{"{{student_name}}"}</code>, <code className="bg-white px-1 rounded text-primary">{"{{amount}}"}</code>, <code className="bg-white px-1 rounded text-primary">{"{{due_date}}"}</code> for dynamic content.
-                      Current Currency: <span className="font-bold">{financialSettings.currency}</span>
+                      <span className="font-bold">{t('admin.finance.automation.proTipLabel')}</span> {t('admin.finance.automation.proTipText')} <code className="bg-white px-1 rounded text-primary">{"{{student_name}}"}</code>, <code className="bg-white px-1 rounded text-primary">{"{{amount}}"}</code>, <code className="bg-white px-1 rounded text-primary">{"{{due_date}}"}</code> {t('admin.finance.automation.proTipSuffix')}
+                      {t('admin.finance.automation.currentCurrencyLabel')} <span className="font-bold">{financialSettings.currency}</span>
                     </p>
                   </div>
                 </div>
@@ -874,13 +874,13 @@ const Automation = () => {
               <DialogFooter className="flex gap-3 pt-2">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                   <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full rounded-xl h-11 border-border font-bold text-xs hover:bg-secondary transition-all">
-                    Cancel
+                    {t('admin.finance.automation.cancel')}
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                   <Button onClick={handleSaveTemplate} className="w-full rounded-xl h-11 gradient-primary shadow-lg shadow-primary/20 font-bold text-xs">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                    <Save className="h-4 w-4 me-2" />
+                    {t('admin.finance.automation.saveChanges')}
                   </Button>
                 </motion.div>
               </DialogFooter>
@@ -899,28 +899,28 @@ const Automation = () => {
                     <Bell className="h-4 w-4 text-amber-500" />
                   </div>
                   <DialogTitle className="text-xl font-bold text-foreground">
-                    {editingReminder ? "Edit Reminder Rule" : "New Reminder Rule"}
+                    {editingReminder ? t('admin.finance.automation.editReminderRuleTitle') : t('admin.finance.automation.newReminderRuleTitle')}
                   </DialogTitle>
                 </div>
                 <DialogDescription className="text-sm font-medium">
-                  Configure when this reminder fires relative to the fee due date, and how it should be sent.
+                  {t('admin.finance.automation.reminderDialogDesc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="reminder-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rule Name</Label>
+                  <Label htmlFor="reminder-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.ruleNameLabel')}</Label>
                   <Input
                     id="reminder-name"
                     value={reminderForm.name}
                     onChange={(e) => setReminderForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g. 14 Days Before Due Date"
+                    placeholder={t('admin.finance.automation.ruleNamePlaceholder')}
                     className="rounded-xl h-11 border-border bg-secondary/30 focus-visible:ring-primary/20 transition-all font-bold"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="reminder-offset" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Offset (Days)</Label>
+                    <Label htmlFor="reminder-offset" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.offsetDaysLabel')}</Label>
                     <Input
                       id="reminder-offset"
                       type="number"
@@ -931,7 +931,7 @@ const Automation = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Direction</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.directionLabel')}</Label>
                     <Select
                       value={reminderForm.direction}
                       onValueChange={(value) => handleReminderDirectionOrOffsetChange({ direction: value as "before" | "after" })}
@@ -940,15 +940,15 @@ const Automation = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="before">Before Due Date</SelectItem>
-                        <SelectItem value="after">After Due Date (Overdue)</SelectItem>
+                        <SelectItem value="before">{t('admin.finance.automation.directionBefore')}</SelectItem>
+                        <SelectItem value="after">{t('admin.finance.automation.directionAfter')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <div className="grid gap-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Channels</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.channelsLabel')}</Label>
                   <div className="grid grid-cols-2 gap-3">
                     {REMINDER_CHANNELS.map((channel) => (
                       <div key={channel} className="flex items-center gap-2 p-3 rounded-xl border border-border bg-secondary/30">
@@ -958,7 +958,7 @@ const Automation = () => {
                           onCheckedChange={() => toggleReminderChannel(channel)}
                         />
                         <Label htmlFor={`channel-${channel}`} className="text-xs font-bold cursor-pointer">
-                          {channel}
+                          {t(CHANNEL_LABEL_KEYS[channel] || channel)}
                         </Label>
                       </div>
                     ))}
@@ -966,7 +966,7 @@ const Automation = () => {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="reminder-status" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
+                  <Label htmlFor="reminder-status" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.statusLabel')}</Label>
                   <Select
                     value={reminderForm.status}
                     onValueChange={(value) => setReminderForm(prev => ({ ...prev, status: value as "Active" | "Inactive" }))}
@@ -975,24 +975,24 @@ const Automation = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Active">{t('admin.finance.automation.statusActive')}</SelectItem>
+                      <SelectItem value="Inactive">{t('admin.finance.automation.statusInactive')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="reminder-template" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Message Template</Label>
+                  <Label htmlFor="reminder-template" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.automation.messageTemplateLabel')}</Label>
                   <Textarea
                     id="reminder-template"
                     value={reminderForm.messageTemplate}
                     onChange={(e) => setReminderForm(prev => ({ ...prev, messageTemplate: e.target.value }))}
                     className="min-h-[220px] rounded-xl border-border bg-secondary/30 focus-visible:ring-primary/20 transition-all font-mono text-[13px] p-4 leading-relaxed"
-                    placeholder="Type your reminder message here..."
+                    placeholder={t('admin.finance.automation.typeReminderPlaceholder')}
                   />
                   <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
                     <p className="text-[11px] text-primary/80 font-medium leading-relaxed">
-                      <span className="font-bold">Supported tags:</span>{" "}
+                      <span className="font-bold">{t('admin.finance.automation.supportedTagsLabel')}</span>{" "}
                       <code className="bg-white px-1 rounded text-primary">{"{{studentName}}"}</code>{" "}
                       <code className="bg-white px-1 rounded text-primary">{"{{grade}}"}</code>{" "}
                       <code className="bg-white px-1 rounded text-primary">{"{{term}}"}</code>{" "}
@@ -1005,13 +1005,13 @@ const Automation = () => {
               <DialogFooter className="flex gap-3 pt-2">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                   <Button variant="outline" onClick={() => setIsReminderDialogOpen(false)} className="w-full rounded-xl h-11 border-border font-bold text-xs hover:bg-secondary transition-all">
-                    Cancel
+                    {t('admin.finance.automation.cancel')}
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                   <Button onClick={handleSaveReminder} disabled={isSavingReminder} className="w-full rounded-xl h-11 gradient-primary shadow-lg shadow-primary/20 font-bold text-xs">
-                    <Save className="h-4 w-4 mr-2" />
-                    {editingReminder ? "Save Changes" : "Create Reminder"}
+                    <Save className="h-4 w-4 me-2" />
+                    {editingReminder ? t('admin.finance.automation.saveChanges') : t('admin.finance.automation.createReminder')}
                   </Button>
                 </motion.div>
               </DialogFooter>

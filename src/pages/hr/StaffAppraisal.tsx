@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Star, TrendingUp, Users, Award, ChevronDown, ChevronUp, ClipboardList, Plus, Download, GitBranch, Search, MessageSquare, Clock, CalendarClock, UserCheck, Megaphone, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { smartDb } from "@/lib/localDb";
@@ -82,20 +83,33 @@ function scoreColor(score: number | undefined) {
   return "text-red-600 font-semibold";
 }
 
-function statusBadge(status: string) {
+// STATUS_LABEL_KEYS maps the raw (English, logic-bearing) status string to its
+// translation key. statusBadge lives outside the component (no hook access),
+// so the caller resolves the label via t() and passes it in — the switch here
+// only ever inspects the original English `status` for color/logic purposes.
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Excellent": "admin.hr.staffAppraisal.statusExcellent",
+  "Good": "admin.hr.staffAppraisal.statusGood",
+  "Satisfactory": "admin.hr.staffAppraisal.statusSatisfactory",
+  "Needs Improvement": "admin.hr.staffAppraisal.statusNeedsImprovement",
+  "Self Review Submitted": "admin.hr.staffAppraisal.statusSelfReviewSubmitted",
+  "Not Started": "admin.hr.staffAppraisal.statusNotStarted",
+};
+
+function statusBadge(status: string, label: string) {
   switch (status) {
     case "Excellent":
-      return <Badge className="bg-green-100 text-green-700 border-green-200">{status}</Badge>;
+      return <Badge className="bg-green-100 text-green-700 border-green-200">{label}</Badge>;
     case "Good":
-      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">{status}</Badge>;
+      return <Badge className="bg-blue-100 text-blue-700 border-blue-200">{label}</Badge>;
     case "Satisfactory":
-      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">{status}</Badge>;
+      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">{label}</Badge>;
     case "Needs Improvement":
-      return <Badge className="bg-red-100 text-red-700 border-red-200">{status}</Badge>;
+      return <Badge className="bg-red-100 text-red-700 border-red-200">{label}</Badge>;
     case "Self Review Submitted":
-      return <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">{status}</Badge>;
+      return <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">{label}</Badge>;
     default:
-      return <Badge>{status}</Badge>;
+      return <Badge>{label}</Badge>;
   }
 }
 

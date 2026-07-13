@@ -372,16 +372,16 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
   realOnly?: boolean; remark?: string; teacherName?: string; principalName?: string;
 }) {
   const { theme } = useTheme(); const dark = theme === "dark";
+  const { t } = useTranslation();
   const th = TEMPLATE_THEME[template];
   const realSubs = realOnly ? realSubjects(studentName) : null;
   if (realOnly && !realSubs) {
     return (
       <div style={{ background: dark ? "#16162A" : "#fff", border: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 12,
         padding: 32, fontFamily: "inherit", textAlign: "center" }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>No marks entered yet</p>
+        <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>{t("admin.academics.reportCard.noMarksEnteredYet")}</p>
         <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", marginTop: 6 }}>
-          {studentName} has no graded marks recorded for {term} · {year}. A report card cannot be
-          previewed until subject teachers submit marks.
+          {t("admin.academics.reportCard.noMarksRecordedDetail", { studentName, term, year })}
         </p>
       </div>
     );
@@ -903,23 +903,23 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: "#0F172A" }}>{studentName}</p>
-          <p style={{ fontSize: 9, color: "#475569", marginTop: 1 }}>{cls} – Section {section} | Roll No. {rollNo}</p>
-          <p style={{ fontSize: 9, color: "#475569" }}>Admission No. {admNo}</p>
+          <p style={{ fontSize: 9, color: "#475569", marginTop: 1 }}>{t("admin.academics.reportCard.classSectionRollLine", { cls, section, rollNo })}</p>
+          <p style={{ fontSize: 9, color: "#475569" }}>{t("admin.academics.reportCard.admissionNoLine", { admNo })}</p>
         </div>
         <div style={{ textAlign: "right" }}>
           <p style={{ fontSize: 14, fontWeight: 800, color: th.primary,
             background: th.primary + "15", borderRadius: 6, padding: "2px 8px" }}>{pct}%</p>
-          <p style={{ fontSize: 9, color: "#475569", marginTop: 4 }}>Attendance: {attendance}%</p>
+          <p style={{ fontSize: 9, color: "#475569", marginTop: 4 }}>{t("admin.academics.reportCard.attendanceLine", { attendance })}</p>
         </div>
       </div>
       {/* Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
         <thead>
           <tr style={{ background: th.primary + "12" }}>
-            {["Subject", "Max Marks", "Obtained", th.scaleLabel].map(h => (
+            {[t("admin.academics.reportCard.colSubject"), t("admin.academics.reportCard.colMaxMarks"), t("admin.academics.reportCard.colObtained"), th.scaleLabel].map((h, hi) => (
               <th key={h} style={{ padding: "5px 6px", fontSize: 9, fontWeight: 800,
                 color: th.primary, textTransform: "uppercase", letterSpacing: ".04em",
-                borderBottom: `1px solid ${th.primary}40`, textAlign: h === "Subject" ? "left" : "center" }}>{h}</th>
+                borderBottom: `1px solid ${th.primary}40`, textAlign: hi === 0 ? "left" : "center" }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -939,7 +939,7 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
             );
           })}
           <tr style={{ background: th.primary + "10", borderTop: `2px solid ${th.primary}` }}>
-            <td style={{ padding: "6px", fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>Total</td>
+            <td style={{ padding: "6px", fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>{t("admin.academics.reportCard.rowTotal")}</td>
             <td style={{ padding: "6px", textAlign: "center", fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>{total}</td>
             <td style={{ padding: "6px", textAlign: "center", fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A" }}>{obtained}</td>
             <td style={{ padding: "6px", textAlign: "center" }}>
@@ -951,7 +951,7 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
       </table>
       {/* Co-Scholastic */}
       <p style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em",
-        color: th.primary, margin: "8px 0 4px" }}>Co-Scholastic Areas</p>
+        color: th.primary, margin: "8px 0 4px" }}>{t("admin.academics.reportCard.coScholasticAreas")}</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
         {th.coScholastic.map(k => (
           <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -974,7 +974,7 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
         paddingTop: 8, borderTop: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}` }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 80, borderBottom: `1px dashed ${dark ? "#3D3D5C" : "#CBD5E1"}`, margin: "0 auto 4px" }} />
-          <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B" }}>Teacher Signature</p>
+          <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B" }}>{t("admin.academics.reportCard.teacherSignature")}</p>
           <p style={{ fontSize: 9, fontWeight: 600, color: dark ? "#F0EFFF" : "#0F172A" }}>{teacherSigName}</p>
         </div>
         <div style={{ width: 40, height: 40, border: `1px dashed ${th.primary}60`, borderRadius: 6,
@@ -983,7 +983,7 @@ function ReportPreview({ studentName = "Aarav Sharma", cls = "Grade 1", section 
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 80, borderBottom: `1px dashed ${dark ? "#3D3D5C" : "#CBD5E1"}`, margin: "0 auto 4px" }} />
-          <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B" }}>Principal Signature</p>
+          <p style={{ fontSize: 8, color: dark ? "#8B8BA8" : "#64748B" }}>{t("admin.academics.reportCard.principalSignature")}</p>
           <p style={{ fontSize: 9, fontWeight: 600, color: dark ? "#F0EFFF" : "#0F172A" }}>{principalSigName}</p>
         </div>
       </div>
@@ -1032,6 +1032,7 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
   onGenerated?: () => number;
 }) {
   const { theme } = useTheme(); const dark = theme === "dark";
+  const { t } = useTranslation();
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [publishedCount, setPublishedCount] = useState(0);
@@ -1075,7 +1076,7 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
             display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <Zap style={{ width: 24, height: 24, color: th.primary }} />
           </div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A" }}>Generate Report Cards</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A" }}>{t("admin.academics.reportCard.generateModalTitle")}</h2>
           <p style={{ fontSize: 13, color: dark ? "#8B8BA8" : "#64748B", marginTop: 4 }}>{cls} — {section} | {term} · {th.board}</p>
         </div>
         {!progress && !done && (
@@ -1083,18 +1084,22 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
             {hasGate && incompleteList.length > 0 && (
               <div style={{ background: dark ? "#3A2E0F" : "#FFFBEB", border: `1px solid ${dark ? "#5C4A1F" : "#FDE68A"}`, borderRadius: 10, padding: 12, marginBottom: 14 }}>
                 <p style={{ fontSize: 12, fontWeight: 700, color: dark ? "#FCD34D" : "#92400E", marginBottom: 6 }}>
-                  {incompleteList.length} of {students.length} student(s) have incomplete marks
+                  {t("admin.academics.reportCard.incompleteMarksCount", { count: incompleteList.length, total: students.length })}
                 </p>
                 <div style={{ maxHeight: 100, overflowY: "auto", fontSize: 11, color: dark ? "#FCD34D" : "#92400E", lineHeight: 1.6 }}>
                   {incompleteList.slice(0, 6).map(s => (
-                    <div key={s.id}>{s.name}: missing {marksCompleteness.get(s.id)?.join(", ")}</div>
+                    <div key={s.id}>{t("admin.academics.reportCard.missingSubjectsLine", { name: s.name, subjects: marksCompleteness.get(s.id)?.join(", ") })}</div>
                   ))}
-                  {incompleteList.length > 6 && <div>...and {incompleteList.length - 6} more</div>}
+                  {incompleteList.length > 6 && <div>{t("admin.academics.reportCard.andNMore", { count: incompleteList.length - 6 })}</div>}
                 </div>
                 <label style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 10, fontSize: 12, color: dark ? "#FCD34D" : "#92400E", cursor: "pointer" }}>
                   <input type="checkbox" checked={ackIncomplete} onChange={e => setAckIncomplete(e.target.checked)}
                     style={{ marginTop: 2 }} />
-                  <span>Generate anyway for just the {completeStudents.length} student{completeStudents.length === 1 ? "" : "s"} with complete marks; skip the rest</span>
+                  <span>
+                    {completeStudents.length === 1
+                      ? t("admin.academics.reportCard.generateAnywaySingular")
+                      : t("admin.academics.reportCard.generateAnywayPlural", { count: completeStudents.length })}
+                  </span>
                 </label>
               </div>
             )}
@@ -1104,8 +1109,13 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
                 cursor: canStart ? "pointer" : "not-allowed", opacity: canStart ? 1 : 0.5,
                 fontFamily: "inherit" }}>
               {hasGate && completeStudents.length === 0
-                ? "No students have complete marks yet"
-                : `Start Generation · ${hasGate && !ackIncomplete && incompleteList.length ? completeStudents.length : students.length} Student${(hasGate && !ackIncomplete && incompleteList.length ? completeStudents.length : students.length) === 1 ? "" : "s"}`}
+                ? t("admin.academics.reportCard.noStudentsCompleteMarks")
+                : (() => {
+                    const n = hasGate && !ackIncomplete && incompleteList.length ? completeStudents.length : students.length;
+                    return n === 1
+                      ? t("admin.academics.reportCard.startGenerationSingular")
+                      : t("admin.academics.reportCard.startGenerationPlural", { count: n });
+                  })()}
             </button>
           </>
         )}
@@ -1116,7 +1126,7 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
                 width: `${progress}%`, transition: "width .1s" }} />
             </div>
             <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", textAlign: "center" }}>
-              Generating... {progress}%
+              {t("admin.academics.reportCard.generatingProgress", { progress })}
             </p>
           </div>
         )}
@@ -1128,27 +1138,29 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
                 : <X style={{ width: 24, height: 24, color: dark ? "#F87171" : "#EF4444" }} />}
             </div>
             <p style={{ fontSize: 14, fontWeight: 700, color: publishedCount ? (dark ? "#4ADE80" : "#10B981") : (dark ? "#F87171" : "#EF4444") }}>
-              {publishedCount ? `${publishedCount} Report Card${publishedCount === 1 ? "" : "s"} Generated!` : "No report cards generated"}
+              {publishedCount
+                ? (publishedCount === 1 ? t("admin.academics.reportCard.generatedCountSingular") : t("admin.academics.reportCard.generatedCountPlural", { count: publishedCount }))
+                : t("admin.academics.reportCard.noReportCardsGenerated")}
             </p>
             <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", marginTop: 4 }}>
-              {publishedCount ? "Ready for download & distribution" : "Marks were incomplete for every selected student"}
+              {publishedCount ? t("admin.academics.reportCard.readyForDownload") : t("admin.academics.reportCard.marksIncompleteForAll")}
             </p>
             {publishedCount > 0 && (
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
                 <button onClick={() => {
                     const done = completeStudents;
                     triggerDownload(buildBulkHTML(done, ctx), `report-cards-${cls.replace(/ /g,"-")}-${term.replace(/ /g,"-")}.html`, "text/html");
-                    toast.success(`${done.length} report cards downloaded!`);
+                    toast.success(t("admin.academics.reportCard.toastReportCardsDownloaded", { count: done.length }));
                     onClose();
                   }}
                   style={{ flex: 1, padding: "10px", background: th.primary, color: "#fff",
                     border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                  Download All
+                  {t("admin.academics.reportCard.downloadAll")}
                 </button>
                 <button onClick={onClose}
                   style={{ flex: 1, padding: "10px", background: dark ? "#1A1A30" : "#F8FAFC", color: dark ? "#F0EFFF" : "#0F172A",
                     border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                  Close
+                  {t("admin.academics.reportCard.close")}
                 </button>
               </div>
             )}
@@ -1156,7 +1168,7 @@ function GenerateModal({ onClose, cls, section, term, template, year, students, 
               <button onClick={onClose}
                 style={{ width: "100%", marginTop: 16, padding: "10px", background: dark ? "#1A1A30" : "#F8FAFC", color: dark ? "#F0EFFF" : "#0F172A",
                   border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Close
+                {t("admin.academics.reportCard.close")}
               </button>
             )}
           </div>
@@ -1172,6 +1184,7 @@ function FullPreviewModal({ onClose, cls, section, term, template, year, student
   template: TemplateId; year: string; students: RCStudent[];
 }) {
   const { theme } = useTheme(); const dark = theme === "dark";
+  const { t } = useTranslation();
   const list = students.length ? students : [{ name: "Aarav Sharma", roll: 1, adm: "ADM-2026-001", attendance: 92.6 }];
   const [currentStudentIdx, setCurrentStudentIdx] = useState(0);
   const student = list[currentStudentIdx] || list[0];
@@ -1188,21 +1201,21 @@ function FullPreviewModal({ onClose, cls, section, term, template, year, student
         <div style={{ padding: "20px 24px", borderBottom: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, display: "flex",
           alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A" }}>Report Card Live Preview</h2>
-            <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B" }}>Previewing student report cards before final generation</p>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A" }}>{t("admin.academics.reportCard.fullPreviewTitle")}</h2>
+            <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B" }}>{t("admin.academics.reportCard.fullPreviewSubtitle")}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#1A1A30" : "#F1F5F9", borderRadius: 8, padding: "4px 8px" }}>
               <button disabled={currentStudentIdx === 0} onClick={() => setCurrentStudentIdx(i => Math.max(0, i - 1))}
                 style={{ background: "none", border: "none", cursor: currentStudentIdx === 0 ? "not-allowed" : "pointer", opacity: currentStudentIdx === 0 ? 0.4 : 1 }}>
-                <ChevronLeft style={{ width: 16, height: 16, color: dark ? "#F0EFFF" : "#0F172A" }} />
+                <ChevronLeft className="rtl:rotate-180" style={{ width: 16, height: 16, color: dark ? "#F0EFFF" : "#0F172A" }} />
               </button>
               <span style={{ fontSize: 12, fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A", minWidth: 60, textAlign: "center" }}>
                 {currentStudentIdx + 1} / {list.length}
               </span>
               <button disabled={currentStudentIdx === list.length - 1} onClick={() => setCurrentStudentIdx(i => Math.min(list.length - 1, i + 1))}
                 style={{ background: "none", border: "none", cursor: currentStudentIdx === list.length - 1 ? "not-allowed" : "pointer", opacity: currentStudentIdx === list.length - 1 ? 0.4 : 1 }}>
-                <ChevronRight style={{ width: 16, height: 16, color: dark ? "#F0EFFF" : "#0F172A" }} />
+                <ChevronRight className="rtl:rotate-180" style={{ width: 16, height: 16, color: dark ? "#F0EFFF" : "#0F172A" }} />
               </button>
             </div>
             <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: dark ? "#8B8BA8" : "#64748B" }}>
@@ -1228,23 +1241,23 @@ function FullPreviewModal({ onClose, cls, section, term, template, year, student
           justifyContent: "flex-end", gap: 10 }}>
           <button onClick={() => {
               triggerDownload(buildReportCardHTML(student, { ...ctx, section: section.replace("Section ","") }), `report-card-${student.name.replace(/ /g,"-")}.html`, "text/html");
-              toast.success(`Downloaded report card for ${student.name}`);
+              toast.success(t("admin.academics.reportCard.toastDownloadedReportCard", { name: student.name }));
             }}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
               background: dark ? "#1A1A30" : "#F8FAFC", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 9,
               fontSize: 13, fontWeight: 600, color: dark ? "#F0EFFF" : "#0F172A", cursor: "pointer", fontFamily: "inherit" }}>
-            <Download style={{ width: 14, height: 14 }} /> Download PDF
+            <Download style={{ width: 14, height: 14 }} /> {t("admin.academics.reportCard.downloadPdf")}
           </button>
           <button onClick={() => window.print()}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
               background: dark ? "#1A1A30" : "#F8FAFC", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 9,
               fontSize: 13, fontWeight: 600, color: dark ? "#F0EFFF" : "#0F172A", cursor: "pointer", fontFamily: "inherit" }}>
-            <Printer style={{ width: 14, height: 14 }} /> Print Report Card
+            <Printer style={{ width: 14, height: 14 }} /> {t("admin.academics.reportCard.printReportCard")}
           </button>
           <button onClick={onClose}
             style={{ padding: "8px 20px", background: dark ? "#9B59E6" : "#6C3BFF", color: "#fff",
               border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-            Close Preview
+            {t("admin.academics.reportCard.closePreview")}
           </button>
         </div>
 
@@ -1976,6 +1989,7 @@ function isCardStale(
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function ReportCard() {
   const { theme } = useTheme(); const dark = theme === "dark";
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { user, role } = useAuth();
   const actor = { uid: user?.uid || "unknown", name: user?.displayName || user?.email || "Unknown", role: role || "admin" };
@@ -2155,14 +2169,14 @@ export default function ReportCard() {
   function downloadCard(c: ReportCardRecord) {
     const student = roster.find(x => String(x.id) === String(c.studentId));
     if (!student) {
-      toast.error("Student info not found in roster");
+      toast.error(t("admin.academics.reportCard.toastStudentNotFound"));
       return;
     }
     const filename = `report-card-${c.name.replace(/ /g,"-")}.html`;
     const ctx = { template, cls, section, term, year: academicYear };
     const html = buildReportCardHTML(student, { ...ctx, section: section.replace("Section ","") });
     triggerDownload(html, filename, "text/html");
-    toast.success(`Downloaded report card for ${c.name}`);
+    toast.success(t("admin.academics.reportCard.toastDownloadedReportCard", { name: c.name }));
   }
 
   function downloadAllExisting() {
@@ -2170,12 +2184,12 @@ export default function ReportCard() {
     const cleanSection = section.replace("Section ", "");
     const validStudents = roster.filter(r => existingCards.some(c => String(c.studentId) === String(r.id)));
     if (!validStudents.length) {
-      toast.error("No report cards to download");
+      toast.error(t("admin.academics.reportCard.toastNoReportCardsToDownload"));
       return;
     }
     const html = buildBulkHTML(validStudents, { ...ctx, section: cleanSection });
     triggerDownload(html, `report-cards-${cls.replace(/ /g,"-")}-${term.replace(/ /g,"-")}.html`, "text/html");
-    toast.success(`Downloaded ${validStudents.length} report cards!`);
+    toast.success(t("admin.academics.reportCard.toastReportCardsDownloaded", { count: validStudents.length }));
   }
 
   const [notifyingBusy, setNotifyingBusy] = useState<string | null>(null);
@@ -2184,9 +2198,9 @@ export default function ReportCard() {
     setNotifyingBusy(c.id);
     try {
       await notifyReportCard(c.id);
-      toast.success(`Notification sent to ${c.name}'s parent & student portal`);
+      toast.success(t("admin.academics.reportCard.toastNotificationSent", { name: c.name }));
     } catch (e) {
-      toast.error("Failed to send notification");
+      toast.error(t("admin.academics.reportCard.toastNotificationFailed"));
     } finally {
       setNotifyingBusy(null);
     }
@@ -2195,15 +2209,15 @@ export default function ReportCard() {
   async function notifyAllExisting() {
     const ids = existingCards.map(c => c.id);
     if (!ids.length) {
-      toast.error("No report cards to notify");
+      toast.error(t("admin.academics.reportCard.toastNoReportCardsToNotify"));
       return;
     }
     setNotifyingBusy("all");
     try {
       await notifyManyReportCards(ids);
-      toast.success(`Notifications sent for ${ids.length} report cards`);
+      toast.success(t("admin.academics.reportCard.toastNotificationsSentBulk", { count: ids.length }));
     } catch (e) {
-      toast.error("Failed to send bulk notifications");
+      toast.error(t("admin.academics.reportCard.toastBulkNotifyFailed"));
     } finally {
       setNotifyingBusy(null);
     }
@@ -2357,10 +2371,14 @@ export default function ReportCard() {
     const skipped = selectedRoster.length - records.length;
     if (records.length) {
       saveReportCards(records);
-      setGeneratedCountTick(t => t + 1);
-      toast.success(`${records.length} report card${records.length === 1 ? "" : "s"} generated as draft${skipped ? ` (${skipped} skipped — marks incomplete)` : ""}. Submit for review to move it forward.`);
+      setGeneratedCountTick(tick => tick + 1);
+      const base = records.length === 1
+        ? t("admin.academics.reportCard.toastGeneratedDraftSingular")
+        : t("admin.academics.reportCard.toastGeneratedDraftPlural", { count: records.length });
+      const skippedNote = skipped ? t("admin.academics.reportCard.toastSkippedNote", { count: skipped }) : "";
+      toast.success(`${base}${skippedNote} ${t("admin.academics.reportCard.toastSubmitForReviewHint")}`);
     } else {
-      toast.error("No report cards generated — marks are incomplete for the selected students");
+      toast.error(t("admin.academics.reportCard.toastNoReportCardsGenerated"));
     }
     return records.length;
   }
@@ -2383,31 +2401,31 @@ export default function ReportCard() {
   // Approved/Published card's marks can't be silently swapped out from under
   // the people who already signed off on it. Reopen it first (approval panel).
   function regenerateOne(studentId: string) {
-    if (!gbSources) { toast.error("Gradebook data not ready yet"); return; }
+    if (!gbSources) { toast.error(t("admin.academics.reportCard.toastGradebookNotReady")); return; }
     const existing = getReportCard(studentId, academicYear, term);
     if (existing && existing.status !== "draft") {
-      toast.error(`This report card is "${existing.status}" — reopen it first (in the list below) before regenerating its marks.`);
+      toast.error(t("admin.academics.reportCard.toastReopenFirst", { status: existing.status }));
       return;
     }
     const r = roster.find(x => String(x.id) === String(studentId));
     if (!r) return;
     const band = getBandForGrade(curriculum, cls);
     const fresh = buildRecordFor(r, gbSources, band, assignedSubjects);
-    if (!fresh) { toast.error("No graded marks found to regenerate from — marks may be incomplete"); return; }
+    if (!fresh) { toast.error(t("admin.academics.reportCard.toastNoMarksToRegenerate")); return; }
     regenerateReportCard(fresh);
-    setGeneratedCountTick(t => t + 1);
-    toast.success(`Report card regenerated for ${r.name}`);
+    setGeneratedCountTick(tick => tick + 1);
+    toast.success(t("admin.academics.reportCard.toastRegeneratedFor", { name: r.name }));
   }
 
   // Regenerate every existing report card for the current class/section/term/year.
   // Locked records (anything past draft) are skipped, not silently overwritten.
   function regenerateClass() {
-    if (!gbSources) { toast.error("Gradebook data not ready yet"); return; }
-    if (!existingCards.length) { toast.error("No report cards to regenerate for this selection"); return; }
+    if (!gbSources) { toast.error(t("admin.academics.reportCard.toastGradebookNotReady")); return; }
+    if (!existingCards.length) { toast.error(t("admin.academics.reportCard.toastNoReportCardsToRegenerate")); return; }
     const draftCards = existingCards.filter(c => c.status === "draft");
     const lockedCount = existingCards.length - draftCards.length;
     if (!draftCards.length) {
-      toast.error(`All ${existingCards.length} report cards for ${cls} · ${section} are past draft — reopen them first to regenerate.`);
+      toast.error(t("admin.academics.reportCard.toastAllPastDraft", { count: existingCards.length, cls, section }));
       return;
     }
     const band = getBandForGrade(curriculum, cls);
@@ -2416,10 +2434,11 @@ export default function ReportCard() {
       .filter((r): r is RCStudent & { id: string } => !!r)
       .map(r => buildRecordFor(r, gbSources, band, assignedSubjects))
       .filter(Boolean) as ReportCardRecord[];
-    if (!freshList.length) { toast.error("No graded marks found to regenerate from"); return; }
+    if (!freshList.length) { toast.error(t("admin.academics.reportCard.toastNoMarksToRegenerate")); return; }
     regenerateReportCards(freshList);
-    setGeneratedCountTick(t => t + 1);
-    toast.success(`${freshList.length} report cards regenerated for ${cls} · ${section}${lockedCount ? ` (${lockedCount} skipped — not in draft)` : ""}`);
+    setGeneratedCountTick(tick => tick + 1);
+    const lockedNote = lockedCount ? t("admin.academics.reportCard.toastLockedSkippedNote", { count: lockedCount }) : "";
+    toast.success(`${t("admin.academics.reportCard.toastRegeneratedForClass", { count: freshList.length, cls, section })}${lockedNote}`);
   }
 
   // One handler for every approval-chain button (Submit/Verify/Approve/
@@ -2430,26 +2449,26 @@ export default function ReportCard() {
   async function runApprovalAction(
     id: string, name: string,
     fn: (id: string, actor: { uid: string; name: string; role: string }) => Promise<ReportCardRecord>,
-    successVerb: string
+    successMsgKey: string
   ) {
     setApprovalBusy(id);
     try {
       await fn(id, actor);
-      setGeneratedCountTick(t => t + 1);
-      toast.success(`${name}'s report card ${successVerb}`);
+      setGeneratedCountTick(tick => tick + 1);
+      toast.success(t(successMsgKey, { name }));
     } catch (e) {
-      toast.error(e instanceof ApprovalError ? e.message : "Action failed");
+      toast.error(e instanceof ApprovalError ? e.message : t("admin.academics.reportCard.toastActionFailed"));
     } finally {
       setApprovalBusy(null);
     }
   }
 
   const STATUS_META: Record<ReportCardStatus, { label: string; color: string; bg: string }> = {
-    draft:     { label: "Draft",     color: dark ? "#8B8BA8" : "#64748B", bg: dark ? "#8B8BA820" : "#F1F5F9" },
-    submitted: { label: "Submitted", color: dark ? "#60A5FA" : "#2563EB", bg: dark ? "#60A5FA20" : "#EFF6FF" },
-    verified:  { label: "Verified",  color: dark ? "#C084FC" : "#7C3AED", bg: dark ? "#C084FC20" : "#F5F3FF" },
-    approved:  { label: "Approved",  color: dark ? "#FBBF24" : "#B45309", bg: dark ? "#FBBF2420" : "#FFFBEB" },
-    published: { label: "Published", color: dark ? "#4ADE80" : "#059669", bg: dark ? "#4ADE8020" : "#ECFDF5" },
+    draft:     { label: t("admin.academics.reportCard.statusDraft"),     color: dark ? "#8B8BA8" : "#64748B", bg: dark ? "#8B8BA820" : "#F1F5F9" },
+    submitted: { label: t("admin.academics.reportCard.statusSubmitted"), color: dark ? "#60A5FA" : "#2563EB", bg: dark ? "#60A5FA20" : "#EFF6FF" },
+    verified:  { label: t("admin.academics.reportCard.statusVerified"),  color: dark ? "#C084FC" : "#7C3AED", bg: dark ? "#C084FC20" : "#F5F3FF" },
+    approved:  { label: t("admin.academics.reportCard.statusApproved"),  color: dark ? "#FBBF24" : "#B45309", bg: dark ? "#FBBF2420" : "#FFFBEB" },
+    published: { label: t("admin.academics.reportCard.statusPublished"), color: dark ? "#4ADE80" : "#059669", bg: dark ? "#4ADE8020" : "#ECFDF5" },
   };
 
   // What the CURRENT user's role may do to a record in its CURRENT status —
@@ -2462,11 +2481,11 @@ export default function ReportCard() {
     const isCoordinatorOrPrincipal = ["grade_coordinator", "academic_coordinator", "principal", "vice_principal"].includes(r);
     const isAdminTier = r === "admin" || r === "super_admin" || r === "school_owner";
     const out: { action: "submit"|"verify"|"approve"|"publish"|"reopen"; label: string }[] = [];
-    if (status === "draft" && (isTeacher || isAdminTier)) out.push({ action: "submit", label: "Submit for Review" });
-    if (status === "submitted" && (isTeacher || isAdminTier)) out.push({ action: "verify", label: "Verify" });
-    if (status === "verified" && (isCoordinatorOrPrincipal || isAdminTier)) out.push({ action: "approve", label: "Approve" });
-    if (status === "approved" && (r === "principal" || isAdminTier)) out.push({ action: "publish", label: "Publish" });
-    if (status !== "draft" && (isCoordinatorOrPrincipal || isAdminTier)) out.push({ action: "reopen", label: "Reopen" });
+    if (status === "draft" && (isTeacher || isAdminTier)) out.push({ action: "submit", label: t("admin.academics.reportCard.actionSubmitForReview") });
+    if (status === "submitted" && (isTeacher || isAdminTier)) out.push({ action: "verify", label: t("admin.academics.reportCard.actionVerify") });
+    if (status === "verified" && (isCoordinatorOrPrincipal || isAdminTier)) out.push({ action: "approve", label: t("admin.academics.reportCard.actionApprove") });
+    if (status === "approved" && (r === "principal" || isAdminTier)) out.push({ action: "publish", label: t("admin.academics.reportCard.actionPublish") });
+    if (status !== "draft" && (isCoordinatorOrPrincipal || isAdminTier)) out.push({ action: "reopen", label: t("admin.academics.reportCard.actionReopen") });
     return out;
   }
 
@@ -2474,9 +2493,15 @@ export default function ReportCard() {
     submit: submitReportCard, verify: (id, a) => verifyReportCard(id, a), approve: (id, a) => approveReportCard(id, a),
     publish: (id, a) => publishReportCard(id, a), reopen: reopenReportCard,
   };
+  // Full "{{name}}'s report card was …" toast messages, one per approval action —
+  // kept as full sentences (not English-only concatenation) so translations can
+  // use natural grammar instead of an English possessive pattern.
   const APPROVAL_VERB: Record<"submit"|"verify"|"approve"|"publish"|"reopen", string> = {
-    submit: "submitted for review", verify: "verified", approve: "approved",
-    publish: "published to the student & parent portals", reopen: "reopened for editing",
+    submit: "admin.academics.reportCard.toastApprovalSubmitted",
+    verify: "admin.academics.reportCard.toastApprovalVerified",
+    approve: "admin.academics.reportCard.toastApprovalApproved",
+    publish: "admin.academics.reportCard.toastApprovalPublished",
+    reopen: "admin.academics.reportCard.toastApprovalReopened",
   };
 
   const avgAttendance = roster.length
@@ -2658,7 +2683,7 @@ export default function ReportCard() {
         padding: "10px 0", background: "none", border: "none", borderBottom: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
       <span style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#94A3B8", fontWeight: 600 }}>{label}</span>
       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: value ? (dark ? "#F0EFFF" : "#0F172A") : (dark ? "#3D3D5C" : "#CBD5E1") }}>
-        {value || "—"} <ChevronRight style={{ width: 12, height: 12, color: dark ? "#3D3D5C" : "#CBD5E1" }} />
+        {value || "—"} <ChevronRight className="rtl:rotate-180" style={{ width: 12, height: 12, color: dark ? "#3D3D5C" : "#CBD5E1" }} />
       </span>
     </button>
   );
@@ -2683,8 +2708,8 @@ export default function ReportCard() {
             <FileCheck className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Report Card Generator</h1>
-            <p className="text-sm text-slate-400">Centralized — generate report cards for any grade &amp; section in a few guided steps.</p>
+            <h1 className="text-2xl font-bold text-slate-900">{t("admin.academics.reportCard.pageTitle")}</h1>
+            <p className="text-sm text-slate-400">{t("admin.academics.reportCard.pageSubtitle")}</p>
           </div>
         </div>
 
@@ -2705,8 +2730,8 @@ export default function ReportCard() {
                       {done ? <Check style={{ width: 17, height: 17 }} /> : <s.icon style={{ width: 17, height: 17 }} />}
                     </span>
                     <div style={{ textAlign: "left" }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: on ? (dark ? "#F0EFFF" : "#0F172A") : (dark ? "#8B8BA8" : "#94A3B8"), whiteSpace: "nowrap", margin: 0 }}>{s.label}</p>
-                      <p style={{ fontSize: 11, color: active ? (dark ? "#9B59E6" : "#6C3BFF") : (dark ? "#8B8BA8" : "#94A3B8"), fontWeight: 600, margin: 0 }}>{s.sub}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: on ? (dark ? "#F0EFFF" : "#0F172A") : (dark ? "#8B8BA8" : "#94A3B8"), whiteSpace: "nowrap", margin: 0 }}>{t(STEP_LABEL_KEYS[s.id].labelKey)}</p>
+                      <p style={{ fontSize: 11, color: active ? (dark ? "#9B59E6" : "#6C3BFF") : (dark ? "#8B8BA8" : "#94A3B8"), fontWeight: 600, margin: 0 }}>{t(STEP_LABEL_KEYS[s.id].subKey)}</p>
                     </div>
                   </button>
                   {i < STEPS.length - 1 && <div style={{ flex: 1, height: 2.5, minWidth: 20, background: done ? (dark ? "#9B59E6" : "#6C3BFF") : (dark ? "#2A2A45" : "#E2E8F0"), margin: "0 14px", borderRadius: 2 }} />}
@@ -2723,18 +2748,18 @@ export default function ReportCard() {
             {/* STEP 1 — TERM & EXAM */}
             {step === 1 && card(
               <div style={{ padding: 26 }}>
-                {stepHead("Academic Term & Exam", "Select the academic year, term and the exam this report card covers.", Calendar)}
-                <p style={fieldLabel}>Academic Year</p>
+                {stepHead(t("admin.academics.reportCard.stepTermExamHeadTitle"), t("admin.academics.reportCard.stepTermExamHeadSub"), Calendar)}
+                <p style={fieldLabel}>{t("admin.academics.reportCard.academicYearLabel")}</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 22 }}>
                   {ACADEMIC_YEARS.map(y => Chip(y, academicYear === y, () => setAcademicYear(y)))}
                 </div>
-                <p style={fieldLabel}>Term</p>
+                <p style={fieldLabel}>{t("admin.academics.reportCard.termLabel")}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
-                  {TERMS.map(t => OptionCard({ key: t, title: t, sub: "Reporting period", active: term === t, onClick: () => setTerm(t), icon: Calendar }))}
+                  {TERMS.map(tm => OptionCard({ key: tm, title: t(TERM_LABEL_KEYS[tm] || tm), sub: t("admin.academics.reportCard.reportingPeriod"), active: term === tm, onClick: () => setTerm(tm), icon: Calendar }))}
                 </div>
-                <p style={fieldLabel}>Exam</p>
+                <p style={fieldLabel}>{t("admin.academics.reportCard.examLabel")}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {EXAMS.map(e => OptionCard({ key: e, title: e, sub: "Assessment", active: exam === e, onClick: () => setExam(e), icon: FileText }))}
+                  {EXAMS.map(e => OptionCard({ key: e, title: t(EXAM_LABEL_KEYS[e] || e), sub: t("admin.academics.reportCard.assessment"), active: exam === e, onClick: () => setExam(e), icon: FileText }))}
                 </div>
               </div>
             )}
@@ -2742,7 +2767,7 @@ export default function ReportCard() {
             {/* STEP 2 — GRADE */}
             {step === 2 && card(
               <div style={{ padding: 26 }}>
-                {stepHead("Select Grade", "Choose the grade you want to generate report cards for.", BookOpen)}
+                {stepHead(t("admin.academics.reportCard.stepGradeHeadTitle"), t("admin.academics.reportCard.stepGradeHeadSub"), BookOpen)}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
                   {classOptions.map(g => {
                     const active = cls === g; const cnt = countFor(g);
@@ -2756,8 +2781,10 @@ export default function ReportCard() {
                           display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <BookOpen style={{ width: 18, height: 18, color: active ? "#fff" : (dark ? "#8B8BA8" : "#94A3B8") }} />
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{g}</p>
-                        <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", margin: "2px 0 0" }}>{cnt} students</p>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{t(CLASS_LABEL_KEYS[g] || g)}</p>
+                        <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", margin: "2px 0 0" }}>
+                          {cnt === 1 ? t("admin.academics.reportCard.studentCountSingular") : t("admin.academics.reportCard.studentCountPlural", { count: cnt })}
+                        </p>
                       </button>
                     );
                   })}
@@ -2768,7 +2795,7 @@ export default function ReportCard() {
             {/* STEP 3 — SECTION */}
             {step === 3 && card(
               <div style={{ padding: 26 }}>
-                {stepHead(`Select Section — ${cls}`, "Choose a section to generate report cards for.", CircleDot)}
+                {stepHead(t("admin.academics.reportCard.stepSectionHeadTitle", { cls: t(CLASS_LABEL_KEYS[cls] || cls) }), t("admin.academics.reportCard.stepSectionHeadSub"), CircleDot)}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12 }}>
                   {sectionOptions.map(sec => {
                     const active = section === sec; const cnt = countFor(cls, sec);
@@ -2782,8 +2809,10 @@ export default function ReportCard() {
                           display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Users style={{ width: 18, height: 18, color: active ? "#fff" : (dark ? "#8B8BA8" : "#94A3B8") }} />
                         </div>
-                        <p style={{ fontSize: 15, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{sec}</p>
-                        <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", margin: "2px 0 0" }}>{cnt} students</p>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{t(SECTION_LABEL_KEYS[sec] || sec)}</p>
+                        <p style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#64748B", margin: "2px 0 0" }}>
+                          {cnt === 1 ? t("admin.academics.reportCard.studentCountSingular") : t("admin.academics.reportCard.studentCountPlural", { count: cnt })}
+                        </p>
                       </button>
                     );
                   })}
@@ -2794,18 +2823,18 @@ export default function ReportCard() {
             {/* STEP 4 — STUDENTS */}
             {step === 4 && card(
               <div style={{ padding: 26 }}>
-                {stepHead("Select Students", `Pick the students from ${cls} · ${section} to include.`, Users)}
+                {stepHead(t("admin.academics.reportCard.stepStudentsHeadTitle"), t("admin.academics.reportCard.stepStudentsHeadSub", { cls: t(CLASS_LABEL_KEYS[cls] || cls), section: t(SECTION_LABEL_KEYS[section] || section) }), Users)}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                   <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-                    <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Search by name, roll or admission no…"
+                    <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder={t("admin.academics.reportCard.searchStudentsPlaceholder")}
                       style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px 10px 36px", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", background: dark ? "#1A1A30" : "#F8FAFC", color: dark ? "#F0EFFF" : "#0F172A" }} />
                     <Search style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: dark ? "#8B8BA8" : "#94A3B8", pointerEvents: "none" }} />
                   </div>
-                  <button onClick={() => { setTouchedSelection(true); setSelectedStudents(roster.map(r => r.id)); }} style={pillBtn(true)}>Select All</button>
-                  <button onClick={() => { setTouchedSelection(true); setSelectedStudents([]); }} style={pillBtn(false)}>Clear</button>
+                  <button onClick={() => { setTouchedSelection(true); setSelectedStudents(roster.map(r => r.id)); }} style={pillBtn(true)}>{t("admin.academics.reportCard.selectAll")}</button>
+                  <button onClick={() => { setTouchedSelection(true); setSelectedStudents([]); }} style={pillBtn(false)}>{t("admin.academics.reportCard.clear")}</button>
                 </div>
                 <div style={{ border: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, borderRadius: 12, maxHeight: 420, overflowY: "auto" }}>
-                  {filteredRoster.length === 0 && <p style={{ padding: 30, textAlign: "center", fontSize: 13, color: dark ? "#8B8BA8" : "#94A3B8" }}>No students match your search.</p>}
+                  {filteredRoster.length === 0 && <p style={{ padding: 30, textAlign: "center", fontSize: 13, color: dark ? "#8B8BA8" : "#94A3B8" }}>{t("admin.academics.reportCard.noStudentsMatchSearch")}</p>}
                   {filteredRoster.map((r, i) => {
                     const checked = selectedStudents.includes(r.id);
                     return (
@@ -2819,47 +2848,47 @@ export default function ReportCard() {
                         </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13, fontWeight: 600, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{r.name}</p>
-                          <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: 0 }}>Roll {r.roll} · {r.adm}</p>
+                          <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: 0 }}>{t("admin.academics.reportCard.rollAdmLine", { roll: r.roll, adm: r.adm })}</p>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: dark ? "#4ADE80" : "#10B981", background: "#10B98115", borderRadius: 5, padding: "2px 9px" }}>Eligible</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: dark ? "#4ADE80" : "#10B981", background: "#10B98115", borderRadius: 5, padding: "2px 9px" }}>{t("admin.academics.reportCard.eligible")}</span>
                       </label>
                     );
                   })}
                 </div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#9B59E6" : "#6C3BFF", marginTop: 14 }}>{studentCount} of {roster.length} students selected</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#9B59E6" : "#6C3BFF", marginTop: 14 }}>{t("admin.academics.reportCard.studentsSelectedOfTotal", { count: studentCount, total: roster.length })}</p>
               </div>
             )}
 
             {/* STEP 5 — TEMPLATE & SETTINGS */}
             {step === 5 && card(
               <div style={{ padding: 26 }}>
-                {stepHead("Template & Settings", "Choose a report card design and what it should include.", FileText)}
-                <p style={fieldLabel}>Report Card Template</p>
+                {stepHead(t("admin.academics.reportCard.stepTemplateHeadTitle"), t("admin.academics.reportCard.stepTemplateHeadSub"), FileText)}
+                <p style={fieldLabel}>{t("admin.academics.reportCard.reportCardTemplateLabel")}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10, marginBottom: 22 }}>
-                  {TEMPLATES.map(t => {
-                    const active = template === t.id;
+                  {TEMPLATES.map(tpl => {
+                    const active = template === tpl.id;
                     return (
-                      <button key={t.id} onClick={() => setTemplate(t.id)}
-                        style={{ border: `2px solid ${active ? t.color : (dark ? "#2A2A45" : "#E8EDF5")}`, borderRadius: 12, overflow: "hidden", background: dark ? "#16162A" : "#fff", cursor: "pointer", fontFamily: "inherit", padding: 0,
-                          boxShadow: active ? `0 4px 12px ${t.color}22` : "none", transition: "all .15s" }}>
-                        <div style={{ borderTop: `4px solid ${t.color}` }}>{renderMiniTemplate(t.id, t.color)}</div>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: active ? t.color : (dark ? "#F0EFFF" : "#0F172A"), textAlign: "center", padding: "6px 4px 8px", borderTop: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, margin: 0 }}>{t.short}</p>
+                      <button key={tpl.id} onClick={() => setTemplate(tpl.id)}
+                        style={{ border: `2px solid ${active ? tpl.color : (dark ? "#2A2A45" : "#E8EDF5")}`, borderRadius: 12, overflow: "hidden", background: dark ? "#16162A" : "#fff", cursor: "pointer", fontFamily: "inherit", padding: 0,
+                          boxShadow: active ? `0 4px 12px ${tpl.color}22` : "none", transition: "all .15s" }}>
+                        <div style={{ borderTop: `4px solid ${tpl.color}` }}>{renderMiniTemplate(tpl.id, tpl.color)}</div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: active ? tpl.color : (dark ? "#F0EFFF" : "#0F172A"), textAlign: "center", padding: "6px 4px 8px", borderTop: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, margin: 0 }}>{t(TEMPLATE_LABEL_KEYS[tpl.id].shortKey)}</p>
                       </button>
                     );
                   })}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
-                  <SelectField label="Grading System" options={GRADING_SYSTEMS} value={grading} onChange={v => setGrading(v as GradingSystem)} />
-                  <SelectField label="Language" options={LANGUAGES} value={lang} onChange={v => setLang(v as Language)} />
+                  <SelectField label={t("admin.academics.reportCard.gradingSystemLabel")} options={GRADING_SYSTEMS} value={grading} onChange={v => setGrading(v as GradingSystem)} />
+                  <SelectField label={t("admin.academics.reportCard.languageLabel")} options={LANGUAGES} value={lang} onChange={v => setLang(v as Language)} />
                 </div>
-                <p style={fieldLabel}>Include in Report Card</p>
+                <p style={fieldLabel}>{t("admin.academics.reportCard.includeInReportCard")}</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <ToggleRow label="Attendance Summary" checked={toggles.attendance} onChange={() => toggleOpt("attendance")} />
-                  <ToggleRow label="Co-Scholastic Areas" checked={toggles.coScholastic} onChange={() => toggleOpt("coScholastic")} />
-                  <ToggleRow label="Teacher Remarks" checked={toggles.teacherRemarks} onChange={() => toggleOpt("teacherRemarks")} />
-                  <ToggleRow label="Principal Remarks" checked={toggles.principalRemarks} onChange={() => toggleOpt("principalRemarks")} />
-                  <ToggleRow label="AI Insights" checked={toggles.aiInsights} onChange={() => toggleOpt("aiInsights")} />
-                  <ToggleRow label="School Branding" checked={toggles.branding} onChange={() => toggleOpt("branding")} />
+                  <ToggleRow label={t("admin.academics.reportCard.toggleAttendanceSummary")} checked={toggles.attendance} onChange={() => toggleOpt("attendance")} />
+                  <ToggleRow label={t("admin.academics.reportCard.toggleCoScholasticAreas")} checked={toggles.coScholastic} onChange={() => toggleOpt("coScholastic")} />
+                  <ToggleRow label={t("admin.academics.reportCard.toggleTeacherRemarks")} checked={toggles.teacherRemarks} onChange={() => toggleOpt("teacherRemarks")} />
+                  <ToggleRow label={t("admin.academics.reportCard.togglePrincipalRemarks")} checked={toggles.principalRemarks} onChange={() => toggleOpt("principalRemarks")} />
+                  <ToggleRow label={t("admin.academics.reportCard.toggleAiInsights")} checked={toggles.aiInsights} onChange={() => toggleOpt("aiInsights")} />
+                  <ToggleRow label={t("admin.academics.reportCard.toggleSchoolBranding")} checked={toggles.branding} onChange={() => toggleOpt("branding")} />
                 </div>
               </div>
             )}
@@ -2873,19 +2902,19 @@ export default function ReportCard() {
                     <div style={{ padding: 22 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                         <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>
-                          Class Analytics — {cls} · {section}
+                          {t("admin.academics.reportCard.classAnalyticsHeading", { cls: t(CLASS_LABEL_KEYS[cls] || cls), section: t(SECTION_LABEL_KEYS[section] || section) })}
                         </p>
                         <span style={{ fontSize: 10.5, fontWeight: 700, color: dark ? "#8B8BA8" : "#94A3B8" }}>
-                          {classAnalytics.gradedCount} of {classAnalytics.totalSelected} selected students have marks
+                          {t("admin.academics.reportCard.gradedOfSelected", { graded: classAnalytics.gradedCount, total: classAnalytics.totalSelected })}
                         </span>
                       </div>
                       <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: "0 0 16px" }}>
-                        Computed live from the real gradebook — not sample data.
+                        {t("admin.academics.reportCard.computedLiveNote")}
                       </p>
                       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1.2fr", gap: 16 }}>
                         {/* Grade distribution */}
                         <div>
-                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>Grade Distribution</p>
+                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>{t("admin.academics.reportCard.gradeDistribution")}</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                             {classAnalytics.gradeDist.filter(g => g.value > 0).map(g => (
                               <div key={g.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2898,13 +2927,13 @@ export default function ReportCard() {
                               </div>
                             ))}
                             {classAnalytics.gradeDist.every(g => g.value === 0) && (
-                              <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8" }}>No graded students yet.</p>
+                              <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8" }}>{t("admin.academics.reportCard.noGradedStudentsYet")}</p>
                             )}
                           </div>
                         </div>
                         {/* Top performers */}
                         <div>
-                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>Top Performers</p>
+                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>{t("admin.academics.reportCard.topPerformers")}</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {classAnalytics.topPerformers.map(p => (
                               <div key={p.rank} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2921,7 +2950,7 @@ export default function ReportCard() {
                         </div>
                         {/* Performance insights — real computed observations, not an LLM call */}
                         <div>
-                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>Performance Insights</p>
+                          <p style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: dark ? "#8B8BA8" : "#64748B", margin: "0 0 10px" }}>{t("admin.academics.reportCard.performanceInsights")}</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             {classAnalytics.insights.map((ins, i) => (
                               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
@@ -2939,12 +2968,18 @@ export default function ReportCard() {
               <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 420px", gap: 18, alignItems: "start" }}>
                 {card(
                   <div style={{ padding: 26 }}>
-                    {stepHead("Review & Generate", "Confirm the details below, then generate the report cards.", Zap)}
+                    {stepHead(t("admin.academics.reportCard.reviewGenerateHeadTitle"), t("admin.academics.reportCard.reviewGenerateHeadSub"), Zap)}
                     <div style={{ background: dark ? "#1A1A30" : "#F8FAFC", border: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, borderRadius: 12, padding: "6px 16px", marginBottom: 18 }}>
                       {[
-                        ["Academic Year", academicYear], ["Term", term], ["Exam", exam],
-                        ["Grade", cls], ["Section", section], ["Students", `${studentCount} selected`],
-                        ["Template", templateMeta.label], ["Grading", grading], ["Language", lang],
+                        [t("admin.academics.reportCard.academicYearLabel"), academicYear],
+                        [t("admin.academics.reportCard.termLabel"), t(TERM_LABEL_KEYS[term] || term)],
+                        [t("admin.academics.reportCard.examLabel"), t(EXAM_LABEL_KEYS[exam] || exam)],
+                        [t("admin.academics.reportCard.gradeLabel"), t(CLASS_LABEL_KEYS[cls] || cls)],
+                        [t("admin.academics.reportCard.sectionLabel"), t(SECTION_LABEL_KEYS[section] || section)],
+                        [t("admin.academics.reportCard.studentsLabel"), t("admin.academics.reportCard.nSelected", { count: studentCount })],
+                        [t("admin.academics.reportCard.templateLabel"), t(TEMPLATE_LABEL_KEYS[template].labelKey)],
+                        [t("admin.academics.reportCard.gradingLabel"), t(GRADING_LABEL_KEYS[grading] || grading)],
+                        [t("admin.academics.reportCard.languageLabel"), t(LANGUAGE_LABEL_KEYS[lang] || lang)],
                       ].map(([k, v], idx, arr) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "11px 0", borderBottom: idx < arr.length - 1 ? `1px solid ${dark ? "#2A2A45" : "#EEF2F7"}` : "none" }}>
                           <span style={{ fontSize: 12, color: dark ? "#8B8BA8" : "#94A3B8", fontWeight: 600 }}>{k}</span>
@@ -2955,27 +2990,29 @@ export default function ReportCard() {
                     {generatedCount > 0 && (
                       <div style={{ display: "flex", alignItems: "center", gap: 10, background: dark ? "#0F2A1A" : "#F0FDF4", border: `1px solid ${dark ? "#1E5A3A" : "#BBF7D0"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
                         <CheckCircle2 style={{ width: 18, height: 18, color: dark ? "#4ADE80" : "#10B981" }} />
-                        <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#4ADE80" : "#047857", margin: 0 }}>{generatedCount} report cards generated · {pending} pending</p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: dark ? "#4ADE80" : "#047857", margin: 0 }}>{t("admin.academics.reportCard.generatedAndPending", { generated: generatedCount, pending })}</p>
                       </div>
                     )}
                     {unpublishedExams.length > 0 && (
                       <div style={{ background: dark ? "#3A2E0F" : "#FFFBEB", border: `1px solid ${dark ? "#5C4A1F" : "#FDE68A"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
                         <p style={{ fontSize: 12.5, fontWeight: 700, color: dark ? "#FCD34D" : "#92400E", margin: 0 }}>
-                          {unpublishedExams.length} exam{unpublishedExams.length === 1 ? "" : "s"} for {cls} · {section} {unpublishedExams.length === 1 ? "has" : "have"} marks entered but {unpublishedExams.length === 1 ? "isn't" : "aren't"} finalized yet
+                          {unpublishedExams.length === 1
+                            ? t("admin.academics.reportCard.unpublishedExamSingular", { cls: t(CLASS_LABEL_KEYS[cls] || cls), section: t(SECTION_LABEL_KEYS[section] || section) })
+                            : t("admin.academics.reportCard.unpublishedExamPlural", { count: unpublishedExams.length, cls: t(CLASS_LABEL_KEYS[cls] || cls), section: t(SECTION_LABEL_KEYS[section] || section) })}
                         </p>
                         <p style={{ fontSize: 11.5, color: dark ? "#FCD34D" : "#92400E", margin: "4px 0 0", opacity: 0.85 }}>
-                          {unpublishedExams.map(e => e.name).join(", ")} — publish results in Exam Results before treating this report card as final.
+                          {t("admin.academics.reportCard.unpublishedExamNamesLine", { names: unpublishedExams.map(e => e.name).join(", ") })}
                         </p>
                       </div>
                     )}
                     <div style={{ display: "flex", gap: 10 }}>
                       <button onClick={() => setShowFullPreview(true)}
                         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, flex: 1, padding: "12px", background: dark ? "#16162A" : "#fff", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 11, fontSize: 13, fontWeight: 700, color: dark ? "#8B8BA8" : "#475569", cursor: "pointer", fontFamily: "inherit" }}>
-                        <Eye style={{ width: 15, height: 15 }} /> Full Preview
+                        <Eye style={{ width: 15, height: 15 }} /> {t("admin.academics.reportCard.fullPreview")}
                       </button>
-                      <button onClick={() => { if (studentCount === 0) { toast.error("Select at least one student"); return; } setShowGenerate(true); }}
+                      <button onClick={() => { if (studentCount === 0) { toast.error(t("admin.academics.reportCard.toastSelectAtLeastOneStudent")); return; } setShowGenerate(true); }}
                         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flex: 2, padding: "12px", background: dark ? "linear-gradient(135deg,#9B59E6,#B87CE8)" : "linear-gradient(135deg,#6C3BFF,#8B5CF6)", border: "none", borderRadius: 11, fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(108,59,255,.35)" }}>
-                        <FileCheck style={{ width: 15, height: 15 }} /> Generate Report Cards ({studentCount})
+                        <FileCheck style={{ width: 15, height: 15 }} /> {t("admin.academics.reportCard.generateReportCardsN", { count: studentCount })}
                       </button>
                     </div>
                   </div>
@@ -2984,24 +3021,24 @@ export default function ReportCard() {
                   <div style={{ padding: 22 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                       <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>
-                        Existing Report Cards — {cls} · {section}
+                        {t("admin.academics.reportCard.existingReportCardsHeading", { cls: t(CLASS_LABEL_KEYS[cls] || cls), section: t(SECTION_LABEL_KEYS[section] || section) })}
                       </p>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {isGradebookApproved && hasAccessToActions && (
                           <>
                             <button onClick={downloadAllExisting}
                               style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: dark ? "#10B98120" : "#ECFDF5", border: `1.5px solid ${dark ? "#10B98160" : "#10B98140"}`, borderRadius: 9, fontSize: 12, fontWeight: 700, color: dark ? "#34D399" : "#059669", cursor: "pointer", fontFamily: "inherit" }}>
-                              <Download style={{ width: 13, height: 13 }} /> Download All
+                              <Download style={{ width: 13, height: 13 }} /> {t("admin.academics.reportCard.downloadAll")}
                             </button>
                             <button onClick={notifyAllExisting} disabled={notifyingBusy === "all"}
                               style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: dark ? "#3B82F620" : "#EFF6FF", border: `1.5px solid ${dark ? "#3B82F660" : "#3B82F640"}`, borderRadius: 9, fontSize: 12, fontWeight: 700, color: dark ? "#60A5FA" : "#2563EB", cursor: notifyingBusy === "all" ? "wait" : "pointer", fontFamily: "inherit" }}>
-                              <Send style={{ width: 13, height: 13 }} /> {notifyingBusy === "all" ? "Notifying..." : "Notify All"}
+                              <Send style={{ width: 13, height: 13 }} /> {notifyingBusy === "all" ? t("admin.academics.reportCard.notifying") : t("admin.academics.reportCard.notifyAll")}
                             </button>
                           </>
                         )}
                         <button onClick={regenerateClass}
                           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: dark ? "#9B59E620" : "#F5F3FF", border: `1.5px solid ${dark ? "#9B59E660" : "#6C3BFF40"}`, borderRadius: 9, fontSize: 12, fontWeight: 700, color: dark ? "#9B59E6" : "#6C3BFF", cursor: "pointer", fontFamily: "inherit" }}>
-                          <RefreshCw style={{ width: 13, height: 13 }} /> Regenerate Class
+                          <RefreshCw style={{ width: 13, height: 13 }} /> {t("admin.academics.reportCard.regenerateClass")}
                         </button>
                       </div>
                     </div>
@@ -3009,7 +3046,7 @@ export default function ReportCard() {
                       <div style={{ background: dark ? "#3A1A1A" : "#FEF2F2", border: `1px solid ${dark ? "#5C1F1F" : "#FCA5A5"}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
                         <AlertTriangle style={{ width: 16, height: 16, color: dark ? "#F87171" : "#DC2626", flexShrink: 0 }} />
                         <p style={{ fontSize: 12, fontWeight: 700, color: dark ? "#F87171" : "#C53030", margin: 0 }}>
-                          Gradebook is awaiting Principal's final approval. Report card downloading and parent/student notifications are disabled.
+                          {t("admin.academics.reportCard.gradebookAwaitingApproval")}
                         </p>
                       </div>
                     )}
@@ -3017,12 +3054,12 @@ export default function ReportCard() {
                       <div style={{ background: dark ? "#3A2E0F" : "#FFFBEB", border: `1px solid ${dark ? "#5C4A1F" : "#FDE68A"}`, borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
                         <AlertTriangle style={{ width: 16, height: 16, color: dark ? "#FCD34D" : "#B45309", flexShrink: 0 }} />
                         <p style={{ fontSize: 12, fontWeight: 700, color: dark ? "#FCD34D" : "#92400E", margin: 0 }}>
-                          Your role does not permit downloading or notifying for this section. Actions are restricted to Admin, Grade Coordinator, and Class Teacher.
+                          {t("admin.academics.reportCard.roleNotPermitted")}
                         </p>
                       </div>
                     )}
                     <p style={{ fontSize: 11.5, color: dark ? "#8B8BA8" : "#94A3B8", margin: "0 0 12px" }}>
-                      Already generated for {term} · {academicYear}. Regenerating re-pulls the latest gradebook marks — status, approval stage and remarks are kept.
+                      {t("admin.academics.reportCard.alreadyGeneratedNote", { term: t(TERM_LABEL_KEYS[term] || term), year: academicYear })}
                     </p>
                     <div style={{ border: `1px solid ${dark ? "#2A2A45" : "#F1F5F9"}`, borderRadius: 10, overflow: "hidden" }}>
                       {existingCards.map((c, i) => {
@@ -3038,7 +3075,7 @@ export default function ReportCard() {
                                 <p style={{ fontSize: 12.5, fontWeight: 700, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{c.name}</p>
                                 <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: "1px 0 0" }}>
                                   {c.overallPct}% · {c.overallGrade}
-                                  {stale && <span style={{ color: dark ? "#FCD34D" : "#B45309", fontWeight: 700 }}> · may be outdated — marks updated since generation</span>}
+                                  {stale && <span style={{ color: dark ? "#FCD34D" : "#B45309", fontWeight: 700 }}> · {t("admin.academics.reportCard.mayBeOutdated")}</span>}
                                 </p>
                               </div>
                               <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".04em",
@@ -3046,12 +3083,12 @@ export default function ReportCard() {
                                 {meta.label} · {APPROVAL_CHAIN.indexOf(c.status) + 1}/{APPROVAL_CHAIN.length}
                               </span>
                               <button onClick={() => regenerateOne(c.studentId)} disabled={c.status !== "draft"}
-                                title={c.status !== "draft" ? "Reopen this record first to regenerate its marks" : "Regenerate"}
+                                title={c.status !== "draft" ? t("admin.academics.reportCard.reopenFirstTitle") : t("admin.academics.reportCard.regenerate")}
                                 style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px",
                                   background: dark ? "#16162A" : "#fff", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 8,
                                   fontSize: 11.5, fontWeight: 700, color: c.status !== "draft" ? (dark ? "#45455A" : "#CBD5E1") : (dark ? "#8B8BA8" : "#475569"),
                                   cursor: c.status !== "draft" ? "not-allowed" : "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                                <RefreshCw style={{ width: 12, height: 12 }} /> Regenerate
+                                <RefreshCw style={{ width: 12, height: 12 }} /> {t("admin.academics.reportCard.regenerate")}
                               </button>
                             </div>
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
@@ -3070,20 +3107,20 @@ export default function ReportCard() {
                               {isGradebookApproved && hasAccessToActions && (
                                 <>
                                   <button onClick={() => downloadCard(c)}
-                                    title="Download HTML/PDF Report Card"
+                                    title={t("admin.academics.reportCard.downloadReportCardTitle")}
                                     style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 11px", borderRadius: 7,
                                       fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
                                       background: dark ? "#10B98120" : "#ECFDF5", color: dark ? "#34D399" : "#059669",
                                       border: `1.5px solid ${dark ? "#10B98150" : "#10B98140"}` }}>
-                                    <Download style={{ width: 12, height: 12 }} /> Download
+                                    <Download style={{ width: 12, height: 12 }} /> {t("admin.academics.reportCard.download")}
                                   </button>
                                   <button onClick={() => notifyCard(c)} disabled={notifyingBusy === c.id}
-                                    title="Send portal & email notification to student & parent"
+                                    title={t("admin.academics.reportCard.notifyTitle")}
                                     style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 11px", borderRadius: 7,
                                       fontSize: 11, fontWeight: 700, fontFamily: "inherit", cursor: notifyingBusy === c.id ? "wait" : "pointer",
                                       background: dark ? "#3B82F620" : "#EFF6FF", color: dark ? "#60A5FA" : "#2563EB",
                                       border: `1.5px solid ${dark ? "#3B82F650" : "#3B82F640"}` }}>
-                                    <Send style={{ width: 12, height: 12 }} /> {notifyingBusy === c.id ? "Notifying..." : "Notify"}
+                                    <Send style={{ width: 12, height: 12 }} /> {notifyingBusy === c.id ? t("admin.academics.reportCard.notifying") : t("admin.academics.reportCard.notify")}
                                   </button>
                                 </>
                               )}
@@ -3097,8 +3134,8 @@ export default function ReportCard() {
                 {card(
                   <div style={{ padding: 18 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                      <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>Live Preview</p>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: templateMeta.color, background: templateMeta.color + "15", borderRadius: 6, padding: "2px 9px" }}>{templateMeta.short}</span>
+                      <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: 0 }}>{t("admin.academics.reportCard.livePreview")}</p>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: templateMeta.color, background: templateMeta.color + "15", borderRadius: 6, padding: "2px 9px" }}>{t(TEMPLATE_LABEL_KEYS[template].shortKey)}</span>
                     </div>
                     <ReportPreview studentName={(selectedRoster[0] || firstStudent).name} cls={cls} section={section.replace("Section ", "")}
                       template={template} term={term} year={academicYear}
@@ -3119,17 +3156,17 @@ export default function ReportCard() {
             <div style={{ position: "sticky", top: 18 }}>
               {card(
                 <div style={{ padding: 20 }}>
-                  <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: "0 0 4px" }}>Your Selection</p>
-                  <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: "0 0 8px" }}>Tap any row to edit.</p>
-                  {summaryRow("Term", term, 1)}
-                  {summaryRow("Exam", exam, 1)}
-                  {summaryRow("Grade", cls, 2)}
-                  {summaryRow("Section", section, 3)}
-                  {summaryRow("Students", studentCount ? `${studentCount} selected` : "", 4)}
-                  {summaryRow("Template", templateMeta.short, 5)}
+                  <p style={{ fontSize: 13, fontWeight: 800, color: dark ? "#F0EFFF" : "#0F172A", margin: "0 0 4px" }}>{t("admin.academics.reportCard.yourSelection")}</p>
+                  <p style={{ fontSize: 11, color: dark ? "#8B8BA8" : "#94A3B8", margin: "0 0 8px" }}>{t("admin.academics.reportCard.tapAnyRowToEdit")}</p>
+                  {summaryRow(t("admin.academics.reportCard.termLabel"), t(TERM_LABEL_KEYS[term] || term), 1)}
+                  {summaryRow(t("admin.academics.reportCard.examLabel"), t(EXAM_LABEL_KEYS[exam] || exam), 1)}
+                  {summaryRow(t("admin.academics.reportCard.gradeLabel"), t(CLASS_LABEL_KEYS[cls] || cls), 2)}
+                  {summaryRow(t("admin.academics.reportCard.sectionLabel"), t(SECTION_LABEL_KEYS[section] || section), 3)}
+                  {summaryRow(t("admin.academics.reportCard.studentsLabel"), studentCount ? t("admin.academics.reportCard.nSelected", { count: studentCount }) : "", 4)}
+                  {summaryRow(t("admin.academics.reportCard.templateLabel"), t(TEMPLATE_LABEL_KEYS[template].shortKey), 5)}
                   <div style={{ marginTop: 16, padding: 14, background: dark ? "linear-gradient(135deg,#2A1F45,#241A3D)" : "linear-gradient(135deg,#F5F3FF,#EDE9FE)", borderRadius: 12 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: dark ? "#C4A6F0" : "#7C3AED", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: ".05em" }}>Ready to generate</p>
-                    <p style={{ fontSize: 22, fontWeight: 900, color: dark ? "#F0EFFF" : "#4C1D95", margin: 0 }}>{studentCount} <span style={{ fontSize: 13, fontWeight: 600 }}>report cards</span></p>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: dark ? "#C4A6F0" : "#7C3AED", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: ".05em" }}>{t("admin.academics.reportCard.readyToGenerate")}</p>
+                    <p style={{ fontSize: 22, fontWeight: 900, color: dark ? "#F0EFFF" : "#4C1D95", margin: 0 }}>{studentCount} <span style={{ fontSize: 13, fontWeight: 600 }}>{t("admin.academics.reportCard.reportCardsWord")}</span></p>
                   </div>
                 </div>
               )}
@@ -3142,7 +3179,7 @@ export default function ReportCard() {
       <div style={{ position: "sticky", bottom: 0, background: dark ? "rgba(22,22,42,.92)" : "rgba(255,255,255,.92)", backdropFilter: "blur(8px)", borderTop: `1px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <button onClick={step === 1 ? () => window.history.back() : goBack}
           style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 20px", background: dark ? "#16162A" : "#fff", border: `1.5px solid ${dark ? "#2A2A45" : "#E2E8F0"}`, borderRadius: 11, fontSize: 13, fontWeight: 700, color: dark ? "#8B8BA8" : "#475569", cursor: "pointer", fontFamily: "inherit" }}>
-          <ChevronLeft style={{ width: 16, height: 16 }} /> {step === 1 ? "Exit" : "Back"}
+          <ChevronLeft className="rtl:rotate-180" style={{ width: 16, height: 16 }} /> {step === 1 ? t("admin.academics.reportCard.exit") : t("admin.academics.reportCard.back")}
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {STEPS.map(s => (
@@ -3152,12 +3189,12 @@ export default function ReportCard() {
         {step < TOTAL ? (
           <button onClick={goNext} disabled={!canNext}
             style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 24px", background: canNext ? (dark ? "linear-gradient(135deg,#9B59E6,#B87CE8)" : "linear-gradient(135deg,#6C3BFF,#8B5CF6)") : (dark ? "#2A2A45" : "#E2E8F0"), border: "none", borderRadius: 11, fontSize: 13, fontWeight: 700, color: canNext ? "#fff" : (dark ? "#8B8BA8" : "#94A3B8"), cursor: canNext ? "pointer" : "not-allowed", fontFamily: "inherit", boxShadow: canNext ? "0 4px 14px rgba(108,59,255,.3)" : "none" }}>
-            Continue <ChevronRight style={{ width: 16, height: 16 }} />
+            {t("admin.academics.reportCard.continue")} <ChevronRight className="rtl:rotate-180" style={{ width: 16, height: 16 }} />
           </button>
         ) : (
-          <button onClick={() => { if (studentCount === 0) { toast.error("Select at least one student"); return; } setShowGenerate(true); }}
+          <button onClick={() => { if (studentCount === 0) { toast.error(t("admin.academics.reportCard.toastSelectAtLeastOneStudent")); return; } setShowGenerate(true); }}
             style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 24px", background: dark ? "linear-gradient(135deg,#9B59E6,#B87CE8)" : "linear-gradient(135deg,#6C3BFF,#8B5CF6)", border: "none", borderRadius: 11, fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(108,59,255,.3)" }}>
-            <FileCheck style={{ width: 15, height: 15 }} /> Generate ({studentCount})
+            <FileCheck style={{ width: 15, height: 15 }} /> {t("admin.academics.reportCard.generateN", { count: studentCount })}
           </button>
         )}
       </div>

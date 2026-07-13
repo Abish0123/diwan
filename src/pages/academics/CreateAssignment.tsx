@@ -321,12 +321,12 @@ export default function CreateAssignment() {
 
   // ─── Sub-components ────────────────────────────────────────────────────────
   const SectionBadge = ({ number }: { number: number }) => (
-    <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold mr-3 shadow-sm">{number}</div>
+    <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold me-3 shadow-sm">{number}</div>
   );
 
   const FieldLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
     <label className="block text-slate-700 font-semibold text-sm mb-1.5">
-      {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
+      {children}{required && <span className="text-rose-500 ms-0.5">*</span>}
     </label>
   );
 
@@ -704,7 +704,7 @@ export default function CreateAssignment() {
                                 <a href={link.url} target="_blank" rel="noopener noreferrer"
                                   className="text-sm text-purple-700 truncate flex-1 hover:underline">{link.url}</a>
                                 <button onClick={() => setLinks(prev => prev.filter((_,j) => j !== i))}
-                                  className="text-slate-400 hover:text-rose-500 ml-1 transition-colors">
+                                  className="text-slate-400 hover:text-rose-500 ms-1 transition-colors">
                                   <Trash2 className="h-3.5 w-3.5"/>
                                 </button>
                               </div>
@@ -717,12 +717,12 @@ export default function CreateAssignment() {
                 </Card>
 
                 <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-5 flex items-start">
-                  <div className="bg-purple-600 rounded-full w-5 h-5 flex items-center justify-center mr-3 shrink-0 mt-0.5">
+                  <div className="bg-purple-600 rounded-full w-5 h-5 flex items-center justify-center me-3 shrink-0 mt-0.5">
                     <Info className="w-3.5 h-3.5 text-white"/>
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm mb-0.5">Note:</h4>
-                    <p className="text-sm text-blue-800">Students will be able to view this assignment after it is published.</p>
+                    <h4 className="font-bold text-slate-900 text-sm mb-0.5">{t('admin.academics.createAssignment.noteLabel')}</h4>
+                    <p className="text-sm text-blue-800">{t('admin.academics.createAssignment.noteText')}</p>
                   </div>
                 </div>
               </div>
@@ -733,22 +733,22 @@ export default function CreateAssignment() {
                 {/* Live Summary */}
                 <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
                   <CardContent className="p-6">
-                    <h3 className="font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100">Assignment Summary</h3>
+                    <h3 className="font-bold text-slate-900 mb-4 pb-3 border-b border-slate-100">{t('admin.academics.createAssignment.summaryTitle')}</h3>
                     <div className="space-y-2.5">
                       {[
-                        { label:"Title",        value: title || "—" },
-                        { label:"Subject",      value: subject || "—" },
-                        { label:"Grade",        value: grade || "—" },
-                        { label:"Section",      value: section ? `Section ${section}` : "All Sections" },
-                        { label:"Teacher",      value: teacher || "—" },
-                        { label:"Type",         value: assignmentType || "—" },
-                        { label:"Total Marks",  value: totalMarks || "—" },
-                        { label:"Passing Score",value: passingScore ? `${passingScore}%` : "—" },
-                        { label:"Due Date",     value: dueDate ? new Date(dueDate).toLocaleDateString("en-US",{day:"2-digit",month:"short",year:"numeric"}) : "—" },
+                        { label:t('admin.academics.createAssignment.summaryTitleLabel'),        value: title || "—" },
+                        { label:t('admin.academics.createAssignment.summarySubjectLabel'),      value: (subject && t(SUBJECT_LABEL_KEYS[subject] || subject)) || "—" },
+                        { label:t('admin.academics.createAssignment.summaryGradeLabel'),        value: grade || "—" },
+                        { label:t('admin.academics.createAssignment.summarySectionLabel'),      value: section ? t('admin.academics.createAssignment.sectionOption', { section }) : t('admin.academics.createAssignment.placeholderAllSections') },
+                        { label:t('admin.academics.createAssignment.summaryTeacherLabel'),      value: teacher || "—" },
+                        { label:t('admin.academics.createAssignment.summaryTypeLabel'),         value: (assignmentType && t(ASSIGNMENT_TYPE_LABEL_KEYS[assignmentType] || assignmentType)) || "—" },
+                        { label:t('admin.academics.createAssignment.summaryTotalMarksLabel'),  value: totalMarks || "—" },
+                        { label:t('admin.academics.createAssignment.summaryPassingScoreLabel'),value: passingScore ? `${passingScore}%` : "—" },
+                        { label:t('admin.academics.createAssignment.summaryDueDateLabel'),     value: dueDate ? new Date(dueDate).toLocaleDateString("en-US",{day:"2-digit",month:"short",year:"numeric"}) : "—" },
                       ].map(r => (
                         <div key={r.label} className="flex items-start justify-between gap-2">
                           <span className="text-[11px] text-slate-400 font-medium shrink-0">{r.label}</span>
-                          <span className="text-[11px] font-semibold text-slate-700 text-right truncate max-w-[160px]">{r.value}</span>
+                          <span className="text-[11px] font-semibold text-slate-700 text-end truncate max-w-[160px]">{r.value}</span>
                         </div>
                       ))}
                     </div>
@@ -759,11 +759,11 @@ export default function CreateAssignment() {
                 <Card className="border-slate-200 shadow-sm rounded-2xl bg-white">
                   <CardContent className="p-6">
                     <h3 className="font-bold text-slate-900 flex items-center mb-2">
-                      <Eye className="w-4 h-4 mr-2 text-purple-600"/> Preview
+                      <Eye className="w-4 h-4 me-2 text-purple-600"/> {t('admin.academics.createAssignment.previewTitle')}
                     </h3>
-                    <p className="text-sm text-slate-600 mb-5 leading-relaxed">This is how the assignment will appear to students.</p>
+                    <p className="text-sm text-slate-600 mb-5 leading-relaxed">{t('admin.academics.createAssignment.previewDescription')}</p>
                     <Button onClick={() => setShowPreview(true)} variant="outline" className="w-full h-11 border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 rounded-xl shadow-sm">
-                      <Eye className="w-4 h-4 mr-2 text-slate-500"/> Preview Assignment
+                      <Eye className="w-4 h-4 me-2 text-slate-500"/> {t('admin.academics.createAssignment.buttonPreviewAssignment')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -785,9 +785,9 @@ export default function CreateAssignment() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-purple-600"/>
-                <h3 className="font-bold text-slate-900">Student Preview</h3>
+                <h3 className="font-bold text-slate-900">{t('admin.academics.createAssignment.studentPreviewTitle')}</h3>
                 <span className="text-xs bg-purple-50 text-purple-600 rounded-full px-2 py-0.5 font-semibold border border-purple-100">
-                  How students will see this
+                  {t('admin.academics.createAssignment.howStudentsWillSee')}
                 </span>
               </div>
               <button onClick={() => setShowPreview(false)}
@@ -803,22 +803,22 @@ export default function CreateAssignment() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-full">
-                      {subject || "Subject"}
+                      {(subject && t(SUBJECT_LABEL_KEYS[subject] || subject)) || t('admin.academics.createAssignment.previewSubjectFallback')}
                     </span>
                     <h2 className="text-xl font-bold mt-2 mb-1 leading-tight">
-                      {title || "Assignment Title"}
+                      {title || t('admin.academics.createAssignment.previewTitleFallback')}
                     </h2>
                     <p className="text-sm text-blue-100">
-                      {grade || "Grade"}{section ? ` · Section ${section}` : ""}
+                      {grade || t('admin.academics.createAssignment.previewGradeFallback')}{section ? ` · ${t('admin.academics.createAssignment.sectionOption', { section })}` : ""}
                       {teacher ? ` · ${teacher}` : ""}
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-end shrink-0">
                     <div className="text-3xl font-black">{totalMarks || "—"}</div>
-                    <div className="text-xs text-blue-200 mt-0.5">Total Marks</div>
+                    <div className="text-xs text-blue-200 mt-0.5">{t('admin.academics.createAssignment.totalMarksLabel')}</div>
                     {passingScore && (
                       <div className="text-xs text-blue-200 mt-1 bg-white/10 rounded px-1.5 py-0.5">
-                        Pass: {passingScore}%
+                        {t('admin.academics.createAssignment.passLabel', { score: passingScore })}
                       </div>
                     )}
                   </div>
@@ -828,9 +828,9 @@ export default function CreateAssignment() {
               {/* Info cards */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: "Type",       value: assignmentType || "—" },
-                  { label: "Submission", value: submissionType === "file" ? "File Upload" : submissionType === "text" ? "Text Entry" : submissionType === "offline" ? "Offline / Physical" : "—" },
-                  { label: "Due Date",   value: dueDate ? new Date(dueDate).toLocaleString("en-US",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—" },
+                  { label: t('admin.academics.createAssignment.infoCardType'),       value: (assignmentType && t(ASSIGNMENT_TYPE_LABEL_KEYS[assignmentType] || assignmentType)) || "—" },
+                  { label: t('admin.academics.createAssignment.infoCardSubmission'), value: submissionTypeLabel(submissionType) },
+                  { label: t('admin.academics.createAssignment.infoCardDueDate'),   value: dueDate ? new Date(dueDate).toLocaleString("en-US",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—" },
                 ].map(item => (
                   <div key={item.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
                     <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
@@ -841,13 +841,13 @@ export default function CreateAssignment() {
 
               {/* Instructions */}
               <div>
-                <h4 className="text-sm font-bold text-slate-800 mb-2">Instructions</h4>
+                <h4 className="text-sm font-bold text-slate-800 mb-2">{t('admin.academics.createAssignment.previewInstructionsTitle')}</h4>
                 {(editorRef.current?.innerHTML || "").replace(/<[^>]+>/g,"").trim() ? (
                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-700 prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML || "" }}/>
                 ) : (
                   <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-400 text-sm">
-                    No instructions added yet
+                    {t('admin.academics.createAssignment.noInstructionsYet')}
                   </div>
                 )}
               </div>
@@ -856,14 +856,14 @@ export default function CreateAssignment() {
               {attachments.length > 0 && (
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 mb-2">
-                    Attachments <span className="text-slate-400 font-normal">({attachments.length})</span>
+                    {t('admin.academics.createAssignment.previewAttachmentsTitle')} <span className="text-slate-400 font-normal">({attachments.length})</span>
                   </h4>
                   <div className="space-y-1.5">
                     {attachments.map((f, i) => (
                       <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs">
                         <FileSpreadsheet className="h-3.5 w-3.5 text-blue-500"/>
                         <span className="text-slate-700 truncate flex-1">{f.name}</span>
-                        <span className="text-slate-400">{(f.size/1024).toFixed(0)} KB</span>
+                        <span className="text-slate-400">{t('admin.academics.createAssignment.fileSizeKb', { size: (f.size/1024).toFixed(0) })}</span>
                       </div>
                     ))}
                   </div>
@@ -873,7 +873,7 @@ export default function CreateAssignment() {
               {/* Resource links */}
               {links.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 mb-2">Resource Links</h4>
+                  <h4 className="text-sm font-bold text-slate-800 mb-2">{t('admin.academics.createAssignment.previewResourceLinksTitle')}</h4>
                   <div className="space-y-1.5">
                     {links.map((link, i) => (
                       <div key={i} className="flex items-center gap-2 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 text-xs">
@@ -887,24 +887,24 @@ export default function CreateAssignment() {
 
               {/* Submission area preview */}
               <div className="border-t border-slate-100 pt-4">
-                <h4 className="text-sm font-bold text-slate-800 mb-2">Submission Area</h4>
+                <h4 className="text-sm font-bold text-slate-800 mb-2">{t('admin.academics.createAssignment.previewSubmissionAreaTitle')}</h4>
                 {submissionType === "file" ? (
                   <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50">
                     <UploadCloud className="h-7 w-7 text-slate-300 mx-auto mb-1.5"/>
-                    <p className="text-sm text-slate-400">Students will upload their files here</p>
+                    <p className="text-sm text-slate-400">{t('admin.academics.createAssignment.previewSubmissionFileHint')}</p>
                   </div>
                 ) : submissionType === "text" ? (
                   <div className="border border-slate-200 rounded-xl p-3 bg-slate-50">
-                    <p className="text-sm text-slate-400 italic">Students will type their answer here...</p>
+                    <p className="text-sm text-slate-400 italic">{t('admin.academics.createAssignment.previewSubmissionTextHint')}</p>
                   </div>
                 ) : (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-                    <p className="text-sm text-amber-700 font-medium">Physical submission — students hand in directly</p>
+                    <p className="text-sm text-amber-700 font-medium">{t('admin.academics.createAssignment.previewSubmissionOfflineHint')}</p>
                   </div>
                 )}
                 <button disabled
                   className="mt-3 w-full h-10 bg-blue-100 text-blue-400 font-semibold rounded-xl text-sm cursor-not-allowed">
-                  Submit Assignment (Preview Only)
+                  {t('admin.academics.createAssignment.buttonSubmitPreviewOnly')}
                 </button>
               </div>
 

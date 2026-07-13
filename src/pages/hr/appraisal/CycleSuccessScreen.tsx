@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Users, GitBranch, Mail, Sparkles } from "lucide-react";
@@ -14,15 +15,44 @@ interface Props {
 }
 
 export function CycleSuccessScreen({ open, result, onViewCycle, onAssignReviewers, onClose }: Props) {
+  const { t } = useTranslation();
   if (!result) return null;
 
   const facts = [
-    { icon: Users, text: `${result.employeesEnrolled} employee${result.employeesEnrolled === 1 ? "" : "s"} enrolled` },
-    { icon: GitBranch, text: `${result.reviewersAssigned} reviewer${result.reviewersAssigned === 1 ? "" : "s"} assigned` },
+    {
+      icon: Users,
+      text:
+        result.employeesEnrolled === 1
+          ? t("admin.hr.appraisal.cycleSuccessScreen.employeesEnrolledSingular", { count: result.employeesEnrolled })
+          : t("admin.hr.appraisal.cycleSuccessScreen.employeesEnrolledPlural", { count: result.employeesEnrolled }),
+    },
+    {
+      icon: GitBranch,
+      text:
+        result.reviewersAssigned === 1
+          ? t("admin.hr.appraisal.cycleSuccessScreen.reviewersAssignedSingular", { count: result.reviewersAssigned })
+          : t("admin.hr.appraisal.cycleSuccessScreen.reviewersAssignedPlural", { count: result.reviewersAssigned }),
+    },
     ...(result.notifications.inAppSent > 0 || result.notifications.emailSent > 0
-      ? [{ icon: Mail, text: `${result.notifications.inAppSent} in-app + ${result.notifications.emailSent} email notification${result.notifications.emailSent === 1 ? "" : "s"} sent` }]
+      ? [
+          {
+            icon: Mail,
+            text:
+              result.notifications.emailSent === 1
+                ? t("admin.hr.appraisal.cycleSuccessScreen.notificationsSentSingular", {
+                    inApp: result.notifications.inAppSent,
+                    email: result.notifications.emailSent,
+                  })
+                : t("admin.hr.appraisal.cycleSuccessScreen.notificationsSentPlural", {
+                    inApp: result.notifications.inAppSent,
+                    email: result.notifications.emailSent,
+                  }),
+          },
+        ]
       : []),
-    ...(result.aiEnabled ? [{ icon: Sparkles, text: "AI-assisted review tools enabled for this cycle" }] : []),
+    ...(result.aiEnabled
+      ? [{ icon: Sparkles, text: t("admin.hr.appraisal.cycleSuccessScreen.aiEnabled") }]
+      : []),
   ];
 
   return (
@@ -37,10 +67,10 @@ export function CycleSuccessScreen({ open, result, onViewCycle, onAssignReviewer
         >
           <Check className="w-8 h-8 text-emerald-600" />
         </motion.div>
-        <DialogTitle className="text-xl font-black text-slate-900">Performance Appraisal Created</DialogTitle>
+        <DialogTitle className="text-xl font-black text-slate-900">{t("admin.hr.appraisal.cycleSuccessScreen.pageTitle")}</DialogTitle>
         <p className="text-sm text-slate-500 mt-1">{result.cycleName}</p>
 
-        <div className="mt-6 space-y-2.5 text-left">
+        <div className="mt-6 space-y-2.5 text-start">
           {facts.map((f, i) => (
             <motion.div
               key={f.text}
@@ -56,9 +86,9 @@ export function CycleSuccessScreen({ open, result, onViewCycle, onAssignReviewer
         </div>
 
         <div className="mt-6 flex flex-col gap-2">
-          <Button onClick={onViewCycle} className="bg-purple-600 hover:bg-purple-700">View Cycle</Button>
-          <Button variant="outline" onClick={onAssignReviewers}>Assign Reviewers</Button>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button onClick={onViewCycle} className="bg-purple-600 hover:bg-purple-700">{t("admin.hr.appraisal.cycleSuccessScreen.viewCycle")}</Button>
+          <Button variant="outline" onClick={onAssignReviewers}>{t("admin.hr.appraisal.cycleSuccessScreen.assignReviewers")}</Button>
+          <Button variant="ghost" onClick={onClose}>{t("admin.hr.appraisal.cycleSuccessScreen.close")}</Button>
         </div>
       </DialogContent>
     </Dialog>

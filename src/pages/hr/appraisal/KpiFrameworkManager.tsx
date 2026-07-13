@@ -11,8 +11,10 @@ import {
 import { toast } from "sonner";
 import { smartDb } from "@/lib/localDb";
 import { KpiCategory, DEFAULT_KPI_CATEGORIES } from "./kpiFrameworkTypes";
+import { useTranslation } from "react-i18next";
 
 export function KpiFrameworkManager() {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<KpiCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function KpiFrameworkManager() {
         setCategories(rows);
       }
     } catch {
-      toast.error("Failed to load KPI framework");
+      toast.error(t("admin.hr.appraisal.kpiFrameworkManager.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -45,10 +47,10 @@ export function KpiFrameworkManager() {
   const totalWeight = useMemo(() => categories.reduce((s, c) => s + (Number(c.weight) || 0), 0), [categories]);
 
   async function handleDelete(c: KpiCategory) {
-    if (!confirm(`Delete "${c.title}"? This can't be undone.`)) return;
+    if (!confirm(t("admin.hr.appraisal.kpiFrameworkManager.confirmDelete", { title: c.title }))) return;
     await smartDb.delete("KpiFrameworkCategory", c.id);
     setCategories((prev) => prev.filter((x) => x.id !== c.id));
-    toast.success(`Deleted "${c.title}"`);
+    toast.success(t("admin.hr.appraisal.kpiFrameworkManager.deletedToast", { title: c.title }));
   }
 
   async function handleRestoreDefault(c: KpiCategory) {
@@ -58,23 +60,23 @@ export function KpiFrameworkManager() {
     const restored: KpiCategory = { ...original, id: c.id, createdAt: c.createdAt, updatedAt: new Date().toISOString() };
     await smartDb.update("KpiFrameworkCategory", c.id, restored);
     setCategories((prev) => prev.map((x) => (x.id === c.id ? restored : x)));
-    toast.success(`Restored "${c.title}" to the standard version`);
+    toast.success(t("admin.hr.appraisal.kpiFrameworkManager.restoredToast", { title: c.title }));
   }
 
   async function handleCreate() {
-    if (!newTitle.trim()) { toast.error("Name is required."); return; }
+    if (!newTitle.trim()) { toast.error(t("admin.hr.appraisal.kpiFrameworkManager.nameRequired")); return; }
     const id = `kpicat-custom-${Date.now()}`;
     const now = new Date().toISOString();
     const c: KpiCategory = {
       id, title: newTitle.trim(), weight: Math.max(0, Number(newWeight) || 0),
-      criteria: ["New criterion"], isDefault: false, createdAt: now, updatedAt: now,
+      criteria: [t("admin.hr.appraisal.kpiFrameworkManager.newCriterionDefault")], isDefault: false, createdAt: now, updatedAt: now,
     };
     await smartDb.create("KpiFrameworkCategory", c, id);
     setCategories((prev) => [...prev, c]);
     setCreateOpen(false);
     setNewTitle(""); setNewWeight("10");
     setEditing(c);
-    toast.success(`Created "${c.title}" — add your criteria.`);
+    toast.success(t("admin.hr.appraisal.kpiFrameworkManager.createdToast", { title: c.title }));
   }
 
   async function saveEdit(c: KpiCategory) {
@@ -82,24 +84,24 @@ export function KpiFrameworkManager() {
     await smartDb.update("KpiFrameworkCategory", c.id, patch);
     setCategories((prev) => prev.map((x) => (x.id === c.id ? patch : x)));
     setEditing(null);
-    toast.success(`Saved "${c.title}"`);
+    toast.success(t("admin.hr.appraisal.kpiFrameworkManager.savedToast", { title: c.title }));
   }
 
-  if (loading) return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">Loading KPI framework…</div>;
+  if (loading) return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">{t("admin.hr.appraisal.kpiFrameworkManager.loading")}</div>;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-900">KPI Framework</h3>
-          <p className="text-xs text-slate-400">The standard category/criteria breakdown appraisals are measured against.</p>
+          <h3 className="text-base font-bold text-slate-900">{t("admin.hr.appraisal.kpiFrameworkManager.pageTitle")}</h3>
+          <p className="text-xs text-slate-400">{t("admin.hr.appraisal.kpiFrameworkManager.pageSubtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={totalWeight === 100 ? "border-emerald-200 text-emerald-700" : "border-amber-200 text-amber-700"}>
-            {totalWeight}% total weight
+            {t("admin.hr.appraisal.kpiFrameworkManager.totalWeightBadge", { weight: totalWeight })}
           </Badge>
           <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> New Category
+            <Plus className="h-3.5 w-3.5" /> {t("admin.hr.appraisal.kpiFrameworkManager.newCategoryButton")}
           </Button>
         </div>
       </div>
@@ -111,15 +113,15 @@ export function KpiFrameworkManager() {
               <button className="flex items-center gap-3 flex-1 text-left" onClick={() => setExpanded(expanded === cat.id ? null : cat.id)}>
                 <ClipboardList className="h-5 w-5 text-indigo-500" />
                 <CardTitle className="text-base">{cat.title}</CardTitle>
-                <Badge variant="outline" className="text-xs">{cat.weight}% weight</Badge>
-                {cat.isDefault && <Badge variant="outline" className="text-[9px]">Standard</Badge>}
+                <Badge variant="outline" className="text-xs">{t("admin.hr.appraisal.kpiFrameworkManager.weightBadge", { weight: cat.weight })}</Badge>
+                {cat.isDefault && <Badge variant="outline" className="text-[9px]">{t("admin.hr.appraisal.kpiFrameworkManager.standardBadge")}</Badge>}
               </button>
               <div className="flex items-center gap-1">
                 <Button size="sm" variant="outline" className="gap-1" onClick={() => setEditing({ ...cat, criteria: [...cat.criteria] })}>
-                  <Pencil className="h-3 w-3" /> Edit
+                  <Pencil className="h-3 w-3" /> {t("admin.hr.appraisal.kpiFrameworkManager.editButton")}
                 </Button>
                 {cat.isDefault && (
-                  <Button size="sm" variant="outline" title="Restore standard version" onClick={() => handleRestoreDefault(cat)}>
+                  <Button size="sm" variant="outline" title={t("admin.hr.appraisal.kpiFrameworkManager.restoreStandardTitle")} onClick={() => handleRestoreDefault(cat)}>
                     <RotateCcw className="h-3 w-3" />
                   </Button>
                 )}
@@ -152,20 +154,20 @@ export function KpiFrameworkManager() {
       {/* New category dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle>New KPI Category</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("admin.hr.appraisal.kpiFrameworkManager.newCategoryDialogTitle")}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <Label>Category Name</Label>
-              <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g. Innovation & Technology" className="mt-1" />
+              <Label>{t("admin.hr.appraisal.kpiFrameworkManager.categoryNameLabel")}</Label>
+              <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder={t("admin.hr.appraisal.kpiFrameworkManager.categoryNamePlaceholder")} className="mt-1" />
             </div>
             <div>
-              <Label>Weight (%)</Label>
+              <Label>{t("admin.hr.appraisal.kpiFrameworkManager.weightLabel")}</Label>
               <Input type="number" min={0} max={100} value={newWeight} onChange={(e) => setNewWeight(e.target.value)} className="mt-1" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} className="bg-purple-600 hover:bg-purple-700">Create</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>{t("admin.hr.appraisal.kpiFrameworkManager.cancelButton")}</Button>
+            <Button onClick={handleCreate} className="bg-purple-600 hover:bg-purple-700">{t("admin.hr.appraisal.kpiFrameworkManager.createButton")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -175,18 +177,18 @@ export function KpiFrameworkManager() {
         <DialogContent className="sm:max-w-[520px] max-h-[85vh] overflow-y-auto">
           {editing && (
             <>
-              <DialogHeader><DialogTitle>Edit KPI Category</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("admin.hr.appraisal.kpiFrameworkManager.editCategoryDialogTitle")}</DialogTitle></DialogHeader>
               <div className="space-y-3 py-2">
                 <div>
-                  <Label>Category Name</Label>
+                  <Label>{t("admin.hr.appraisal.kpiFrameworkManager.categoryNameLabel")}</Label>
                   <Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Weight (%)</Label>
+                  <Label>{t("admin.hr.appraisal.kpiFrameworkManager.weightLabel")}</Label>
                   <Input type="number" min={0} max={100} value={editing.weight} onChange={(e) => setEditing({ ...editing, weight: Number(e.target.value) })} className="mt-1" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Criteria</Label>
+                  <Label>{t("admin.hr.appraisal.kpiFrameworkManager.criteriaLabel")}</Label>
                   {editing.criteria.map((c, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Input
@@ -201,16 +203,16 @@ export function KpiFrameworkManager() {
                   ))}
                   <button
                     type="button"
-                    onClick={() => setEditing({ ...editing, criteria: [...editing.criteria, "New criterion"] })}
+                    onClick={() => setEditing({ ...editing, criteria: [...editing.criteria, t("admin.hr.appraisal.kpiFrameworkManager.newCriterionDefault")] })}
                     className="text-xs font-semibold text-purple-600 hover:underline flex items-center gap-1"
                   >
-                    <Plus className="h-3.5 w-3.5" /> Add Criterion
+                    <Plus className="h-3.5 w-3.5" /> {t("admin.hr.appraisal.kpiFrameworkManager.addCriterionButton")}
                   </button>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button onClick={() => saveEdit(editing)} className="bg-purple-600 hover:bg-purple-700">Save</Button>
+                <Button variant="outline" onClick={() => setEditing(null)}>{t("admin.hr.appraisal.kpiFrameworkManager.cancelButton")}</Button>
+                <Button onClick={() => saveEdit(editing)} className="bg-purple-600 hover:bg-purple-700">{t("admin.hr.appraisal.kpiFrameworkManager.saveButton")}</Button>
               </DialogFooter>
             </>
           )}

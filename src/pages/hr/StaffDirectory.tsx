@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,38 @@ import { smartDb } from "@/lib/localDb";
 // from real approved leave requests (mirrors the policy used in TeacherLeave.tsx).
 const ANNUAL_LEAVE_ENTITLEMENT_DAYS = 12 + 10 + 21 + 3 + 5; // Casual + Sick + Annual + Emergency + Duty
 
+// Lookup maps: underlying identifiers stay in English for data-matching/logic,
+// only the rendered label is translated.
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Active": "admin.hr.staffDirectory.statusActive",
+  "On Leave": "admin.hr.staffDirectory.statusOnLeave",
+  "Inactive": "admin.hr.staffDirectory.statusInactive",
+  "Terminated": "admin.hr.staffDirectory.statusTerminated",
+};
+
+const ROLE_LABEL_KEYS: Record<string, string> = {
+  "Teacher": "admin.hr.staffDirectory.roleTeacher",
+  "Senior Teacher": "admin.hr.staffDirectory.roleSeniorTeacher",
+  "Head of Department": "admin.hr.staffDirectory.roleHeadOfDepartment",
+  "Administrator": "admin.hr.staffDirectory.roleAdministrator",
+  "Librarian": "admin.hr.staffDirectory.roleLibrarian",
+  "Support Staff": "admin.hr.staffDirectory.roleSupportStaff",
+  "IT Specialist": "admin.hr.staffDirectory.roleITSpecialist",
+  "Sports Coach": "admin.hr.staffDirectory.roleSportsCoach",
+};
+
+const DEPARTMENT_LABEL_KEYS: Record<string, string> = {
+  "Administration": "admin.hr.staffDirectory.deptAdministration",
+  "Mathematics": "admin.hr.staffDirectory.deptMathematics",
+  "Science": "admin.hr.staffDirectory.deptScience",
+  "Humanities": "admin.hr.staffDirectory.deptHumanities",
+  "IT": "admin.hr.staffDirectory.deptIT",
+  "Library": "admin.hr.staffDirectory.deptLibrary",
+  "Sports": "admin.hr.staffDirectory.deptSports",
+};
+
 const StaffDirectory = () => {
+  const { t } = useTranslation();
   const { staff, addStaff, updateStaff, deleteStaff, loading } = useStaff();
   const { leaves } = useLeave();
   const navigate = useNavigate();
@@ -174,11 +206,11 @@ const StaffDirectory = () => {
       setSelectedStaff({ ...selectedStaff, documents: updatedDocs });
       toast.success(
         url
-          ? `${file.name} uploaded to ${selectedStaff.name}'s file`
-          : `${file.name} recorded — file exceeds 500 KB, metadata only`
+          ? t('admin.hr.staffDirectory.toastDocUploaded', { fileName: file.name, staffName: selectedStaff.name })
+          : t('admin.hr.staffDirectory.toastDocRecordedMetadataOnly', { fileName: file.name })
       );
     } catch {
-      toast.error("Failed to save the document");
+      toast.error(t('admin.hr.staffDirectory.toastDocSaveFailed'));
     }
   };
 
@@ -209,7 +241,7 @@ const StaffDirectory = () => {
         })) as PayrollRecord[];
         setPayrollHistory(history);
       } catch (error) {
-        console.error("Error fetching payroll history:", error);
+        console.error("Error fetching payroll history:", error); // debug log, not user-facing
       } finally {
         setLoadingHistory(false);
       }
@@ -287,19 +319,19 @@ const StaffDirectory = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      toast.error("Name is required");
+      toast.error(t('admin.hr.staffDirectory.toastNameRequired'));
       return false;
     }
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error("Valid email is required");
+      toast.error(t('admin.hr.staffDirectory.toastValidEmailRequired'));
       return false;
     }
     if (!formData.role.trim()) {
-      toast.error("Role is required");
+      toast.error(t('admin.hr.staffDirectory.toastRoleRequired'));
       return false;
     }
     if (!formData.department) {
-      toast.error("Department is required");
+      toast.error(t('admin.hr.staffDirectory.toastDepartmentRequired'));
       return false;
     }
     return true;
@@ -311,16 +343,16 @@ const StaffDirectory = () => {
     try {
       if (staffToEdit) {
         await updateStaff(staffToEdit.id, formData);
-        toast.success("Staff member updated successfully");
+        toast.success(t('admin.hr.staffDirectory.toastStaffUpdated'));
       } else {
         await addStaff(formData);
-        toast.success("Staff member added successfully");
+        toast.success(t('admin.hr.staffDirectory.toastStaffAdded'));
       }
       setIsAddEditOpen(false);
       setStaffToEdit(null);
       resetForm();
     } catch (error) {
-      toast.error("Failed to save staff member");
+      toast.error(t('admin.hr.staffDirectory.toastStaffSaveFailed'));
     }
   };
 

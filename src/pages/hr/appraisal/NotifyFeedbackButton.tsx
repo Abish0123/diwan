@@ -16,6 +16,7 @@ import { smartDb } from "@/lib/localDb";
 import { pushNotify } from "@/lib/pushNotifications";
 import { getRateableTeachersForStudent } from "@/lib/feedbackEligibility";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 async function runThrottled<T>(
   items: T[],
@@ -37,6 +38,7 @@ async function runThrottled<T>(
 }
 
 export function NotifyFeedbackButton() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -55,7 +57,7 @@ export function NotifyFeedbackButton() {
         (a, b) => new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime()
       )[0];
       if (!activeCycle) {
-        toast.error("Start an appraisal cycle first — feedback requests are tied to the active cycle.");
+        toast.error(t("admin.hr.appraisal.notifyFeedbackButton.cycleRequiredError"));
         setSending(false);
         return;
       }
@@ -71,10 +73,19 @@ export function NotifyFeedbackButton() {
             getRateableTeachersForStudent(s.grade, s.section, "parent"),
           ]);
           const loginId = s.admissionNumber || s.rollNumber || s.id;
+          const cycleTitle = activeCycle.title || t("admin.hr.appraisal.notifyFeedbackButton.defaultCycleTitle");
           if (studentTargets.length > 0) {
             await pushNotify({
-              title: "Teacher Feedback Requested",
-              message: `${activeCycle.title || "This term"}'s feedback is open — rate ${studentTargets.length} of your teacher${studentTargets.length === 1 ? "" : "s"} on your dashboard.`,
+              title: t("admin.hr.appraisal.notifyFeedbackButton.notificationTitle"),
+              message: t("admin.hr.appraisal.notifyFeedbackButton.studentMessage", {
+                cycleTitle,
+                count: studentTargets.length,
+                teacherWord: t(
+                  studentTargets.length === 1
+                    ? "admin.hr.appraisal.notifyFeedbackButton.teacherWordYourSingular"
+                    : "admin.hr.appraisal.notifyFeedbackButton.teacherWordYourPlural"
+                ),
+              }),
               audienceRole: "student",
               recipientUid: loginId,
               category: "hr",
@@ -86,8 +97,17 @@ export function NotifyFeedbackButton() {
           const parentEmail = s.fatherEmail || s.motherEmail || s.guardianEmail;
           if (parentEmail && parentTargets.length > 0) {
             await pushNotify({
-              title: "Teacher Feedback Requested",
-              message: `${activeCycle.title || "This term"}'s feedback is open for ${s.name} — rate ${parentTargets.length} of their teacher${parentTargets.length === 1 ? "" : "s"} on your dashboard.`,
+              title: t("admin.hr.appraisal.notifyFeedbackButton.notificationTitle"),
+              message: t("admin.hr.appraisal.notifyFeedbackButton.parentMessage", {
+                cycleTitle,
+                studentName: s.name,
+                count: parentTargets.length,
+                teacherWord: t(
+                  parentTargets.length === 1
+                    ? "admin.hr.appraisal.notifyFeedbackButton.teacherWordTheirSingular"
+                    : "admin.hr.appraisal.notifyFeedbackButton.teacherWordTheirPlural"
+                ),
+              }),
               audienceRole: "parent",
               recipientUid: `${loginId}-parent`,
               category: "hr",
@@ -102,9 +122,24 @@ export function NotifyFeedbackButton() {
 
       setStudentsNotified(studentCount);
       setParentsNotified(parentCount);
-      toast.success(`Notified ${studentCount} student${studentCount === 1 ? "" : "s"} and ${parentCount} parent${parentCount === 1 ? "" : "s"}.`);
+      toast.success(
+        t("admin.hr.appraisal.notifyFeedbackButton.notifiedSummary", {
+          studentCount,
+          studentWord: t(
+            studentCount === 1
+              ? "admin.hr.appraisal.notifyFeedbackButton.studentWordSingular"
+              : "admin.hr.appraisal.notifyFeedbackButton.studentWordPlural"
+          ),
+          parentCount,
+          parentWord: t(
+            parentCount === 1
+              ? "admin.hr.appraisal.notifyFeedbackButton.parentWordSingular"
+              : "admin.hr.appraisal.notifyFeedbackButton.parentWordPlural"
+          ),
+        })
+      );
     } catch {
-      toast.error("Failed to send feedback notifications.");
+      toast.error(t("admin.hr.appraisal.notifyFeedbackButton.sendFailedError"));
     } finally {
       setSending(false);
     }
@@ -113,22 +148,27 @@ export function NotifyFeedbackButton() {
   return (
     <>
       <Button size="sm" variant="outline" className="gap-1.5" onClick={handleSend} disabled={sending}>
-        <Send className="h-3.5 w-3.5" /> Notify Students & Parents
+        <Send className="h-3.5 w-3.5" /> {t("admin.hr.appraisal.notifyFeedbackButton.notifyButtonLabel")}
       </Button>
 
       <Dialog open={sending} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-[420px]" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-          <DialogHeader><DialogTitle>Sending feedback requests…</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("admin.hr.appraisal.notifyFeedbackButton.sendingDialogTitle")}</DialogTitle></DialogHeader>
           <div className="space-y-2 py-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">
-                {progress.total ? `${progress.done} / ${progress.total} students checked` : "Starting…"}
+                {progress.total
+                  ? t("admin.hr.appraisal.notifyFeedbackButton.progressStudentsChecked", {
+                      done: progress.done,
+                      total: progress.total,
+                    })
+                  : t("admin.hr.appraisal.notifyFeedbackButton.progressStarting")}
               </span>
-              <span className="text-slate-400">Please don't close this window</span>
+              <span className="text-slate-400">{t("admin.hr.appraisal.notifyFeedbackButton.progressCloseWarning")}</span>
             </div>
             <Progress value={progress.total ? Math.round((progress.done / progress.total) * 100) : 5} className="h-1.5" />
             <p className="text-[11px] text-slate-400">
-              Large rosters are deliberately throttled to respect the server's write rate limit — this can take a few minutes for a full school.
+              {t("admin.hr.appraisal.notifyFeedbackButton.throttleNote")}
             </p>
           </div>
         </DialogContent>

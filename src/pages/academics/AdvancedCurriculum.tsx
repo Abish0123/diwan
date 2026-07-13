@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -1046,7 +1046,7 @@ const AdvancedCurriculum = () => {
                           onClick={handleLoadNcert}
                           className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-sm"
                         >
-                          <BookMarked className="w-4 h-4 mr-2" /> {t('admin.academics.advancedCurriculum.loadNcertChapters')}
+                          <BookMarked className="w-4 h-4 me-2" /> {t('admin.academics.advancedCurriculum.loadNcertChapters')}
                         </Button>
                       </>
                     ) : (
@@ -1069,9 +1069,9 @@ const AdvancedCurriculum = () => {
                   className="w-full h-12 bg-gradient-to-r from-[#d12386] to-[#9810fa] hover:opacity-90 text-white font-semibold text-lg shadow-md group"
                 >
                   {isGenerating ? (
-                    <Zap className="w-5 h-5 mr-2 animate-pulse" />
+                    <Zap className="w-5 h-5 me-2 animate-pulse" />
                   ) : (
-                    <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+                    <Sparkles className="w-5 h-5 me-2 group-hover:rotate-12 transition-transform" />
                   )}
                   {isGenerating ? t('admin.academics.advancedCurriculum.aiGenerating') : t('admin.academics.advancedCurriculum.aiGenerateCurriculum')}
                 </Button>
@@ -1095,13 +1095,13 @@ const AdvancedCurriculum = () => {
                       <button
                         key={curr.id}
                         onClick={() => handleLoadCurriculum(curr)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left group"
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-start group"
                       >
                         <div>
                           <p className="text-sm font-bold text-slate-900">{curr.subject} - {curr.grade}</p>
                           <p className="text-xs text-slate-500">{curr.curriculumType} • {curr.academicYear}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#d12386] transition-colors" />
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#d12386] transition-colors rtl:rotate-180" />
                       </button>
                     ))}
                   </div>
@@ -1156,10 +1156,10 @@ const AdvancedCurriculum = () => {
       <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-10 shadow-sm no-print">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setStep("setup")}>
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 rtl:rotate-180" />
           </Button>
           <div className="flex flex-col">
-            <h2 className="font-bold text-slate-900">Advanced Curriculum Design</h2>
+            <h2 className="font-bold text-slate-900">{t('admin.academics.advancedCurriculum.headerTitle')}</h2>
             <p className="text-xs text-slate-500 flex items-center gap-2">
               <span>{currentCurriculum.grade} • {currentCurriculum.subject} • {currentCurriculum.curriculumType}</span>
               {currentCurriculum.resourceUrl && (
@@ -1169,16 +1169,16 @@ const AdvancedCurriculum = () => {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-orange-600 font-semibold hover:underline"
                 >
-                  <BookMarked className="w-3 h-3" /> NCERT source
+                  <BookMarked className="w-3 h-3" /> {t('admin.academics.advancedCurriculum.ncertSource')}
                 </a>
               )}
               {libraryBookCount !== null && (
                 <a
                   href={`/library?category=${encodeURIComponent(currentCurriculum.subject || "")}`}
                   className="inline-flex items-center gap-1 text-purple-600 font-semibold hover:underline"
-                  title={libraryBookCount > 0 ? `${libraryBookCount} real book(s) catalogued under "${currentCurriculum.subject}" in the Library` : "No Library books catalogued under this subject yet"}
+                  title={libraryBookCount > 0 ? t('admin.academics.advancedCurriculum.libraryBooksCatalogued', { count: libraryBookCount, subject: currentCurriculum.subject }) : t('admin.academics.advancedCurriculum.libraryNoBooksCatalogued')}
                 >
-                  <BookMarked className="w-3 h-3" /> {libraryBookCount} book{libraryBookCount === 1 ? "" : "s"} in Library
+                  <BookMarked className="w-3 h-3" /> {libraryBookCount === 1 ? t('admin.academics.advancedCurriculum.libraryBookCountSingular', { count: libraryBookCount }) : t('admin.academics.advancedCurriculum.libraryBookCountPlural', { count: libraryBookCount })}
                 </a>
               )}
             </p>
@@ -1193,25 +1193,25 @@ const AdvancedCurriculum = () => {
             disabled={isOptimizing}
             className="border-[#d12386] text-[#d12386] hover:bg-[#d12386]/5"
           >
-            <Zap className={`w-4 h-4 mr-2 ${isOptimizing ? 'animate-pulse' : ''}`} />
-            AI Optimize
+            <Zap className={`w-4 h-4 me-2 ${isOptimizing ? 'animate-pulse' : ''}`} />
+            {t('admin.academics.advancedCurriculum.aiOptimize')}
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => window.print()}
             className="border-slate-200 text-slate-600 hover:bg-slate-50"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Export PDF
+            <Download className="w-4 h-4 me-2" />
+            {t('admin.academics.advancedCurriculum.exportPdf')}
           </Button>
           <Button size="sm" onClick={handleSave} className="bg-[#9810fa] hover:bg-[#5b4bc4]">
-            <Save className="w-4 h-4 mr-2" />
-            Save Draft
+            <Save className="w-4 h-4 me-2" />
+            {t('admin.academics.advancedCurriculum.saveDraft')}
           </Button>
           <Button size="sm" onClick={handlePublish} className="bg-gradient-to-r from-[#d12386] to-[#9810fa] text-white">
-            <Send className="w-4 h-4 mr-2" />
-            Publish
+            <Send className="w-4 h-4 me-2" />
+            {t('admin.academics.advancedCurriculum.publish')}
           </Button>
         </div>
       </header>
@@ -1241,7 +1241,7 @@ const AdvancedCurriculum = () => {
                 disabled={applyingFix !== null || optimizationData.suggestions.length === 0}
                 className="text-amber-700 hover:bg-amber-100 h-8 px-3"
               >
-                {applyingFix === "all" ? "Applying..." : "Apply Suggestions"}
+                {applyingFix === "all" ? t('admin.academics.advancedCurriculum.applyingEllipsis') : t('admin.academics.advancedCurriculum.applySuggestions')}
               </Button>
             </div>
           </motion.div>
@@ -1251,20 +1251,20 @@ const AdvancedCurriculum = () => {
       {/* --- Main Content Area --- */}
       <main className="flex-1 flex overflow-hidden">
         {/* --- Left Panel: Structure Navigation --- */}
-        <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 no-print">
+        <aside className="w-64 bg-white border-e border-slate-200 flex flex-col shrink-0 no-print">
           <div className="p-4 border-b border-slate-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                 <Layout className="w-4 h-4 text-slate-400" />
-                Curriculum
+                {t('admin.academics.advancedCurriculum.curriculumSidebarTitle')}
               </h3>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAddTerm}>
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input placeholder={`Search ${structureLabel.toLowerCase()}s...`} className="pl-9 h-8 text-sm bg-slate-50 border-none" />
+              <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input placeholder={t('admin.academics.advancedCurriculum.searchStructurePlaceholder', { label: structureLabel })} className="ps-9 h-8 text-sm bg-slate-50 border-none" />
             </div>
           </div>
 
@@ -1277,7 +1277,7 @@ const AdvancedCurriculum = () => {
                     className="w-full flex items-center justify-between p-2 hover:bg-slate-50 rounded-md text-sm font-medium text-slate-700 group"
                   >
                     <div className="flex items-center gap-2">
-                      {activeTermId === term.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                      {activeTermId === term.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400 rtl:rotate-180" />}
                       {term.name}
                     </div>
                   </button>
@@ -1288,13 +1288,13 @@ const AdvancedCurriculum = () => {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden pl-4 space-y-1"
+                        className="overflow-hidden ps-4 space-y-1"
                       >
                         {term.units.map((unit) => (
                           <button
                             key={unit.id}
                             onClick={() => setActiveUnitId(unit.id)}
-                            className={`w-full text-left p-2 rounded-md text-sm transition-colors ${
+                            className={`w-full text-start p-2 rounded-md text-sm transition-colors ${
                               activeUnitId === unit.id 
                                 ? "bg-[#d12386]/10 text-[#d12386] font-medium" 
                                 : "text-slate-500 hover:bg-slate-50"
@@ -1309,8 +1309,8 @@ const AdvancedCurriculum = () => {
                           className="w-full justify-start text-xs text-slate-400 hover:text-[#d12386] h-8"
                           onClick={() => handleAddUnit(term.id)}
                         >
-                          <Plus className="w-3 h-3 mr-2" />
-                          Add {structureLabel}
+                          <Plus className="w-3 h-3 me-2" />
+                          {t('admin.academics.advancedCurriculum.addStructureLabel', { label: structureLabel })}
                         </Button>
                       </motion.div>
                     )}
@@ -1336,7 +1336,7 @@ const AdvancedCurriculum = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className="bg-white text-[#d12386] border-[#d12386]/20">
-                        {structureLabel}: {activeUnit.name}
+                        {t('admin.academics.advancedCurriculum.structureLabelPrefix', { label: structureLabel, name: activeUnit.name })}
                       </Badge>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1352,8 +1352,8 @@ const AdvancedCurriculum = () => {
                             <Clock className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Duration</p>
-                            <p className="font-semibold text-slate-900">{activeUnit.weeks.length} Weeks</p>
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">{t('admin.academics.advancedCurriculum.durationLabel')}</p>
+                            <p className="font-semibold text-slate-900">{t('admin.academics.advancedCurriculum.weeksCount', { count: activeUnit.weeks.length })}</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -1363,7 +1363,7 @@ const AdvancedCurriculum = () => {
                             <BarChart3 className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Difficulty</p>
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">{t('admin.academics.advancedCurriculum.difficultyLabel')}</p>
                             <p className="font-semibold text-slate-900">{activeUnit.difficulty}</p>
                           </div>
                         </CardContent>
@@ -1374,8 +1374,8 @@ const AdvancedCurriculum = () => {
                             <CheckCircle2 className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Outcomes</p>
-                            <p className="font-semibold text-slate-900">{activeUnit.learningOutcomes.length} Points</p>
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">{t('admin.academics.advancedCurriculum.outcomesLabel')}</p>
+                            <p className="font-semibold text-slate-900">{t('admin.academics.advancedCurriculum.pointsCount', { count: activeUnit.learningOutcomes.length })}</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -1387,7 +1387,7 @@ const AdvancedCurriculum = () => {
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                         <Layout className="w-5 h-5 text-[#d12386]" />
-                        Weekly Planner
+                        {t('admin.academics.advancedCurriculum.weeklyPlannerTitle')}
                       </h3>
                       {(() => {
                         const total = activeUnit.weeks.length;
@@ -1395,7 +1395,7 @@ const AdvancedCurriculum = () => {
                         const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
                         return (
                           <div className="flex items-center gap-2 min-w-[160px]">
-                            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{covered}/{total} covered</span>
+                            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('admin.academics.advancedCurriculum.coveredProgress', { covered, total })}</span>
                             <Progress value={pct} className="h-1.5 w-24" />
                           </div>
                         );
@@ -1407,7 +1407,7 @@ const AdvancedCurriculum = () => {
                           <CardContent className="p-4 flex items-center gap-4">
                             <div className={cn("shrink-0 w-12 h-12 rounded-full flex flex-col items-center justify-center border",
                               week.completed ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100")}>
-                              <span className="text-[10px] uppercase font-bold text-slate-400">Week</span>
+                              <span className="text-[10px] uppercase font-bold text-slate-400">{t('admin.academics.advancedCurriculum.weekLabel')}</span>
                               <span className="text-lg font-bold text-slate-700 leading-none">{week.week}</span>
                             </div>
                             <div className="flex-1">
@@ -1415,14 +1415,14 @@ const AdvancedCurriculum = () => {
                                 <h4 className="font-semibold text-slate-900">{week.topic}</h4>
                                 <div className="flex items-center gap-1.5">
                                   {week.completed && (
-                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px]" title={week.completedBy ? `Covered by ${week.completedBy}` : undefined}>
-                                      <CheckCircle2 className="w-3 h-3 mr-1" /> Covered
+                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px]" title={week.completedBy ? t('admin.academics.advancedCurriculum.coveredByPerson', { name: week.completedBy }) : undefined}>
+                                      <CheckCircle2 className="w-3 h-3 me-1" /> {t('admin.academics.advancedCurriculum.coveredBadge')}
                                     </Badge>
                                   )}
                                   {optimizationData?.issues.find((i: { week?: number }) => i.week === week.week) && (
                                     <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[10px]">
-                                      <AlertTriangle className="w-3 h-3 mr-1" />
-                                      Overload Risk
+                                      <AlertTriangle className="w-3 h-3 me-1" />
+                                      {t('admin.academics.advancedCurriculum.overloadRiskBadge')}
                                     </Badge>
                                   )}
                                 </div>
@@ -1446,8 +1446,8 @@ const AdvancedCurriculum = () => {
                                   if (term && week.id) toggleWeekComplete(term.id!, activeUnit.id!, week.id);
                                 }}
                               >
-                                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                                {week.completed ? "Covered" : "Mark Covered"}
+                                <CheckCircle2 className="w-3.5 h-3.5 me-1.5" />
+                                {week.completed ? t('admin.academics.advancedCurriculum.coveredBadge') : t('admin.academics.advancedCurriculum.markCovered')}
                               </Button>
                               <Button
                                 variant="outline"
@@ -1460,8 +1460,8 @@ const AdvancedCurriculum = () => {
                                   }
                                 }}
                               >
-                                <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-                                View Lesson
+                                <BookOpen className="w-3.5 h-3.5 me-1.5" />
+                                {t('admin.academics.advancedCurriculum.viewLesson')}
                               </Button>
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1484,7 +1484,7 @@ const AdvancedCurriculum = () => {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                           <BookOpen className="w-4 h-4 text-blue-500" />
-                          Learning Outcomes
+                          {t('admin.academics.advancedCurriculum.learningOutcomesTitle')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
@@ -1495,8 +1495,8 @@ const AdvancedCurriculum = () => {
                           </div>
                         ))}
                         <Button variant="ghost" size="sm" className="w-full text-xs text-slate-400 hover:text-blue-500 mt-2">
-                          <Plus className="w-3 h-3 mr-2" />
-                          Add Outcome
+                          <Plus className="w-3 h-3 me-2" />
+                          {t('admin.academics.advancedCurriculum.addOutcome')}
                         </Button>
                       </CardContent>
                     </Card>
@@ -1505,7 +1505,7 @@ const AdvancedCurriculum = () => {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                           <Zap className="w-4 h-4 text-purple-500" />
-                          Assessments
+                          {t('admin.academics.advancedCurriculum.assessmentsTitle')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
@@ -1517,7 +1517,7 @@ const AdvancedCurriculum = () => {
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-slate-700">{assessment.type}</p>
-                                <p className="text-[10px] text-slate-500">Week {assessment.week}</p>
+                                <p className="text-[10px] text-slate-500">{t('admin.academics.advancedCurriculum.weekNumber', { week: assessment.week })}</p>
                               </div>
                             </div>
                             <Badge variant="outline" className="bg-white text-slate-600 border-slate-200">
@@ -1526,8 +1526,8 @@ const AdvancedCurriculum = () => {
                           </div>
                         ))}
                         <Button variant="ghost" size="sm" className="w-full text-xs text-slate-400 hover:text-purple-500 mt-2">
-                          <Plus className="w-3 h-3 mr-2" />
-                          Add Assessment
+                          <Plus className="w-3 h-3 me-2" />
+                          {t('admin.academics.advancedCurriculum.addAssessment')}
                         </Button>
                       </CardContent>
                     </Card>
@@ -1539,8 +1539,8 @@ const AdvancedCurriculum = () => {
                     <Layout className="w-10 h-10" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Select a unit to start building</h3>
-                    <p className="text-slate-500 max-w-xs">Choose a unit from the left panel to edit its structure and weekly plan.</p>
+                    <h3 className="text-lg font-bold text-slate-900">{t('admin.academics.advancedCurriculum.selectUnitTitle')}</h3>
+                    <p className="text-slate-500 max-w-xs">{t('admin.academics.advancedCurriculum.selectUnitDescription')}</p>
                   </div>
                 </div>
               )}
@@ -1549,17 +1549,17 @@ const AdvancedCurriculum = () => {
         </section>
 
         {/* --- Right Panel: AI Optimization --- */}
-        <aside className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 no-print">
+        <aside className="w-80 bg-white border-s border-slate-200 flex flex-col shrink-0 no-print">
           <div className="p-6 border-b border-slate-100">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 mb-4">
               <Brain className="w-5 h-5 text-[#d12386]" />
-              AI Optimization
+              {t('admin.academics.advancedCurriculum.aiOptimizationTitle')}
             </h3>
-            
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <span>Optimization Score</span>
+                  <span>{t('admin.academics.advancedCurriculum.optimizationScore')}</span>
                   <span className={optimizationData ? "text-[#d12386]" : ""}>
                     {optimizationData ? `${optimizationData.scores.cognitive}%` : "--"}
                   </span>
@@ -1569,13 +1569,13 @@ const AdvancedCurriculum = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Engagement</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('admin.academics.advancedCurriculum.engagementLabel')}</p>
                   <p className="text-lg font-bold text-slate-700">
                     {optimizationData ? `${optimizationData.scores.engagement}%` : "--"}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Risk Level</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('admin.academics.advancedCurriculum.riskLevelLabel')}</p>
                   <p className={`text-lg font-bold ${
                     optimizationData?.riskLevel === 'high' ? 'text-red-500' : 
                     optimizationData?.riskLevel === 'medium' ? 'text-amber-500' : 
@@ -1593,12 +1593,12 @@ const AdvancedCurriculum = () => {
               {optimizationData ? (
                 <>
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Insights & Issues</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.advancedCurriculum.insightsIssuesTitle')}</h4>
                     {optimizationData.issues.map((issue: { type: string; message: string }, i: number) => (
                       <div key={i} className="p-3 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
                         <div className="flex items-center gap-2 text-amber-700 font-bold text-sm">
                           <AlertTriangle className="w-4 h-4" />
-                          {issue.type === 'overload' ? 'Cognitive Overload' : 'Engagement Risk'}
+                          {issue.type === 'overload' ? t('admin.academics.advancedCurriculum.cognitiveOverload') : t('admin.academics.advancedCurriculum.engagementRisk')}
                         </div>
                         <p className="text-xs text-amber-600 leading-relaxed">{issue.message}</p>
                       </div>
@@ -1606,7 +1606,7 @@ const AdvancedCurriculum = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Smart Suggestions</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">{t('admin.academics.advancedCurriculum.smartSuggestionsTitle')}</h4>
                     {optimizationData.suggestions.map((suggestion: { message: string }, i: number) => (
                       <div key={i} className="p-3 rounded-xl bg-blue-50 border border-blue-100 space-y-3">
                         <p className="text-xs text-blue-700 font-medium leading-relaxed">{suggestion.message}</p>
@@ -1618,10 +1618,10 @@ const AdvancedCurriculum = () => {
                         >
                           {applyingFix === i ? (
                             <>
-                              <Zap className="w-3 h-3 mr-1.5 animate-pulse" />
-                              Applying...
+                              <Zap className="w-3 h-3 me-1.5 animate-pulse" />
+                              {t('admin.academics.advancedCurriculum.applyingEllipsis')}
                             </>
-                          ) : "Apply Fix"}
+                          ) : t('admin.academics.advancedCurriculum.applyFix')}
                         </Button>
                       </div>
                     ))}
@@ -1633,19 +1633,19 @@ const AdvancedCurriculum = () => {
                     <Zap className="w-8 h-8" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-700">No data analyzed yet</p>
+                    <p className="text-sm font-bold text-slate-700">{t('admin.academics.advancedCurriculum.noDataAnalyzedYet')}</p>
                     <p className="text-xs text-slate-400 max-w-[180px] mx-auto mt-1">
-                      Click "AI Optimize" to analyze your curriculum for cognitive load and engagement.
+                      {t('admin.academics.advancedCurriculum.clickAiOptimizeHint')}
                     </p>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleOptimize}
                     disabled={isOptimizing}
                     className="border-[#d12386] text-[#d12386] hover:bg-[#d12386]/5"
                   >
-                    {isOptimizing ? "Analyzing..." : "Run AI Analysis"}
+                    {isOptimizing ? t('admin.academics.advancedCurriculum.analyzingEllipsis') : t('admin.academics.advancedCurriculum.runAiAnalysis')}
                   </Button>
                 </div>
               )}
@@ -1658,8 +1658,8 @@ const AdvancedCurriculum = () => {
               disabled={applyingFix !== null || isOptimizing}
               className="w-full bg-gradient-to-r from-[#d12386] to-[#9810fa] hover:opacity-90 text-white shadow-md"
             >
-              <Zap className={`w-4 h-4 mr-2 ${applyingFix === "all" || isOptimizing ? "animate-pulse" : ""}`} />
-              {isOptimizing ? "Analyzing..." : applyingFix === "all" ? "Optimizing..." : "Auto Optimize All"}
+              <Zap className={`w-4 h-4 me-2 ${applyingFix === "all" || isOptimizing ? "animate-pulse" : ""}`} />
+              {isOptimizing ? t('admin.academics.advancedCurriculum.analyzingEllipsis') : applyingFix === "all" ? t('admin.academics.advancedCurriculum.optimizingEllipsis') : t('admin.academics.advancedCurriculum.autoOptimizeAll')}
             </Button>
           </div>
         </aside>
@@ -1678,13 +1678,13 @@ const AdvancedCurriculum = () => {
               <>
                 <DialogHeader className="p-6 bg-gradient-to-r from-[#d12386] to-[#9810fa] text-white shrink-0">
                   <div className="flex items-center gap-2 text-[#d12386]/20 mb-2">
-                    <Badge className="bg-white/20 text-white border-none">Week {week.week}</Badge>
+                    <Badge className="bg-white/20 text-white border-none">{t('admin.academics.advancedCurriculum.weekNumber', { week: week.week })}</Badge>
                     <span className="text-white/60">•</span>
                     <span className="text-sm font-medium text-white/80">{unit?.name}</span>
                   </div>
                   <DialogTitle className="text-2xl font-bold text-white">{week.topic}</DialogTitle>
                   <DialogDescription className="text-white/70">
-                    Detailed lesson content and reading materials
+                    {t('admin.academics.advancedCurriculum.lessonDialogDescription')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1699,22 +1699,22 @@ const AdvancedCurriculum = () => {
                         <BookOpen className="w-10 h-10 text-slate-300" />
                       </div>
                       <div className="max-w-sm">
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">No Lesson Content Yet</h3>
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">{t('admin.academics.advancedCurriculum.noLessonContentTitle')}</h3>
                         <p className="text-slate-500 text-sm">
-                          Generate detailed reading materials, concepts, and examples for this topic using AI.
+                          {t('admin.academics.advancedCurriculum.noLessonContentDescription')}
                         </p>
                       </div>
-                      <Button 
+                      <Button
                         onClick={() => handleGenerateLesson(viewingWeek.termId, viewingWeek.unitId, viewingWeek.weekId)}
                         disabled={isGeneratingLesson}
                         className="bg-[#d12386] hover:bg-[#d12386]/90 text-white px-8 h-11 rounded-xl shadow-lg shadow-[#d12386]/20"
                       >
                         {isGeneratingLesson ? (
-                          <Zap className="w-4 h-4 mr-2 animate-pulse" />
+                          <Zap className="w-4 h-4 me-2 animate-pulse" />
                         ) : (
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <Sparkles className="w-4 h-4 me-2" />
                         )}
-                        {isGeneratingLesson ? "Generating Content..." : "AI Generate Lesson Content"}
+                        {isGeneratingLesson ? t('admin.academics.advancedCurriculum.generatingContentEllipsis') : t('admin.academics.advancedCurriculum.aiGenerateLessonContent')}
                       </Button>
                     </div>
                   )}
@@ -1724,15 +1724,15 @@ const AdvancedCurriculum = () => {
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" className="text-slate-600">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export PDF
+                        <Download className="w-4 h-4 me-2" />
+                        {t('admin.academics.advancedCurriculum.exportPdf')}
                       </Button>
                       <Button variant="outline" size="sm" className="text-slate-600">
-                        <Send className="w-4 h-4 mr-2" />
-                        Share with Students
+                        <Send className="w-4 h-4 me-2" />
+                        {t('admin.academics.advancedCurriculum.shareWithStudents')}
                       </Button>
                     </div>
-                    <Button variant="ghost" onClick={() => setViewingWeek(null)}>Close</Button>
+                    <Button variant="ghost" onClick={() => setViewingWeek(null)}>{t('admin.academics.advancedCurriculum.close')}</Button>
                   </div>
                 </DialogFooter>
               </>

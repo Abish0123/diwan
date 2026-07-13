@@ -78,6 +78,7 @@ import { sendFeeReminder, sendBulkFeeReminders } from "@/lib/feeReminderEngine";
 import { downloadInvoiceReceiptPdf, printInvoiceReceiptPdf } from "@/lib/invoiceReceiptPdf";
 import { computeLateFee, DEFAULT_LATE_FEE_POLICY, LateFeePolicy } from "@/lib/lateFeeEngine";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 // Debounces a fast-changing value (search input) so expensive derived
 // computations (filtering/grouping hundreds of invoices) only re-run ~180ms
@@ -105,6 +106,7 @@ const FALLBACK_REMINDER_TEMPLATE =
   "Subject: Fee Payment Reminder\n\nDear Parent,\n\nThis is a reminder that a fee payment of QAR {{amount}} for {{studentName}} ({{grade}}) was due on {{dueDate}}.\n\nPlease make the payment at your earliest convenience.\n\nThank you.";
 
 const FeesManagement = () => {
+  const { t } = useTranslation();
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [structureDialogOpen, setStructureDialogOpen] = useState(false);
   const [collectFeeDialogOpen, setCollectFeeDialogOpen] = useState(false);
@@ -240,10 +242,10 @@ const FeesManagement = () => {
 
   const handleExport = () => {
     if (invoices.length === 0) {
-      toast.error("No data to export");
+      toast.error(t('admin.finance.feesManagement.toastNoDataExport'));
       return;
     }
-    toast.info("Exporting fee collection data...");
+    toast.info(t('admin.finance.feesManagement.toastExportingData'));
     const headers = ["Invoice #", "Student", "Class", "Total Amount", "Paid", "Due", "Status", "Due Date"];
     const rows = invoices.map(i => [
       i.invoiceNumber, 
@@ -262,7 +264,7 @@ const FeesManagement = () => {
     link.href = url;
     link.download = `fee_collections_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
-    toast.success("Export complete");
+    toast.success(t('admin.finance.feesManagement.toastExportComplete'));
   };
 
   // Resolves a student's parent contact info for reminder delivery.
@@ -311,12 +313,14 @@ const FeesManagement = () => {
 
   const summarizeReminders = (emailCount: number, parentAppCount: number, whatsappSkipped: number, whatsappTargets: string[] = []) => {
     const parts: string[] = [];
-    if (emailCount > 0) parts.push(`${emailCount} email${emailCount !== 1 ? "s" : ""}`);
-    if (parentAppCount > 0) parts.push(`${parentAppCount} in-app alert${parentAppCount !== 1 ? "s" : ""}`);
-    const base = parts.length > 0 ? `Reminders sent: ${parts.join(", ")}.` : "No reminders could be sent — no parent contact info on file.";
+    if (emailCount > 0) parts.push(emailCount !== 1 ? t('admin.finance.feesManagement.emailCountPlural', { count: emailCount }) : t('admin.finance.feesManagement.emailCountSingular', { count: emailCount }));
+    if (parentAppCount > 0) parts.push(parentAppCount !== 1 ? t('admin.finance.feesManagement.inAppAlertCountPlural', { count: parentAppCount }) : t('admin.finance.feesManagement.inAppAlertCountSingular', { count: parentAppCount }));
+    const base = parts.length > 0 ? t('admin.finance.feesManagement.remindersSentMessage', { parts: parts.join(", ") }) : t('admin.finance.feesManagement.noRemindersSent');
     const uniqueTargets = [...new Set(whatsappTargets)];
     const whatsappNote = whatsappSkipped > 0
-      ? ` WhatsApp is not connected — configure a provider in Settings to enable it (${whatsappSkipped} skipped${uniqueTargets.length > 0 ? `; would have messaged parent number${uniqueTargets.length !== 1 ? "s" : ""}: ${uniqueTargets.join(", ")}` : ""}).`
+      ? (uniqueTargets.length > 0
+          ? t('admin.finance.feesManagement.whatsappNotConnectedWithTargets', { count: whatsappSkipped, targets: uniqueTargets.join(", ") })
+          : t('admin.finance.feesManagement.whatsappNotConnectedNoTargets', { count: whatsappSkipped }))
       : "";
     return base + whatsappNote;
   };
@@ -324,7 +328,7 @@ const FeesManagement = () => {
   const handleSendReminders = async () => {
     const overdue = invoices.filter(i => getInvoiceDisplayStatus(i) === 'Overdue');
     if (overdue.length === 0) {
-      toast.info("No overdue invoices found");
+      toast.info(t('admin.finance.feesManagement.toastNoOverdueInvoices'));
       return;
     }
     if (!user?.uid) return;
@@ -347,7 +351,7 @@ const FeesManagement = () => {
       toast.success(summarizeReminders(emailCount, parentAppCount, whatsappSkipped, whatsappTargets));
     } catch (err) {
       console.error("Failed to send reminders:", err);
-      toast.error("Failed to send reminders");
+      toast.error(t('admin.finance.feesManagement.toastFailedSendReminders'));
     } finally {
       setSendingReminders(false);
     }
@@ -355,7 +359,7 @@ const FeesManagement = () => {
 
   const handleSendRemindersToSelected = async () => {
     if (selectedUnpaidInvoiceIds.size === 0) {
-      toast.info("No unpaid invoices selected");
+      toast.info(t('admin.finance.feesManagement.toastNoUnpaidSelected'));
       return;
     }
     if (!user?.uid) return;
@@ -380,7 +384,7 @@ const FeesManagement = () => {
       setSelectedUnpaidInvoiceIds(new Set());
     } catch (err) {
       console.error("Failed to send reminders:", err);
-      toast.error("Failed to send reminders");
+      toast.error(t('admin.finance.feesManagement.toastFailedSendReminders'));
     } finally {
       setSendingReminders(false);
     }
@@ -410,7 +414,7 @@ const FeesManagement = () => {
       const parentAppCount = result.parentApp ? 1 : 0;
       const whatsappSkipped = result.whatsapp === "not_connected" ? 1 : 0;
       if (recipient.parentEmails.length === 0 && emailCount === 0 && parentAppCount === 0) {
-        toast.error(`No parent email on file for ${invoice.studentName} — reminder not sent`);
+        toast.error(t('admin.finance.feesManagement.toastNoParentEmail', { name: invoice.studentName }));
       } else {
         toast.success(summarizeReminders(emailCount, parentAppCount, whatsappSkipped, result.whatsappTargets), {
           description: `${invoice.studentName} — ${invoice.invoiceNumber}`,
@@ -418,7 +422,7 @@ const FeesManagement = () => {
       }
     } catch (err) {
       console.error("Failed to send reminder:", err);
-      toast.error("Failed to send reminder");
+      toast.error(t('admin.finance.feesManagement.toastFailedSendReminder'));
     } finally {
       setReminderRowId(null);
     }
@@ -467,8 +471,8 @@ const FeesManagement = () => {
 
   const generateFeeInvoice = async () => {
     const lead = genLeads.find(l => l.id === genLeadId);
-    if (!lead) { toast.error("Select a lead"); return; }
-    if (!genStructureId) { toast.error("Select a fee structure"); return; }
+    if (!lead) { toast.error(t('admin.finance.feesManagement.toastSelectLead')); return; }
+    if (!genStructureId) { toast.error(t('admin.finance.feesManagement.toastSelectFeeStructure')); return; }
     const structure = feeStructures.find(s => s.id === genStructureId);
     const recipientEmail = lead.email || "—";
     // generateSingleInvoice sends the "please pay" invoice-generated email
@@ -514,11 +518,11 @@ const FeesManagement = () => {
         uid: user.uid,
         createdAt: new Date().toISOString(),
       });
-      toast.success("VAT invoice recorded");
+      toast.success(t('admin.finance.feesManagement.toastVatInvoiceRecorded'));
       fetchPaymentHistory();
     } catch (error) {
       console.error("Error saving VAT invoice:", error);
-      toast.error("Failed to save VAT invoice record");
+      toast.error(t('admin.finance.feesManagement.toastFailedSaveVat'));
     }
   };
 
@@ -543,11 +547,11 @@ const FeesManagement = () => {
         uid: user.uid,
         createdAt: new Date().toISOString(),
       });
-      toast.success("Online payment recorded");
+      toast.success(t('admin.finance.feesManagement.toastOnlinePaymentRecorded'));
       fetchPaymentHistory();
     } catch (error) {
       console.error("Error saving online payment:", error);
-      toast.error("Failed to save online payment record");
+      toast.error(t('admin.finance.feesManagement.toastFailedSaveOnlinePayment'));
     }
   };
 
@@ -651,26 +655,26 @@ const FeesManagement = () => {
               <CreditCard className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Fees Management</h1>
-              <p className="text-sm text-slate-400">Manage school fee structures, collections, and due tracking.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.feesManagement.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.finance.feesManagement.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
+              <Download className="me-2 h-4 w-4" />
+              {t('admin.finance.feesManagement.exportButton')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setVatInvoiceOpen(true)}>
-              <FileText className="mr-2 h-4 w-4" />
-              VAT Invoice
+              <FileText className="me-2 h-4 w-4" />
+              {t('admin.finance.feesManagement.vatInvoiceButton')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setPaymentOpen(true)}>
-              <CreditCard className="mr-2 h-4 w-4" />
-              Pay Online
+              <CreditCard className="me-2 h-4 w-4" />
+              {t('admin.finance.feesManagement.payOnlineButton')}
             </Button>
             <Button size="sm" className="gradient-primary" onClick={() => setRevenueDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Collect Fees
+              <Plus className="me-2 h-4 w-4" />
+              {t('admin.finance.feesManagement.collectFeesButton')}
             </Button>
           </div>
         </div>
@@ -680,31 +684,31 @@ const FeesManagement = () => {
         <Tabs defaultValue="collections" className="space-y-6">
           <TabsList className="bg-transparent p-0 h-auto gap-1 justify-start flex-wrap">
             <TabsTrigger value="structure" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <BookOpen className="h-4 w-4" /> Fee Structure
+              <BookOpen className="h-4 w-4" /> {t('admin.finance.feesManagement.tabFeeStructure')}
             </TabsTrigger>
             <TabsTrigger value="collections" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <Wallet className="h-4 w-4" /> Collections
+              <Wallet className="h-4 w-4" /> {t('admin.finance.feesManagement.tabCollections')}
             </TabsTrigger>
             <TabsTrigger value="admission-fees" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <GraduationCap className="h-4 w-4" /> Admission Fees
+              <GraduationCap className="h-4 w-4" /> {t('admin.finance.feesManagement.tabAdmissionFees')}
               {admissionFeeInvoices.some(i => i.paymentSubmittedByParent && i.status !== 'Paid') && (
-                <span className="ml-1 h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="ms-1 h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
               )}
             </TabsTrigger>
             <TabsTrigger value="semester" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <Calendar className="h-4 w-4" /> {periodLabel} Fees
+              <Calendar className="h-4 w-4" /> {t('admin.finance.feesManagement.tabPeriodFees', { period: periodLabel })}
             </TabsTrigger>
             <TabsTrigger value="discounts" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <Tag className="h-4 w-4" /> Discounts
+              <Tag className="h-4 w-4" /> {t('admin.finance.feesManagement.tabDiscounts')}
             </TabsTrigger>
             <TabsTrigger value="due-tracking" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <AlertTriangle className="h-4 w-4" /> Due Tracking
+              <AlertTriangle className="h-4 w-4" /> {t('admin.finance.feesManagement.tabDueTracking')}
             </TabsTrigger>
             <TabsTrigger value="vat-invoices" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <FileText className="h-4 w-4" /> VAT Invoices
+              <FileText className="h-4 w-4" /> {t('admin.finance.feesManagement.tabVatInvoices')}
             </TabsTrigger>
             <TabsTrigger value="online-payments" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">
-              <CreditCard className="h-4 w-4" /> Online Payments
+              <CreditCard className="h-4 w-4" /> {t('admin.finance.feesManagement.tabOnlinePayments')}
             </TabsTrigger>
           </TabsList>
 
@@ -717,8 +721,8 @@ const FeesManagement = () => {
                     <Sparkles className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">AI Insight</p>
-                    <p className="text-xs text-muted-foreground">{overdueInvoicesCount} {overdueInvoicesCount === 1 ? "student has" : "students have"} overdue fees. Sending reminders now could improve collection by 12%.</p>
+                    <p className="text-sm font-semibold">{t('admin.finance.feesManagement.aiInsightTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{overdueInvoicesCount === 1 ? t('admin.finance.feesManagement.aiInsightBodySingular', { count: overdueInvoicesCount }) : t('admin.finance.feesManagement.aiInsightBodyPlural', { count: overdueInvoicesCount })}</p>
                   </div>
                 </div>
                 <Button
@@ -728,8 +732,8 @@ const FeesManagement = () => {
                   onClick={handleSendReminders}
                   disabled={sendingReminders}
                 >
-                  {sendingReminders ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
-                  Send Reminders
+                  {sendingReminders ? <Loader2 className="me-2 h-3.5 w-3.5 animate-spin" /> : null}
+                  {t('admin.finance.feesManagement.sendRemindersButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -737,61 +741,61 @@ const FeesManagement = () => {
             {/* Toolbar */}
             <div className="flex items-center justify-between gap-4">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search student, class or invoice..." 
-                  className="pl-10 rounded-xl bg-white border-none shadow-sm"
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('admin.finance.feesManagement.searchPlaceholderCollections')}
+                  className="ps-10 rounded-xl bg-white border-none shadow-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Filter className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <select
                     value={collectionsStatus}
                     onChange={e => setCollectionsStatus(e.target.value)}
-                    className="h-9 rounded-xl border-none bg-white pl-9 pr-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
+                    className="h-9 rounded-xl border-none bg-white ps-9 pe-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
                   >
-                    <option value="all">All Status</option>
-                    <option value="Unpaid">Unpaid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Overdue">Overdue</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Cancelled">Cancelled</option>
+                    <option value="all">{t('admin.finance.feesManagement.statusAll')}</option>
+                    <option value="Unpaid">{t('admin.finance.feesManagement.statusUnpaid')}</option>
+                    <option value="Partial">{t('admin.finance.feesManagement.statusPartial')}</option>
+                    <option value="Overdue">{t('admin.finance.feesManagement.statusOverdue')}</option>
+                    <option value="Paid">{t('admin.finance.feesManagement.statusPaid')}</option>
+                    <option value="Cancelled">{t('admin.finance.feesManagement.statusCancelled')}</option>
                   </select>
                 </div>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <select
                     value={collectionsYear}
                     onChange={e => setCollectionsYear(e.target.value)}
-                    className="h-9 rounded-xl border-none bg-white pl-9 pr-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
+                    className="h-9 rounded-xl border-none bg-white ps-9 pe-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
                   >
-                    <option value="all">All Academic Years</option>
+                    <option value="all">{t('admin.finance.feesManagement.allAcademicYears')}</option>
                     {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
                 <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Filter className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <select
                     value={collectionsFeeType}
                     onChange={e => setCollectionsFeeType(e.target.value as typeof collectionsFeeType)}
-                    className="h-9 rounded-xl border-none bg-white pl-9 pr-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
+                    className="h-9 rounded-xl border-none bg-white ps-9 pe-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none appearance-none"
                   >
-                    <option value="all">All Fee Types</option>
-                    <option value="Tuition">Tuition</option>
-                    <option value="Admission">Admission Fee</option>
-                    <option value="SchoolFee">School Fee</option>
+                    <option value="all">{t('admin.finance.feesManagement.allFeeTypes')}</option>
+                    <option value="Tuition">{t('admin.finance.feesManagement.feeTypeTuition')}</option>
+                    <option value="Admission">{t('admin.finance.feesManagement.feeTypeAdmissionFeeOption')}</option>
+                    <option value="SchoolFee">{t('admin.finance.feesManagement.feeTypeSchoolFeeOption')}</option>
                   </select>
                 </div>
                 <Button size="sm" variant="outline" className="border-none bg-white shadow-sm" onClick={() => setGenerateInvoiceOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Generate Fee Invoice
+                  <Plus className="me-2 h-4 w-4" /> {t('admin.finance.feesManagement.generateFeeInvoiceButton')}
                 </Button>
                 {selectedUnpaidInvoiceIds.size > 0 && (
                   <Button size="sm" onClick={handleSendRemindersToSelected} disabled={sendingReminders} className="bg-amber-600 hover:bg-amber-700 text-white">
-                    {sendingReminders ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    Send Reminders ({selectedUnpaidInvoiceIds.size})
+                    {sendingReminders ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4" />}
+                    {t('admin.finance.feesManagement.sendRemindersCountButton', { count: selectedUnpaidInvoiceIds.size })}
                   </Button>
                 )}
               </div>
@@ -818,8 +822,8 @@ const FeesManagement = () => {
                   <div className="mx-auto w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-4">
                     <FileText className="h-6 w-6 text-slate-300" />
                   </div>
-                  <h3 className="text-sm font-medium">No invoices found</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or generate new invoices.</p>
+                  <h3 className="text-sm font-medium">{t('admin.finance.feesManagement.noInvoicesFoundTitle')}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{t('admin.finance.feesManagement.noInvoicesFoundDesc')}</p>
                 </div>
               ) : (
                 <>
@@ -850,7 +854,7 @@ const FeesManagement = () => {
                           <div>
                             <p className="text-sm font-bold">{invoice.studentName}</p>
                             <p className="text-[10px] text-muted-foreground font-mono">{invoice.invoiceNumber}</p>
-                            <p className="text-[10px] text-slate-400">Created {format(new Date(invoice.createdAt || new Date()), "dd MMM yyyy, HH:mm")}</p>
+                            <p className="text-[10px] text-slate-400">{t('admin.finance.feesManagement.createdPrefix')} {format(new Date(invoice.createdAt || new Date()), "dd MMM yyyy, HH:mm")}</p>
                           </div>
                         </div>
                         <Badge variant="secondary" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${getInvoiceDisplayStatus(invoice) === 'Paid' ? 'bg-emerald-50 text-emerald-600' : getInvoiceDisplayStatus(invoice) === 'Partial' ? 'bg-amber-50 text-amber-600' : getInvoiceDisplayStatus(invoice) === 'Overdue' ? 'bg-rose-50 text-rose-600' : getInvoiceDisplayStatus(invoice) === 'Upcoming' ? 'bg-blue-50 text-purple-600' : 'bg-slate-50 text-slate-600'}`}>
@@ -859,20 +863,20 @@ const FeesManagement = () => {
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="bg-slate-50 rounded-xl p-2">
-                          <p className="text-[9px] text-muted-foreground uppercase font-bold">Total</p>
+                          <p className="text-[9px] text-muted-foreground uppercase font-bold">{t('admin.finance.feesManagement.totalLabel')}</p>
                           <p className="text-xs font-bold">{financialSettings?.currency || '$'}{(Number(invoice.amount) || 0).toLocaleString()}</p>
                         </div>
                         <div className="bg-emerald-50 rounded-xl p-2">
-                          <p className="text-[9px] text-emerald-600 uppercase font-bold">Paid</p>
+                          <p className="text-[9px] text-emerald-600 uppercase font-bold">{t('admin.finance.feesManagement.paidLabel')}</p>
                           <p className="text-xs font-bold text-emerald-600">{financialSettings?.currency || '$'}{(Number(invoice.paidAmount) || 0).toLocaleString()}</p>
                         </div>
                         <div className="bg-rose-50 rounded-xl p-2">
-                          <p className="text-[9px] text-rose-600 uppercase font-bold">Due</p>
+                          <p className="text-[9px] text-rose-600 uppercase font-bold">{t('admin.finance.feesManagement.dueLabel')}</p>
                           <p className="text-xs font-bold text-rose-600">{financialSettings?.currency || '$'}{(Number(invoice.dueAmount) || 0).toLocaleString()}</p>
                         </div>
                       </div>
                       <Button size="sm" className="w-full h-9 gradient-primary text-xs font-bold" onClick={() => { setSelectedInvoice(invoice); setCollectFeeDialogOpen(true); }}>
-                        <CreditCard className="h-3.5 w-3.5 mr-2" /> Collect Payment
+                        <CreditCard className="h-3.5 w-3.5 me-2" /> {t('admin.finance.feesManagement.collectPaymentButton')}
                       </Button>
                     </div>
                     );
@@ -896,16 +900,16 @@ const FeesManagement = () => {
                           className="cursor-pointer"
                         />
                       </TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Invoice #</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Class</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Fee Type</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Total Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Paid</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Due</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Created</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Action</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderInvoiceNo')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderClass')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderFeeType')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderTotalAmount')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderPaid')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDue')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderCreated')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStatus')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-end">{t('admin.finance.feesManagement.tableHeaderAction')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -943,7 +947,7 @@ const FeesManagement = () => {
                             invoice.feeType === 'SchoolFee' ? 'bg-teal-50 text-teal-600' :
                             'bg-slate-50 text-slate-600'
                           }`}>
-                            {invoice.feeType === 'Admission' ? 'Admission' : invoice.feeType === 'SchoolFee' ? 'School Fee' : 'Tuition'}
+                            {invoice.feeType === 'Admission' ? t('admin.finance.feesManagement.feeTypeAdmission') : invoice.feeType === 'SchoolFee' ? t('admin.finance.feesManagement.feeTypeSchoolFee') : t('admin.finance.feesManagement.feeTypeTuition')}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">{financialSettings?.currency || '$'}{(Number(invoice.amount) || 0).toLocaleString()}</TableCell>
@@ -966,7 +970,7 @@ const FeesManagement = () => {
                             {getInvoiceDisplayStatus(invoice)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -983,7 +987,7 @@ const FeesManagement = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-slate-100"
-                              title="Send reminder"
+                              title={t('admin.finance.feesManagement.sendReminderTitle')}
                               disabled={reminderRowId === invoice.id}
                               onClick={() => handleSendSingleReminder(invoice)}
                             >
@@ -1000,26 +1004,26 @@ const FeesManagement = () => {
                                   setSelectedInvoice(invoice);
                                   setCollectFeeDialogOpen(true);
                                 }}>
-                                  Collect Payment
+                                  {t('admin.finance.feesManagement.collectPaymentButton')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleViewDetails(invoice)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
+                                  <Eye className="me-2 h-4 w-4" />
+                                  {t('admin.finance.feesManagement.viewDetailsMenuItem')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDownloadReceipt(invoice)}>
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Download Receipt
+                                  <Download className="me-2 h-4 w-4" />
+                                  {t('admin.finance.feesManagement.downloadReceiptMenuItem')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handlePrintReceipt(invoice)}>
-                                  <Printer className="mr-2 h-4 w-4" />
-                                  Print Receipt
+                                  <Printer className="me-2 h-4 w-4" />
+                                  {t('admin.finance.feesManagement.printReceiptMenuItem')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-rose-600"
                                   onClick={() => updateInvoiceStatus(invoice.id, 'Cancelled')}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Void Transaction
+                                  <Trash2 className="me-2 h-4 w-4" />
+                                  {t('admin.finance.feesManagement.voidTransactionMenuItem')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1038,9 +1042,9 @@ const FeesManagement = () => {
           {/* ── ADMISSION FEES TAB ── */}
           <TabsContent value="admission-fees" className="space-y-6">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Admission Fees</h3>
+              <h3 className="text-lg font-black text-slate-900">{t('admin.finance.feesManagement.admissionFeesHeading')}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Admission + School Fee invoices generated from the Admissions pipeline. Payments the parent already declared via the application form are flagged — verify the transaction, then mark paid to move the applicant forward.
+                {t('admin.finance.feesManagement.admissionFeesDesc')}
               </p>
             </div>
 
@@ -1050,8 +1054,8 @@ const FeesManagement = () => {
                   <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                     <GraduationCap className="h-6 w-6 text-slate-400" />
                   </div>
-                  <p className="font-black text-slate-600">No admission fee invoices yet.</p>
-                  <p className="text-xs text-slate-400">These appear automatically once an applicant submits the admission form or clears Doc Verification.</p>
+                  <p className="font-black text-slate-600">{t('admin.finance.feesManagement.noAdmissionInvoicesTitle')}</p>
+                  <p className="text-xs text-slate-400">{t('admin.finance.feesManagement.noAdmissionInvoicesDesc')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1059,12 +1063,12 @@ const FeesManagement = () => {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Declared Payment</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderType')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderAmount')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDeclaredPayment')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStatus')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-end">{t('admin.finance.feesManagement.tableHeaderActions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1076,7 +1080,7 @@ const FeesManagement = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-violet-50 text-purple-600">
-                            {inv.feeType === 'Admission' ? 'Admission Fee' : 'School Fee'}
+                            {inv.feeType === 'Admission' ? t('admin.finance.feesManagement.feeTypeAdmissionFeeOption') : t('admin.finance.feesManagement.feeTypeSchoolFeeOption')}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-bold text-slate-800">{financialSettings?.currency || "QAR"} {inv.amount.toLocaleString()}</TableCell>
@@ -1084,7 +1088,7 @@ const FeesManagement = () => {
                           {inv.paymentSubmittedByParent ? (
                             <div className="flex flex-col gap-0.5">
                               <Badge className="w-fit rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border-none">
-                                {inv.paymentMethodDeclared || "Declared"} · Ref {inv.paymentTxnRef || "—"}
+                                {inv.paymentMethodDeclared || t('admin.finance.feesManagement.declaredLabel')} · Ref {inv.paymentTxnRef || "—"}
                               </Badge>
                               <span className="text-[10px] text-slate-400">
                                 {inv.paymentSubmittedAt ? new Date(inv.paymentSubmittedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
@@ -1103,11 +1107,11 @@ const FeesManagement = () => {
                             {inv.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           {inv.status !== 'Paid' && inv.status !== 'Cancelled' ? (
                             <Button size="sm" className="rounded-xl gradient-primary text-white text-xs font-bold h-8 px-3"
                               onClick={() => { setSelectedInvoice(inv); setCollectFeeDialogOpen(true); }}>
-                              Mark as Paid
+                              {t('admin.finance.feesManagement.markAsPaidButton')}
                             </Button>
                           ) : (
                             <span className="text-xs text-slate-300">—</span>
@@ -1126,11 +1130,11 @@ const FeesManagement = () => {
             {/* KPI Strip */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {[
-                { label: "Total Billed",    value: fmtAmt(semKpis.total),   cls: "bg-violet-50 text-violet-700 border border-violet-100" },
-                { label: "Collected",       value: fmtAmt(semKpis.paid),    cls: "bg-emerald-50 text-emerald-700 border border-emerald-100" },
-                { label: "Pending",         value: fmtAmt(semKpis.due),     cls: "bg-amber-50 text-amber-700 border border-amber-100" },
-                { label: "Overdue Amt",     value: fmtAmt(semKpis.overdue), cls: "bg-rose-50 text-rose-700 border border-rose-100" },
-                { label: "Collection Rate", value: `${semKpis.rate}%`,      cls: "bg-blue-50 text-blue-700 border border-blue-100", rate: true },
+                { label: t('admin.finance.feesManagement.kpiTotalBilled'),    value: fmtAmt(semKpis.total),   cls: "bg-violet-50 text-violet-700 border border-violet-100" },
+                { label: t('admin.finance.feesManagement.kpiCollected'),       value: fmtAmt(semKpis.paid),    cls: "bg-emerald-50 text-emerald-700 border border-emerald-100" },
+                { label: t('admin.finance.feesManagement.kpiPending'),         value: fmtAmt(semKpis.due),     cls: "bg-amber-50 text-amber-700 border border-amber-100" },
+                { label: t('admin.finance.feesManagement.kpiOverdueAmt'),     value: fmtAmt(semKpis.overdue), cls: "bg-rose-50 text-rose-700 border border-rose-100" },
+                { label: t('admin.finance.feesManagement.kpiCollectionRate'), value: `${semKpis.rate}%`,      cls: "bg-blue-50 text-blue-700 border border-blue-100", rate: true },
               ].map(k => (
                 <Card key={k.label} className={`${k.cls} shadow-none rounded-2xl`}>
                   <CardContent className="p-4">
@@ -1149,15 +1153,15 @@ const FeesManagement = () => {
             {/* Filters & Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search student, class, invoice…" className="pl-10 rounded-xl bg-white border-none shadow-sm" value={semSearch} onChange={e => setSemSearch(e.target.value)} />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder={t('admin.finance.feesManagement.searchPlaceholderSemester')} className="ps-10 rounded-xl bg-white border-none shadow-sm" value={semSearch} onChange={e => setSemSearch(e.target.value)} />
               </div>
               <select
                 value={semYear}
                 onChange={e => setSemYear(e.target.value)}
                 className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none"
               >
-                <option value="all">All Academic Years</option>
+                <option value="all">{t('admin.finance.feesManagement.allAcademicYears')}</option>
                 {ACADEMIC_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
               <select
@@ -1165,16 +1169,16 @@ const FeesManagement = () => {
                 onChange={e => setSemStatus(e.target.value)}
                 className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm focus:outline-none"
               >
-                <option value="all">All Status</option>
-                <option value="Unpaid">Unpaid</option>
-                <option value="Partial">Partial</option>
-                <option value="Overdue">Overdue</option>
-                <option value="Paid">Paid</option>
+                <option value="all">{t('admin.finance.feesManagement.statusAll')}</option>
+                <option value="Unpaid">{t('admin.finance.feesManagement.statusUnpaid')}</option>
+                <option value="Partial">{t('admin.finance.feesManagement.statusPartial')}</option>
+                <option value="Overdue">{t('admin.finance.feesManagement.statusOverdue')}</option>
+                <option value="Paid">{t('admin.finance.feesManagement.statusPaid')}</option>
               </select>
               {selectedUnpaidInvoiceIds.size > 0 && (
                 <Button size="sm" onClick={handleSendRemindersToSelected} disabled={sendingReminders} className="bg-amber-600 hover:bg-amber-700 text-white">
-                  {sendingReminders ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  Send Reminders ({selectedUnpaidInvoiceIds.size})
+                  {sendingReminders ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4" />}
+                  {t('admin.finance.feesManagement.sendRemindersCountButton', { count: selectedUnpaidInvoiceIds.size })}
                 </Button>
               )}
             </div>
@@ -1183,14 +1187,14 @@ const FeesManagement = () => {
             {feesLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                <p className="ml-3 text-slate-500 text-sm">Loading…</p>
+                <p className="ms-3 text-slate-500 text-sm">{t('admin.finance.feesManagement.loadingText')}</p>
               </div>
             ) : semGroups.length === 0 ? (
               <Card className="border-dashed border-2 border-slate-200 rounded-2xl">
                 <CardContent className="py-16 flex flex-col items-center gap-2 text-center">
                   <BookOpen className="h-8 w-8 text-slate-300" />
-                  <p className="font-bold text-slate-500">No invoices found</p>
-                  <p className="text-xs text-slate-400">Adjust your filters or generate invoices from the Fee Structure tab.</p>
+                  <p className="font-bold text-slate-500">{t('admin.finance.feesManagement.noInvoicesFoundTitle')}</p>
+                  <p className="text-xs text-slate-400">{t('admin.finance.feesManagement.noInvoicesFoundDescSemester')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1208,7 +1212,7 @@ const FeesManagement = () => {
                   return (
                     <Card key={group.key} className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
                       {/* Group header — clickable */}
-                      <button className="w-full text-left" onClick={() => toggleSemGroup(group.key)}>
+                      <button className="w-full text-start" onClick={() => toggleSemGroup(group.key)}>
                         <CardContent className="p-5">
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -1227,25 +1231,25 @@ const FeesManagement = () => {
                                   <Badge variant="outline" className="text-[10px] font-bold rounded-full px-2">{group.yr}</Badge>
                                   {group.overdue > 0 && (
                                     <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px] font-black rounded-full px-2">
-                                      {group.overdue} Overdue
+                                      {t('admin.finance.feesManagement.overdueCountBadge', { count: group.overdue })}
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-xs text-slate-400 mt-0.5">{group.invoices.length} invoice{group.invoices.length !== 1 ? "s" : ""}</p>
+                                <p className="text-xs text-slate-400 mt-0.5">{group.invoices.length !== 1 ? t('admin.finance.feesManagement.invoiceCountPlural', { count: group.invoices.length }) : t('admin.finance.feesManagement.invoiceCountSingular', { count: group.invoices.length })}</p>
                               </div>
                             </div>
 
                             <div className="hidden md:flex items-center gap-5">
-                              <div className="text-right">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Billed</p>
+                              <div className="text-end">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('admin.finance.feesManagement.billedLabel')}</p>
                                 <p className="text-sm font-black text-slate-900">{fmtAmt(group.total)}</p>
                               </div>
-                              <div className="text-right">
-                                <p className="text-[10px] font-bold text-emerald-500 uppercase">Collected</p>
+                              <div className="text-end">
+                                <p className="text-[10px] font-bold text-emerald-500 uppercase">{t('admin.finance.feesManagement.kpiCollected')}</p>
                                 <p className="text-sm font-black text-emerald-600">{fmtAmt(group.paid)}</p>
                               </div>
-                              <div className="text-right">
-                                <p className="text-[10px] font-bold text-rose-400 uppercase">Pending</p>
+                              <div className="text-end">
+                                <p className="text-[10px] font-bold text-rose-400 uppercase">{t('admin.finance.feesManagement.kpiPending')}</p>
                                 <p className="text-sm font-black text-rose-600">{fmtAmt(group.due)}</p>
                               </div>
                               <div className={`h-11 w-11 rounded-full flex items-center justify-center text-xs font-black ${
@@ -1255,7 +1259,7 @@ const FeesManagement = () => {
 
                             {isOpen
                               ? <ChevronDown className="h-5 w-5 text-slate-400 shrink-0" />
-                              : <ChevronRight className="h-5 w-5 text-slate-400 shrink-0" />}
+                              : <ChevronRight className="h-5 w-5 text-slate-400 shrink-0 rtl:rotate-180" />}
                           </div>
                           {/* Collection progress bar */}
                           <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -1290,16 +1294,16 @@ const FeesManagement = () => {
                                     className="cursor-pointer"
                                   />
                                 </TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Invoice #</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Student</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Class</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Total</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Paid</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Due</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Created</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Due Date</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">Status</TableHead>
-                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400 text-right">Action</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderInvoiceNo')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderClass')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderTotal')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderPaid')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderDue')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderCreated')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderDueDate')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400">{t('admin.finance.feesManagement.tableHeaderStatus')}</TableHead>
+                                <TableHead className="text-[11px] font-black uppercase tracking-wider text-slate-400 text-end">{t('admin.finance.feesManagement.tableHeaderAction')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1348,7 +1352,7 @@ const FeesManagement = () => {
                                     <TableCell className="text-xs text-slate-500">
                                       <div>
                                         <p>{format(new Date(inv.dueDate), "dd MMM yyyy")}</p>
-                                        {isOD && <p className="text-rose-600 font-bold text-[10px]">{daysOD}d overdue</p>}
+                                        {isOD && <p className="text-rose-600 font-bold text-[10px]">{t('admin.finance.feesManagement.daysOverdueShort', { days: daysOD })}</p>}
                                       </div>
                                     </TableCell>
                                     <TableCell>
@@ -1356,7 +1360,7 @@ const FeesManagement = () => {
                                         {inv.status}
                                       </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-end">
                                       <div className="flex items-center justify-end gap-1">
                                         {inv.status !== "Paid" && inv.status !== "Cancelled" && (
                                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/5"
@@ -1378,11 +1382,11 @@ const FeesManagement = () => {
                           </Table>
                           {/* Group summary footer */}
                           <div className="flex flex-wrap items-center gap-4 px-5 py-3 bg-slate-50 border-t border-slate-100 text-xs">
-                            <span className="font-black text-slate-400 uppercase tracking-wider">Summary:</span>
-                            <span className="font-black text-slate-700">Billed: <span className="text-slate-900">{fmtAmt(group.total)}</span></span>
-                            <span className="font-black text-emerald-600">Collected: {fmtAmt(group.paid)}</span>
-                            <span className="font-black text-rose-600">Pending: {fmtAmt(group.due)}</span>
-                            <span className="ml-auto font-black text-slate-500">{group.paidCount}/{group.invoices.length} paid</span>
+                            <span className="font-black text-slate-400 uppercase tracking-wider">{t('admin.finance.feesManagement.summaryLabel')}</span>
+                            <span className="font-black text-slate-700">{t('admin.finance.feesManagement.summaryBilledLabel')} <span className="text-slate-900">{fmtAmt(group.total)}</span></span>
+                            <span className="font-black text-emerald-600">{t('admin.finance.feesManagement.summaryCollectedLabel')} {fmtAmt(group.paid)}</span>
+                            <span className="font-black text-rose-600">{t('admin.finance.feesManagement.summaryPendingLabel')} {fmtAmt(group.due)}</span>
+                            <span className="ms-auto font-black text-slate-500">{t('admin.finance.feesManagement.paidCountFraction', { paid: group.paidCount, total: group.invoices.length })}</span>
                           </div>
                         </div>
                       )}
@@ -1395,27 +1399,27 @@ const FeesManagement = () => {
 
           <TabsContent value="structure" className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-lg font-semibold">Fee Structures</h2>
+              <h2 className="text-lg font-semibold">{t('admin.finance.feesManagement.feeStructuresHeading')}</h2>
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    if (feeStructures.length === 0) { toast.error("No fee structures to export"); return; }
+                    if (feeStructures.length === 0) { toast.error(t('admin.finance.feesManagement.toastNoFeeStructuresExport')); return; }
                     exportFeeStructuresToExcel(feeStructures, financialSettings?.currency || "QAR");
-                    toast.success("Fee structures exported to Excel");
+                    toast.success(t('admin.finance.feesManagement.toastFeeStructuresExported'));
                   }}
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
+                  <Download className="me-2 h-4 w-4" />
+                  {t('admin.finance.feesManagement.exportButton')}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setImportStructureOpen(true)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Import
+                  <FileText className="me-2 h-4 w-4" />
+                  {t('admin.finance.feesManagement.importButton')}
                 </Button>
                 <Button size="sm" className="gradient-primary" onClick={() => { setEditingStructure(null); setStructureDialogOpen(true); }}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Structure
+                  <Plus className="me-2 h-4 w-4" />
+                  {t('admin.finance.feesManagement.newStructureButton')}
                 </Button>
               </div>
             </div>
@@ -1427,13 +1431,13 @@ const FeesManagement = () => {
                     <div className="mx-auto w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-4">
                       <CreditCard className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold">No Fee Structures</h3>
+                    <h3 className="text-lg font-semibold">{t('admin.finance.feesManagement.noFeeStructuresTitle')}</h3>
                     <p className="text-muted-foreground max-w-sm mx-auto mt-2">
-                      Define your school's fee structure by class, academic year, and category — or import them from an Excel template.
+                      {t('admin.finance.feesManagement.noFeeStructuresDesc')}
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-6">
-                      <Button variant="outline" onClick={() => setImportStructureOpen(true)}>Import from Excel</Button>
-                      <Button className="gradient-primary" onClick={() => { setEditingStructure(null); setStructureDialogOpen(true); }}>Create New Structure</Button>
+                      <Button variant="outline" onClick={() => setImportStructureOpen(true)}>{t('admin.finance.feesManagement.importFromExcelButton')}</Button>
+                      <Button className="gradient-primary" onClick={() => { setEditingStructure(null); setStructureDialogOpen(true); }}>{t('admin.finance.feesManagement.createNewStructureButton')}</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1455,14 +1459,14 @@ const FeesManagement = () => {
                         <div className="flex items-center gap-1 shrink-0 mt-1">
                           <Button
                             variant="ghost" size="icon" className="h-8 w-8 rounded-lg"
-                            title="Edit fee structure"
+                            title={t('admin.finance.feesManagement.editFeeStructureTitle')}
                             onClick={() => { setEditingStructure(structure); setStructureDialogOpen(true); }}
                           >
                             <FileText className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost" size="icon" className="h-8 w-8 rounded-lg"
-                            title="Print for parent"
+                            title={t('admin.finance.feesManagement.printForParentTitle')}
                             onClick={() => { setPrintStructure(structure); setPrintDialogOpen(true); }}
                           >
                             <Printer className="h-4 w-4" />
@@ -1472,11 +1476,11 @@ const FeesManagement = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-baseline justify-between">
-                        <span className="text-sm text-muted-foreground">Total Amount</span>
+                        <span className="text-sm text-muted-foreground">{t('admin.finance.feesManagement.totalAmountLabel')}</span>
                         <span className="text-2xl font-bold text-primary">{financialSettings?.currency || '$'}{(Number(structure.totalAmount) || 0).toLocaleString()}</span>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Components</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('admin.finance.feesManagement.componentsLabel')}</p>
                         {structure.components.map((comp, idx) => (
                           <div key={idx} className="flex items-center justify-between text-sm">
                             <span>{comp.name}</span>
@@ -1489,7 +1493,7 @@ const FeesManagement = () => {
                         variant="outline"
                         onClick={() => generateInvoicesForClass(structure.classId, structure.id)}
                       >
-                        Generate Invoices
+                        {t('admin.finance.feesManagement.generateInvoicesButton')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1500,10 +1504,10 @@ const FeesManagement = () => {
 
           <TabsContent value="discounts" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Fee Discount Rules</h2>
+              <h2 className="text-lg font-semibold">{t('admin.finance.feesManagement.feeDiscountRulesHeading')}</h2>
               <Button size="sm" className="gradient-primary" onClick={() => setDiscountDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Discount Rule
+                <Plus className="me-2 h-4 w-4" />
+                {t('admin.finance.feesManagement.addDiscountRuleButton')}
               </Button>
             </div>
 
@@ -1513,22 +1517,22 @@ const FeesManagement = () => {
                   <div className="mx-auto w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-4">
                     <Tag className="h-8 w-8 text-slate-400" />
                   </div>
-                  <h3 className="text-lg font-semibold">No Discount Rules</h3>
+                  <h3 className="text-lg font-semibold">{t('admin.finance.feesManagement.noDiscountRulesTitle')}</h3>
                   <p className="text-muted-foreground max-w-sm mx-auto mt-2">
-                    Manage student scholarships, sibling discounts, and early bird offers.
+                    {t('admin.finance.feesManagement.noDiscountRulesDesc')}
                   </p>
-                  <Button className="mt-6 gradient-primary" onClick={() => setDiscountDialogOpen(true)}>Add Discount Rule</Button>
+                  <Button className="mt-6 gradient-primary" onClick={() => setDiscountDialogOpen(true)}>{t('admin.finance.feesManagement.addDiscountRuleButton')}</Button>
                 </CardContent>
               ) : (
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Discount Name</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Category</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Value</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Action</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDiscountName')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderCategory')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderType')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderValue')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStatus')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-end">{t('admin.finance.feesManagement.tableHeaderAction')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1549,7 +1553,7 @@ const FeesManagement = () => {
                             {discount.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -1564,20 +1568,20 @@ const FeesManagement = () => {
 
           <TabsContent value="due-tracking" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Overdue Payments</h2>
+              <h2 className="text-lg font-semibold">{t('admin.finance.feesManagement.overduePaymentsHeading')}</h2>
               <Button size="sm" variant="outline" onClick={handleSendReminders} disabled={sendingReminders}>
-                {sendingReminders ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Bulk Reminders
+                {sendingReminders ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4" />}
+                {t('admin.finance.feesManagement.bulkRemindersButton')}
               </Button>
             </div>
 
             {/* Aging analysis — standard AR buckets, includes any applied late fee */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "0–30 Days", value: agingBuckets.d30, tone: "bg-amber-50 text-amber-700" },
-                { label: "31–60 Days", value: agingBuckets.d60, tone: "bg-orange-50 text-orange-700" },
-                { label: "61–90 Days", value: agingBuckets.d90, tone: "bg-rose-50 text-rose-700" },
-                { label: "90+ Days", value: agingBuckets.d90plus, tone: "bg-red-100 text-red-800" },
+                { label: t('admin.finance.feesManagement.aging0to30'), value: agingBuckets.d30, tone: "bg-amber-50 text-amber-700" },
+                { label: t('admin.finance.feesManagement.aging31to60'), value: agingBuckets.d60, tone: "bg-orange-50 text-orange-700" },
+                { label: t('admin.finance.feesManagement.aging61to90'), value: agingBuckets.d90, tone: "bg-rose-50 text-rose-700" },
+                { label: t('admin.finance.feesManagement.aging90plus'), value: agingBuckets.d90plus, tone: "bg-red-100 text-red-800" },
               ].map(b => (
                 <Card key={b.label} className="border-none shadow-sm">
                   <CardContent className="p-4">
@@ -1594,21 +1598,21 @@ const FeesManagement = () => {
                   <div className="mx-auto w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-4">
                     <CheckCircle2 className="h-8 w-8 text-emerald-400" />
                   </div>
-                  <h3 className="text-lg font-semibold">All caught up!</h3>
+                  <h3 className="text-lg font-semibold">{t('admin.finance.feesManagement.allCaughtUpTitle')}</h3>
                   <p className="text-muted-foreground max-w-sm mx-auto mt-2">
-                    There are currently no overdue fee payments.
+                    {t('admin.finance.feesManagement.allCaughtUpDesc')}
                   </p>
                 </CardContent>
               ) : (
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Due Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Late Fee</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Due Date</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Days Overdue</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider text-right">Action</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDueAmount')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderLateFee')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDueDate')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDaysOverdue')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider text-end">{t('admin.finance.feesManagement.tableHeaderAction')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1638,15 +1642,15 @@ const FeesManagement = () => {
                           <TableCell>{format(new Date(invoice.dueDate), 'MMM dd, yyyy')}</TableCell>
                           <TableCell>
                             <Badge variant="destructive" className="rounded-full">
-                              {daysOverdue} Days
+                              {t('admin.finance.feesManagement.daysOverdueBadge', { days: daysOverdue })}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-end">
                             <Button size="sm" variant="ghost" className="text-primary" onClick={() => {
                               setSelectedInvoice(invoice);
                               setCollectFeeDialogOpen(true);
                             }}>
-                              Send Reminder
+                              {t('admin.finance.feesManagement.sendReminderButton')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1663,12 +1667,12 @@ const FeesManagement = () => {
           <TabsContent value="vat-invoices" className="space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-black text-slate-900">VAT Invoice History</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Generated via the "VAT Invoice" button above.</p>
+                <h3 className="text-lg font-black text-slate-900">{t('admin.finance.feesManagement.vatInvoiceHistoryHeading')}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t('admin.finance.feesManagement.vatInvoiceHistoryDesc')}</p>
               </div>
               <Button size="sm" className="gradient-primary rounded-xl" onClick={() => setVatInvoiceOpen(true)}>
-                <FileText className="mr-2 h-4 w-4" />
-                Generate VAT Invoice
+                <FileText className="me-2 h-4 w-4" />
+                {t('admin.finance.feesManagement.generateVatInvoiceButton')}
               </Button>
             </div>
 
@@ -1678,8 +1682,8 @@ const FeesManagement = () => {
                   <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                     <FileText className="h-6 w-6 text-slate-400" />
                   </div>
-                  <p className="font-black text-slate-600">No VAT invoices generated yet.</p>
-                  <p className="text-xs text-slate-400">Generate a VAT invoice from the toolbar above to see it listed here.</p>
+                  <p className="font-black text-slate-600">{t('admin.finance.feesManagement.noVatInvoicesTitle')}</p>
+                  <p className="text-xs text-slate-400">{t('admin.finance.feesManagement.noVatInvoicesDesc')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1687,12 +1691,12 @@ const FeesManagement = () => {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Subtotal</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">VAT Rate</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">VAT Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Total</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Generated Date</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderSubtotal')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderVatRate')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderVatAmount')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderTotal')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderGeneratedDate')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1722,12 +1726,12 @@ const FeesManagement = () => {
           <TabsContent value="online-payments" className="space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-black text-slate-900">Online Payments</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Payments processed through the online payment gateway.</p>
+                <h3 className="text-lg font-black text-slate-900">{t('admin.finance.feesManagement.onlinePaymentsHeading')}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{t('admin.finance.feesManagement.onlinePaymentsDesc')}</p>
               </div>
               <Button size="sm" className="gradient-primary rounded-xl" onClick={() => setPaymentOpen(true)}>
-                <CreditCard className="mr-2 h-4 w-4" />
-                New Payment
+                <CreditCard className="me-2 h-4 w-4" />
+                {t('admin.finance.feesManagement.newPaymentButton')}
               </Button>
             </div>
 
@@ -1737,8 +1741,8 @@ const FeesManagement = () => {
                   <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                     <Wallet className="h-6 w-6 text-slate-400" />
                   </div>
-                  <p className="font-black text-slate-600">No online payments recorded yet.</p>
-                  <p className="text-xs text-slate-400">Payments made through the online gateway will appear here.</p>
+                  <p className="font-black text-slate-600">{t('admin.finance.feesManagement.noOnlinePaymentsTitle')}</p>
+                  <p className="text-xs text-slate-400">{t('admin.finance.feesManagement.noOnlinePaymentsDesc')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1746,13 +1750,13 @@ const FeesManagement = () => {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Txn Ref</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Student</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Method</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Card Brand</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Date</TableHead>
-                      <TableHead className="font-bold text-xs uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderTxnRef')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStudent')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderAmount')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderMethod')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderCardBrand')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderDate')}</TableHead>
+                      <TableHead className="font-bold text-xs uppercase tracking-wider">{t('admin.finance.feesManagement.tableHeaderStatus')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1763,7 +1767,7 @@ const FeesManagement = () => {
                         <TableCell className="font-medium">{item.currency || financialSettings?.currency} {(Number(item.amount) || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600">
-                            {item.method === "myfatoorah_card" ? "Card" : item.method === "myfatoorah_bank" ? "Bank Transfer" : item.method}
+                            {item.method === "myfatoorah_card" ? t('admin.finance.feesManagement.methodCard') : item.method === "myfatoorah_bank" ? t('admin.finance.feesManagement.methodBankTransfer') : item.method}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{item.cardBrand || "—"}</TableCell>
@@ -1829,33 +1833,33 @@ const FeesManagement = () => {
       <Dialog open={generateInvoiceOpen} onOpenChange={setGenerateInvoiceOpen}>
         <DialogContent className="sm:max-w-[480px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Generate Fee Invoice</DialogTitle>
+            <DialogTitle>{t('admin.finance.feesManagement.generateFeeInvoiceButton')}</DialogTitle>
             <DialogDescription>
-              Creates a real invoice for an admissions lead — it appears in Collections and is paid the same way as any other fee.
+              {t('admin.finance.feesManagement.generateFeeInvoiceDialogDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Fee Type</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">{t('admin.finance.feesManagement.feeTypeLabel')}</label>
               <div className="flex gap-2">
                 <button type="button"
                   onClick={() => { setGenFeeType('Admission'); setGenLeadId(""); setGenStructureId(""); }}
                   className={`flex-1 h-10 rounded-xl text-sm font-bold border ${genFeeType === 'Admission' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}>
-                  Admission Fee
+                  {t('admin.finance.feesManagement.feeTypeAdmissionFeeOption')}
                 </button>
                 <button type="button"
                   onClick={() => { setGenFeeType('SchoolFee'); setGenLeadId(""); setGenStructureId(""); }}
                   className={`flex-1 h-10 rounded-xl text-sm font-bold border ${genFeeType === 'SchoolFee' ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}>
-                  School Fee
+                  {t('admin.finance.feesManagement.feeTypeSchoolFeeOption')}
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Admissions Lead</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">{t('admin.finance.feesManagement.admissionsLeadLabel')}</label>
               <select value={genLeadId} onChange={e => setGenLeadId(e.target.value)}
                 className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
                 <option value="">
-                  {genLeads.length === 0 ? "No leads awaiting this invoice" : "Select a lead…"}
+                  {genLeads.length === 0 ? t('admin.finance.feesManagement.noLeadsAwaitingOption') : t('admin.finance.feesManagement.selectLeadOption')}
                 </option>
                 {genLeads.map(l => (
                   <option key={l.id} value={l.id}>{l.studentName} — {l.interestedClass || l.allocatedGrade || "—"} ({l.status})</option>
@@ -1863,11 +1867,11 @@ const FeesManagement = () => {
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Fee Structure</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block">{t('admin.finance.feesManagement.feeStructureLabel')}</label>
               <select value={genStructureId} onChange={e => setGenStructureId(e.target.value)}
                 className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
                 <option value="">
-                  {genStructureOptions.length === 0 ? `No ${genFeeType === 'Admission' ? 'Admission Fee' : 'School Fee'} structures — create one first` : "Select a fee structure…"}
+                  {genStructureOptions.length === 0 ? t('admin.finance.feesManagement.noFeeStructuresOption', { feeType: genFeeType === 'Admission' ? t('admin.finance.feesManagement.feeTypeAdmissionFeeOption') : t('admin.finance.feesManagement.feeTypeSchoolFeeOption') }) : t('admin.finance.feesManagement.selectFeeStructureOption')}
                 </option>
                 {genStructureOptions.map(s => (
                   <option key={s.id} value={s.id}>{s.name} — {financialSettings?.currency || 'QAR'} {s.totalAmount.toLocaleString()}</option>
@@ -1876,9 +1880,9 @@ const FeesManagement = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateInvoiceOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setGenerateInvoiceOpen(false)}>{t('admin.finance.feesManagement.cancelButton')}</Button>
             <Button className="gradient-primary" disabled={!genLeadId || !genStructureId} onClick={generateFeeInvoice}>
-              Generate Invoice
+              {t('admin.finance.feesManagement.generateFeeInvoiceButton')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1887,33 +1891,33 @@ const FeesManagement = () => {
       {/* ── Admission/School Fee Invoice Generated (Email Simulation) ── */}
       <Dialog open={!!invoicePreview} onOpenChange={open => { if (!open) setInvoicePreview(null); }}>
         <DialogContent className="sm:max-w-[520px] rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="sr-only"><DialogTitle>Invoice Generated</DialogTitle></DialogHeader>
+          <DialogHeader className="sr-only"><DialogTitle>{t('admin.finance.feesManagement.invoiceGeneratedTitle')}</DialogTitle></DialogHeader>
           {invoicePreview && (
             <div className="bg-white">
               <div className="bg-primary px-8 py-5 text-white">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Invoice Emailed</p>
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">{t('admin.finance.feesManagement.invoiceEmailedLabel')}</p>
                 <p className="text-lg font-black">Student Diwan ERP</p>
-                <p className="text-xs opacity-80 mt-0.5">To: {invoicePreview.email}</p>
+                <p className="text-xs opacity-80 mt-0.5">{t('admin.finance.feesManagement.toLabel')} {invoicePreview.email}</p>
               </div>
               <div className="px-8 py-6 space-y-5">
                 <div>
                   <p className="text-base font-black text-slate-900">
-                    {invoicePreview.type === 'school_fee' ? 'School Fee' : 'Admission Fee'} Invoice
+                    {invoicePreview.type === 'school_fee' ? t('admin.finance.feesManagement.schoolFeeInvoiceTitle') : t('admin.finance.feesManagement.admissionFeeInvoiceTitle')}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    This invoice is now in Collections, awaiting payment. Details below.
+                    {t('admin.finance.feesManagement.invoiceGeneratedDesc')}
                   </p>
                 </div>
 
                 <div className="bg-slate-50 rounded-2xl border border-slate-100 divide-y divide-slate-100">
                   {[
-                    { label: 'Invoice Number', value: invoicePreview.invoiceNo, mono: true },
-                    { label: 'Student Name', value: invoicePreview.studentName },
-                    { label: 'Fee Type', value: invoicePreview.type === 'school_fee' ? 'Annual School Fee' : 'Admission Fee' },
-                    { label: 'Fee Structure', value: invoicePreview.paymentMethodLabel },
-                    { label: 'Amount Due', value: `${financialSettings?.currency || 'QAR'} ${invoicePreview.amount.toLocaleString()}`, highlight: true },
-                    { label: 'Generated', value: new Date(invoicePreview.paidAt).toLocaleDateString('en-QA', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                    { label: 'Status', value: 'UNPAID', green: false },
+                    { label: t('admin.finance.feesManagement.rowLabelInvoiceNumber'), value: invoicePreview.invoiceNo, mono: true },
+                    { label: t('admin.finance.feesManagement.rowLabelStudentName'), value: invoicePreview.studentName },
+                    { label: t('admin.finance.feesManagement.rowLabelFeeType'), value: invoicePreview.type === 'school_fee' ? t('admin.finance.feesManagement.annualSchoolFeeLabel') : t('admin.finance.feesManagement.feeTypeAdmissionFeeOption') },
+                    { label: t('admin.finance.feesManagement.rowLabelFeeStructure'), value: invoicePreview.paymentMethodLabel },
+                    { label: t('admin.finance.feesManagement.rowLabelAmountDue'), value: `${financialSettings?.currency || 'QAR'} ${invoicePreview.amount.toLocaleString()}`, highlight: true },
+                    { label: t('admin.finance.feesManagement.rowLabelGenerated'), value: new Date(invoicePreview.paidAt).toLocaleDateString('en-QA', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                    { label: t('admin.finance.feesManagement.rowLabelStatus'), value: t('admin.finance.feesManagement.unpaidStatusLabel'), green: false },
                   ].map(row => (
                     <div key={row.label} className="flex justify-between items-center px-4 py-3">
                       <span className="text-xs font-bold text-slate-500">{row.label}</span>
@@ -1925,14 +1929,13 @@ const FeesManagement = () => {
                 </div>
 
                 <p className="text-[11px] text-slate-400 leading-relaxed text-center">
-                  This invoice was generated in Student Diwan ERP and emailed to{' '}
-                  <strong className="text-slate-600">{invoicePreview.email}</strong>. Collect payment for
-                  it from the Collections tab like any other invoice.
+                  {t('admin.finance.feesManagement.invoiceEmailedFooterPart1')}{' '}
+                  <strong className="text-slate-600">{invoicePreview.email}</strong>{t('admin.finance.feesManagement.invoiceEmailedFooterPart2')}
                 </p>
 
                 <Button className="w-full rounded-xl gradient-primary text-white font-bold h-11"
                   onClick={() => setInvoicePreview(null)}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" /> Done
+                  <CheckCircle2 className="h-4 w-4 me-2" /> {t('admin.finance.feesManagement.doneButton')}
                 </Button>
               </div>
             </div>
@@ -1945,7 +1948,7 @@ const FeesManagement = () => {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Invoice Details
+              {t('admin.finance.feesManagement.invoiceDetailsTitle')}
             </DialogTitle>
             <DialogDescription>
               {detailsInvoice ? `${detailsInvoice.invoiceNumber} — ${detailsInvoice.studentName}` : ""}
@@ -1956,15 +1959,15 @@ const FeesManagement = () => {
             <div className="space-y-4">
               <div className="bg-slate-50 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Invoice #</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailInvoiceNumberLabel')}</span>
                   <span className="font-mono font-medium">{detailsInvoice.invoiceNumber}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Student</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailStudentLabel')}</span>
                   <span className="font-medium">{detailsInvoice.studentName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Class</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailClassLabel')}</span>
                   <span className="font-medium">{detailsInvoice.className}</span>
                 </div>
                 {detailsInvoice.term && (
@@ -1974,37 +1977,37 @@ const FeesManagement = () => {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Category</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailCategoryLabel')}</span>
                   <span className="font-medium">{detailsInvoice.category}</span>
                 </div>
                 <div className="pt-2 border-t flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Amount</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.totalAmountLabel')}</span>
                   <span className="font-bold">{financialSettings?.currency || '$'}{(Number(detailsInvoice.amount) || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Paid Amount</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailPaidAmountLabel')}</span>
                   <span className="font-bold text-emerald-600">{financialSettings?.currency || '$'}{(Number(detailsInvoice.paidAmount) || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Due Amount</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailDueAmountLabel')}</span>
                   <span className="font-bold text-rose-600">{financialSettings?.currency || '$'}{(Number(detailsInvoice.dueAmount) || 0).toLocaleString()}</span>
                 </div>
                 {detailsInvoice.penalty > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Penalty</span>
+                    <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailPenaltyLabel')}</span>
                     <span className="font-bold text-rose-600">{financialSettings?.currency || '$'}{(Number(detailsInvoice.penalty) || 0).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Due Date</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailDueDateLabel')}</span>
                   <span className="font-medium">{format(new Date(detailsInvoice.dueDate), 'MMM dd, yyyy')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Created</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailCreatedLabel')}</span>
                   <span className="font-medium">{format(new Date(detailsInvoice.createdAt), 'MMM dd, yyyy')}</span>
                 </div>
                 <div className="pt-2 border-t flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Status</span>
+                  <span className="text-muted-foreground">{t('admin.finance.feesManagement.detailStatusLabel')}</span>
                   <Badge variant="secondary" className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     getInvoiceDisplayStatus(detailsInvoice) === 'Paid' ? 'bg-emerald-50 text-emerald-600' :
                     getInvoiceDisplayStatus(detailsInvoice) === 'Partial' ? 'bg-amber-50 text-amber-600' :
@@ -2019,12 +2022,12 @@ const FeesManagement = () => {
 
               <div className="flex items-center gap-2">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => handleDownloadReceipt(detailsInvoice)}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Receipt
+                  <Download className="me-2 h-4 w-4" />
+                  {t('admin.finance.feesManagement.downloadReceiptMenuItem')}
                 </Button>
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => handlePrintReceipt(detailsInvoice)}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print Receipt
+                  <Printer className="me-2 h-4 w-4" />
+                  {t('admin.finance.feesManagement.printReceiptMenuItem')}
                 </Button>
               </div>
             </div>

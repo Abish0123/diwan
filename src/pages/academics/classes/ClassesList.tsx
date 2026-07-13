@@ -121,6 +121,16 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
   "Active": "admin.academics.classesList.statusActive",
   "Inactive": "admin.academics.classesList.statusInactive",
 };
+const SECTION_TYPE_LABEL_KEYS: Record<string, string> = {
+  "Regular": "admin.academics.classesList.sectionTypeRegular",
+  "Advanced": "admin.academics.classesList.sectionTypeAdvanced",
+  "Special Needs": "admin.academics.classesList.sectionTypeSpecialNeeds",
+};
+const SEMESTER_STATUS_LABEL_KEYS: Record<string, string> = {
+  "Active": "admin.academics.classesList.statusActive",
+  "Upcoming": "admin.academics.classesList.statusUpcoming",
+  "Completed": "admin.academics.classesList.statusCompleted",
+};
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 // Grade list itself now comes from the active curriculum (useGrades()) at the
@@ -1034,26 +1044,26 @@ export default function ClassesList() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuItem onClick={() => navigate("/academics/classes/new")}>
-                    <Plus className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuAddNewGrade')}
+                    <Plus className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuAddNewGrade')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/academics/classes/new-section")}>
-                    <Users className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuAddSection')}
+                    <Users className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuAddSection')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={exportAllClasses}>
-                    <Download className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuExportClasses')}
+                    <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuExportClasses')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setImportOpen(true); setImportRows([]); setImportError(""); }}>
-                    <Download className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuImportClassesLong')}
+                    <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuImportClassesLong')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/timetable")}>
-                    <CalendarDays className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuMasterTimetable')}
+                    <CalendarDays className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuMasterTimetable')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.location.reload()}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuRefreshData')}
+                    <RefreshCw className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuRefreshData')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setSeedOpen(true)} className="text-amber-600 focus:text-amber-600">
-                    <RefreshCw className="w-4 h-4 mr-2" /> {t('admin.academics.classesList.menuInitializeSchoolStructure')}
+                    <RefreshCw className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuInitializeSchoolStructure')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1187,7 +1197,7 @@ export default function ClassesList() {
                               <DropdownMenuItem onClick={e => openAddSection(grade, e as any)}>{t('admin.academics.classesList.menuAddSection')}</DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={e => openAssignCoord(grade, e as any)}>
-                                <Shield className="w-4 h-4 mr-2 text-indigo-500" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}
+                                <Shield className="w-4 h-4 me-2 text-indigo-500" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -1263,7 +1273,7 @@ export default function ClassesList() {
                   <li>{t('admin.academics.classesList.importFormatDuplicates')}</li>
                 </ul>
                 <Button variant="link" size="sm" className="px-0 h-auto mt-1 text-purple-600" onClick={downloadImportTemplate}>
-                  <Download className="w-3.5 h-3.5 mr-1" /> {t('admin.academics.classesList.btnDownloadCsvTemplate')}
+                  <Download className="w-3.5 h-3.5 me-1" /> {t('admin.academics.classesList.btnDownloadCsvTemplate')}
                 </Button>
               </div>
 
@@ -1378,13 +1388,13 @@ export default function ClassesList() {
           <div className="flex items-center gap-2 text-sm">
             <button onClick={() => { setDrillLevel("grades"); setSelectedGrade(null); setSearch(""); }}
               className="flex items-center gap-1 text-gray-500 hover:text-purple-600 font-medium transition-colors">
-              Classes
+              {t('admin.academics.classesList.pageTitle')}
             </button>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <ChevronRight className="w-4 h-4 text-gray-300 rtl:rotate-180" />
             <button onClick={goBack} className="text-gray-500 hover:text-purple-600 font-medium transition-colors">
               {selectedGrade}
             </button>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <ChevronRight className="w-4 h-4 text-gray-300 rtl:rotate-180" />
             <span className="font-semibold text-gray-900">{secName}</span>
           </div>
 
@@ -1395,7 +1405,7 @@ export default function ClassesList() {
                 <span className={cn("w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-lg", secColors.bg)}>
                   {secLetter}
                 </span>
-                <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
+                <span className="absolute -bottom-1 -end-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center">
                   <CheckCircle2 className="w-3 h-3 text-white" />
                 </span>
               </div>
@@ -1403,24 +1413,24 @@ export default function ClassesList() {
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{secName}</h1>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {t('admin.academics.classesList.statusActive')}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
                   <span className={cn("font-semibold", secColors.text)}>{selectedGrade}</span>
                   <span className="mx-2 text-gray-300">·</span>
-                  Select a semester to open the class dashboard
+                  {t('admin.academics.classesList.selectSemesterHint')}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" className="gap-1.5 border-gray-200 text-gray-600 hover:bg-gray-50"
                 onClick={() => navigate(`/students?grade=${encodeURIComponent(selectedGrade || "")}`)}>
-                <Users className="w-4 h-4" /> View Students
+                <Users className="w-4 h-4" /> {t('admin.academics.classesList.btnViewStudents')}
               </Button>
               <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-sm font-semibold"
                 onClick={() => setAddSemOpen(true)}>
-                <Plus className="w-4 h-4" /> Add Semester
+                <Plus className="w-4 h-4" /> {t('admin.academics.classesList.btnAddSemester')}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1430,24 +1440,24 @@ export default function ClassesList() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuItem onClick={() => exportSectionRoster(selectedSection)}>
-                    <Download className="w-4 h-4 mr-2" /> Export Section Roster (Excel/CSV)
+                    <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuExportSectionRoster')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setImportStudentTarget(selectedSection); setImportStudentRows([]); setImportStudentError(""); }}>
-                    <Download className="w-4 h-4 mr-2" /> Import Students (Download template to import)
+                    <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuImportStudentsLong')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => openEditSection(selectedSection)}>
-                    <Edit className="w-4 h-4 mr-2" /> Edit Section Details
+                    <Edit className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuEditSectionDetails')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setAddSemOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Add Semester
+                    <Plus className="w-4 h-4 me-2" /> {t('admin.academics.classesList.btnAddSemester')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate(`/students?grade=${encodeURIComponent(selectedGrade || "")}`)}>
-                    <Users className="w-4 h-4 mr-2" /> View Students
+                    <Users className="w-4 h-4 me-2" /> {t('admin.academics.classesList.btnViewStudents')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteTarget(selectedSection)}>
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete Section
+                    <Trash2 className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuDeleteSection')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1458,28 +1468,28 @@ export default function ClassesList() {
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-50 to-orange-50 border border-gray-100 text-sm">
             <Shield className="w-4 h-4 text-indigo-400 shrink-0" />
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-indigo-400">Grade Coordinator</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-indigo-400">{t('admin.academics.classesList.gradeCoordinatorLabel')}</span>
               {coordinators[selectedGrade!] ? (
                 <div className="flex items-center gap-1.5">
                   <Avatar className="w-5 h-5 shrink-0"><AvatarFallback className="bg-purple-600 text-white text-[9px] font-bold">{initials(coordinators[selectedGrade!].name)}</AvatarFallback></Avatar>
                   <span className="font-semibold text-indigo-700 text-xs truncate">{coordinators[selectedGrade!].name}</span>
                 </div>
               ) : (
-                <button onClick={() => openAssignCoord(selectedGrade!)} className="text-xs text-indigo-400 hover:text-purple-600 font-semibold hover:underline">+ Assign</button>
+                <button onClick={() => openAssignCoord(selectedGrade!)} className="text-xs text-indigo-400 hover:text-purple-600 font-semibold hover:underline">{t('admin.academics.classesList.btnPlusAssign')}</button>
               )}
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 rtl:rotate-180" />
             <UserCheck className="w-4 h-4 text-orange-400 shrink-0" />
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-orange-400">Class Teacher</span>
+              <span className="text-[11px] font-bold uppercase tracking-wide text-orange-400">{t('admin.academics.classesList.classTeacherLabel')}</span>
               <div className="flex items-center gap-1.5">
                 <Avatar className="w-5 h-5 shrink-0"><AvatarFallback className="bg-orange-500 text-white text-[9px] font-bold">{secTeacher !== t('admin.academics.classesList.notAssigned') ? initials(secTeacher) : "?"}</AvatarFallback></Avatar>
                 <span className="font-semibold text-orange-700 text-xs truncate">{secTeacher}</span>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 rtl:rotate-180" />
             <Users className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className="text-xs font-semibold text-gray-500">Students</span>
+            <span className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.colStudents')}</span>
           </div>
 
           {/* Quick action chips */}
@@ -1499,16 +1509,16 @@ export default function ClassesList() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-100 flex items-center justify-center">
                 <CalendarDays className="w-8 h-8 text-indigo-500" />
               </div>
-              <p className="font-bold text-gray-700 text-lg">No semesters yet</p>
-              <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">Create a term or semester to start managing this section's dashboard, gradebook and attendance.</p>
+              <p className="font-bold text-gray-700 text-lg">{t('admin.academics.classesList.emptyNoSemestersYet')}</p>
+              <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">{t('admin.academics.classesList.emptyNoSemestersHint')}</p>
               <div className="flex items-center gap-2 justify-center mt-5">
                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
                   onClick={() => setAddSemOpen(true)}>
-                  <Plus className="w-4 h-4 mr-1" /> Add Semester
+                  <Plus className="w-4 h-4 me-1" /> {t('admin.academics.classesList.btnAddSemester')}
                 </Button>
                 <Button size="sm" variant="outline" className="border-gray-200"
                   onClick={() => { setNewSemName("Term 1"); setNewSemStart("2026-01-01"); setNewSemEnd("2026-06-30"); setNewSemStatus("Active"); setAddSemOpen(true); }}>
-                  <Sparkles className="w-4 h-4 mr-1 text-amber-500" /> Quick Setup
+                  <Sparkles className="w-4 h-4 me-1 text-amber-500" /> {t('admin.academics.classesList.btnQuickSetup')}
                 </Button>
               </div>
             </div>
@@ -1554,7 +1564,7 @@ export default function ClassesList() {
                           </div>
                         </div>
                         <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border", semStatusBadge(sem.status))}>
-                          {sem.status}
+                          {t(SEMESTER_STATUS_LABEL_KEYS[sem.status] || sem.status)}
                         </span>
                       </div>
 
@@ -1562,7 +1572,7 @@ export default function ClassesList() {
                       {sem.status === 'Active' && sem.startDate && sem.endDate && (
                         <div className="mb-4">
                           <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[11px] font-medium text-gray-500">Term progress</span>
+                            <span className="text-[11px] font-medium text-gray-500">{t('admin.academics.classesList.termProgress')}</span>
                             <span className={cn("text-[11px] font-bold", secColors.text)}>{progress}%</span>
                           </div>
                           <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
@@ -1572,9 +1582,9 @@ export default function ClassesList() {
                       )}
 
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                        <span className="text-xs text-gray-400">Open class dashboard</span>
+                        <span className="text-xs text-gray-400">{t('admin.academics.classesList.openClassDashboard')}</span>
                         <span className={cn("flex items-center gap-1 text-sm font-semibold transition-transform group-hover:translate-x-0.5", secColors.text)}>
-                          Open <ChevronRight className="w-4 h-4" />
+                          {t('admin.academics.classesList.btnOpen')} <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                         </span>
                       </div>
                     </CardContent>
@@ -1590,9 +1600,9 @@ export default function ClassesList() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide mb-1">Students</p>
+                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide mb-1">{t('admin.academics.classesList.colStudents')}</p>
                     <p className="text-3xl font-bold text-gray-900">{secStudents.length}</p>
-                    <p className="text-xs text-gray-500 mt-1">Enrolled</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('admin.academics.classesList.statEnrolled')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-indigo-100/80"><Users className="w-5 h-5 text-purple-600" /></div>
                 </div>
@@ -1603,9 +1613,9 @@ export default function ClassesList() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide mb-1">Class Teacher</p>
+                    <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide mb-1">{t('admin.academics.classesList.classTeacherLabel')}</p>
                     <p className="text-lg font-bold text-gray-900 truncate">{secTeacher}</p>
-                    <p className="text-xs text-gray-500 mt-1">Section Lead</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('admin.academics.classesList.statSectionLead')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-orange-100/80"><UserCheck className="w-5 h-5 text-orange-600" /></div>
                 </div>
@@ -1616,9 +1626,9 @@ export default function ClassesList() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide mb-1">Subjects</p>
+                    <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide mb-1">{t('admin.academics.classesList.subjectsLabel')}</p>
                     <p className="text-3xl font-bold text-gray-900">{secSubjectsCount || "—"}</p>
-                    <p className="text-xs text-gray-500 mt-1">Courses</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('admin.academics.classesList.statCourses')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-purple-100/80"><BookMarked className="w-5 h-5 text-purple-600" /></div>
                 </div>
@@ -1629,9 +1639,9 @@ export default function ClassesList() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">Status</p>
-                    <p className="text-lg font-bold text-green-700">Active</p>
-                    <p className="text-xs text-gray-500 mt-1">Running</p>
+                    <p className="text-xs text-green-600 font-semibold uppercase tracking-wide mb-1">{t('admin.academics.classesList.colStatus')}</p>
+                    <p className="text-lg font-bold text-green-700">{t('admin.academics.classesList.statusActive')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('admin.academics.classesList.statRunning')}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-green-100/80"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
                 </div>
@@ -1656,14 +1666,14 @@ export default function ClassesList() {
         <Dialog open={addSemOpen} onOpenChange={v => !v && setAddSemOpen(false)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold">Add Semester</DialogTitle>
-              <DialogDescription>Create a new semester for {secName}.</DialogDescription>
+              <DialogTitle className="text-lg font-bold">{t('admin.academics.classesList.btnAddSemester')}</DialogTitle>
+              <DialogDescription>{t('admin.academics.classesList.dialogAddSemesterDesc', { section: secName })}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               {/* Semester Name */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Semester Name</Label>
-                <Input placeholder="e.g. Term 1" value={newSemName} onChange={e => setNewSemName(e.target.value)} autoFocus />
+                <Label className="text-sm font-medium">{t('admin.academics.classesList.labelSemesterName')}</Label>
+                <Input placeholder={t('admin.academics.classesList.placeholderTermExample')} value={newSemName} onChange={e => setNewSemName(e.target.value)} autoFocus />
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {["Term 1","Term 2","Term 3","Term 4","Semester 1","Semester 2"].map(chip => (
                     <button key={chip} onClick={() => setNewSemName(chip)}
@@ -1679,34 +1689,34 @@ export default function ClassesList() {
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Start Date</Label>
+                  <Label className="text-sm font-medium">{t('admin.academics.classesList.labelStartDate')}</Label>
                   <Input type="date" value={newSemStart} onChange={e => setNewSemStart(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">End Date</Label>
+                  <Label className="text-sm font-medium">{t('admin.academics.classesList.labelEndDate')}</Label>
                   <Input type="date" value={newSemEnd} onChange={e => setNewSemEnd(e.target.value)} />
                 </div>
               </div>
               {/* Status */}
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">Status</Label>
+                <Label className="text-sm font-medium">{t('admin.academics.classesList.colStatus')}</Label>
                 <Select value={newSemStatus} onValueChange={v => setNewSemStatus(v as any)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Upcoming">Upcoming</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Active">{t('admin.academics.classesList.statusActive')}</SelectItem>
+                    <SelectItem value="Upcoming">{t('admin.academics.classesList.statusUpcoming')}</SelectItem>
+                    <SelectItem value="Completed">{t('admin.academics.classesList.statusCompleted')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddSemOpen(false)} disabled={addingSem}>Cancel</Button>
+              <Button variant="outline" onClick={() => setAddSemOpen(false)} disabled={addingSem}>{t('admin.academics.classesList.btnCancel')}</Button>
               <Button onClick={handleAddSemester} disabled={addingSem || !newSemName.trim()}
                 className="bg-purple-600 hover:bg-purple-700 text-white">
-                {addingSem ? "Adding…" : "Add Semester"}
+                {addingSem ? t('admin.academics.classesList.btnAdding') : t('admin.academics.classesList.btnAddSemester')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1722,7 +1732,7 @@ export default function ClassesList() {
     return (
       <DashboardLayout>
         <AccessDenied
-          detail={coordAssignedGrade ? `You're assigned to ${coordAssignedGrade}.` : "You haven't been assigned a grade yet — contact your administrator."}
+          detail={coordAssignedGrade ? t('admin.academics.classesList.accessDeniedAssignedTo', { grade: coordAssignedGrade }) : t('admin.academics.classesList.accessDeniedNotAssigned')}
         />
       </DashboardLayout>
     );
@@ -1814,15 +1824,15 @@ export default function ClassesList() {
   const gradeTeacher = uniqueTeachers[0] || null;
   const totalSubjects = gradeSections.length ? Math.round(gradeSections.reduce((a, c) => a + (c.subjects?.length || 0), 0) / gradeSections.length) : 0;
   const GRADE_TABS = [
-    { id: "sections", label: "Sections", icon: LayoutGrid },
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "students", label: "Students", icon: Users },
-    { id: "subjects", label: "Subjects", icon: BookMarked },
-    { id: "timetable", label: "Timetable", icon: CalendarDays },
-    { id: "attendance", label: "Attendance", icon: UserCheck },
-    { id: "exams", label: "Exams", icon: FileText },
-    { id: "gradebook", label: "Gradebook", icon: ClipboardCheck },
-    { id: "reportcards", label: "Report Cards", icon: FileText },
+    { id: "sections", label: t('admin.academics.classesList.tabSections'), icon: LayoutGrid },
+    { id: "overview", label: t('admin.academics.classesList.tabOverview'), icon: BarChart3 },
+    { id: "students", label: t('admin.academics.classesList.colStudents'), icon: Users },
+    { id: "subjects", label: t('admin.academics.classesList.subjectsLabel'), icon: BookMarked },
+    { id: "timetable", label: t('admin.academics.classesList.tabTimetable'), icon: CalendarDays },
+    { id: "attendance", label: t('admin.academics.classesList.tabAttendance'), icon: UserCheck },
+    { id: "exams", label: t('admin.academics.classesList.tabExams'), icon: FileText },
+    { id: "gradebook", label: t('admin.academics.classesList.tabGradebook'), icon: ClipboardCheck },
+    { id: "reportcards", label: t('admin.academics.classesList.tabReportCards'), icon: FileText },
   ];
   const gradeClassData = { name: selectedGrade || "", grade: selectedGrade || "", status: "Active", academicYear: gradeSections[0]?.academicYear || "2026-27", teacher: gradeTeacher || t('admin.academics.classesList.notAssigned') };
   // Grade-wide datesheets: every exam of this grade across ALL its sections,
@@ -1848,35 +1858,35 @@ export default function ClassesList() {
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
-          <button onClick={() => navigate("/")} className="text-gray-500 hover:text-purple-600 font-medium transition-colors">Academics</button>
-          <ChevronRight className="w-4 h-4 text-gray-300" />
-          <button onClick={goBack} className="text-gray-500 hover:text-purple-600 font-medium transition-colors">Classes</button>
-          <ChevronRight className="w-4 h-4 text-gray-300" />
+          <button onClick={() => navigate("/")} className="text-gray-500 hover:text-purple-600 font-medium transition-colors">{t('admin.academics.classesList.breadcrumbAcademics')}</button>
+          <ChevronRight className="w-4 h-4 text-gray-300 rtl:rotate-180" />
+          <button onClick={goBack} className="text-gray-500 hover:text-purple-600 font-medium transition-colors">{t('admin.academics.classesList.pageTitle')}</button>
+          <ChevronRight className="w-4 h-4 text-gray-300 rtl:rotate-180" />
           <span className="font-semibold text-gray-900">{selectedGrade}</span>
         </div>
 
         {/* Grade Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={goBack} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
+            <button onClick={goBack} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5 rtl:rotate-180" /></button>
             <span className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-lg", gradeColor)}>{gradeLabel}</span>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{selectedGrade} <span className="text-gray-300 font-light">—</span> {GRADE_TABS.find(t => t.id === gradeTab)?.label || "Overview"}</h1>
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-xs">Active</Badge>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{selectedGrade} <span className="text-gray-300 font-light">—</span> {GRADE_TABS.find(tb => tb.id === gradeTab)?.label || t('admin.academics.classesList.tabOverview')}</h1>
+                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-xs">{t('admin.academics.classesList.statusActive')}</Badge>
               </div>
               <div className="flex items-center gap-3 mt-1.5">
                 {coordinators[selectedGrade!] ? (
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-100">
                     <Shield className="w-3.5 h-3.5 text-indigo-500" />
                     <span className="text-xs font-semibold text-indigo-700">{coordinators[selectedGrade!].name}</span>
-                    <span className="text-[10px] text-indigo-400 font-medium">· Grade Coordinator</span>
-                    <button onClick={() => openAssignCoord(selectedGrade!)} className="ml-0.5 text-[10px] text-indigo-400 hover:text-purple-600 font-medium hover:underline">Change</button>
+                    <span className="text-[10px] text-indigo-400 font-medium">· {t('admin.academics.classesList.gradeCoordinatorLabel')}</span>
+                    <button onClick={() => openAssignCoord(selectedGrade!)} className="ms-0.5 text-[10px] text-indigo-400 hover:text-purple-600 font-medium hover:underline">{t('admin.academics.classesList.btnChange')}</button>
                   </div>
                 ) : (
                   <button onClick={() => openAssignCoord(selectedGrade!)}
                     className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-semibold hover:underline">
-                    <Shield className="w-3.5 h-3.5" /> Assign Grade Coordinator
+                    <Shield className="w-3.5 h-3.5" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}
                   </button>
                 )}
               </div>
@@ -1885,15 +1895,15 @@ export default function ClassesList() {
           <div className="flex items-center gap-2">
             {gradeTab === "gradebook" ? (
               <Button size="sm" variant="outline" className="gap-1.5 border-gray-200" onClick={handleExportGradebook}>
-                <Download className="w-4 h-4" /> Export Report
+                <Download className="w-4 h-4" /> {t('admin.academics.classesList.btnExportReport')}
               </Button>
             ) : (
               <>
                 <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-sm" onClick={() => openAddSection(selectedGrade!)}>
-                  <Plus className="w-4 h-4" /> Add Section
+                  <Plus className="w-4 h-4" /> {t('admin.academics.classesList.menuAddSection')}
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5 border-gray-200" onClick={() => setPromoteOpen(true)}>
-                  <TrendingUp className="w-4 h-4" /> Promote Students
+                  <TrendingUp className="w-4 h-4" /> {t('admin.academics.classesList.btnPromoteStudents')}
                 </Button>
               </>
             )}
@@ -1905,25 +1915,25 @@ export default function ClassesList() {
                 {gradeTab === "gradebook" && (
                   <>
                     <DropdownMenuItem onClick={handleExportGradebook}>
-                      <Download className="w-4 h-4 mr-2" /> Export Gradebook Report
+                      <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuExportGradebookReport')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
                 <DropdownMenuItem onClick={() => exportGradeClasses(selectedGrade!)}>
-                  <Download className="w-4 h-4 mr-2" /> Export Grade Data (Excel/CSV)
+                  <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuExportGradeData')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setImportOpen(true); setImportRows([]); setImportError(""); }}>
-                  <Download className="w-4 h-4 mr-2" /> Import Section Data (Download CSV template to import)
+                  <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuImportSectionData')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => openEditGrade(selectedGrade!)}><Edit className="w-4 h-4 mr-2" /> Edit Grade</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openAddSection(selectedGrade!)}><Plus className="w-4 h-4 mr-2" /> Add Section</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => openAssignCoord(selectedGrade!)}><Shield className="w-4 h-4 mr-2 text-indigo-500" /> Assign Grade Coordinator</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPromoteOpen(true)}><TrendingUp className="w-4 h-4 mr-2" /> Promote Students</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/students?grade=${encodeURIComponent(selectedGrade || "")}`)}><Users className="w-4 h-4 mr-2" /> View Students</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openEditGrade(selectedGrade!)}><Edit className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuEditGrade')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openAddSection(selectedGrade!)}><Plus className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuAddSection')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openAssignCoord(selectedGrade!)}><Shield className="w-4 h-4 me-2 text-indigo-500" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPromoteOpen(true)}><TrendingUp className="w-4 h-4 me-2" /> {t('admin.academics.classesList.btnPromoteStudents')}</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/students?grade=${encodeURIComponent(selectedGrade || "")}`)}><Users className="w-4 h-4 me-2" /> {t('admin.academics.classesList.btnViewStudents')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setGradeTab("timetable")}><CalendarDays className="w-4 h-4 mr-2" /> View Timetable</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setGradeTab("timetable")}><CalendarDays className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuViewTimetable')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -1946,10 +1956,10 @@ export default function ClassesList() {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
               {[
-                { label: "Total Students", value: gradeStudents.length, sub: `Across ${gradeSections.length} sections`, icon: Users, color: "text-purple-600", bg: "bg-violet-50" },
-                { label: "Total Sections", value: gradeSections.length, sub: "Active sections", icon: LayoutGrid, color: "text-emerald-600", bg: "bg-emerald-50" },
-                { label: "Total Subjects", value: totalSubjects, sub: "In this class", icon: BookOpen, color: "text-amber-600", bg: "bg-amber-50" },
-                { label: "Attendance (This Month)", value: avgAttendance != null ? `${avgAttendance}%` : "—", sub: "Average attendance", icon: TrendingUp, color: "text-purple-600", bg: "bg-blue-50" },
+                { label: t('admin.academics.classesList.statTotalStudents'), value: gradeStudents.length, sub: t('admin.academics.classesList.statAcrossSections', { count: gradeSections.length }), icon: Users, color: "text-purple-600", bg: "bg-violet-50" },
+                { label: t('admin.academics.classesList.statTotalSections'), value: gradeSections.length, sub: t('admin.academics.classesList.statActiveSections'), icon: LayoutGrid, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { label: t('admin.academics.classesList.statTotalSubjects'), value: totalSubjects, sub: t('admin.academics.classesList.statInThisClass'), icon: BookOpen, color: "text-amber-600", bg: "bg-amber-50" },
+                { label: t('admin.academics.classesList.statAttendanceThisMonth'), value: avgAttendance != null ? `${avgAttendance}%` : "—", sub: t('admin.academics.classesList.statAverageAttendance'), icon: TrendingUp, color: "text-purple-600", bg: "bg-blue-50" },
               ].map(({ label, value, sub, icon: Icon, color, bg }) => (
                 <Card key={label} className="border border-gray-100 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
                   <CardContent className="p-4 flex items-start gap-3">
@@ -1967,9 +1977,9 @@ export default function ClassesList() {
                 <CardContent className="p-4 flex items-center gap-3">
                   <Avatar className="w-11 h-11"><AvatarFallback className={coordinators[selectedGrade!] ? "bg-indigo-100 text-purple-600 text-xs font-bold" : "bg-gray-100 text-gray-400 text-xs font-bold"}>{coordinators[selectedGrade!] ? initials(coordinators[selectedGrade!].name) : "?"}</AvatarFallback></Avatar>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1 mb-0.5"><Shield className="w-3 h-3 text-indigo-500" /><p className="text-[11px] font-medium text-purple-600">Grade Coordinator</p></div>
-                    <p className="text-sm font-black text-gray-900 truncate">{coordinators[selectedGrade!]?.name || "Not Assigned"}</p>
-                    <p className="text-[11px] text-indigo-400">{coordinators[selectedGrade!] ? "Grade Authority" : "Click to assign"}</p>
+                    <div className="flex items-center gap-1 mb-0.5"><Shield className="w-3 h-3 text-indigo-500" /><p className="text-[11px] font-medium text-purple-600">{t('admin.academics.classesList.gradeCoordinatorLabel')}</p></div>
+                    <p className="text-sm font-black text-gray-900 truncate">{coordinators[selectedGrade!]?.name || t('admin.academics.classesList.notAssigned')}</p>
+                    <p className="text-[11px] text-indigo-400">{coordinators[selectedGrade!] ? t('admin.academics.classesList.gradeAuthority') : t('admin.academics.classesList.clickToAssign')}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1986,18 +1996,18 @@ export default function ClassesList() {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center shrink-0"><Shield className="w-4 h-4 text-white" /></div>
                       <div className="min-w-0">
-                        <p className="font-bold text-gray-900 text-sm leading-tight">Section Performance Monitor</p>
-                        <p className="text-[11px] text-indigo-500 truncate">Live status across all sections of {selectedGrade} · {coordinators[selectedGrade!]?.name || "Grade Coordinator"}</p>
+                        <p className="font-bold text-gray-900 text-sm leading-tight">{t('admin.academics.classesList.sectionPerformanceMonitor')}</p>
+                        <p className="text-[11px] text-indigo-500 truncate">{t('admin.academics.classesList.liveStatusAcrossSections', { grade: selectedGrade, coordinator: coordinators[selectedGrade!]?.name || t('admin.academics.classesList.gradeCoordinatorLabel') })}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className={cn("inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full", allSubmitted ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
                         {allSubmitted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                        {submittedCount}/{gradeSections.length} attendance in
+                        {t('admin.academics.classesList.attendanceInCount', { submitted: submittedCount, total: gradeSections.length })}
                       </span>
                       <span className={cn("inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full", totalFlags === 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600")}>
                         <AlertCircle className="w-3.5 h-3.5" />
-                        {totalFlags} behavior {totalFlags === 1 ? "flag" : "flags"}
+                        {totalFlags === 1 ? t('admin.academics.classesList.behaviorFlagSingular', { count: totalFlags }) : t('admin.academics.classesList.behaviorFlagPlural', { count: totalFlags })}
                       </span>
                     </div>
                   </div>
@@ -2005,19 +2015,19 @@ export default function ClassesList() {
                     <table className="w-full text-sm min-w-[760px]">
                       <thead>
                         <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 bg-gray-50/50">
-                          <th className="text-left px-5 py-2.5">Section</th>
-                          <th className="text-left px-3 py-2.5">Class Teacher</th>
-                          <th className="text-center px-3 py-2.5">Students</th>
-                          <th className="text-center px-3 py-2.5">Attendance Today</th>
-                          <th className="text-center px-3 py-2.5">Avg Attendance</th>
-                          <th className="text-center px-5 py-2.5">Behavior</th>
+                          <th className="text-start px-5 py-2.5">{t('admin.academics.classesList.colSections')}</th>
+                          <th className="text-start px-3 py-2.5">{t('admin.academics.classesList.classTeacherLabel')}</th>
+                          <th className="text-center px-3 py-2.5">{t('admin.academics.classesList.colStudents')}</th>
+                          <th className="text-center px-3 py-2.5">{t('admin.academics.classesList.colAttendanceToday')}</th>
+                          <th className="text-center px-3 py-2.5">{t('admin.academics.classesList.colAvgAttendance')}</th>
+                          <th className="text-center px-5 py-2.5">{t('admin.academics.classesList.colBehavior')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {gradeSections.map((cls) => {
                           const secName = sectionLabel(cls);
                           const enrolled = gradeStudents.filter(s => studentClassMap.get(s.id) === cls.id).length;
-                          const teacher = cls.teacher || "Not Assigned";
+                          const teacher = cls.teacher || t('admin.academics.classesList.notAssigned');
                           const submitted = sectionAttendanceSubmittedToday(cls.id);
                           const att = sectionAttendancePct(cls.id);
                           const flags = sectionBehaviorFlagCount(cls.id);
@@ -2033,9 +2043,9 @@ export default function ClassesList() {
                               <td className="px-3 py-3 text-center text-gray-600 font-medium">{enrolled}</td>
                               <td className="px-3 py-3 text-center">
                                 {submitted ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600"><CheckCircle2 className="w-3.5 h-3.5" /> Submitted</span>
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600"><CheckCircle2 className="w-3.5 h-3.5" /> {t('admin.academics.classesList.statusSubmitted')}</span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600"><Clock className="w-3.5 h-3.5" /> Pending</span>
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600"><Clock className="w-3.5 h-3.5" /> {t('admin.academics.classesList.statusPending')}</span>
                                 )}
                               </td>
                               <td className="px-3 py-3 text-center">
@@ -2047,7 +2057,7 @@ export default function ClassesList() {
                               </td>
                               <td className="px-5 py-3 text-center">
                                 {flags === 0 ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600"><CheckCircle2 className="w-3.5 h-3.5" /> Clear</span>
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600"><CheckCircle2 className="w-3.5 h-3.5" /> {t('admin.academics.classesList.statusClear')}</span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600"><AlertCircle className="w-3.5 h-3.5" /> {flags}</span>
                                 )}
@@ -2059,10 +2069,10 @@ export default function ClassesList() {
                     </table>
                   </div>
                   <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/40">
-                    <p className="text-[11px] text-gray-400">Tap a section to open its Class Teacher dashboard</p>
+                    <p className="text-[11px] text-gray-400">{t('admin.academics.classesList.tapSectionHint')}</p>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setGradeTab("attendance")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors">Attendance</button>
-                      <button onClick={() => setGradeTab("exams")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors">Exams</button>
+                      <button onClick={() => setGradeTab("attendance")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors">{t('admin.academics.classesList.tabAttendance')}</button>
+                      <button onClick={() => setGradeTab("exams")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors">{t('admin.academics.classesList.tabExams')}</button>
                     </div>
                   </div>
                 </Card>
@@ -2074,24 +2084,24 @@ export default function ClassesList() {
               {/* Section Summary table */}
               <Card className="border border-gray-100 shadow-sm rounded-2xl lg:col-span-2">
                 <CardContent className="p-5">
-                  <p className="font-bold text-gray-900 mb-4">Section Summary</p>
+                  <p className="font-bold text-gray-900 mb-4">{t('admin.academics.classesList.sectionSummary')}</p>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                        <th className="text-left pb-2">Section</th>
-                        <th className="text-left pb-2">Students</th>
-                        <th className="text-left pb-2">Class Teacher</th>
-                        <th className="text-right pb-2">Attendance</th>
+                        <th className="text-start pb-2">{t('admin.academics.classesList.colSections')}</th>
+                        <th className="text-start pb-2">{t('admin.academics.classesList.colStudents')}</th>
+                        <th className="text-start pb-2">{t('admin.academics.classesList.classTeacherLabel')}</th>
+                        <th className="text-end pb-2">{t('admin.academics.classesList.colAttendance')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {gradeSections.length === 0 ? (
-                        <tr><td colSpan={4} className="py-6 text-center text-gray-400 text-xs">No sections yet</td></tr>
+                        <tr><td colSpan={4} className="py-6 text-center text-gray-400 text-xs">{t('admin.academics.classesList.emptyNoSectionsYet')}</td></tr>
                       ) : gradeSections.map((cls) => {
                         const secName = sectionLabel(cls);
                         const enrolled = gradeStudents.filter(s => studentClassMap.get(s.id) === cls.id).length;
                         const att = sectionAttendancePct(cls.id);
-                        const teacher = cls.teacher || "Not Assigned";
+                        const teacher = cls.teacher || t('admin.academics.classesList.notAssigned');
                         return (
                           <tr key={cls.id} onClick={() => openSectionRow(cls)} className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer transition-colors">
                             <td className="py-3 font-bold text-gray-900">{secName}</td>
@@ -2102,7 +2112,7 @@ export default function ClassesList() {
                                 <span className="text-xs font-medium text-gray-700 truncate">{teacher}</span>
                               </div>
                             </td>
-                            <td className="py-3 text-right">
+                            <td className="py-3 text-end">
                               {att != null ? (
                                 <span className={cn("text-xs font-bold px-2 py-0.5 rounded-md", att >= 95 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>{att}%</span>
                               ) : (
@@ -2114,7 +2124,7 @@ export default function ClassesList() {
                       })}
                     </tbody>
                   </table>
-                  <button onClick={() => setGradeTab("sections")} className="flex items-center gap-1 text-xs font-semibold text-purple-600 mt-4 hover:underline">View all sections <ChevronRight className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => setGradeTab("sections")} className="flex items-center gap-1 text-xs font-semibold text-purple-600 mt-4 hover:underline">{t('admin.academics.classesList.viewAllSections')} <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" /></button>
                 </CardContent>
               </Card>
 
@@ -2122,8 +2132,8 @@ export default function ClassesList() {
               <Card className="border border-gray-100 shadow-sm rounded-2xl lg:col-span-3">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <p className="font-bold text-gray-900">Attendance Overview <span className="text-xs text-gray-400 font-medium">(This Week)</span></p>
-                    <button onClick={() => setGradeTab("attendance")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 transition-colors hover:bg-indigo-50">View Report</button>
+                    <p className="font-bold text-gray-900">{t('admin.academics.classesList.attendanceOverview')} <span className="text-xs text-gray-400 font-medium">{t('admin.academics.classesList.thisWeek')}</span></p>
+                    <button onClick={() => setGradeTab("attendance")} className="text-xs font-semibold text-purple-600 hover:underline border border-gray-200 rounded-lg px-3 py-1.5 transition-colors hover:bg-indigo-50">{t('admin.academics.classesList.btnViewReport')}</button>
                   </div>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -2131,7 +2141,7 @@ export default function ClassesList() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                         <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                        <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: number) => [`${v}%`, "Attendance"]} />
+                        <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(v: number) => [`${v}%`, t('admin.academics.classesList.colAttendance')]} />
                         <Bar dataKey="pct" fill="#7c3aed" radius={[6, 6, 0, 0]} maxBarSize={48} label={{ position: "top", fontSize: 11, fill: "#64748b", formatter: (v: number) => v ? `${v}%` : "" }} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -2145,8 +2155,8 @@ export default function ClassesList() {
               <Card className="border border-gray-100 shadow-sm rounded-2xl">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2"><Megaphone className="w-4 h-4 text-purple-600" /><p className="font-bold text-gray-900 text-sm">Recent Announcements</p></div>
-                    <button onClick={() => navigate("/communication/announcements")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                    <div className="flex items-center gap-2"><Megaphone className="w-4 h-4 text-purple-600" /><p className="font-bold text-gray-900 text-sm">{t('admin.academics.classesList.recentAnnouncements')}</p></div>
+                    <button onClick={() => navigate("/communication/announcements")} className="text-xs text-purple-600 font-semibold hover:underline">{t('admin.academics.classesList.btnViewAll')}</button>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -2170,8 +2180,8 @@ export default function ClassesList() {
               <Card className="border border-gray-100 shadow-sm rounded-2xl">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-rose-600" /><p className="font-bold text-gray-900 text-sm">Upcoming Exams</p></div>
-                    <button onClick={() => setGradeTab("exams")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                    <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-rose-600" /><p className="font-bold text-gray-900 text-sm">{t('admin.academics.classesList.upcomingExams')}</p></div>
+                    <button onClick={() => setGradeTab("exams")} className="text-xs text-purple-600 font-semibold hover:underline">{t('admin.academics.classesList.btnViewAll')}</button>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -2192,8 +2202,8 @@ export default function ClassesList() {
               <Card className="border border-gray-100 shadow-sm rounded-2xl">
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-emerald-600" /><p className="font-bold text-gray-900 text-sm">Recent Assignments</p></div>
-                    <button onClick={() => navigate("/assignments")} className="text-xs text-purple-600 font-semibold hover:underline">View All</button>
+                    <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-emerald-600" /><p className="font-bold text-gray-900 text-sm">{t('admin.academics.classesList.recentAssignments')}</p></div>
+                    <button onClick={() => navigate("/assignments")} className="text-xs text-purple-600 font-semibold hover:underline">{t('admin.academics.classesList.btnViewAll')}</button>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -2226,36 +2236,42 @@ export default function ClassesList() {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h2 className="font-bold text-gray-900">Students in {selectedGrade}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{filteredGradeStudents.length} of {gradeStudents.length} enrolled students across {gradeSections.length} sections</p>
+                <h2 className="font-bold text-gray-900">{t('admin.academics.classesList.studentsInGrade', { grade: selectedGrade })}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{t('admin.academics.classesList.enrolledStudentsAcrossSections', { shown: filteredGradeStudents.length, total: gradeStudents.length, sections: gradeSections.length })}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Select value={studentsTabSectionFilter} onValueChange={setStudentsTabSectionFilter}>
-                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder="Filter by section" /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder={t('admin.academics.classesList.placeholderFilterBySection')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="All">All Sections</SelectItem>
+                    <SelectItem value="All">{t('admin.academics.classesList.allSections')}</SelectItem>
                     {gradeSections.map(cls => (
                       <SelectItem key={cls.id} value={cls.id}>{sectionLabel(cls)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5" onClick={() => navigate(`/students?grade=${encodeURIComponent(selectedGrade || "")}`)}>
-                  <Users className="w-4 h-4" /> View All Students
+                  <Users className="w-4 h-4" /> {t('admin.academics.classesList.btnViewAllStudents')}
                 </Button>
               </div>
             </div>
             {filteredGradeStudents.length === 0 ? (
               <div className="rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
                 <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium text-gray-500">No students {studentsTabSectionFilter === "All" ? "in this grade yet" : "in this section yet"}</p>
+                <p className="font-medium text-gray-500">{studentsTabSectionFilter === "All" ? t('admin.academics.classesList.emptyNoStudentsInGrade') : t('admin.academics.classesList.emptyNoStudentsInSection')}</p>
               </div>
             ) : (
               <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      {["Student", "Section", "Attendance", "Status", "Action"].map(h => (
-                        <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                      {[
+                        t('admin.academics.classesList.colStudent'),
+                        t('admin.academics.classesList.colSections'),
+                        t('admin.academics.classesList.colAttendance'),
+                        t('admin.academics.classesList.colStatus'),
+                        t('admin.academics.classesList.colAction'),
+                      ].map(h => (
+                        <th key={h} className="px-5 py-3.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -2284,11 +2300,11 @@ export default function ClassesList() {
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <span className={cn("text-xs font-bold px-2.5 py-1 rounded-full", s.status === "Inactive" ? "bg-gray-100 text-gray-500" : "bg-emerald-50 text-emerald-700 border border-emerald-200")}>{s.status || "Active"}</span>
+                            <span className={cn("text-xs font-bold px-2.5 py-1 rounded-full", s.status === "Inactive" ? "bg-gray-100 text-gray-500" : "bg-emerald-50 text-emerald-700 border border-emerald-200")}>{s.status ? t(STATUS_LABEL_KEYS[s.status] || s.status) : t('admin.academics.classesList.statusActive')}</span>
                           </td>
                           <td className="px-5 py-4">
                             <Button size="sm" variant="outline" className="h-7 text-xs px-3 border-gray-200 hover:border-indigo-300 hover:text-purple-600" onClick={(e) => { e.stopPropagation(); navigate(`/students?highlight=${encodeURIComponent(s.id)}`); }}>
-                              Profile <ChevronRight className="w-3 h-3 ml-1" />
+                              {t('admin.academics.classesList.btnProfile')} <ChevronRight className="w-3 h-3 ms-1 rtl:rotate-180" />
                             </Button>
                           </td>
                         </tr>
@@ -2301,7 +2317,7 @@ export default function ClassesList() {
           </div>
           );
         })() : gradeTab === "subjects" ? (
-          <SubjectsPro classData={gradeClassData} subjects={gradeSubjects} studentCount={gradeStudents.length} teacherName={gradeTeacher || "Not Assigned"} semesterName={null} onSubjectsChange={persistGradeSubjects} />
+          <SubjectsPro classData={gradeClassData} subjects={gradeSubjects} studentCount={gradeStudents.length} teacherName={gradeTeacher || t('admin.academics.classesList.notAssigned')} semesterName={null} onSubjectsChange={persistGradeSubjects} />
         ) : gradeTab === "timetable" ? (
           <TimetablePro
             classData={gradeClassData}
@@ -2329,11 +2345,11 @@ export default function ClassesList() {
           return (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">Section</span>
+                <span className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.colSections')}</span>
                 <Select value={studentsTabSectionFilter} onValueChange={setStudentsTabSectionFilter}>
-                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder="Filter by section" /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder={t('admin.academics.classesList.placeholderFilterBySection')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="All">All Sections</SelectItem>
+                    <SelectItem value="All">{t('admin.academics.classesList.allSections')}</SelectItem>
                     {gradeSections.map(cls => (
                       <SelectItem key={cls.id} value={cls.id}>{sectionLabel(cls)}</SelectItem>
                     ))}
@@ -2357,11 +2373,11 @@ export default function ClassesList() {
           return (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">Section</span>
+                <span className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.colSections')}</span>
                 <Select value={studentsTabSectionFilter} onValueChange={setStudentsTabSectionFilter}>
-                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder="Filter by section" /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue placeholder={t('admin.academics.classesList.placeholderFilterBySection')} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="All">All Sections</SelectItem>
+                    <SelectItem value="All">{t('admin.academics.classesList.allSections')}</SelectItem>
                     {gradeSections.map(cls => (
                       <SelectItem key={cls.id} value={cls.id}>{sectionLabel(cls)}</SelectItem>
                     ))}
@@ -2375,15 +2391,15 @@ export default function ClassesList() {
           <div className="space-y-5">
             {gradeTab !== "sections" && (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-700 font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0" /> Select a section below to manage its {GRADE_TABS.find(t => t.id === gradeTab)?.label}.
+                <AlertCircle className="w-4 h-4 shrink-0" /> {t('admin.academics.classesList.selectSectionHint', { tab: GRADE_TABS.find(tb => tb.id === gradeTab)?.label })}
               </div>
             )}
 
           {/* Sections heading */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-bold text-gray-900">Sections</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Overview of all sections in {selectedGrade}</p>
+              <h2 className="font-bold text-gray-900">{t('admin.academics.classesList.colSections')}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{t('admin.academics.classesList.overviewOfSections', { grade: selectedGrade })}</p>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode("grid")} className={cn("p-1.5 rounded-lg", viewMode === "grid" ? "bg-indigo-50 text-purple-600" : "text-gray-400 hover:text-gray-600")}>
@@ -2395,14 +2411,14 @@ export default function ClassesList() {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1.5 border-gray-200 text-gray-600 h-8">
-                    <SlidersHorizontal className="w-4 h-4" /> Filters
+                    <SlidersHorizontal className="w-4 h-4" /> {t('admin.academics.classesList.btnFilters')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-56 p-3 space-y-3">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Sort Sections By</p>
-                  {["Name (A-Z)", "Students (High-Low)", "Attendance"].map(o => (
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">{t('admin.academics.classesList.sortSectionsBy')}</p>
+                  {[t('admin.academics.classesList.sortNameAz'), t('admin.academics.classesList.sortStudentsHighLow'), t('admin.academics.classesList.colAttendance')].map(o => (
                     <button key={o}
-                      className="w-full text-left text-xs font-semibold rounded-lg px-3 py-2 border border-gray-200 bg-white text-gray-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-purple-600 transition-colors">
+                      className="w-full text-start text-xs font-semibold rounded-lg px-3 py-2 border border-gray-200 bg-white text-gray-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-purple-600 transition-colors">
                       {o}
                     </button>
                   ))}
@@ -2415,10 +2431,10 @@ export default function ClassesList() {
           {gradeSections.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-gray-200 py-16 text-center">
               <BookOpen className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium text-gray-500">No sections yet</p>
-              <p className="text-sm text-gray-400 mt-1">Add a section to get started</p>
+              <p className="font-medium text-gray-500">{t('admin.academics.classesList.emptyNoSectionsYet')}</p>
+              <p className="text-sm text-gray-400 mt-1">{t('admin.academics.classesList.emptyAddSectionHint')}</p>
               <Button size="sm" className="mt-4 bg-purple-600 hover:bg-purple-700 text-white" onClick={() => openAddSection(selectedGrade!)}>
-                <Plus className="w-4 h-4 mr-1" /> Add Section
+                <Plus className="w-4 h-4 me-1" /> {t('admin.academics.classesList.menuAddSection')}
               </Button>
             </div>
           ) : (
@@ -2436,7 +2452,7 @@ export default function ClassesList() {
                 const girls = sectionStudentsList.filter(s => /^(f|female|girl)/i.test(String((s as any).gender || ""))).length;
                 const attendance = sectionAttendancePct(cls.id);
                 const sparkData = sectionAttendanceTrend(cls.id);
-                const teacher = cls.teacher || "Not Assigned";
+                const teacher = cls.teacher || t('admin.academics.classesList.notAssigned');
 
                 const openSection = () => {
                   setSelectedSection(cls);
@@ -2469,7 +2485,7 @@ export default function ClassesList() {
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {t('admin.academics.classesList.statusActive')}
                           </span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -2479,22 +2495,22 @@ export default function ClassesList() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-64" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuItem onClick={openSection}>
-                                <ChevronRight className="w-4 h-4 mr-2" /> Open Section
+                                <ChevronRight className="w-4 h-4 me-2 rtl:rotate-180" /> {t('admin.academics.classesList.menuOpenSection')}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEditSection(cls)}>
-                                <Edit className="w-4 h-4 mr-2" /> Edit Section
+                                <Edit className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuEditSection')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => exportSectionRoster(cls)}>
-                                <Download className="w-4 h-4 mr-2" /> Export Section Roster (Excel/CSV)
+                                <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuExportSectionRoster')}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => { setImportStudentTarget(cls); setImportStudentRows([]); setImportStudentError(""); }}>
-                                <Download className="w-4 h-4 mr-2" /> Import Students (Download template to import)
+                                <Download className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuImportStudentsLong')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-red-600 focus:text-red-600"
                                 onClick={() => setDeleteTarget(cls)}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete Section
+                                <Trash2 className="w-4 h-4 me-2" /> {t('admin.academics.classesList.menuDeleteSection')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -2508,16 +2524,16 @@ export default function ClassesList() {
                         </Avatar>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-gray-800 truncate">{teacher}</p>
-                          <p className="text-[10px] text-gray-500">Class Teacher</p>
+                          <p className="text-[10px] text-gray-500">{t('admin.academics.classesList.classTeacherLabel')}</p>
                         </div>
                       </div>
 
                       {/* Student counts */}
                       <div className="grid grid-cols-3 gap-2 mb-4 py-3 border-t border-b border-gray-100">
                         {[
-                          { label: "Total", value: enrolled },
-                          { label: "Boys", value: boys },
-                          { label: "Girls", value: girls },
+                          { label: t('admin.academics.classesList.statTotal'), value: enrolled },
+                          { label: t('admin.academics.classesList.statBoys'), value: boys },
+                          { label: t('admin.academics.classesList.statGirls'), value: girls },
                         ].map(({ label, value }) => (
                           <div key={label} className="text-center">
                             <p className="text-xl font-black text-gray-900">{value}</p>
@@ -2529,7 +2545,7 @@ export default function ClassesList() {
                       {/* Attendance */}
                       <div className="mb-3">
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-medium text-gray-500">Attendance</span>
+                          <span className="text-xs font-medium text-gray-500">{t('admin.academics.classesList.colAttendance')}</span>
                           <span className={cn("text-sm font-bold", colors.text)}>{attendance != null ? `${attendance}%` : "—"}</span>
                         </div>
                         <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
@@ -2550,9 +2566,9 @@ export default function ClassesList() {
                       )}
 
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                        <span className="text-[10px] text-gray-400">Click to open dashboard</span>
+                        <span className="text-[10px] text-gray-400">{t('admin.academics.classesList.clickToOpenDashboard')}</span>
                         <span className={cn("flex items-center gap-1 text-xs font-semibold", colors.text)}>
-                          Open <ChevronRight className="w-3.5 h-3.5" />
+                          {t('admin.academics.classesList.btnOpen')} <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
                         </span>
                       </div>
                     </CardContent>
@@ -2579,15 +2595,15 @@ export default function ClassesList() {
       <AlertDialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTarget ? sectionLabel(deleteTarget) : "Section"}?</AlertDialogTitle>
+            <AlertDialogTitle>{t('admin.academics.classesList.dialogDeleteSectionTitle', { name: deleteTarget ? sectionLabel(deleteTarget) : t('admin.academics.classesList.colSections') })}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this section and all associated data. This action cannot be undone.
+              {t('admin.academics.classesList.dialogDeleteSectionDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t('admin.academics.classesList.btnCancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteSection} disabled={deleting} className="bg-red-600 hover:bg-red-700">
-              {deleting ? "Deleting…" : "Delete Section"}
+              {deleting ? t('admin.academics.classesList.btnDeleting') : t('admin.academics.classesList.menuDeleteSection')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2597,19 +2613,19 @@ export default function ClassesList() {
       <Dialog open={!!importStudentTarget} onOpenChange={o => !o && setImportStudentTarget(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Import Students to {importStudentTarget ? sectionLabel(importStudentTarget) : ""}</DialogTitle>
-            <DialogDescription>Bulk-enrol students into this section from a CSV spreadsheet.</DialogDescription>
+            <DialogTitle>{t('admin.academics.classesList.dialogImportStudentsTitle', { section: importStudentTarget ? sectionLabel(importStudentTarget) : "" })}</DialogTitle>
+            <DialogDescription>{t('admin.academics.classesList.dialogImportStudentsDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-sm">
-              <p className="font-semibold text-gray-700 mb-1">Required file format</p>
-              <ul className="text-gray-500 text-[13px] space-y-0.5 list-disc pl-4">
-                <li>Accepted: <b>.csv</b>. Excel users: <i>Save As → CSV</i>.</li>
-                <li>Columns (in order): <b>Name</b>, <b>Email</b>, <b>Gender</b></li>
-                <li>One row per student. Example: <code>John Doe,john@example.com,Male</code></li>
+              <p className="font-semibold text-gray-700 mb-1">{t('admin.academics.classesList.requiredFileFormat')}</p>
+              <ul className="text-gray-500 text-[13px] space-y-0.5 list-disc ps-4">
+                <li>{t('admin.academics.classesList.importStudentsFormatAccepted')}</li>
+                <li>{t('admin.academics.classesList.importStudentsFormatColumns')}</li>
+                <li>{t('admin.academics.classesList.importStudentsFormatExample')}</li>
               </ul>
               <Button variant="link" size="sm" className="px-0 h-auto mt-1 text-purple-600" onClick={downloadStudentTemplate}>
-                <Download className="w-3.5 h-3.5 mr-1" /> Download Student CSV template
+                <Download className="w-3.5 h-3.5 me-1" /> {t('admin.academics.classesList.btnDownloadStudentCsvTemplate')}
               </Button>
             </div>
 
@@ -2617,18 +2633,18 @@ export default function ClassesList() {
             <button onClick={() => importStudentFileRef.current?.click()}
               className="w-full border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center gap-1 hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors">
               <Download className="w-7 h-7 text-indigo-400" />
-              <span className="text-sm font-medium text-gray-600">Click to choose student CSV file</span>
-              <span className="text-[11px] text-gray-400">CSV format only</span>
+              <span className="text-sm font-medium text-gray-600">{t('admin.academics.classesList.clickToChooseStudentCsv')}</span>
+              <span className="text-[11px] text-gray-400">{t('admin.academics.classesList.csvFormatOnly')}</span>
             </button>
 
             {importStudentError && <p className="text-sm text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2.5">{importStudentError}</p>}
 
             {importStudentRows.length > 0 && (
               <div className="rounded-xl border border-gray-100 overflow-hidden">
-                <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {importStudentRows.length} students ready to import</div>
+                <div className="px-3 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {t('admin.academics.classesList.studentsReadyToImport', { count: importStudentRows.length })}</div>
                 <div className="max-h-40 overflow-y-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="text-left px-3 py-1.5">Name</th><th className="text-left px-3 py-1.5">Email</th><th className="text-left px-3 py-1.5">Gender</th></tr></thead>
+                    <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colName')}</th><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colEmail')}</th><th className="text-start px-3 py-1.5">{t('admin.academics.classesList.colGender')}</th></tr></thead>
                     <tbody>{importStudentRows.slice(0, 50).map((r, i) => (<tr key={i} className="border-t border-gray-50"><td className="px-3 py-1.5 font-medium text-gray-700">{r.name}</td><td className="px-3 py-1.5 text-gray-600">{r.email || "—"}</td><td className="px-3 py-1.5 text-gray-500">{r.gender || "—"}</td></tr>))}</tbody>
                   </table>
                 </div>
@@ -2636,9 +2652,9 @@ export default function ClassesList() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportStudentTarget(null)} disabled={importingStudents}>Cancel</Button>
+            <Button variant="outline" onClick={() => setImportStudentTarget(null)} disabled={importingStudents}>{t('admin.academics.classesList.btnCancel')}</Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleConfirmImportStudents} disabled={importingStudents || importStudentRows.length === 0}>
-              {importingStudents ? "Importing…" : `Import ${importStudentRows.length || ""} Students`}
+              {importingStudents ? t('admin.academics.classesList.btnImporting') : t('admin.academics.classesList.btnImportStudentsCount', { count: importStudentRows.length || 0 })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2648,32 +2664,32 @@ export default function ClassesList() {
       <Dialog open={!!editSectionTarget} onOpenChange={o => !o && setEditSectionTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Edit Section</DialogTitle>
-            <DialogDescription>Rename this section or change its class teacher.</DialogDescription>
+            <DialogTitle>{t('admin.academics.classesList.dialogEditSectionTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.academics.classesList.dialogEditSectionDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs font-semibold text-gray-500">Section Name</Label>
-              <Input value={editSecName} onChange={e => setEditSecName(e.target.value)} placeholder="e.g. Section A"
+              <Label className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.labelSectionName')}</Label>
+              <Input value={editSecName} onChange={e => setEditSecName(e.target.value)} placeholder={t('admin.academics.classesList.placeholderSectionExample')}
                 onKeyDown={e => { if (e.key === "Enter") handleEditSection(); }} />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-gray-500">Class Teacher</Label>
+              <Label className="text-xs font-semibold text-gray-500">{t('admin.academics.classesList.classTeacherLabel')}</Label>
               <Select value={editSecTeacher || "__none"} onValueChange={v => setEditSecTeacher(v === "__none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Not assigned" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('admin.academics.classesList.notAssignedLower')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">Not assigned</SelectItem>
+                  <SelectItem value="__none">{t('admin.academics.classesList.notAssignedLower')}</SelectItem>
                   {staff.filter(s => s.role === "Teacher" || (s as any).department === "Academic").map(s => (
                     <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
                   ))}
-                  {staff.length === 0 && ["Mrs. Sarah Khan", "Mr. Imran Qureshi", "Miss. Sana Fatima"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {staff.length === 0 && ["Mrs. Sarah Khan", "Mr. Imran Qureshi", "Miss. Sana Fatima"].map(tn => <SelectItem key={tn} value={tn}>{tn}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSectionTarget(null)} disabled={editingSection}>Cancel</Button>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleEditSection} disabled={editingSection}>{editingSection ? "Saving…" : "Save"}</Button>
+            <Button variant="outline" onClick={() => setEditSectionTarget(null)} disabled={editingSection}>{t('admin.academics.classesList.btnCancel')}</Button>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={handleEditSection} disabled={editingSection}>{editingSection ? t('admin.academics.classesList.btnSaving') : t('admin.academics.classesList.btnSave')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2695,10 +2711,10 @@ export default function ClassesList() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-purple-600" /> Promote Students
+              <TrendingUp className="w-5 h-5 text-purple-600" /> {t('admin.academics.classesList.btnPromoteStudents')}
             </DialogTitle>
             <DialogDescription>
-              Promote all students in <strong>{selectedGrade}</strong> to the next grade level.
+              {t('admin.academics.classesList.dialogPromoteDescPrefix')} <strong>{selectedGrade}</strong> {t('admin.academics.classesList.dialogPromoteDescSuffix')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-3 space-y-4">
@@ -2711,7 +2727,7 @@ export default function ClassesList() {
                     <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow", gradeBgColor(selectedGrade || "", grades))}>
                       {gradeBadgeLabel(selectedGrade || "")}
                     </div>
-                    <ArrowRight className="w-5 h-5 text-indigo-400" />
+                    <ArrowRight className="w-5 h-5 text-indigo-400 rtl:rotate-180" />
                     {nextGrade ? (
                       <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow", gradeBgColor(nextGrade, grades))}>
                         {gradeBadgeLabel(nextGrade)}
@@ -2723,29 +2739,29 @@ export default function ClassesList() {
                     )}
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 text-sm">
-                        {selectedGrade} → {nextGrade || "Graduation"}
+                        {selectedGrade} → {nextGrade || t('admin.academics.classesList.graduation')}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {gradeStudents.length} students · {gradeSections.length} sections
+                        {t('admin.academics.classesList.studentsSectionsCount', { students: gradeStudents.length, sections: gradeSections.length })}
                       </p>
                     </div>
                   </div>
                   {!nextGrade && (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100 text-xs text-amber-700">
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      This is the final grade. Students will be marked as graduates.
+                      {t('admin.academics.classesList.finalGradeNotice')}
                     </div>
                   )}
                   <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-600">
                     <AlertCircle className="w-4 h-4 shrink-0 text-gray-400" />
-                    This action updates student records for the new academic year. It can be reviewed before confirming.
+                    {t('admin.academics.classesList.promoteReviewNotice')}
                   </div>
                 </div>
               );
             })()}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setPromoteOpen(false)}>{t('admin.academics.classesList.btnCancel')}</Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={async () => {
               const currentIdx = grades.indexOf(selectedGrade || "");
               const nextGrade = currentIdx >= 0 && currentIdx < grades.length - 1 ? grades[currentIdx + 1] : null;
@@ -2763,7 +2779,7 @@ export default function ClassesList() {
               }
               setPromoteOpen(false);
             }}>
-              <TrendingUp className="w-4 h-4 mr-1.5" /> Confirm Promotion
+              <TrendingUp className="w-4 h-4 me-1.5" /> {t('admin.academics.classesList.btnConfirmPromotion')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2788,6 +2804,7 @@ function AssignCoordinatorDialog({
   open, grade, staff, currentCoordId, staffSearch,
   onSearchChange, onSelectStaff, onSave, onClose,
 }: AssignCoordinatorDialogProps) {
+  const { t } = useTranslation();
   const filtered = staff.filter(s => {
     if (!staffSearch.trim()) return true;
     return (s.name || s.fullName || "").toLowerCase().includes(staffSearch.toLowerCase());
@@ -2797,45 +2814,45 @@ function AssignCoordinatorDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-indigo-500" /> Assign Grade Coordinator
+            <Shield className="w-5 h-5 text-indigo-500" /> {t('admin.academics.classesList.menuAssignGradeCoordinator')}
           </DialogTitle>
           <DialogDescription>
-            Select the Grade Coordinator for <strong>{grade}</strong>. This person monitors and oversees all sections within the grade.
+            {t('admin.academics.classesList.dialogAssignCoordDescPrefix')} <strong>{grade}</strong>. {t('admin.academics.classesList.dialogAssignCoordDescSuffix')}
           </DialogDescription>
         </DialogHeader>
 
         {/* Hierarchy reminder */}
         <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
           <GraduationCap className="w-3.5 h-3.5 text-gray-400" />
-          <span>Principal</span>
-          <ChevronRight className="w-3 h-3 text-gray-300" />
-          <span>Academic Coordinator</span>
-          <ChevronRight className="w-3 h-3 text-gray-300" />
-          <span className="text-purple-600 font-bold">Grade Coordinator</span>
-          <ChevronRight className="w-3 h-3 text-gray-300" />
-          <span>Class Teacher</span>
+          <span>{t('admin.academics.classesList.hierarchyPrincipal')}</span>
+          <ChevronRight className="w-3 h-3 text-gray-300 rtl:rotate-180" />
+          <span>{t('admin.academics.classesList.hierarchyAcademicCoordinator')}</span>
+          <ChevronRight className="w-3 h-3 text-gray-300 rtl:rotate-180" />
+          <span className="text-purple-600 font-bold">{t('admin.academics.classesList.gradeCoordinatorLabel')}</span>
+          <ChevronRight className="w-3 h-3 text-gray-300 rtl:rotate-180" />
+          <span>{t('admin.academics.classesList.classTeacherLabel')}</span>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="Search staff..." value={staffSearch} onChange={e => onSearchChange(e.target.value)} className="pl-9" autoFocus />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input placeholder={t('admin.academics.classesList.placeholderSearchStaff')} value={staffSearch} onChange={e => onSearchChange(e.target.value)} className="ps-9" autoFocus />
         </div>
 
-        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pe-1">
           {/* Clear option */}
           <button
             onClick={() => onSelectStaff("")}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-start",
               !currentCoordId ? "border-gray-300 bg-gray-50" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
             )}>
             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0 text-gray-400 text-xs font-bold">—</div>
-            <span className="text-sm text-gray-500 font-medium">Not assigned</span>
-            {!currentCoordId && <CheckCircle2 className="w-4 h-4 text-gray-400 ml-auto shrink-0" />}
+            <span className="text-sm text-gray-500 font-medium">{t('admin.academics.classesList.notAssignedLower')}</span>
+            {!currentCoordId && <CheckCircle2 className="w-4 h-4 text-gray-400 ms-auto shrink-0" />}
           </button>
 
           {filtered.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-sm">No staff found</div>
+            <div className="text-center py-8 text-gray-400 text-sm">{t('admin.academics.classesList.noStaffFound')}</div>
           ) : filtered.map(s => {
             const name = s.name || s.fullName || "Unknown";
             const role = s.role || s.department || "";
@@ -2844,7 +2861,7 @@ function AssignCoordinatorDialog({
               <button key={s.id}
                 onClick={() => onSelectStaff(isSelected ? "" : s.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-start",
                   isSelected ? "border-indigo-300 bg-indigo-50" : "border-gray-100 hover:border-indigo-200 hover:bg-gray-50"
                 )}>
                 <Avatar className="w-8 h-8 shrink-0">
@@ -2863,9 +2880,9 @@ function AssignCoordinatorDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t('admin.academics.classesList.btnCancel')}</Button>
           <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={onSave}>
-            <Shield className="w-4 h-4 mr-1.5" /> Save Coordinator
+            <Shield className="w-4 h-4 me-1.5" /> {t('admin.academics.classesList.btnSaveCoordinator')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -2885,6 +2902,7 @@ interface SectionWizardProps {
 }
 
 function SectionWizard({ open, grade, existingSections, staff, loading, onSave, onClose }: SectionWizardProps) {
+  const { t } = useTranslation();
   const grades = useGrades();
   const [step, setStep] = useState(1);
   const [sectionName, setSectionName] = useState('');
@@ -2917,9 +2935,9 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
   const selectedTeacherName = selectedTeacher ? (selectedTeacher.name || selectedTeacher.fullName || '') : '';
 
   const steps = [
-    { num: 1, label: "Section Details" },
-    { num: 2, label: "Assign Teacher" },
-    { num: 3, label: "Review" },
+    { num: 1, label: t('admin.academics.classesList.wizardStepSectionDetails') },
+    { num: 2, label: t('admin.academics.classesList.wizardStepAssignTeacher') },
+    { num: 3, label: t('admin.academics.classesList.wizardStepReview') },
   ];
 
   function handleCreate() {
@@ -2938,7 +2956,7 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
           {/* Left panel — step indicator */}
           <div className="w-52 bg-gray-50 border-r border-gray-100 p-6 flex flex-col">
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Add Section</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin.academics.classesList.menuAddSection')}</p>
               <p className="text-sm font-bold text-gray-900 mt-0.5">{grade}</p>
             </div>
             <div className="space-y-1 flex-1">
@@ -2965,7 +2983,7 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
               ))}
             </div>
             <div className="mt-auto pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-400">Step {step} of 3</p>
+              <p className="text-xs text-gray-400">{t('admin.academics.classesList.stepOfThree', { step })}</p>
               <div className="h-1 rounded-full bg-gray-200 mt-1.5">
                 <div className="h-full rounded-full bg-purple-600 transition-all" style={{ width: `${(step / 3) * 100}%` }} />
               </div>
@@ -2980,14 +2998,14 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
               {step === 1 && (
                 <div className="space-y-5">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Section Details</h2>
-                    <p className="text-sm text-gray-500 mt-0.5">Configure the new section for {grade}</p>
+                    <h2 className="text-lg font-bold text-gray-900">{t('admin.academics.classesList.wizardStepSectionDetails')}</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{t('admin.academics.classesList.wizardConfigureNewSection', { grade })}</p>
                   </div>
 
                   {/* Existing sections */}
                   {existingSections.length > 0 && (
                     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Existing Sections</p>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t('admin.academics.classesList.wizardExistingSections')}</p>
                       <div className="flex flex-wrap gap-1.5">
                         {existingSections.map(s => (
                           <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-600 shadow-sm">
@@ -3000,12 +3018,12 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
 
                   {/* Section Name */}
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">Section Name</Label>
-                    <Input placeholder="e.g. Section D" value={sectionName}
+                    <Label className="text-sm font-medium">{t('admin.academics.classesList.labelSectionName')}</Label>
+                    <Input placeholder={t('admin.academics.classesList.placeholderSectionD')} value={sectionName}
                       onChange={e => setSectionName(e.target.value)} autoFocus />
                     {quickLetters.length > 0 && (
                       <div>
-                        <p className="text-xs text-gray-400 mb-1.5">Quick pick</p>
+                        <p className="text-xs text-gray-400 mb-1.5">{t('admin.academics.classesList.wizardQuickPick')}</p>
                         <div className="flex flex-wrap gap-1.5">
                           {quickLetters.map(l => {
                             const val = `Section ${l}`;
@@ -3026,15 +3044,15 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
 
                   {/* Section Type */}
                   <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">Section Type</Label>
+                    <Label className="text-sm font-medium">{t('admin.academics.classesList.labelSectionType')}</Label>
                     <Select value={sectionType} onValueChange={setSectionType}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Regular">Regular</SelectItem>
-                        <SelectItem value="Advanced">Advanced</SelectItem>
-                        <SelectItem value="Special Needs">Special Needs</SelectItem>
+                        <SelectItem value="Regular">{t('admin.academics.classesList.sectionTypeRegular')}</SelectItem>
+                        <SelectItem value="Advanced">{t('admin.academics.classesList.sectionTypeAdvanced')}</SelectItem>
+                        <SelectItem value="Special Needs">{t('admin.academics.classesList.sectionTypeSpecialNeeds')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -3045,18 +3063,18 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
               {step === 2 && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Assign Teacher</h2>
-                    <p className="text-sm text-gray-500 mt-0.5">Select a class teacher for {sectionName || "this section"} (optional)</p>
+                    <h2 className="text-lg font-bold text-gray-900">{t('admin.academics.classesList.wizardStepAssignTeacher')}</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{t('admin.academics.classesList.wizardSelectTeacherHint', { section: sectionName || t('admin.academics.classesList.thisSection') })}</p>
                   </div>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input placeholder="Search staff..." value={staffSearch}
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input placeholder={t('admin.academics.classesList.placeholderSearchStaff')} value={staffSearch}
                       onChange={e => setStaffSearch(e.target.value)}
-                      className="pl-9" />
+                      className="ps-9" />
                   </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-64 overflow-y-auto pe-1">
                     {filteredStaff.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400 text-sm">No staff found</div>
+                      <div className="text-center py-8 text-gray-400 text-sm">{t('admin.academics.classesList.noStaffFound')}</div>
                     ) : filteredStaff.map(s => {
                       const name = s.name || s.fullName || 'Unknown';
                       const subject = s.subject || s.department || s.role || '';
@@ -3065,7 +3083,7 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
                         <button key={s.id}
                           onClick={() => setSelectedTeacherId(isSelected ? '' : s.id)}
                           className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left",
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-start",
                             isSelected
                               ? "border-indigo-300 bg-indigo-50"
                               : "border-gray-200 hover:border-indigo-200 hover:bg-gray-50"
@@ -3079,7 +3097,7 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
                             <p className="text-sm font-semibold text-gray-900 truncate">{name}</p>
                             {subject && <p className="text-xs text-gray-500 truncate">{subject}</p>}
                           </div>
-                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600 ml-auto flex-shrink-0" />}
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-purple-600 ms-auto flex-shrink-0" />}
                         </button>
                       );
                     })}
@@ -3091,8 +3109,8 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
               {step === 3 && (
                 <div className="space-y-5">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Review & Create</h2>
-                    <p className="text-sm text-gray-500 mt-0.5">Confirm the details before creating the section</p>
+                    <h2 className="text-lg font-bold text-gray-900">{t('admin.academics.classesList.wizardReviewCreate')}</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{t('admin.academics.classesList.wizardConfirmDetailsHint')}</p>
                   </div>
                   <Card className="border border-gray-200">
                     <CardContent className="p-5 space-y-4">
@@ -3101,22 +3119,22 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
                           {gradeBadgeLabel(grade)}
                         </span>
                         <div>
-                          <p className="text-xs text-gray-500">Grade</p>
+                          <p className="text-xs text-gray-500">{t('admin.academics.classesList.colGrade')}</p>
                           <p className="font-semibold text-gray-900">{grade}</p>
                         </div>
                       </div>
                       <div className="border-t border-gray-100 pt-4 grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Section Name</p>
+                          <p className="text-xs text-gray-500 mb-0.5">{t('admin.academics.classesList.labelSectionName')}</p>
                           <p className="font-semibold text-gray-900">{sectionName || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5">Section Type</p>
-                          <p className="font-semibold text-gray-900">{sectionType}</p>
+                          <p className="text-xs text-gray-500 mb-0.5">{t('admin.academics.classesList.labelSectionType')}</p>
+                          <p className="font-semibold text-gray-900">{t(SECTION_TYPE_LABEL_KEYS[sectionType] || sectionType)}</p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs text-gray-500 mb-0.5">Class Teacher</p>
-                          <p className="font-semibold text-gray-900">{selectedTeacherName || "Not assigned"}</p>
+                          <p className="text-xs text-gray-500 mb-0.5">{t('admin.academics.classesList.classTeacherLabel')}</p>
+                          <p className="font-semibold text-gray-900">{selectedTeacherName || t('admin.academics.classesList.notAssignedLower')}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -3129,21 +3147,21 @@ function SectionWizard({ open, grade, existingSections, staff, loading, onSave, 
             <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-white">
               <Button variant="outline" onClick={step === 1 ? onClose : () => setStep(s => s - 1)}
                 className="border-gray-200">
-                {step === 1 ? "Cancel" : "Previous"}
+                {step === 1 ? t('admin.academics.classesList.btnCancel') : t('admin.academics.classesList.btnPrevious')}
               </Button>
               {step < 3 ? (
                 <Button
                   onClick={() => setStep(s => s + 1)}
                   disabled={step === 1 && !sectionName.trim()}
                   className="bg-purple-600 hover:bg-purple-700 text-white">
-                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                  {t('admin.academics.classesList.btnNext')} <ChevronRight className="w-4 h-4 ms-1 rtl:rotate-180" />
                 </Button>
               ) : (
                 <Button
                   onClick={handleCreate}
                   disabled={loading || !sectionName.trim()}
                   className="bg-purple-600 hover:bg-purple-700 text-white">
-                  {loading ? "Creating…" : "Create Section"}
+                  {loading ? t('admin.academics.classesList.btnCreating') : t('admin.academics.classesList.btnCreateSection')}
                 </Button>
               )}
             </div>

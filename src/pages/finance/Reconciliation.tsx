@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { 
   Card, 
@@ -39,6 +40,7 @@ import { BankTransaction } from "@/types/finance";
 import { Timestamp } from "firebase/firestore";
 
 const Reconciliation = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -57,7 +59,7 @@ const Reconciliation = () => {
       setLastSynced("just now");
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      toast.error("Failed to load transactions");
+      toast.error(t("admin.finance.reconciliation.toastLoadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +75,7 @@ const Reconciliation = () => {
   // real way transactions enter the ledger today is the CSV import below
   // (handleUploadStatement) or manual entry, so say that honestly instead.
   const handleSync = () => {
-    toast.info('Live bank-feed sync isn\'t connected yet — use "Upload Statement" to import a CSV export from your bank.');
+    toast.info(t("admin.finance.reconciliation.toastSyncNotConnected"));
   };
 
   const handleConfirmMatch = async (id: string) => {
@@ -82,11 +84,11 @@ const Reconciliation = () => {
         status: "Reconciled",
         updatedAt: Timestamp.now()
       });
-      toast.success("Transaction reconciled successfully");
+      toast.success(t("admin.finance.reconciliation.toastReconciled"));
       fetchTransactions();
     } catch (error) {
       console.error("Error reconciling transaction:", error);
-      toast.error("Failed to reconcile");
+      toast.error(t("admin.finance.reconciliation.toastReconcileFailed"));
     }
   };
 
@@ -124,31 +126,41 @@ const Reconciliation = () => {
   const aiInsights: { title: string; desc: string; type: string; icon: typeof AlertCircle }[] = [];
   if (duplicatePending) {
     aiInsights.push({
-      title: "Possible Duplicate",
-      desc: `Two pending transactions share the amount ${financialSettings.currency}${Math.abs(duplicatePending.amount).toLocaleString()}. Review before reconciling.`,
+      title: t("admin.finance.reconciliation.insightDuplicateTitle"),
+      desc: t("admin.finance.reconciliation.insightDuplicateDesc", { amount: `${financialSettings.currency}${Math.abs(duplicatePending.amount).toLocaleString()}` }),
       type: "warning",
       icon: AlertCircle,
     });
   }
   if (matchedCount > 0) {
     aiInsights.push({
-      title: "Pattern Match",
-      desc: `${matchedCount} transaction${matchedCount === 1 ? "" : "s"} matched against your internal records.`,
+      title: t("admin.finance.reconciliation.insightPatternMatchTitle"),
+      desc: matchedCount === 1
+        ? t("admin.finance.reconciliation.insightPatternMatchDescSingular", { count: matchedCount })
+        : t("admin.finance.reconciliation.insightPatternMatchDescPlural", { count: matchedCount }),
       type: "success",
       icon: CheckCircle2,
     });
   }
   if (aiInsights.length === 0 && transactions.length > 0) {
     aiInsights.push({
-      title: "No Anomalies Detected",
-      desc: "No duplicate amounts or pattern matches found across current transactions.",
+      title: t("admin.finance.reconciliation.insightNoAnomaliesTitle"),
+      desc: t("admin.finance.reconciliation.insightNoAnomaliesDesc"),
       type: "success",
       icon: CheckCircle2,
     });
   }
 
   const handleGenerateReport = () => {
-    const headers = ["ID", "Date", "Description", "Type", "Amount", "Status", "Suggested Match"];
+    const headers = [
+      t("admin.finance.reconciliation.csvHeaderId"),
+      t("admin.finance.reconciliation.csvHeaderDate"),
+      t("admin.finance.reconciliation.csvHeaderDescription"),
+      t("admin.finance.reconciliation.csvHeaderType"),
+      t("admin.finance.reconciliation.csvHeaderAmount"),
+      t("admin.finance.reconciliation.csvHeaderStatus"),
+      t("admin.finance.reconciliation.csvHeaderSuggestedMatch"),
+    ];
     const rows = transactions.map(t => [
       t.id,
       t.date,
@@ -166,7 +178,7 @@ const Reconciliation = () => {
     link.download = `reconciliation_report_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success("Report exported");
+    toast.success(t("admin.finance.reconciliation.toastReportExported"));
   };
 
   const handleUploadStatement = () => {
@@ -182,7 +194,7 @@ const Reconciliation = () => {
           const text = String(reader.result || "");
           const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
           if (lines.length < 2) {
-            toast.error("Could not parse statement");
+            toast.error(t("admin.finance.reconciliation.toastParseFailed"));
             return;
           }
           // Best-effort header mapping: date, description, amount, type.
@@ -192,7 +204,7 @@ const Reconciliation = () => {
           const amtIdx = header.findIndex(h => h.includes("amount") || h.includes("amt"));
           const typeIdx = header.findIndex(h => h.includes("type"));
           if (amtIdx === -1) {
-            toast.error("Could not parse statement");
+            toast.error(t("admin.finance.reconciliation.toastParseFailed"));
             return;
           }
           let created = 0;
@@ -217,17 +229,21 @@ const Reconciliation = () => {
             created++;
           }
           if (created === 0) {
-            toast.error("Could not parse statement");
+            toast.error(t("admin.finance.reconciliation.toastParseFailed"));
             return;
           }
-          toast.success(`Imported ${created} transaction${created === 1 ? "" : "s"} from "${file.name}"`);
+          toast.success(
+            created === 1
+              ? t("admin.finance.reconciliation.toastImportedSingular", { count: created, file: file.name })
+              : t("admin.finance.reconciliation.toastImportedPlural", { count: created, file: file.name })
+          );
           fetchTransactions();
         } catch (err) {
           console.error("Error parsing statement:", err);
-          toast.error("Could not parse statement");
+          toast.error(t("admin.finance.reconciliation.toastParseFailed"));
         }
       };
-      reader.onerror = () => toast.error("Could not read file");
+      reader.onerror = () => toast.error(t("admin.finance.reconciliation.toastReadFailed"));
       reader.readAsText(file);
     };
     input.click();
@@ -236,8 +252,8 @@ const Reconciliation = () => {
   const bankAccounts = [
     {
       id: "PRIMARY",
-      bank: "Primary Operating Account",
-      accountNumber: "Consolidated Ledger",
+      bank: t("admin.finance.reconciliation.primaryOperatingAccount"),
+      accountNumber: t("admin.finance.reconciliation.consolidatedLedger"),
       balance: currentBalance,
       lastSynced,
       status: pendingCount > 0 ? "Needs Attention" : "Synced",
@@ -245,14 +261,19 @@ const Reconciliation = () => {
     },
     {
       id: "STATUS",
-      bank: "Reconciliation Status",
-      accountNumber: `${matchRate}% Matched`,
+      bank: t("admin.finance.reconciliation.reconciliationStatus"),
+      accountNumber: t("admin.finance.reconciliation.matchedPercent", { rate: matchRate }),
       balance: pendingUnmatchedTotal,
       lastSynced,
       status: pendingCount > 0 ? "Needs Attention" : "Synced",
       pendingMatches: pendingCount,
     },
   ];
+
+  const ACCOUNT_STATUS_LABEL_KEYS: Record<string, string> = {
+    Synced: "admin.finance.reconciliation.statusSynced",
+    "Needs Attention": "admin.finance.reconciliation.statusNeedsAttention",
+  };
 
   return (
     <DashboardLayout>
@@ -264,8 +285,8 @@ const Reconciliation = () => {
               <RefreshCw className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Bank Reconciliation</h1>
-              <p className="text-sm text-slate-400">Match your bank statements with internal records to ensure 100% financial accuracy.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.reconciliation.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("admin.finance.reconciliation.pageSubtitle")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -273,13 +294,13 @@ const Reconciliation = () => {
               onClick={handleUploadStatement}
               className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <Upload className="h-4 w-4 text-slate-500" /> Upload Statement
+              <Upload className="h-4 w-4 text-slate-500" /> {t("admin.finance.reconciliation.uploadStatement")}
             </button>
             <button
               onClick={handleSync}
               className="flex items-center gap-2 h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold"
             >
-              <RefreshCw className="h-4 w-4" /> Sync Bank Feeds
+              <RefreshCw className="h-4 w-4" /> {t("admin.finance.reconciliation.syncBankFeeds")}
             </button>
           </div>
         </div>
@@ -300,17 +321,17 @@ const Reconciliation = () => {
                 </div>
                 <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap",
                   account.status === "Synced" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                  {account.status}
+                  {t(ACCOUNT_STATUS_LABEL_KEYS[account.status] || account.status)}
                 </span>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[11px] text-slate-400 mb-0.5">{i === 0 ? "Current Balance" : "Unreconciled"}</p>
+                  <p className="text-[11px] text-slate-400 mb-0.5">{i === 0 ? t("admin.finance.reconciliation.currentBalance") : t("admin.finance.reconciliation.unreconciled")}</p>
                   <p className="text-xl font-bold text-slate-900">{financialSettings.currency} {account.balance.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400 mb-0.5">Pending Matches</p>
+                  <p className="text-[11px] text-slate-400 mb-0.5">{t("admin.finance.reconciliation.pendingMatches")}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-xl font-bold text-slate-900">{account.pendingMatches}</p>
                     {account.pendingMatches > 0 && (
@@ -322,7 +343,7 @@ const Reconciliation = () => {
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <History className="h-3.5 w-3.5" /> Last synced {account.lastSynced}
+                  <History className="h-3.5 w-3.5" /> {t("admin.finance.reconciliation.lastSynced", { time: account.lastSynced })}
                 </div>
                 <button
                   className="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1"
@@ -331,7 +352,7 @@ const Reconciliation = () => {
                     if (el) el.scrollIntoView({ behavior: "smooth" });
                   }}
                 >
-                  Reconcile Now <ArrowRight className="h-3.5 w-3.5" />
+                  {t("admin.finance.reconciliation.reconcileNow")} <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
                 </button>
               </div>
             </div>
@@ -341,19 +362,19 @@ const Reconciliation = () => {
         {/* Filter row */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-end gap-3">
           <div className="relative flex-1 max-w-xs">
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Search</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("admin.finance.reconciliation.searchLabel")}</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                className="pl-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
-                placeholder="Search…"
+                className="ps-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
+                placeholder={t("admin.finance.reconciliation.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
           <button className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-slate-400" /> Filter
+            <Filter className="h-3.5 w-3.5 text-slate-400" /> {t("admin.finance.reconciliation.filter")}
           </button>
         </div>
 
@@ -363,21 +384,21 @@ const Reconciliation = () => {
           <div className="lg:col-span-2 space-y-5" id="pending-transactions">
             <Card className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
               <CardHeader className="p-5 bg-slate-50/70 border-b border-slate-100">
-                <CardTitle className="text-base font-bold text-slate-900">Pending Transactions</CardTitle>
-                <CardDescription className="text-xs text-slate-400">Review and match bank entries with your records.</CardDescription>
+                <CardTitle className="text-base font-bold text-slate-900">{t("admin.finance.reconciliation.pendingTransactionsTitle")}</CardTitle>
+                <CardDescription className="text-xs text-slate-400">{t("admin.finance.reconciliation.pendingTransactionsDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="min-h-[300px]">
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3">
                       <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                      <p className="text-sm font-semibold text-slate-500">Fetching transactions…</p>
+                      <p className="text-sm font-semibold text-slate-500">{t("admin.finance.reconciliation.fetchingTransactions")}</p>
                     </div>
                   ) : filteredTransactions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-2">
                       <CheckCircle2 className="h-10 w-10 text-emerald-200" />
-                      <p className="text-sm font-semibold text-slate-700">All caught up!</p>
-                      <p className="text-xs text-slate-400">No pending transactions to reconcile.</p>
+                      <p className="text-sm font-semibold text-slate-700">{t("admin.finance.reconciliation.allCaughtUp")}</p>
+                      <p className="text-xs text-slate-400">{t("admin.finance.reconciliation.noPendingTransactions")}</p>
                     </div>
                   ) : (
                       filteredTransactions.map((trx) => (
@@ -402,11 +423,11 @@ const Reconciliation = () => {
                             </p>
                             {trx.suggestedMatch && trx.suggestedMatch !== "None" ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-600">Match: {trx.suggestedMatch}</span>
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-600">{t("admin.finance.reconciliation.matchLabel", { match: trx.suggestedMatch })}</span>
                                 <span className="text-[11px] font-semibold text-emerald-500">{trx.confidence}%</span>
                               </div>
                             ) : (
-                              <span className="text-[11px] font-medium text-slate-400 border border-slate-200 px-2 py-0.5 rounded-md">No Match Found</span>
+                              <span className="text-[11px] font-medium text-slate-400 border border-slate-200 px-2 py-0.5 rounded-md">{t("admin.finance.reconciliation.noMatchFound")}</span>
                             )}
                           </div>
 
@@ -414,7 +435,7 @@ const Reconciliation = () => {
                             <button
                               onClick={() => handleConfirmMatch(trx.id)}
                               className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold">
-                              <Check className="h-3.5 w-3.5" /> Confirm
+                              <Check className="h-3.5 w-3.5" /> {t("admin.finance.reconciliation.confirm")}
                             </button>
                             <button className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-400">
                               <MoreVertical className="h-3.5 w-3.5" />
@@ -433,25 +454,25 @@ const Reconciliation = () => {
             {/* AI Insights Card */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-600" /> AI Reconciliation
+                <Sparkles className="h-4 w-4 text-purple-600" /> {t("admin.finance.reconciliation.aiReconciliation")}
               </h3>
               <div className="space-y-2.5">
                 {transactions.length === 0 ? (
                   <div className="p-3 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center">
-                    <p className="text-xs font-semibold text-slate-400">No Data Yet</p>
+                    <p className="text-xs font-semibold text-slate-400">{t("admin.finance.reconciliation.noDataYetTitle")}</p>
                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                      Import a bank statement or record transactions to see match rate and AI insights here.
+                      {t("admin.finance.reconciliation.noDataYetDesc")}
                     </p>
                   </div>
                 ) : (
                   <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-semibold text-slate-500">Auto-Match Rate</span>
+                      <span className="text-xs font-semibold text-slate-500">{t("admin.finance.reconciliation.autoMatchRate")}</span>
                       <span className="text-xs font-bold text-purple-600">{matchRate}%</span>
                     </div>
                     <Progress value={matchRate} className="h-1.5 bg-purple-100" />
                     <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                      AI has successfully matched {matchedCount} out of {transactions.length} transactions.
+                      {t("admin.finance.reconciliation.aiMatchedSummary", { matched: matchedCount, total: transactions.length })}
                     </p>
                   </div>
                 )}
@@ -467,7 +488,7 @@ const Reconciliation = () => {
                         <p className="text-xs font-semibold text-slate-900 mb-0.5">{insight.title}</p>
                         <p className="text-xs text-slate-500 leading-relaxed">{insight.desc}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0 rtl:rotate-180" />
                     </div>
                   </div>
                 ))}
@@ -476,25 +497,25 @@ const Reconciliation = () => {
 
             {/* Reconciliation Summary */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Summary</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("admin.finance.reconciliation.summary")}</h3>
               <div className="space-y-2.5">
                 {transactions.length === 0 ? (
                   <div className="p-4 rounded-lg border border-dashed border-slate-200 text-center">
-                    <p className="text-sm font-semibold text-slate-600">No bank transactions yet</p>
-                    <p className="text-xs text-slate-400 mt-1">Import your bank statement or record transactions to begin reconciliation.</p>
+                    <p className="text-sm font-semibold text-slate-600">{t("admin.finance.reconciliation.noTransactionsYetTitle")}</p>
+                    <p className="text-xs text-slate-400 mt-1">{t("admin.finance.reconciliation.noTransactionsYetDesc")}</p>
                   </div>
                 ) : (
                   <>
                     <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-xs font-semibold text-slate-500">Total Matched</span>
+                      <span className="text-xs font-semibold text-slate-500">{t("admin.finance.reconciliation.totalMatched")}</span>
                       <span className="text-sm font-bold text-emerald-600">{matchedCount}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-xs font-semibold text-slate-500">Total Unmatched</span>
+                      <span className="text-xs font-semibold text-slate-500">{t("admin.finance.reconciliation.totalUnmatched")}</span>
                       <span className="text-sm font-bold text-rose-500">{pendingCount}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-xs font-semibold text-slate-500">Discrepancy</span>
+                      <span className="text-xs font-semibold text-slate-500">{t("admin.finance.reconciliation.discrepancy")}</span>
                       <span className="text-sm font-bold text-slate-900">{financialSettings.currency} {pendingUnmatchedTotal.toLocaleString()}</span>
                     </div>
                   </>
@@ -504,7 +525,7 @@ const Reconciliation = () => {
                   disabled={transactions.length === 0}
                   className="w-full h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-50"
                 >
-                  Generate Report
+                  {t("admin.finance.reconciliation.generateReport")}
                 </button>
               </div>
             </div>

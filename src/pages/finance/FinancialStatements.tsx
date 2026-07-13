@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { 
   Download, 
   Printer, 
@@ -41,6 +42,7 @@ import {
 type Period = "this-month" | "last-month" | "this-quarter" | "this-year";
 
 const FinancialStatements = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("income");
@@ -91,7 +93,7 @@ const FinancialStatements = () => {
         });
       } catch (error) {
         console.error("Error fetching financial data:", error);
-        toast.error("Failed to load financial data");
+        toast.error(t("admin.finance.financialStatements.toastLoadFailed"));
       } finally {
         setLoading(false);
       }
@@ -318,7 +320,7 @@ const FinancialStatements = () => {
       setReportData({
         generatedAt: new Date().toLocaleString(),
         periodName: stats.periodName,
-        status: "Real-Time Sync"
+        status: t("admin.finance.financialStatements.statusRealTimeSync")
       });
     }
   }, [loading, period, stats.periodName]);
@@ -328,17 +330,17 @@ const FinancialStatements = () => {
     toast.promise(
       new Promise((resolve) => setTimeout(resolve, 1500)),
       {
-        loading: 'Analyzing financial data and generating report...',
+        loading: t("admin.finance.financialStatements.toastGenerating"),
         success: () => {
           setIsGenerating(false);
           setReportData({
             generatedAt: new Date().toLocaleString(),
             periodName: stats.periodName,
-            status: "Finalized"
+            status: t("admin.finance.financialStatements.statusFinalized")
           });
-          return 'Financial report generated successfully!';
+          return t("admin.finance.financialStatements.toastGenerateSuccess");
         },
-        error: 'Failed to generate report',
+        error: t("admin.finance.financialStatements.toastGenerateFailed"),
       }
     );
   };
@@ -373,7 +375,7 @@ const FinancialStatements = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("CSV exported successfully");
+    toast.success(t("admin.finance.financialStatements.toastCsvExported"));
   };
 
   const handlePrint = () => {
@@ -383,7 +385,7 @@ const FinancialStatements = () => {
   // Formats a real pct-change (or null for "no prior-period base") into the
   // badge string + trend direction used by the KPI cards.
   const formatChange = (pct: number | null): { change: string; trend: "up" | "down" } => {
-    if (pct === null) return { change: "New", trend: "up" };
+    if (pct === null) return { change: t("admin.finance.financialStatements.trendNew"), trend: "up" };
     return { change: `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`, trend: pct >= 0 ? "up" : "down" };
   };
 
@@ -393,7 +395,7 @@ const FinancialStatements = () => {
       case "balance":
         return [
           {
-            title: "Total Assets",
+            title: t("admin.finance.financialStatements.kpiTotalAssets"),
             value: `${currency}${stats.totalAssets.toLocaleString()}`,
             ...formatChange(stats.changes.totalAssets),
             icon: Wallet,
@@ -404,7 +406,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.totalAssets
           },
           {
-            title: "Total Liabilities",
+            title: t("admin.finance.financialStatements.kpiTotalLiabilities"),
             value: `${currency}${stats.totalLiabilities.toLocaleString()}`,
             ...formatChange(stats.changes.totalLiabilities),
             icon: Scale,
@@ -415,7 +417,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.totalLiabilities
           },
           {
-            title: "Total Equity",
+            title: t("admin.finance.financialStatements.kpiTotalEquity"),
             value: `${currency}${stats.totalEquity.toLocaleString()}`,
             ...formatChange(stats.changes.totalEquity),
             icon: TrendingUp,
@@ -429,7 +431,7 @@ const FinancialStatements = () => {
       case "cash":
         return [
           {
-            title: "Operating Cash",
+            title: t("admin.finance.financialStatements.kpiOperatingCash"),
             value: `${currency}${stats.operatingCash.toLocaleString()}`,
             ...formatChange(stats.changes.operatingCash),
             icon: Activity,
@@ -440,7 +442,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.operatingCash
           },
           {
-            title: "Investing Cash",
+            title: t("admin.finance.financialStatements.kpiInvestingCash"),
             value: `${stats.investingCash < 0 ? '-' : ''}${currency}${Math.abs(stats.investingCash).toLocaleString()}`,
             ...formatChange(stats.changes.investingCash),
             icon: TrendingDown,
@@ -451,7 +453,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.investingCash
           },
           {
-            title: "Financing Cash",
+            title: t("admin.finance.financialStatements.kpiFinancingCash"),
             value: `${currency}${stats.financingCash.toLocaleString()}`,
             ...formatChange(stats.changes.financingCash),
             icon: TrendingUp,
@@ -466,7 +468,7 @@ const FinancialStatements = () => {
       default:
         return [
           {
-            title: "Total Revenue",
+            title: t("admin.finance.financialStatements.kpiTotalRevenue"),
             value: `${currency}${stats.totalRevenue.toLocaleString()}`,
             ...formatChange(stats.changes.totalRevenue),
             icon: TrendingUp,
@@ -477,7 +479,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.totalRevenue
           },
           {
-            title: "Total Expenses",
+            title: t("admin.finance.financialStatements.kpiTotalExpenses"),
             value: `${currency}${stats.totalExpenses.toLocaleString()}`,
             ...formatChange(stats.changes.totalExpenses),
             icon: TrendingDown,
@@ -488,7 +490,7 @@ const FinancialStatements = () => {
             sparkline: monthlySparklines.totalExpenses
           },
           {
-            title: "Net Income",
+            title: t("admin.finance.financialStatements.kpiNetIncome"),
             value: `${currency}${stats.netIncome.toLocaleString()}`,
             ...formatChange(stats.changes.netIncome),
             icon: TrendingUp,
@@ -504,6 +506,12 @@ const FinancialStatements = () => {
 
   const kpis = getKpis();
 
+  const STATEMENT_TITLE_KEYS: Record<string, string> = {
+    income: "admin.finance.financialStatements.statementTitleIncome",
+    balance: "admin.finance.financialStatements.statementTitleBalance",
+    cash: "admin.finance.financialStatements.statementTitleCash",
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20 print:p-0 print:pb-0">
@@ -516,16 +524,16 @@ const FinancialStatements = () => {
               className="h-10 w-10 rounded-xl border-slate-200 shrink-0 print:hidden"
               onClick={() => navigate(-1)}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
             </Button>
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0 print:hidden">
                 <FileText className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Financial Statements</h1>
-                <p className="text-sm text-slate-400 mt-1 print:hidden">Track financial performance and actionable insights</p>
-                <p className="hidden print:block text-slate-500 mt-1">Report for {stats.periodName}</p>
+                <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.financialStatements.pageTitle")}</h1>
+                <p className="text-sm text-slate-400 mt-1 print:hidden">{t("admin.finance.financialStatements.pageSubtitle")}</p>
+                <p className="hidden print:block text-slate-500 mt-1">{t("admin.finance.financialStatements.reportForPeriod", { period: stats.periodName })}</p>
               </div>
             </div>
           </div>
@@ -533,10 +541,10 @@ const FinancialStatements = () => {
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
               {([
-                { k: "this-month", label: "This Month" },
-                { k: "last-month", label: "Last Month" },
-                { k: "this-quarter", label: "Quarter" },
-                { k: "this-year", label: "Year" },
+                { k: "this-month", label: t("admin.finance.financialStatements.periodThisMonth") },
+                { k: "last-month", label: t("admin.finance.financialStatements.periodLastMonth") },
+                { k: "this-quarter", label: t("admin.finance.financialStatements.periodQuarter") },
+                { k: "this-year", label: t("admin.finance.financialStatements.periodYear") },
               ] as const).map(p => (
                 <button key={p.k} onClick={() => setPeriod(p.k)}
                   className={cn("rounded-md px-3 h-8 text-xs font-semibold transition-all", period === p.k ? "bg-white shadow-sm text-purple-600" : "text-slate-500 hover:text-slate-700")}>
@@ -546,7 +554,7 @@ const FinancialStatements = () => {
             </div>
 
             <button onClick={handlePrint} className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Printer className="h-3.5 w-3.5" /> Print
+              <Printer className="h-3.5 w-3.5" /> {t("admin.finance.financialStatements.buttonPrint")}
             </button>
 
             <button
@@ -555,7 +563,7 @@ const FinancialStatements = () => {
               className="flex items-center gap-2 h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-60"
             >
               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Generate Financial Report
+              {t("admin.finance.financialStatements.buttonGenerateReport")}
             </button>
           </div>
         </div>
@@ -608,21 +616,21 @@ const FinancialStatements = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
           <div className="flex items-center gap-1 border-b border-slate-100">
             {([
-              { k: "income", label: "Income Statement" },
-              { k: "balance", label: "Balance Sheet" },
-              { k: "cash", label: "Cash Flow" },
-            ] as const).map(t => (
-              <button key={t.k} onClick={() => setActiveTab(t.k)}
+              { k: "income", label: t("admin.finance.financialStatements.tabIncomeStatement") },
+              { k: "balance", label: t("admin.finance.financialStatements.tabBalanceSheet") },
+              { k: "cash", label: t("admin.finance.financialStatements.tabCashFlow") },
+            ] as const).map(tab => (
+              <button key={tab.k} onClick={() => setActiveTab(tab.k)}
                 className={cn("px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors",
-                  activeTab === t.k ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
-                {t.label}
+                  activeTab === tab.k ? "border-purple-600 text-purple-600" : "border-transparent text-slate-500 hover:text-slate-700")}>
+                {tab.label}
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-2">
             <button onClick={handleExportCSV} className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Download className="h-3.5 w-3.5" /> Export CSV
+              <Download className="h-3.5 w-3.5" /> {t("admin.finance.financialStatements.buttonExportCsv")}
             </button>
             <button
               onClick={handlePrint}
@@ -633,7 +641,7 @@ const FinancialStatements = () => {
                   dialog, which lets the user "Save as PDF", instead of the
                   old fake "Generating…/Downloaded" toast pair that never
                   produced a file. */}
-              <FileText className="h-3.5 w-3.5" /> Download PDF
+              <FileText className="h-3.5 w-3.5" /> {t("admin.finance.financialStatements.buttonDownloadPdf")}
             </button>
           </div>
         </div>
@@ -648,8 +656,8 @@ const FinancialStatements = () => {
                     <FileText className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Statement</h3>
-                    <p className="text-xs text-slate-500">Report Period: {reportData.periodName} • Generated: {reportData.generatedAt}</p>
+                    <h3 className="text-base font-bold text-slate-900">{t(STATEMENT_TITLE_KEYS[activeTab] || activeTab)}</h3>
+                    <p className="text-xs text-slate-500">{t("admin.finance.financialStatements.reportPeriodGenerated", { period: reportData.periodName, generated: reportData.generatedAt })}</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700">
@@ -660,56 +668,58 @@ const FinancialStatements = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2">
                   <div className="p-6 rounded-lg bg-slate-50 border border-slate-100">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Summary Analysis</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t("admin.finance.financialStatements.summaryAnalysisTitle")}</p>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      The financial performance for {stats.periodName} shows a {stats.netIncome > 0 ? 'positive' : 'negative'} net result. 
-                      {stats.totalRevenue > stats.totalExpenses ? 'Revenue growth is outpacing operational costs.' : 'Operational costs are currently higher than revenue inflow.'}
+                      {stats.netIncome > 0
+                        ? t("admin.finance.financialStatements.summaryPositive", { period: stats.periodName })
+                        : t("admin.finance.financialStatements.summaryNegative", { period: stats.periodName })}{" "}
+                      {stats.totalRevenue > stats.totalExpenses ? t("admin.finance.financialStatements.summaryRevenueOutpacing") : t("admin.finance.financialStatements.summaryCostsHigher")}
                     </p>
                   </div>
                   <div className="p-6 rounded-lg bg-slate-50 border border-slate-100">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Key Recommendations</p>
-                    <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
-                      <li>{stats.netIncome > 0 ? 'Consider reinvesting surplus into infrastructure.' : 'Review operational expenses for potential cuts.'}</li>
-                      <li>Monitor fee collection rates closely.</li>
-                      <li>Evaluate asset depreciation impact on long-term equity.</li>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t("admin.finance.financialStatements.keyRecommendationsTitle")}</p>
+                    <ul className="text-sm text-slate-600 space-y-2 list-disc ps-4">
+                      <li>{stats.netIncome > 0 ? t("admin.finance.financialStatements.recommendationReinvest") : t("admin.finance.financialStatements.recommendationReviewExpenses")}</li>
+                      <li>{t("admin.finance.financialStatements.recommendationMonitorFees")}</li>
+                      <li>{t("admin.finance.financialStatements.recommendationEvaluateDepreciation")}</li>
                     </ul>
                   </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-100 overflow-hidden">
                   <div className="bg-slate-50 p-4 border-b border-slate-100 flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Detailed Breakdown</span>
-                    <span className="text-xs text-slate-500 font-medium">All figures in {financialSettings.currency}</span>
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">{t("admin.finance.financialStatements.detailedBreakdownTitle")}</span>
+                    <span className="text-xs text-slate-500 font-medium">{t("admin.finance.financialStatements.allFiguresIn", { currency: financialSettings.currency })}</span>
                   </div>
                   <div className="p-6 space-y-4">
                     {activeTab === "income" && (
                       <>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600">Operating Revenue</span>
+                          <span className="text-sm font-medium text-slate-600">{t("admin.finance.financialStatements.rowOperatingRevenue")}</span>
                           <span className="text-sm font-bold text-slate-900">{financialSettings.currency} {stats.totalRevenue.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Student Fees</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowStudentFees")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.periodStudentRev.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Other Income</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowOtherIncome")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.periodEntityRev.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600">Operating Expenses</span>
+                          <span className="text-sm font-medium text-slate-600">{t("admin.finance.financialStatements.rowOperatingExpenses")}</span>
                           <span className="text-sm font-bold text-rose-600">({financialSettings.currency} {stats.totalExpenses.toLocaleString()})</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Payroll & Benefits</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowPayrollBenefits")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.periodPayroll.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• General Expenses</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowGeneralExpenses")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.periodExpenses.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 pt-4">
-                          <span className="text-base font-bold text-slate-900">Net Operating Income</span>
+                          <span className="text-base font-bold text-slate-900">{t("admin.finance.financialStatements.rowNetOperatingIncome")}</span>
                           <span className={cn("text-base font-bold", stats.netIncome >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {financialSettings.currency} {stats.netIncome.toLocaleString()}
                           </span>
@@ -720,43 +730,43 @@ const FinancialStatements = () => {
                     {activeTab === "balance" && (
                       <>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-bold text-slate-900">Total Assets</span>
+                          <span className="text-sm font-bold text-slate-900">{t("admin.finance.financialStatements.rowTotalAssets")}</span>
                           <span className="text-sm font-bold text-slate-900">{financialSettings.currency} {stats.totalAssets.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Cash &amp; Equivalents</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowCashEquivalents")}</span>
                           <span className={cn("text-sm", stats.cash < 0 ? "text-rose-600" : "text-slate-600")}>{financialSettings.currency} {stats.cash.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Fixed Assets (Net)</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowFixedAssetsNet")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.fixedAssets.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-bold text-slate-900">Total Liabilities</span>
+                          <span className="text-sm font-bold text-slate-900">{t("admin.finance.financialStatements.rowTotalLiabilities")}</span>
                           <span className="text-sm font-bold text-rose-600">{financialSettings.currency} {stats.totalLiabilities.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Accounts Payable</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowAccountsPayable")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {(stats.accountsPayable + stats.pendingPayroll).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Bank Loan</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowBankLoan")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.bankLoan.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-bold text-slate-900">Total Equity</span>
+                          <span className="text-sm font-bold text-slate-900">{t("admin.finance.financialStatements.rowTotalEquity")}</span>
                           <span className="text-sm font-bold text-purple-600">{financialSettings.currency} {stats.totalEquity.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Contributed Capital</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowContributedCapital")}</span>
                           <span className="text-sm text-slate-600">{financialSettings.currency} {stats.contributedCapital.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600 ml-4">• Retained Earnings</span>
+                          <span className="text-sm font-medium text-slate-600 ms-4">{t("admin.finance.financialStatements.rowRetainedEarnings")}</span>
                           <span className={cn("text-sm", stats.retainedEarnings < 0 ? "text-rose-600" : "text-slate-600")}>{financialSettings.currency} {stats.retainedEarnings.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 pt-4 border-t border-slate-200">
-                          <span className="text-base font-bold text-slate-900">Liabilities + Equity</span>
+                          <span className="text-base font-bold text-slate-900">{t("admin.finance.financialStatements.rowLiabilitiesPlusEquity")}</span>
                           <span className="text-base font-bold text-slate-900">{financialSettings.currency} {(stats.totalLiabilities + stats.totalEquity).toLocaleString()}</span>
                         </div>
                       </>
@@ -765,25 +775,25 @@ const FinancialStatements = () => {
                     {activeTab === "cash" && (
                       <>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600">Cash from Operating Activities</span>
+                          <span className="text-sm font-medium text-slate-600">{t("admin.finance.financialStatements.rowCashFromOperating")}</span>
                           <span className={cn("text-sm font-bold", stats.operatingCash >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {financialSettings.currency} {stats.operatingCash.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600">Cash from Investing Activities</span>
+                          <span className="text-sm font-medium text-slate-600">{t("admin.finance.financialStatements.rowCashFromInvesting")}</span>
                           <span className={cn("text-sm font-bold", stats.investingCash >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {financialSettings.currency} {stats.investingCash.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-slate-50">
-                          <span className="text-sm font-medium text-slate-600">Cash from Financing Activities</span>
+                          <span className="text-sm font-medium text-slate-600">{t("admin.finance.financialStatements.rowCashFromFinancing")}</span>
                           <span className={cn("text-sm font-bold", stats.financingCash >= 0 ? "text-emerald-600" : "text-rose-600")}>
                             {financialSettings.currency} {stats.financingCash.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2 pt-4">
-                          <span className="text-base font-bold text-slate-900">Net Increase in Cash</span>
+                          <span className="text-base font-bold text-slate-900">{t("admin.finance.financialStatements.rowNetIncreaseInCash")}</span>
                           <span className="text-base font-bold text-cyan-600">
                             {financialSettings.currency} {(stats.operatingCash + stats.investingCash + stats.financingCash).toLocaleString()}
                           </span>
@@ -800,16 +810,16 @@ const FinancialStatements = () => {
             <div className="h-20 w-20 rounded-full bg-white shadow-sm flex items-center justify-center mb-6">
               <FileText className="h-10 w-10 text-slate-300" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">No Data Available</h3>
-            <p className="text-slate-500 max-w-xs mt-2">Generate a report to see your financial performance analysis here.</p>
+            <h3 className="text-xl font-bold text-slate-900">{t("admin.finance.financialStatements.emptyStateTitle")}</h3>
+            <p className="text-slate-500 max-w-xs mt-2">{t("admin.finance.financialStatements.emptyStateDescription")}</p>
           </Card>
         )}
 
         {/* Floating Action Button */}
-        <motion.button 
+        <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          className="fixed bottom-8 right-8 h-14 w-14 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-xl shadow-purple-200 flex items-center justify-center z-50 print:hidden"
+          className="fixed bottom-8 end-8 h-14 w-14 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-xl shadow-purple-200 flex items-center justify-center z-50 print:hidden"
           onClick={handleGenerateReport}
         >
           <Sparkles className="h-6 w-6" />

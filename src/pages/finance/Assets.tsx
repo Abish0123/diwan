@@ -51,8 +51,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { AssetDialog } from "@/components/finance/AssetDialog";
 import { AssetMaintenanceDialog } from "@/components/finance/AssetMaintenanceDialog";
 import { Asset } from "@/types/finance";
+import { useTranslation } from "react-i18next";
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Active: "admin.finance.assets.statusActive",
+  Maintenance: "admin.finance.assets.statusMaintenance",
+  Inactive: "admin.finance.assets.statusInactive",
+};
 
 const Assets = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings: financialSettings } = useFinancialSettings();
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,7 +80,7 @@ const Assets = () => {
       setAssets(data as Asset[]);
     } catch (error) {
       console.error("Error fetching assets:", error);
-      toast.error("Failed to load assets");
+      toast.error(t("admin.finance.assets.toastLoadFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -85,11 +93,11 @@ const Assets = () => {
   const handleDeleteAsset = async (id: string) => {
     try {
       await smartDb.delete("AssetRecord", id);
-      toast.success("Asset deleted successfully");
+      toast.success(t("admin.finance.assets.toastDeleteSuccess"));
       fetchAssets();
     } catch (error) {
       console.error("Error deleting asset:", error);
-      toast.error("Failed to delete asset");
+      toast.error(t("admin.finance.assets.toastDeleteFailed"));
     }
   };
 
@@ -128,8 +136,8 @@ const Assets = () => {
     if (mostDepreciated) {
       const pct = ((mostDepreciated.purchaseValue - mostDepreciated.currentValue) / mostDepreciated.purchaseValue) * 100;
       insights.push({
-        title: "Most Depreciated Asset",
-        desc: `${mostDepreciated.name} (${mostDepreciated.id}) has depreciated ${pct.toFixed(0)}% from its original purchase value.`,
+        title: t("admin.finance.assets.insightMostDepreciatedTitle"),
+        desc: t("admin.finance.assets.insightMostDepreciatedDesc", { name: mostDepreciated.name, id: mostDepreciated.id, pct: pct.toFixed(0) }),
         type: "warning",
         icon: TrendingDown,
       });
@@ -138,8 +146,10 @@ const Assets = () => {
     const inactiveOrMaintenance = assets.filter(a => a.status === "Maintenance" || a.status === "Inactive");
     if (inactiveOrMaintenance.length > 0) {
       insights.push({
-        title: "Attention Needed",
-        desc: `${inactiveOrMaintenance.length} asset${inactiveOrMaintenance.length === 1 ? "" : "s"} currently marked ${inactiveOrMaintenance.length === 1 ? inactiveOrMaintenance[0].status.toLowerCase() : "as maintenance/inactive"}.`,
+        title: t("admin.finance.assets.insightAttentionNeededTitle"),
+        desc: inactiveOrMaintenance.length === 1
+          ? t("admin.finance.assets.insightAttentionDescSingular", { status: t(STATUS_LABEL_KEYS[inactiveOrMaintenance[0].status] || inactiveOrMaintenance[0].status).toLowerCase() })
+          : t("admin.finance.assets.insightAttentionDescPlural", { count: inactiveOrMaintenance.length }),
         type: "alert",
         icon: Shield,
       });
@@ -147,21 +157,21 @@ const Assets = () => {
 
     const categoryCounts = new Map<string, number>();
     assets.forEach(a => {
-      const cat = a.category || "Uncategorized";
+      const cat = a.category || t("admin.finance.assets.uncategorized");
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
     });
     const topCategory = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0];
     if (topCategory) {
       insights.push({
-        title: "Largest Category",
-        desc: `${topCategory[0]} makes up ${topCategory[1]} of ${assets.length} registered assets.`,
+        title: t("admin.finance.assets.insightLargestCategoryTitle"),
+        desc: t("admin.finance.assets.insightLargestCategoryDesc", { category: topCategory[0], count: topCategory[1], total: assets.length }),
         type: "info",
         icon: Building2,
       });
     }
 
     return insights;
-  }, [assets]);
+  }, [assets, t]);
 
   return (
     <DashboardLayout>
@@ -173,19 +183,19 @@ const Assets = () => {
               <Building2 className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">School Assets</h1>
-              <p className="text-sm text-slate-400">Manage and track all physical and digital assets, monitor depreciation, and plan capital expenditures.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.assets.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("admin.finance.assets.pageDescription")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-              <Download className="h-4 w-4 text-slate-500" /> Export Register
+              <Download className="h-4 w-4 text-slate-500" /> {t("admin.finance.assets.exportRegister")}
             </button>
             <button
               onClick={handleAddAsset}
               className="flex items-center gap-2 h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold"
             >
-              <Plus className="h-4 w-4" /> Add New Asset
+              <Plus className="h-4 w-4" /> {t("admin.finance.assets.addNewAsset")}
             </button>
           </div>
         </div>
@@ -194,25 +204,25 @@ const Assets = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
             {
-              label: "Total Asset Value",
+              label: t("admin.finance.assets.kpiTotalAssetValue"),
               value: `${financialSettings.currency}${totalAssetValue.toLocaleString()}`,
               icon: Building2,
               bg: "bg-blue-50", ic: "text-blue-500",
-              sub: valueChangePct === null ? "No purchase data" : `${valueChangePct >= 0 ? "+" : ""}${valueChangePct.toFixed(1)}% vs purchase`,
+              sub: valueChangePct === null ? t("admin.finance.assets.kpiNoPurchaseData") : t("admin.finance.assets.kpiValueChangeVsPurchase", { sign: valueChangePct >= 0 ? "+" : "", pct: valueChangePct.toFixed(1) }),
             },
             {
-              label: "Asset Count",
+              label: t("admin.finance.assets.kpiAssetCount"),
               value: assets.length.toString(),
               icon: Shield,
               bg: "bg-emerald-50", ic: "text-emerald-500",
-              sub: `Across ${new Set(assets.map(a => a.category)).size} categories`,
+              sub: t("admin.finance.assets.kpiAcrossCategories", { count: new Set(assets.map(a => a.category)).size }),
             },
             {
-              label: "Depreciation (YTD)",
+              label: t("admin.finance.assets.kpiDepreciationYtd"),
               value: `${financialSettings.currency}${totalDepreciation.toLocaleString()}`,
               icon: TrendingDown,
               bg: "bg-amber-50", ic: "text-amber-500",
-              sub: "Non-cash expense",
+              sub: t("admin.finance.assets.kpiNonCashExpense"),
             },
           ].map((stat) => (
             <div key={stat.label} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
@@ -231,19 +241,19 @@ const Assets = () => {
         {/* Filter row */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-end gap-3">
           <div className="relative flex-1 max-w-xs">
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Search</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t("admin.finance.assets.searchLabel")}</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                className="pl-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
-                placeholder="Search assets…"
+                className="ps-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
+                placeholder={t("admin.finance.assets.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
           <button className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-slate-400" /> Filter
+            <Filter className="h-3.5 w-3.5 text-slate-400" /> {t("admin.finance.assets.filterButton")}
           </button>
         </div>
 
@@ -253,21 +263,21 @@ const Assets = () => {
           <div className="lg:col-span-2 space-y-5">
             <Card className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
               <CardHeader className="p-5 bg-slate-50/70 border-b border-slate-100">
-                <CardTitle className="text-base font-bold text-slate-900">Asset Inventory</CardTitle>
-                <CardDescription className="text-xs text-slate-400">Comprehensive list of all institutional assets.</CardDescription>
+                <CardTitle className="text-base font-bold text-slate-900">{t("admin.finance.assets.assetInventoryTitle")}</CardTitle>
+                <CardDescription className="text-xs text-slate-400">{t("admin.finance.assets.assetInventoryDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-slate-50/70">
                       <TableRow className="hover:bg-transparent border-b border-slate-100">
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Asset Details</TableHead>
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Category</TableHead>
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Purchase Value</TableHead>
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Current Value</TableHead>
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Assigned To</TableHead>
-                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Status</TableHead>
-                        <TableHead className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Actions</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableAssetDetails")}</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableCategory")}</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tablePurchaseValue")}</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableCurrentValue")}</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableAssignedTo")}</TableHead>
+                        <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableStatus")}</TableHead>
+                        <TableHead className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t("admin.finance.assets.tableActions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -276,13 +286,13 @@ const Assets = () => {
                           <TableCell colSpan={7} className="py-16 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-                              <span className="text-sm font-semibold text-slate-500">Loading assets…</span>
+                              <span className="text-sm font-semibold text-slate-500">{t("admin.finance.assets.loadingAssets")}</span>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : filteredAssets.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="py-16 text-center text-sm text-slate-400">No assets found</TableCell>
+                          <TableCell colSpan={7} className="py-16 text-center text-sm text-slate-400">{t("admin.finance.assets.noAssetsFound")}</TableCell>
                         </TableRow>
                       ) : (
                           filteredAssets.map((asset) => (
@@ -313,21 +323,21 @@ const Assets = () => {
                                 <div className="flex flex-col">
                                   <span className="font-semibold text-purple-600 text-sm">{financialSettings.currency} {asset.currentValue.toLocaleString()}</span>
                                   <span className={cn("text-[11px] font-semibold", asset.currentValue >= asset.purchaseValue ? "text-emerald-500" : "text-rose-500")}>
-                                    {asset.currentValue >= asset.purchaseValue ? "+" : "-"}{asset.depreciation} change
+                                    {t("admin.finance.assets.changeSuffix", { sign: asset.currentValue >= asset.purchaseValue ? "+" : "-", value: asset.depreciation })}
                                   </span>
                                 </div>
                               </TableCell>
                               <TableCell className="px-4 py-3">
-                                <span className="text-xs text-slate-600">{asset.assignedToName || <span className="text-slate-300">Unassigned</span>}</span>
+                                <span className="text-xs text-slate-600">{asset.assignedToName || <span className="text-slate-300">{t("admin.finance.assets.unassigned")}</span>}</span>
                               </TableCell>
                               <TableCell className="px-4 py-3">
                                 <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap",
                                   asset.status === "Active" ? "bg-emerald-100 text-emerald-700" :
                                   asset.status === "Maintenance" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500")}>
-                                  {asset.status}
+                                  {t(STATUS_LABEL_KEYS[asset.status] || asset.status)}
                                 </span>
                               </TableCell>
-                              <TableCell className="px-4 py-3 text-right">
+                              <TableCell className="px-4 py-3 text-end">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <button className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-400 transition-colors">
@@ -336,16 +346,16 @@ const Assets = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="rounded-xl">
                                     <DropdownMenuItem onClick={() => handleEditAsset(asset)} className="gap-2 cursor-pointer">
-                                      <Edit className="h-4 w-4" /> Edit Asset
+                                      <Edit className="h-4 w-4" /> {t("admin.finance.assets.editAsset")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setMaintenanceAsset(asset)} className="gap-2 cursor-pointer">
-                                      <History className="h-4 w-4" /> View History
+                                      <History className="h-4 w-4" /> {t("admin.finance.assets.viewHistory")}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => handleDeleteAsset(asset.id)}
                                       className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50"
                                     >
-                                      <Trash2 className="h-4 w-4" /> Delete Asset
+                                      <Trash2 className="h-4 w-4" /> {t("admin.finance.assets.deleteAsset")}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -365,7 +375,7 @@ const Assets = () => {
             {/* AI Insights Card */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-600" /> Asset Insights
+                <Sparkles className="h-4 w-4 text-purple-600" /> {t("admin.finance.assets.assetInsightsTitle")}
               </h3>
               <div className="space-y-2.5">
                 {assetInsights.length > 0 ? assetInsights.map((insight, i) => (
@@ -381,24 +391,24 @@ const Assets = () => {
                         <p className="text-xs font-semibold text-slate-900 mb-0.5">{insight.title}</p>
                         <p className="text-xs text-slate-500 leading-relaxed">{insight.desc}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0 rtl:rotate-180" />
                     </div>
                   </div>
                 )) : (
-                  <p className="text-xs text-slate-400 text-center py-4">No asset alerts right now.</p>
+                  <p className="text-xs text-slate-400 text-center py-4">{t("admin.finance.assets.noAssetAlerts")}</p>
                 )}
               </div>
             </div>
 
             {/* Quick Actions Card */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Quick Actions</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t("admin.finance.assets.quickActionsTitle")}</h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Depreciate", icon: TrendingDown },
-                  { label: "Insurance", icon: Shield },
-                  { label: "Audit", icon: History },
-                  { label: "Register", icon: Download },
+                  { label: t("admin.finance.assets.actionDepreciate"), icon: TrendingDown },
+                  { label: t("admin.finance.assets.actionInsurance"), icon: Shield },
+                  { label: t("admin.finance.assets.actionAudit"), icon: History },
+                  { label: t("admin.finance.assets.actionRegister"), icon: Download },
                 ].map((a, i) => (
                   <button key={i}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">

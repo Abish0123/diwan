@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { 
   Plus, 
@@ -107,7 +108,23 @@ const DEFAULT_BUDGET_CATEGORIES = [
   "Miscellaneous",
 ];
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "On Track": "admin.finance.budgeting.statusOnTrack",
+  "Near Limit": "admin.finance.budgeting.statusNearLimit",
+  "Over Budget": "admin.finance.budgeting.statusOverBudget",
+  "Not Set": "admin.finance.budgeting.statusNotSet",
+  "Not Started": "admin.finance.budgeting.statusNotStarted",
+  "All": "admin.finance.budgeting.statusAll",
+};
+
+const INSIGHT_TITLE_KEYS: Record<string, string> = {
+  "Over Budget": "admin.finance.budgeting.insightOverBudgetTitle",
+  "Near Limit": "admin.finance.budgeting.insightNearLimitTitle",
+  "Underutilized": "admin.finance.budgeting.insightUnderutilizedTitle",
+};
+
 const Budgeting = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { settings: financialSettings, updateSettings } = useFinancialSettings();
@@ -156,7 +173,7 @@ const Budgeting = () => {
       setPayroll(payData as Transaction[]);
     } catch (error) {
       console.error("Error fetching budget data:", error);
-      toast.error("Failed to load budget data");
+      toast.error(t('admin.finance.budgeting.toastLoadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -228,7 +245,7 @@ const Budgeting = () => {
       const top = overBudget[0];
       insights.push({
         title: "Over Budget",
-        desc: `'${top.category}' is at ${top.percent.toFixed(0)}% utilization, ${financialSettings.currency}${(top.spent - top.allocated).toLocaleString()} over its allocated budget.`,
+        desc: t('admin.finance.budgeting.insightOverBudgetDesc', { category: top.category, percent: top.percent.toFixed(0), currency: financialSettings.currency, amount: (top.spent - top.allocated).toLocaleString() }),
         type: "alert",
         icon: AlertCircle,
       });
@@ -239,7 +256,7 @@ const Budgeting = () => {
       const top = nearLimit[0];
       insights.push({
         title: "Near Limit",
-        desc: `'${top.category}' has used ${top.percent.toFixed(0)}% of its allocated budget.`,
+        desc: t('admin.finance.budgeting.insightNearLimitDesc', { category: top.category, percent: top.percent.toFixed(0) }),
         type: "warning",
         icon: TrendingUp,
       });
@@ -250,7 +267,7 @@ const Budgeting = () => {
       const top = surplus[0];
       insights.push({
         title: "Underutilized",
-        desc: `'${top.category}' has only used ${top.percent.toFixed(0)}% of its ${financialSettings.currency}${top.allocated.toLocaleString()} allocation.`,
+        desc: t('admin.finance.budgeting.insightUnderutilizedDesc', { category: top.category, percent: top.percent.toFixed(0), currency: financialSettings.currency, amount: top.allocated.toLocaleString() }),
         type: "info",
         icon: PieChart,
       });
@@ -271,7 +288,7 @@ const Budgeting = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Budget report exported successfully");
+    toast.success(t('admin.finance.budgeting.toastExportSuccess'));
   };
 
   const handleReallocate = async () => {
@@ -281,12 +298,12 @@ const Budgeting = () => {
       await smartDb.update("financial_categories", selectedCategory.id, {
         budget: Number(newBudgetValue)
       });
-      toast.success(`Budget for ${selectedCategory.name} updated successfully`);
+      toast.success(t('admin.finance.budgeting.toastReallocateSuccess', { name: selectedCategory.name }));
       setIsReallocateOpen(false);
       fetchData();
     } catch (error) {
       console.error("Error updating budget:", error);
-      toast.error("Failed to update budget");
+      toast.error(t('admin.finance.budgeting.toastReallocateFailed'));
     }
   };
 
@@ -302,10 +319,10 @@ const Budgeting = () => {
   const handleArchive = async (id: string) => {
     try {
       await smartDb.update("financial_categories", id, { status: "Inactive" });
-      toast.success("Category archived successfully");
+      toast.success(t('admin.finance.budgeting.toastArchiveSuccess'));
       fetchData();
     } catch (error) {
-      toast.error("Failed to archive category");
+      toast.error(t('admin.finance.budgeting.toastArchiveFailed'));
     }
   };
 
@@ -321,17 +338,21 @@ const Budgeting = () => {
       const existingNames = new Set(categories.map(c => c.name.toLowerCase()));
       const toCreate = DEFAULT_BUDGET_CATEGORIES.filter(name => !existingNames.has(name.toLowerCase()));
       if (toCreate.length === 0) {
-        toast.info("All default categories already exist");
+        toast.info(t('admin.finance.budgeting.toastDefaultsExist'));
         return;
       }
       await Promise.all(toCreate.map(name =>
         smartDb.create("financial_categories", { name, type: "Expense", budget: 0, uid: user.uid })
       ));
-      toast.success(`Created ${toCreate.length} default budget categor${toCreate.length === 1 ? "y" : "ies"} — set each one's amount via Allocate Budget`);
+      toast.success(
+        toCreate.length === 1
+          ? t('admin.finance.budgeting.toastDefaultsCreatedSingular')
+          : t('admin.finance.budgeting.toastDefaultsCreatedPlural', { count: toCreate.length })
+      );
       fetchData();
     } catch (error) {
       console.error("Error creating default categories:", error);
-      toast.error("Failed to create default categories");
+      toast.error(t('admin.finance.budgeting.toastDefaultsFailed'));
     } finally {
       setIsCreatingDefaults(false);
     }
@@ -347,8 +368,8 @@ const Budgeting = () => {
               <Target className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Budget Management</h1>
-              <p className="text-sm text-slate-400">Monitor operational limits and optimize school spending with real-time utilization tracking.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.finance.budgeting.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.finance.budgeting.pageSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -356,13 +377,13 @@ const Budgeting = () => {
               onClick={handleExport}
               className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <Download className="h-4 w-4 text-slate-500" /> Export Report
+              <Download className="h-4 w-4 text-slate-500" /> {t('admin.finance.budgeting.exportReport')}
             </button>
             <button
               onClick={() => { setSelectedCategory(null); setNewBudgetValue(""); setIsReallocateOpen(true); }}
               className="flex items-center gap-2 h-10 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold"
             >
-              <Plus className="h-4 w-4" /> Allocate Budget
+              <Plus className="h-4 w-4" /> {t('admin.finance.budgeting.allocateBudget')}
             </button>
           </div>
         </div>
@@ -371,25 +392,27 @@ const Budgeting = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {[
             {
-              label: "Total Allocated",
+              label: t('admin.finance.budgeting.kpiTotalAllocated'),
               value: `${financialSettings.currency}${totalAllocated.toLocaleString()}`,
               icon: DollarSign,
               bg: "bg-blue-50", ic: "text-blue-500",
-              sub: `${budgets.length} categor${budgets.length === 1 ? "y" : "ies"}`,
+              sub: budgets.length === 1
+                ? t('admin.finance.budgeting.categoryCountSingular')
+                : t('admin.finance.budgeting.categoryCountPlural', { count: budgets.length }),
             },
             {
-              label: "Total Spent",
+              label: t('admin.finance.budgeting.kpiTotalSpent'),
               value: `${financialSettings.currency}${totalSpent.toLocaleString()}`,
               icon: TrendingUp,
               bg: "bg-emerald-50", ic: "text-emerald-500",
-              sub: `${totalAllocated > 0 ? Math.round((totalSpent / totalAllocated) * 100) : 0}% utilization`,
+              sub: t('admin.finance.budgeting.utilizationPercent', { percent: totalAllocated > 0 ? Math.round((totalSpent / totalAllocated) * 100) : 0 }),
             },
             {
-              label: "Budget Alerts",
+              label: t('admin.finance.budgeting.kpiBudgetAlerts'),
               value: overBudgetCount,
               icon: AlertCircle,
               bg: "bg-rose-50", ic: "text-rose-500",
-              sub: overBudgetCount > 0 ? "Requires attention" : "All within limits",
+              sub: overBudgetCount > 0 ? t('admin.finance.budgeting.requiresAttention') : t('admin.finance.budgeting.allWithinLimits'),
             },
           ].map((stat) => (
             <div key={stat.label} className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
@@ -408,27 +431,27 @@ const Budgeting = () => {
         {/* Filter row */}
         <div className="bg-white border border-slate-100 rounded-xl shadow-sm px-4 py-3 flex flex-wrap items-end gap-3">
           <div className="relative flex-1 max-w-xs">
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Search</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.finance.budgeting.searchLabel')}</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                className="pl-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
-                placeholder="Search categories…"
+                className="ps-9 h-9 text-sm rounded-lg border-slate-200 bg-white"
+                placeholder={t('admin.finance.budgeting.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
           <div>
-            <label className="text-[11px] font-medium text-slate-500 block mb-1">Status</label>
+            <label className="text-[11px] font-medium text-slate-500 block mb-1">{t('admin.finance.budgeting.statusLabel')}</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <Filter className="h-3.5 w-3.5 text-slate-400" /> {filterStatus}
+                  <Filter className="h-3.5 w-3.5 text-slate-400" /> {t(STATUS_LABEL_KEYS[filterStatus] || filterStatus)}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 rounded-xl">
-                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('admin.finance.budgeting.filterByStatus')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {["All", "On Track", "Near Limit", "Over Budget", "Not Set"].map(status => (
                   <DropdownMenuItem
@@ -436,7 +459,7 @@ const Budgeting = () => {
                     onClick={() => setFilterStatus(status)}
                     className="flex items-center justify-between"
                   >
-                    {status}
+                    {t(STATUS_LABEL_KEYS[status] || status)}
                     {filterStatus === status && <div className="h-2 w-2 rounded-full bg-purple-600" />}
                   </DropdownMenuItem>
                 ))}
@@ -447,7 +470,7 @@ const Budgeting = () => {
             onClick={() => { setSelectedCategory(null); setNewBudgetValue(""); setIsReallocateOpen(true); }}
             className="flex items-center gap-2 h-9 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            <Plus className="h-4 w-4" /> New Category
+            <Plus className="h-4 w-4" /> {t('admin.finance.budgeting.newCategory')}
           </button>
         </div>
 
@@ -457,35 +480,35 @@ const Budgeting = () => {
           <div className="lg:col-span-2 space-y-5">
             <Card className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
               <CardHeader className="p-5 bg-slate-50/70 border-b border-slate-100">
-                <CardTitle className="text-base font-bold text-slate-900">Budget Utilization</CardTitle>
-                <CardDescription className="text-xs text-slate-400">Fiscal Period: FY 2026 (April – March)</CardDescription>
+                <CardTitle className="text-base font-bold text-slate-900">{t('admin.finance.budgeting.budgetUtilization')}</CardTitle>
+                <CardDescription className="text-xs text-slate-400">{t('admin.finance.budgeting.fiscalPeriod')}</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {isLoading ? (
                   <div className="py-16 flex flex-col items-center justify-center text-slate-400">
                     <Loader2 className="h-8 w-8 animate-spin mb-3 text-purple-600" />
-                    <p className="text-sm font-semibold">Analyzing budget data…</p>
+                    <p className="text-sm font-semibold">{t('admin.finance.budgeting.analyzingData')}</p>
                   </div>
                 ) : budgets.length === 0 ? (
                   <div className="py-16 text-center">
                     <PieChart className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-slate-500 mb-1">No Budgets Found</p>
-                    <p className="text-xs text-slate-400 mb-4">Start by setting up expense categories and allocating funds.</p>
+                    <p className="text-sm font-semibold text-slate-500 mb-1">{t('admin.finance.budgeting.noBudgetsFound')}</p>
+                    <p className="text-xs text-slate-400 mb-4">{t('admin.finance.budgeting.noBudgetsHint')}</p>
                     <div className="flex flex-col items-center gap-2">
                       <button
                         onClick={handleCreateDefaultStructure}
                         disabled={isCreatingDefaults}
                         className="inline-flex items-center gap-2 h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-60">
                         {isCreatingDefaults ? (
-                          <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+                          <><Loader2 className="h-4 w-4 animate-spin" /> {t('admin.finance.budgeting.creatingEllipsis')}</>
                         ) : (
-                          <><Sparkles className="h-4 w-4" /> Create Default Budget Structure</>
+                          <><Sparkles className="h-4 w-4" /> {t('admin.finance.budgeting.createDefaultStructure')}</>
                         )}
                       </button>
                       <button
                         onClick={() => navigate("/finance/setup")}
                         className="inline-flex items-center gap-2 h-9 px-4 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                        Configure Categories Manually
+                        {t('admin.finance.budgeting.configureCategoriesManually')}
                       </button>
                     </div>
                   </div>
@@ -494,12 +517,12 @@ const Budgeting = () => {
                     <Table>
                       <TableHeader className="bg-slate-50/70">
                         <TableRow className="hover:bg-transparent border-b border-slate-100">
-                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Category</TableHead>
-                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Allocated</TableHead>
-                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Spent</TableHead>
-                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Utilization</TableHead>
-                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">Status</TableHead>
-                          <TableHead className="px-4 py-3 text-right text-xs font-semibold text-slate-500">Actions</TableHead>
+                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colCategory')}</TableHead>
+                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colAllocated')}</TableHead>
+                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colSpent')}</TableHead>
+                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colUtilization')}</TableHead>
+                          <TableHead className="px-4 py-3 text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colStatus')}</TableHead>
+                          <TableHead className="px-4 py-3 text-end text-xs font-semibold text-slate-500">{t('admin.finance.budgeting.colActions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -541,8 +564,8 @@ const Budgeting = () => {
                                       </span>
                                       <span className="text-slate-400 font-normal">
                                         {b.allocated - b.spent >= 0
-                                          ? `${financialSettings.currency}${(b.allocated - b.spent).toLocaleString()} left`
-                                          : `${financialSettings.currency}${Math.abs(b.allocated - b.spent).toLocaleString()} over`}
+                                          ? t('admin.finance.budgeting.amountLeft', { currency: financialSettings.currency, amount: (b.allocated - b.spent).toLocaleString() })
+                                          : t('admin.finance.budgeting.amountOver', { currency: financialSettings.currency, amount: Math.abs(b.allocated - b.spent).toLocaleString() })}
                                       </span>
                                     </div>
                                     <Progress value={percent} className={cn("h-1.5 rounded-full", isOver ? "bg-rose-100" : isNear ? "bg-amber-100" : "bg-slate-100")} />
@@ -554,14 +577,14 @@ const Budgeting = () => {
                                     b.status === "Near Limit" ? "bg-amber-100 text-amber-700" :
                                     b.status === "Over Budget" ? "bg-rose-100 text-rose-700" :
                                     "bg-slate-100 text-slate-500")}>
-                                    {b.status}
+                                    {t(STATUS_LABEL_KEYS[b.status] || b.status)}
                                   </span>
                                 </TableCell>
-                                <TableCell className="px-4 py-3 text-right">
+                                <TableCell className="px-4 py-3 text-end">
                                   <div className="flex items-center justify-end gap-1.5">
                                     <button
                                       onClick={() => { setSelectedCategory(b); setNewBudgetValue(b.allocated.toString()); setIsReallocateOpen(true); }}
-                                      title="Edit"
+                                      title={t('admin.finance.budgeting.editTitle')}
                                       className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 text-slate-400 transition-colors">
                                       <Edit2 className="h-3.5 w-3.5" />
                                     </button>
@@ -573,12 +596,12 @@ const Budgeting = () => {
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end" className="rounded-xl">
                                         <DropdownMenuItem onClick={() => handleArchive(b.id)}>
-                                          <History className="h-4 w-4 mr-2" />
-                                          Archive Category
+                                          <History className="h-4 w-4 me-2" />
+                                          {t('admin.finance.budgeting.archiveCategory')}
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-rose-600" onClick={() => toast.error("Delete functionality restricted for core categories")}>
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Delete
+                                        <DropdownMenuItem className="text-rose-600" onClick={() => toast.error(t('admin.finance.budgeting.toastDeleteRestricted'))}>
+                                          <Trash2 className="h-4 w-4 me-2" />
+                                          {t('admin.finance.budgeting.deleteLabel')}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -600,7 +623,7 @@ const Budgeting = () => {
             {/* AI Insights Card */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
               <h3 className="font-bold text-slate-900 text-sm mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-600" /> AI Insights
+                <Sparkles className="h-4 w-4 text-purple-600" /> {t('admin.finance.budgeting.aiInsights')}
               </h3>
               <div className="space-y-2.5">
                 {budgetInsights.length > 0 ? budgetInsights.map((insight, i) => (
@@ -617,27 +640,27 @@ const Budgeting = () => {
                         <insight.icon className="h-3.5 w-3.5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-900 mb-0.5">{insight.title}</p>
+                        <p className="text-xs font-semibold text-slate-900 mb-0.5">{t(INSIGHT_TITLE_KEYS[insight.title] || insight.title)}</p>
                         <p className="text-xs text-slate-500 leading-relaxed">{insight.desc}</p>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-purple-600 transition-colors flex-shrink-0 rtl:rotate-180" />
                     </div>
                   </div>
                 )) : (
-                  <p className="text-xs text-slate-400 text-center py-4">No budget alerts right now — all categories are within their limits.</p>
+                  <p className="text-xs text-slate-400 text-center py-4">{t('admin.finance.budgeting.noAlertsMessage')}</p>
                 )}
               </div>
             </div>
 
             {/* Quick Actions Card */}
             <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-4">
-              <h3 className="font-bold text-slate-900 text-sm mb-3">Quick Actions</h3>
+              <h3 className="font-bold text-slate-900 text-sm mb-3">{t('admin.finance.budgeting.quickActions')}</h3>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Reallocate", icon: PieChart, fn: () => { setSelectedCategory(null); setNewBudgetValue(""); setIsReallocateOpen(true); } },
-                  { label: "Set Goals", icon: Target, fn: () => setIsGoalsOpen(true) },
-                  { label: "Forecast", icon: TrendingUp, fn: () => setIsForecastOpen(true) },
-                  { label: "Refresh", icon: RefreshCcw, fn: () => fetchData() },
+                  { label: t('admin.finance.budgeting.actionReallocate'), icon: PieChart, fn: () => { setSelectedCategory(null); setNewBudgetValue(""); setIsReallocateOpen(true); } },
+                  { label: t('admin.finance.budgeting.actionSetGoals'), icon: Target, fn: () => setIsGoalsOpen(true) },
+                  { label: t('admin.finance.budgeting.actionForecast'), icon: TrendingUp, fn: () => setIsForecastOpen(true) },
+                  { label: t('admin.finance.budgeting.actionRefresh'), icon: RefreshCcw, fn: () => fetchData() },
                 ].map((a, i) => (
                   <button key={i} onClick={a.fn}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
@@ -657,18 +680,18 @@ const Budgeting = () => {
       <Dialog open={isReallocateOpen} onOpenChange={setIsReallocateOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Reallocate Budget</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('admin.finance.budgeting.reallocateBudgetTitle')}</DialogTitle>
             <DialogDescription>
-              {selectedCategory 
-                ? `Adjust the allocated budget for ${selectedCategory.name}.`
-                : "Select a category to adjust its allocated budget."}
+              {selectedCategory
+                ? t('admin.finance.budgeting.reallocateDescNamed', { name: selectedCategory.name })
+                : t('admin.finance.budgeting.reallocateDescGeneric')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {!selectedCategory && (
               <div className="grid gap-2">
-                <Label htmlFor="category-select">Select Category</Label>
-                <Select 
+                <Label htmlFor="category-select">{t('admin.finance.budgeting.selectCategory')}</Label>
+                <Select
                   onValueChange={(value) => {
                     const cat = categories.find(c => c.id === value);
                     if (cat) {
@@ -678,7 +701,7 @@ const Budgeting = () => {
                   }}
                 >
                   <SelectTrigger id="category-select" className="rounded-xl">
-                    <SelectValue placeholder="Choose a category" />
+                    <SelectValue placeholder={t('admin.finance.budgeting.chooseCategoryPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     {categories.map(cat => (
@@ -689,25 +712,25 @@ const Budgeting = () => {
               </div>
             )}
             <div className="grid gap-2">
-              <Label htmlFor="budget">New Budget Amount ({financialSettings.currency})</Label>
-              <Input 
-                id="budget" 
-                type="number" 
-                value={newBudgetValue} 
+              <Label htmlFor="budget">{t('admin.finance.budgeting.newBudgetAmountLabel', { currency: financialSettings.currency })}</Label>
+              <Input
+                id="budget"
+                type="number"
+                value={newBudgetValue}
                 onChange={(e) => setNewBudgetValue(e.target.value)}
                 className="rounded-xl"
-                placeholder="Enter amount"
+                placeholder={t('admin.finance.budgeting.enterAmountPlaceholder')}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsReallocateOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button 
-              onClick={handleReallocate} 
+            <Button variant="outline" onClick={() => setIsReallocateOpen(false)} className="rounded-xl">{t('admin.finance.budgeting.cancel')}</Button>
+            <Button
+              onClick={handleReallocate}
               className="rounded-xl gradient-primary shadow-lg shadow-primary/20"
               disabled={!selectedCategory || !newBudgetValue}
             >
-              Update Budget
+              {t('admin.finance.budgeting.updateBudget')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -719,20 +742,20 @@ const Budgeting = () => {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
-              Set Financial Goals
+              {t('admin.finance.budgeting.setFinancialGoalsTitle')}
             </DialogTitle>
             <DialogDescription>
-              Define target utilization limits for the school's budget.
+              {t('admin.finance.budgeting.setFinancialGoalsDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Target Utilization Threshold (%)</Label>
+                <Label>{t('admin.finance.budgeting.targetUtilizationThreshold')}</Label>
                 <div className="flex items-center gap-4">
-                  <Input 
-                    type="number" 
-                    value={targetUtilization} 
+                  <Input
+                    type="number"
+                    value={targetUtilization}
                     onChange={(e) => setTargetUtilization(Number(e.target.value))}
                     className="rounded-xl"
                   />
@@ -741,18 +764,18 @@ const Budgeting = () => {
                   </Badge>
                 </div>
                 <p className="text-[10px] text-slate-400">
-                  System will alert you when spending exceeds this percentage of allocated budget.
+                  {t('admin.finance.budgeting.targetUtilizationHint')}
                 </p>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGoalsOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button 
-              onClick={handleSaveGoals} 
+            <Button variant="outline" onClick={() => setIsGoalsOpen(false)} className="rounded-xl">{t('admin.finance.budgeting.cancel')}</Button>
+            <Button
+              onClick={handleSaveGoals}
               className="rounded-xl gradient-primary shadow-lg shadow-primary/20"
             >
-              Save Goals
+              {t('admin.finance.budgeting.saveGoals')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -764,32 +787,32 @@ const Budgeting = () => {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Budget Forecasting
+              {t('admin.finance.budgeting.budgetForecastingTitle')}
             </DialogTitle>
             <DialogDescription>
-              Predictive analysis based on current spending patterns.
+              {t('admin.finance.budgeting.budgetForecastingDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-6 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Current Burn Rate</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('admin.finance.budgeting.currentBurnRate')}</p>
                 <p className="text-2xl font-black text-slate-900">
-                  {financialSettings.currency} {Math.round(totalSpent / 3).toLocaleString()}/mo
+                  {t('admin.finance.budgeting.perMonthAmount', { currency: financialSettings.currency, amount: Math.round(totalSpent / 3).toLocaleString() })}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-1">Based on last 90 days</p>
+                <p className="text-[10px] text-slate-400 mt-1">{t('admin.finance.budgeting.basedOnLast90Days')}</p>
               </div>
               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Projected EOY</p>
+                <p className="text-[10px] font-bold text-primary uppercase tracking-widest">{t('admin.finance.budgeting.projectedEOY')}</p>
                 <p className="text-2xl font-black text-primary">
                   {financialSettings.currency} {Math.round(totalSpent * 4).toLocaleString()}
                 </p>
-                <p className="text-[10px] text-primary/60 mt-1">Estimated annual spend</p>
+                <p className="text-[10px] text-primary/60 mt-1">{t('admin.finance.budgeting.estimatedAnnualSpend')}</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-sm font-bold text-slate-900">Risk Assessment</h4>
+              <h4 className="text-sm font-bold text-slate-900">{t('admin.finance.budgeting.riskAssessment')}</h4>
               {budgets.filter(b => b.percent > 75).length > 0 ? (
                 <div className="space-y-2">
                   {budgets.filter(b => b.percent > 75).map(b => (
@@ -798,20 +821,20 @@ const Budgeting = () => {
                         <AlertCircle className="h-4 w-4 text-rose-600" />
                         <span className="text-xs font-bold text-rose-900">{b.category}</span>
                       </div>
-                      <span className="text-xs font-black text-rose-600">High Risk</span>
+                      <span className="text-xs font-black text-rose-600">{t('admin.finance.budgeting.highRisk')}</span>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  <p className="text-xs font-medium text-emerald-900">All categories are projected to stay within limits.</p>
+                  <p className="text-xs font-medium text-emerald-900">{t('admin.finance.budgeting.allProjectedWithinLimits')}</p>
                 </div>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsForecastOpen(false)} className="w-full rounded-xl">Close Analysis</Button>
+            <Button onClick={() => setIsForecastOpen(false)} className="w-full rounded-xl">{t('admin.finance.budgeting.closeAnalysis')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

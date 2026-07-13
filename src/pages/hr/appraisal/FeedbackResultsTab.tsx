@@ -6,6 +6,7 @@
 // or parent said what, which is what keeps "anonymous" a real guarantee
 // rather than a UI convention.
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, MessageSquareQuote, Users, ChevronDown, ChevronUp } from "lucide-react";
@@ -27,6 +28,12 @@ const TEMPLATE_LABEL: Record<string, string> = {
   parent_teacher: "Parent Feedback",
 };
 
+const TEMPLATE_LABEL_KEYS: Record<string, string> = {
+  student_class_teacher: "admin.hr.appraisal.resultsTab.templateClassTeacher",
+  student_subject_teacher: "admin.hr.appraisal.resultsTab.templateSubjectTeacher",
+  parent_teacher: "admin.hr.appraisal.resultsTab.templateParentFeedback",
+};
+
 function ratingColor(v: number | null) {
   if (v === null) return "text-slate-400";
   if (v >= 4) return "text-emerald-600";
@@ -35,6 +42,7 @@ function ratingColor(v: number | null) {
 }
 
 export function FeedbackResultsTab() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [cycle, setCycle] = useState<{ id: string; title?: string } | null>(null);
   const [aggregates, setAggregates] = useState<Aggregate[]>([]);
@@ -93,13 +101,13 @@ export function FeedbackResultsTab() {
   }, [aggregates]);
 
   if (loading) {
-    return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">Loading results…</div>;
+    return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">{t('admin.hr.appraisal.resultsTab.loadingResults')}</div>;
   }
 
   if (!cycle) {
     return (
       <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">
-        No active appraisal cycle — feedback results are tied to a cycle.
+        {t('admin.hr.appraisal.resultsTab.noActiveCycle')}
       </CardContent></Card>
     );
   }
@@ -108,8 +116,8 @@ export function FeedbackResultsTab() {
     return (
       <Card><CardContent className="py-12 text-center">
         <Users className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-        <p className="text-sm font-medium text-slate-600">No feedback submitted yet for "{cycle.title || cycle.id}"</p>
-        <p className="text-xs text-muted-foreground mt-1">Results appear here — averaged and anonymous — as students and parents respond.</p>
+        <p className="text-sm font-medium text-slate-600">{t('admin.hr.appraisal.resultsTab.noFeedbackYet', { cycleTitle: cycle.title || cycle.id })}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t('admin.hr.appraisal.resultsTab.resultsAppearHere')}</p>
       </CardContent></Card>
     );
   }
@@ -119,7 +127,7 @@ export function FeedbackResultsTab() {
       {grouped.map(([templateKey, rows]) => (
         <div key={templateKey}>
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-2">
-            {TEMPLATE_LABEL[templateKey] || templateKey}
+            {TEMPLATE_LABEL_KEYS[templateKey] ? t(TEMPLATE_LABEL_KEYS[templateKey]) : (TEMPLATE_LABEL[templateKey] || templateKey)}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {rows
@@ -132,21 +140,25 @@ export function FeedbackResultsTab() {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-bold text-slate-800">{row.teacherName}</p>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{row.submissionCount} response{row.submissionCount === 1 ? "" : "s"}</Badge>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {row.submissionCount === 1
+                            ? t('admin.hr.appraisal.resultsTab.responseCountSingular', { count: row.submissionCount })
+                            : t('admin.hr.appraisal.resultsTab.responseCountPlural', { count: row.submissionCount })}
+                        </Badge>
                       </div>
                       <div className="flex items-center gap-1.5 mb-3">
                         <Star className={`h-4 w-4 fill-current ${ratingColor(row.averageRating)}`} />
                         <span className={`text-lg font-bold ${ratingColor(row.averageRating)}`}>
                           {row.averageRating !== null ? row.averageRating.toFixed(2) : "—"}
                         </span>
-                        <span className="text-xs text-slate-400">/ 5 average</span>
+                        <span className="text-xs text-slate-400">{t('admin.hr.appraisal.resultsTab.outOfFiveAverage')}</span>
                       </div>
                       <button
                         className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:underline"
                         onClick={() => setExpanded(isOpen ? null : key)}
                       >
                         {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        {isOpen ? "Hide details" : "View question breakdown & comments"}
+                        {isOpen ? t('admin.hr.appraisal.resultsTab.hideDetails') : t('admin.hr.appraisal.resultsTab.viewBreakdown')}
                       </button>
                       {isOpen && (
                         <div className="mt-3 space-y-3 pt-3 border-t border-slate-100">
@@ -161,7 +173,7 @@ export function FeedbackResultsTab() {
                           {row.comments.length > 0 && (
                             <div className="space-y-1.5">
                               <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-                                <MessageSquareQuote className="h-3 w-3" /> Comments ({row.comments.length}) — anonymous
+                                <MessageSquareQuote className="h-3 w-3" /> {t('admin.hr.appraisal.resultsTab.commentsAnonymous', { count: row.comments.length })}
                               </p>
                               <div className="max-h-40 overflow-y-auto space-y-1.5">
                                 {row.comments.map((c, i) => (

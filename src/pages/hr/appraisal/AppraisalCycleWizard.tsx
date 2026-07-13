@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -25,19 +26,53 @@ import {
 import { resolveSelectedStaff, CreationProgress } from "./createAppraisalCycle";
 
 const STEPS = [
-  { id: 1, label: "Basic Info", icon: ClipboardCheck },
-  { id: 2, label: "Employees", icon: Users },
-  { id: 3, label: "KPIs", icon: Target },
-  { id: 4, label: "Workflow", icon: GitBranch },
-  { id: 5, label: "Rating", icon: Star },
-  { id: 6, label: "Deadlines", icon: CalendarClock },
-  { id: 7, label: "AI", icon: Sparkles },
-  { id: 8, label: "Notify", icon: Bell },
-  { id: 9, label: "Review", icon: Check },
+  { id: 1, label: "Basic Info", key: "basicInfo", icon: ClipboardCheck },
+  { id: 2, label: "Employees", key: "employees", icon: Users },
+  { id: 3, label: "KPIs", key: "kpis", icon: Target },
+  { id: 4, label: "Workflow", key: "workflow", icon: GitBranch },
+  { id: 5, label: "Rating", key: "rating", icon: Star },
+  { id: 6, label: "Deadlines", key: "deadlines", icon: CalendarClock },
+  { id: 7, label: "AI", key: "ai", icon: Sparkles },
+  { id: 8, label: "Notify", key: "notify", icon: Bell },
+  { id: 9, label: "Review", key: "review", icon: Check },
 ];
+
+const STEP_LABEL_KEYS: Record<string, string> = {
+  basicInfo: "admin.hr.appraisal.cycleWizard.stepBasicInfo",
+  employees: "admin.hr.appraisal.cycleWizard.stepEmployees",
+  kpis: "admin.hr.appraisal.cycleWizard.stepKpis",
+  workflow: "admin.hr.appraisal.cycleWizard.stepWorkflow",
+  rating: "admin.hr.appraisal.cycleWizard.stepRating",
+  deadlines: "admin.hr.appraisal.cycleWizard.stepDeadlines",
+  ai: "admin.hr.appraisal.cycleWizard.stepAi",
+  notify: "admin.hr.appraisal.cycleWizard.stepNotify",
+  review: "admin.hr.appraisal.cycleWizard.stepReview",
+};
 
 const RATING_5PT = ["Poor", "Needs Improvement", "Good", "Very Good", "Outstanding"];
 const RATING_LETTER = ["A", "B", "C", "D"];
+
+const RATING_5PT_LABEL_KEYS: Record<string, string> = {
+  "Poor": "admin.hr.appraisal.cycleWizard.ratingPoor",
+  "Needs Improvement": "admin.hr.appraisal.cycleWizard.ratingNeedsImprovement",
+  "Good": "admin.hr.appraisal.cycleWizard.ratingGood",
+  "Very Good": "admin.hr.appraisal.cycleWizard.ratingVeryGood",
+  "Outstanding": "admin.hr.appraisal.cycleWizard.ratingOutstanding",
+};
+
+const CYCLE_TYPE_LABEL_KEYS: Record<string, string> = {
+  Annual: "admin.hr.appraisal.cycleWizard.cycleTypeAnnual",
+  Semester: "admin.hr.appraisal.cycleWizard.cycleTypeSemester",
+  Quarterly: "admin.hr.appraisal.cycleWizard.cycleTypeQuarterly",
+  Custom: "admin.hr.appraisal.cycleWizard.cycleTypeCustom",
+};
+
+const WORKFLOW_ROLE_LABEL_KEYS: Record<string, string> = {
+  Teacher: "admin.hr.appraisal.cycleWizard.roleTeacher",
+  HOD: "admin.hr.appraisal.cycleWizard.roleHod",
+  Principal: "admin.hr.appraisal.cycleWizard.rolePrincipal",
+  HR: "admin.hr.appraisal.cycleWizard.roleHr",
+};
 
 function defaultConfig(academicYear: string): AppraisalCycleConfig {
   return {
@@ -84,15 +119,16 @@ interface Props {
   onSaveDraft: (config: AppraisalCycleConfig) => void;
 }
 
-const PROGRESS_PHASE_LABEL: Record<CreationProgress["phase"], string> = {
-  scorecards: "Creating employee scorecards",
-  notifications: "Sending in-app notifications",
-  emails: "Sending emails",
+const PROGRESS_PHASE_LABEL_KEYS: Record<CreationProgress["phase"], string> = {
+  scorecards: "admin.hr.appraisal.cycleWizard.progressScorecards",
+  notifications: "admin.hr.appraisal.cycleWizard.progressNotifications",
+  emails: "admin.hr.appraisal.cycleWizard.progressEmails",
 };
 
 export function AppraisalCycleWizard({
   open, onOpenChange, staff, branches, academicYear, kpiTemplates, onSaveTemplate, submitting, progress, onSubmit, onSaveDraft,
 }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [config, setConfig] = useState<AppraisalCycleConfig>(() => defaultConfig(academicYear));
   const [importText, setImportText] = useState("");
@@ -146,16 +182,16 @@ export function AppraisalCycleWizard({
   function handleImportKpis() {
     try {
       const parsed = JSON.parse(importText);
-      if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
+      if (!Array.isArray(parsed)) throw new Error(t('admin.hr.appraisal.cycleWizard.errorExpectedJsonArray'));
       const kpis = parsed
         .map((p: any) => ({ title: String(p.title || "").trim(), weight: Number(p.weight) || 0 }))
         .filter((k) => k.title);
-      if (kpis.length === 0) throw new Error("No valid KPI rows found");
+      if (kpis.length === 0) throw new Error(t('admin.hr.appraisal.cycleWizard.errorNoValidKpiRows'));
       set("kpis", kpis);
       setShowImport(false);
       setImportText("");
     } catch (e) {
-      alert(`Couldn't import KPIs: ${(e as Error).message}. Expected format: [{"title":"Teaching Quality","weight":30}, ...]`);
+      alert(t('admin.hr.appraisal.cycleWizard.importErrorAlert', { message: (e as Error).message }));
     }
   }
 
@@ -163,8 +199,8 @@ export function AppraisalCycleWizard({
     <Dialog open={open} onOpenChange={(o) => { if (!o && !submitting) handleClose(); }}>
       <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-xl font-bold">Create Appraisal Cycle</DialogTitle>
-          <p className="text-xs text-muted-foreground">Step {step} of 9 — {STEPS[step - 1].label}</p>
+          <DialogTitle className="text-xl font-bold">{t('admin.hr.appraisal.cycleWizard.dialogTitle')}</DialogTitle>
+          <p className="text-xs text-muted-foreground">{t('admin.hr.appraisal.cycleWizard.stepOfLabel', { step, total: 9, label: t(STEP_LABEL_KEYS[STEPS[step - 1].key]) })}</p>
         </DialogHeader>
 
         {/* Stepper */}
@@ -179,7 +215,7 @@ export function AppraisalCycleWizard({
                 )}>
                   {s.id < step ? <Check className="h-3 w-3" /> : s.id}
                 </div>
-                <span className={cn("text-[9px] text-center leading-tight hidden sm:block", s.id === step ? "text-purple-700 font-semibold" : "text-slate-400")}>{s.label}</span>
+                <span className={cn("text-[9px] text-center leading-tight hidden sm:block", s.id === step ? "text-purple-700 font-semibold" : "text-slate-400")}>{t(STEP_LABEL_KEYS[s.key])}</span>
               </div>
             ))}
           </div>
@@ -199,22 +235,22 @@ export function AppraisalCycleWizard({
               {step === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <Label>Cycle Name *</Label>
-                    <Input value={config.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. 2026 Annual Performance Review" className="mt-1" />
+                    <Label>{t('admin.hr.appraisal.cycleWizard.cycleNameLabel')}</Label>
+                    <Input value={config.name} onChange={(e) => set("name", e.target.value)} placeholder={t('admin.hr.appraisal.cycleWizard.cycleNamePlaceholder')} className="mt-1" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Academic Year *</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.academicYearLabel')}</Label>
                       <Input value={config.academicYear} onChange={(e) => set("academicYear", e.target.value)} className="mt-1" />
                     </div>
                     <div>
-                      <Label>Cycle Type *</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.cycleTypeLabel')}</Label>
                       <div className="grid grid-cols-2 gap-2 mt-1">
-                        {(["Annual", "Semester", "Quarterly", "Custom"] as CycleType[]).map((t) => (
-                          <button key={t} type="button" onClick={() => set("cycleType", t)}
+                        {(["Annual", "Semester", "Quarterly", "Custom"] as CycleType[]).map((ct) => (
+                          <button key={ct} type="button" onClick={() => set("cycleType", ct)}
                             className={cn("text-xs font-semibold rounded-lg border px-3 py-2 transition",
-                              config.cycleType === t ? "border-purple-500 bg-purple-50 text-purple-700" : "border-slate-200 text-slate-600 hover:border-slate-300")}>
-                            {t}
+                              config.cycleType === ct ? "border-purple-500 bg-purple-50 text-purple-700" : "border-slate-200 text-slate-600 hover:border-slate-300")}>
+                            {t(CYCLE_TYPE_LABEL_KEYS[ct])}
                           </button>
                         ))}
                       </div>
@@ -222,33 +258,33 @@ export function AppraisalCycleWizard({
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Start Date *</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.startDateLabel')}</Label>
                       <Input type="date" value={config.startDate} onChange={(e) => set("startDate", e.target.value)} className="mt-1" />
                     </div>
                     <div>
-                      <Label>End Date *</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.endDateLabel')}</Label>
                       <Input type="date" value={config.endDate} onChange={(e) => set("endDate", e.target.value)} className="mt-1" />
                     </div>
                   </div>
                   <div>
-                    <Label>Description</Label>
-                    <Textarea value={config.description} onChange={(e) => set("description", e.target.value)} rows={3} className="mt-1" placeholder="Optional notes about this cycle's purpose or scope…" />
+                    <Label>{t('admin.hr.appraisal.cycleWizard.descriptionLabel')}</Label>
+                    <Textarea value={config.description} onChange={(e) => set("description", e.target.value)} rows={3} className="mt-1" placeholder={t('admin.hr.appraisal.cycleWizard.descriptionPlaceholder')} />
                   </div>
                 </div>
               )}
 
               {step === 2 && (
                 <div className="space-y-4">
-                  <p className="text-sm font-semibold text-slate-700">Who should be evaluated?</p>
+                  <p className="text-sm font-semibold text-slate-700">{t('admin.hr.appraisal.cycleWizard.whoEvaluatedLabel')}</p>
                   <label className="flex items-center gap-2.5 p-3 rounded-xl border border-purple-200 bg-purple-50 cursor-pointer">
                     <Checkbox checked={config.scope === "all"} onCheckedChange={(v) => set("scope", v ? "all" : "filtered")} />
-                    <span className="text-sm font-semibold text-purple-800">All Staff ({staff.filter(s => s.status !== "Inactive").length} active)</span>
+                    <span className="text-sm font-semibold text-purple-800">{t('admin.hr.appraisal.cycleWizard.allStaffActive', { count: staff.filter(s => s.status !== "Inactive").length })}</span>
                   </label>
 
                   {config.scope === "filtered" && (
-                    <div className="space-y-4 pl-1">
+                    <div className="space-y-4 ps-1">
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Category</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('admin.hr.appraisal.cycleWizard.categoryLabel')}</p>
                         <div className="grid grid-cols-2 gap-2">
                           {STAFF_CATEGORIES.map((cat) => {
                             const count = staff.filter((s) => s.status !== "Inactive" && staffCategoriesFor(s).includes(cat)).length;
@@ -263,9 +299,9 @@ export function AppraisalCycleWizard({
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Campus</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('admin.hr.appraisal.cycleWizard.campusLabel')}</p>
                         <div className="grid grid-cols-2 gap-2">
-                          {(branches.length ? branches : [{ id: "main", name: "Main Campus" }]).map((b) => (
+                          {(branches.length ? branches : [{ id: "main", name: t('admin.hr.appraisal.cycleWizard.mainCampusFallback') }]).map((b) => (
                             <label key={b.id} className="flex items-center gap-2 text-sm">
                               <Checkbox checked={config.campuses.length === 0 || config.campuses.includes(b.id)} onCheckedChange={(v) => {
                                 const all = branches.length ? branches.map(x => x.id) : ["main"];
@@ -278,7 +314,7 @@ export function AppraisalCycleWizard({
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Department</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('admin.hr.appraisal.cycleWizard.departmentLabel')}</p>
                         <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                           {departments.map((d) => (
                             <label key={d} className="flex items-center gap-2 text-sm">
@@ -295,8 +331,8 @@ export function AppraisalCycleWizard({
                   )}
 
                   <div className="rounded-xl bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
-                    <span className="text-sm font-medium">Total Selected</span>
-                    <span className="text-lg font-extrabold">{selectedStaff.length} Employees</span>
+                    <span className="text-sm font-medium">{t('admin.hr.appraisal.cycleWizard.totalSelectedLabel')}</span>
+                    <span className="text-lg font-extrabold">{t('admin.hr.appraisal.cycleWizard.employeesCount', { count: selectedStaff.length })}</span>
                   </div>
                 </div>
               )}
@@ -304,19 +340,19 @@ export function AppraisalCycleWizard({
               {step === 3 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-700">Choose how staff will be evaluated.</p>
+                    <p className="text-sm font-semibold text-slate-700">{t('admin.hr.appraisal.cycleWizard.chooseHowStaffEvaluated')}</p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => set("kpis", DEFAULT_KPI_TEMPLATE.map(k => ({ ...k })))}>Load Template</Button>
-                      <Button size="sm" variant="outline" onClick={() => { const n = prompt("Template name?"); if (n) { onSaveTemplate(n, config.kpis); } }}>Save Template</Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowImport((v) => !v)}>Import KPI</Button>
+                      <Button size="sm" variant="outline" onClick={() => set("kpis", DEFAULT_KPI_TEMPLATE.map(k => ({ ...k })))}>{t('admin.hr.appraisal.cycleWizard.loadTemplateButton')}</Button>
+                      <Button size="sm" variant="outline" onClick={() => { const n = prompt(t('admin.hr.appraisal.cycleWizard.templateNamePrompt')); if (n) { onSaveTemplate(n, config.kpis); } }}>{t('admin.hr.appraisal.cycleWizard.saveTemplateButton')}</Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowImport((v) => !v)}>{t('admin.hr.appraisal.cycleWizard.importKpiButton')}</Button>
                     </div>
                   </div>
 
                   {showImport && (
                     <div className="rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50">
-                      <p className="text-xs text-slate-500">Paste a JSON array: <code>{`[{"title":"Teaching Quality","weight":30}]`}</code></p>
+                      <p className="text-xs text-slate-500">{t('admin.hr.appraisal.cycleWizard.pasteJsonArrayLabel')} <code>{`[{"title":"Teaching Quality","weight":30}]`}</code></p>
                       <Textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={3} className="text-xs font-mono" />
-                      <Button size="sm" onClick={handleImportKpis}>Apply Import</Button>
+                      <Button size="sm" onClick={handleImportKpis}>{t('admin.hr.appraisal.cycleWizard.applyImportButton')}</Button>
                     </div>
                   )}
 
@@ -340,24 +376,24 @@ export function AppraisalCycleWizard({
                         <Slider value={[k.weight]} min={0} max={100} step={1} onValueChange={([v]) => {
                           const kpis = [...config.kpis]; kpis[i] = { ...k, weight: v }; set("kpis", kpis);
                         }} className="flex-1" />
-                        <span className="w-12 text-right text-sm font-bold text-slate-700">{k.weight}%</span>
+                        <span className="w-12 text-end text-sm font-bold text-slate-700">{k.weight}%</span>
                         <button onClick={() => set("kpis", config.kpis.filter((_, idx) => idx !== i))} className="text-slate-300 hover:text-rose-500">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => set("kpis", [...config.kpis, { title: "New KPI", weight: 0 }])}
+                  <button onClick={() => set("kpis", [...config.kpis, { title: t('admin.hr.appraisal.cycleWizard.newKpiDefaultTitle'), weight: 0 }])}
                     className="text-xs font-semibold text-purple-600 hover:underline flex items-center gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Add KPI Category
+                    <Plus className="h-3.5 w-3.5" /> {t('admin.hr.appraisal.cycleWizard.addKpiCategoryButton')}
                   </button>
 
                   <div className={cn("flex items-center justify-between rounded-xl px-4 py-3 font-bold",
                     kpiTotal === 100 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
-                    <span>Total</span>
+                    <span>{t('admin.hr.appraisal.cycleWizard.totalLabel')}</span>
                     <div className="flex items-center gap-3">
                       <span>{kpiTotal}%</span>
-                      {kpiTotal !== 100 && <Button size="sm" variant="outline" onClick={normalizeWeights}>Normalize to 100%</Button>}
+                      {kpiTotal !== 100 && <Button size="sm" variant="outline" onClick={normalizeWeights}>{t('admin.hr.appraisal.cycleWizard.normalizeTo100Button')}</Button>}
                     </div>
                   </div>
                 </div>
@@ -366,25 +402,25 @@ export function AppraisalCycleWizard({
               {step === 4 && (
                 <div className="space-y-5">
                   <div>
-                    <p className="text-sm font-semibold text-slate-700 mb-3">Who reviews whom?</p>
+                    <p className="text-sm font-semibold text-slate-700 mb-3">{t('admin.hr.appraisal.cycleWizard.whoReviewsWhom')}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {config.workflow.chain.map((role, i) => (
                         <div key={role} className="flex items-center gap-2">
-                          <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">{role}</span>
-                          {i < config.workflow.chain.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-slate-300" />}
+                          <span className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">{t(WORKFLOW_ROLE_LABEL_KEYS[role] || role)}</span>
+                          {i < config.workflow.chain.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-slate-300 rtl:rotate-180" />}
                         </div>
                       ))}
-                      <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-                      <span className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">Completed</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 rtl:rotate-180" />
+                      <span className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold">{t('admin.hr.appraisal.cycleWizard.completedLabel')}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {([
-                      ["selfReview", "Enable Self Review"],
-                      ["peerReview", "Enable Peer Review"],
-                      ["review360", "Enable 360°"],
-                      ["parentFeedback", "Enable Parent Feedback"],
-                      ["studentFeedback", "Enable Student Feedback"],
+                      ["selfReview", t('admin.hr.appraisal.cycleWizard.enableSelfReview')],
+                      ["peerReview", t('admin.hr.appraisal.cycleWizard.enablePeerReview')],
+                      ["review360", t('admin.hr.appraisal.cycleWizard.enable360')],
+                      ["parentFeedback", t('admin.hr.appraisal.cycleWizard.enableParentFeedback')],
+                      ["studentFeedback", t('admin.hr.appraisal.cycleWizard.enableStudentFeedback')],
                     ] as const).map(([key, label]) => (
                       <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
                         <span className="text-sm font-medium text-slate-700">{label}</span>
@@ -399,9 +435,9 @@ export function AppraisalCycleWizard({
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
                     {([
-                      ["5-point", "1–5 Scale"],
-                      ["10-point", "1–10 Scale"],
-                      ["letter", "Letter Grade"],
+                      ["5-point", t('admin.hr.appraisal.cycleWizard.scale5Point')],
+                      ["10-point", t('admin.hr.appraisal.cycleWizard.scale10Point')],
+                      ["letter", t('admin.hr.appraisal.cycleWizard.scaleLetterGrade')],
                     ] as [RatingScaleType, string][]).map(([type, label]) => (
                       <button key={type} onClick={() => set("ratingScale", {
                         type,
@@ -418,7 +454,7 @@ export function AppraisalCycleWizard({
                       {RATING_5PT.map((l, i) => (
                         <div key={l} className="text-center p-2 rounded-lg bg-slate-50 border">
                           <p className="font-extrabold text-purple-600">{i + 1}</p>
-                          <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{l}</p>
+                          <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{t(RATING_5PT_LABEL_KEYS[l] || l)}</p>
                         </div>
                       ))}
                     </div>
@@ -431,7 +467,7 @@ export function AppraisalCycleWizard({
                     </div>
                   )}
                   {config.ratingScale.type === "10-point" && (
-                    <p className="text-xs text-slate-500">Reviewers will score each KPI from 1 (lowest) to 10 (highest).</p>
+                    <p className="text-xs text-slate-500">{t('admin.hr.appraisal.cycleWizard.tenPointScaleDescription')}</p>
                   )}
                 </div>
               )}
@@ -440,26 +476,26 @@ export function AppraisalCycleWizard({
                 <div className="space-y-5">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Self Review Due</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.selfReviewDueLabel')}</Label>
                       <Input type="date" value={config.deadlines.selfReview} onChange={(e) => set("deadlines", { ...config.deadlines, selfReview: e.target.value })} className="mt-1" />
                     </div>
                     <div>
-                      <Label>Manager Review Due</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.managerReviewDueLabel')}</Label>
                       <Input type="date" value={config.deadlines.managerReview} onChange={(e) => set("deadlines", { ...config.deadlines, managerReview: e.target.value })} className="mt-1" />
                     </div>
                     <div>
-                      <Label>Principal Approval Due</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.principalApprovalDueLabel')}</Label>
                       <Input type="date" value={config.deadlines.principalApproval} onChange={(e) => set("deadlines", { ...config.deadlines, principalApproval: e.target.value })} className="mt-1" />
                     </div>
                     <div>
-                      <Label>HR Finalize Due</Label>
+                      <Label>{t('admin.hr.appraisal.cycleWizard.hrFinalizeDueLabel')}</Label>
                       <Input type="date" value={config.deadlines.hrFinalize} onChange={(e) => set("deadlines", { ...config.deadlines, hrFinalize: e.target.value })} className="mt-1" />
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Automatic Reminders</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{t('admin.hr.appraisal.cycleWizard.automaticRemindersLabel')}</p>
                     <div className="flex flex-wrap gap-3">
-                      {([["d7", "7 days before"], ["d3", "3 days before"], ["d1", "1 day before"], ["dueDate", "On due date"]] as const).map(([key, label]) => (
+                      {([["d7", t('admin.hr.appraisal.cycleWizard.reminder7DaysBefore')], ["d3", t('admin.hr.appraisal.cycleWizard.reminder3DaysBefore')], ["d1", t('admin.hr.appraisal.cycleWizard.reminder1DayBefore')], ["dueDate", t('admin.hr.appraisal.cycleWizard.reminderOnDueDate')]] as const).map(([key, label]) => (
                         <label key={key} className="flex items-center gap-2 text-sm">
                           <Checkbox checked={config.deadlines.reminders[key]} onCheckedChange={(v) =>
                             set("deadlines", { ...config.deadlines, reminders: { ...config.deadlines.reminders, [key]: !!v } })} />
@@ -474,14 +510,14 @@ export function AppraisalCycleWizard({
               {step === 7 && (
                 <div className="space-y-3">
                   <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
-                    Enterprise feature — these toggles configure which AI-assisted tools are available once reviewers start scoring. Turning one on doesn't fabricate results up front; it unlocks that assistance during the review itself.
+                    {t('admin.hr.appraisal.cycleWizard.aiFeatureIntro')}
                   </div>
                   {([
-                    ["insights", "AI Insights", "Surfaces patterns across scorecards as they're submitted."],
-                    ["summary", "AI Summary", "Drafts a first-pass written summary a reviewer can edit."],
-                    ["kpiSuggestions", "AI KPI Suggestions", "Suggests KPI weight adjustments based on role/department."],
-                    ["biasDetection", "Bias Detection", "Flags rating patterns that may indicate reviewer bias."],
-                    ["performancePrediction", "Performance Prediction", "Projects likely trajectory from historical scores."],
+                    ["insights", t('admin.hr.appraisal.cycleWizard.aiInsightsLabel'), t('admin.hr.appraisal.cycleWizard.aiInsightsDesc')],
+                    ["summary", t('admin.hr.appraisal.cycleWizard.aiSummaryLabel'), t('admin.hr.appraisal.cycleWizard.aiSummaryDesc')],
+                    ["kpiSuggestions", t('admin.hr.appraisal.cycleWizard.aiKpiSuggestionsLabel'), t('admin.hr.appraisal.cycleWizard.aiKpiSuggestionsDesc')],
+                    ["biasDetection", t('admin.hr.appraisal.cycleWizard.biasDetectionLabel'), t('admin.hr.appraisal.cycleWizard.biasDetectionDesc')],
+                    ["performancePrediction", t('admin.hr.appraisal.cycleWizard.performancePredictionLabel'), t('admin.hr.appraisal.cycleWizard.performancePredictionDesc')],
                   ] as const).map(([key, label, desc]) => (
                     <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
                       <div>
@@ -496,39 +532,39 @@ export function AppraisalCycleWizard({
 
               {step === 8 && (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-slate-700 mb-1">Notify enrolled staff via</p>
+                  <p className="text-sm font-semibold text-slate-700 mb-1">{t('admin.hr.appraisal.cycleWizard.notifyEnrolledStaffVia')}</p>
                   {([
-                    ["inApp", "In-App Notification", true],
-                    ["email", "Email", true],
-                    ["push", "Push Notification", true],
-                    ["whatsapp", "WhatsApp", false],
-                    ["sms", "SMS", false],
+                    ["inApp", t('admin.hr.appraisal.cycleWizard.notifyInApp'), true],
+                    ["email", t('admin.hr.appraisal.cycleWizard.notifyEmail'), true],
+                    ["push", t('admin.hr.appraisal.cycleWizard.notifyPush'), true],
+                    ["whatsapp", t('admin.hr.appraisal.cycleWizard.notifyWhatsapp'), false],
+                    ["sms", t('admin.hr.appraisal.cycleWizard.notifySms'), false],
                   ] as const).map(([key, label, wired]) => (
                     <label key={key} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3">
                       <div>
                         <span className="text-sm font-medium text-slate-700">{label}</span>
-                        {!wired && <span className="ml-2 text-[10px] text-amber-600 font-semibold uppercase">Requires setup</span>}
+                        {!wired && <span className="ms-2 text-[10px] text-amber-600 font-semibold uppercase">{t('admin.hr.appraisal.cycleWizard.requiresSetupBadge')}</span>}
                       </div>
                       <Switch checked={config.notifications[key]} onCheckedChange={(v) => set("notifications", { ...config.notifications, [key]: v })} />
                     </label>
                   ))}
-                  <p className="text-xs text-slate-400 pt-1">WhatsApp/SMS need real provider credentials configured under Settings → Integrations before they'll actually send — your preference is saved either way.</p>
+                  <p className="text-xs text-slate-400 pt-1">{t('admin.hr.appraisal.cycleWizard.whatsappSmsSetupNote')}</p>
                 </div>
               )}
 
               {step === 9 && (
                 <div className="space-y-4">
-                  <p className="text-sm font-semibold text-slate-700">Review &amp; Create</p>
+                  <p className="text-sm font-semibold text-slate-700">{t('admin.hr.appraisal.cycleWizard.reviewAndCreateHeading')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      ["Cycle", config.name || "—"],
-                      ["Academic Year", config.academicYear],
-                      ["Employees", `${selectedStaff.length}`],
-                      ["KPIs", `${config.kpis.length}`],
-                      ["Deadline (HR Finalize)", config.deadlines.hrFinalize || "—"],
-                      ["AI", Object.values(config.ai).some(Boolean) ? "Enabled" : "Disabled"],
-                      ["Notifications", Object.entries(config.notifications).filter(([, v]) => v).map(([k]) => k).join(", ") || "None"],
-                      ["Rating Scale", config.ratingScale.type],
+                      [t('admin.hr.appraisal.cycleWizard.summaryCycle'), config.name || "—"],
+                      [t('admin.hr.appraisal.cycleWizard.summaryAcademicYear'), config.academicYear],
+                      [t('admin.hr.appraisal.cycleWizard.summaryEmployees'), `${selectedStaff.length}`],
+                      [t('admin.hr.appraisal.cycleWizard.summaryKpis'), `${config.kpis.length}`],
+                      [t('admin.hr.appraisal.cycleWizard.summaryDeadlineHrFinalize'), config.deadlines.hrFinalize || "—"],
+                      [t('admin.hr.appraisal.cycleWizard.summaryAi'), Object.values(config.ai).some(Boolean) ? t('admin.hr.appraisal.cycleWizard.enabledValue') : t('admin.hr.appraisal.cycleWizard.disabledValue')],
+                      [t('admin.hr.appraisal.cycleWizard.summaryNotifications'), Object.entries(config.notifications).filter(([, v]) => v).map(([k]) => k).join(", ") || t('admin.hr.appraisal.cycleWizard.noneValue')],
+                      [t('admin.hr.appraisal.cycleWizard.summaryRatingScale'), config.ratingScale.type],
                     ].map(([label, value]) => (
                       <div key={label} className="rounded-xl border border-slate-200 p-3">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{label}</p>
@@ -546,30 +582,30 @@ export function AppraisalCycleWizard({
           <div className="px-6 py-3 border-t bg-purple-50 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-purple-800">
-                {progress ? PROGRESS_PHASE_LABEL[progress.phase] : "Starting…"}
-                {progress ? ` — ${progress.done} / ${progress.total}` : ""}
+                {progress ? t(PROGRESS_PHASE_LABEL_KEYS[progress.phase]) : t('admin.hr.appraisal.cycleWizard.startingLabel')}
+                {progress ? t('admin.hr.appraisal.cycleWizard.progressDoneOfTotal', { done: progress.done, total: progress.total }) : ""}
               </span>
-              <span className="text-purple-500 font-medium">Please don't close this window</span>
+              <span className="text-purple-500 font-medium">{t('admin.hr.appraisal.cycleWizard.dontCloseWindowLabel')}</span>
             </div>
             <Progress value={progress ? Math.round((progress.done / Math.max(1, progress.total)) * 100) : 5} className="h-1.5" />
             <p className="text-[10px] text-purple-400">
-              Large rosters are deliberately rate-limited to stay within the server's write limits — this can take a few minutes for a full-school cycle.
+              {t('admin.hr.appraisal.cycleWizard.rateLimitedNote')}
             </p>
           </div>
         )}
         <div className="px-6 py-4 border-t flex items-center justify-between bg-slate-50 rounded-b-lg">
           <Button variant="outline" onClick={step === 1 ? handleClose : back} disabled={submitting}>
-            {step === 1 ? "Cancel" : <><ChevronLeft className="h-4 w-4 mr-1" /> Back</>}
+            {step === 1 ? t('admin.hr.appraisal.cycleWizard.cancelButton') : <><ChevronLeft className="h-4 w-4 me-1 rtl:rotate-180" /> {t('admin.hr.appraisal.cycleWizard.backButton')}</>}
           </Button>
           <div className="flex gap-2">
             {step === 9 && (
-              <Button variant="outline" onClick={() => onSaveDraft(config)} disabled={submitting}>Save Draft</Button>
+              <Button variant="outline" onClick={() => onSaveDraft(config)} disabled={submitting}>{t('admin.hr.appraisal.cycleWizard.saveDraftButton')}</Button>
             )}
             {step < 9 ? (
-              <Button onClick={next} disabled={!canProceed} className="gap-1">Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button onClick={next} disabled={!canProceed} className="gap-1">{t('admin.hr.appraisal.cycleWizard.nextButton')} <ChevronRight className="h-4 w-4 rtl:rotate-180" /></Button>
             ) : (
               <Button onClick={() => onSubmit(config)} disabled={submitting} className="gap-1 bg-purple-600 hover:bg-purple-700">
-                {submitting ? "Creating…" : "Create Cycle"}
+                {submitting ? t('admin.hr.appraisal.cycleWizard.creatingLabel') : t('admin.hr.appraisal.cycleWizard.createCycleButton')}
               </Button>
             )}
           </div>

@@ -1289,7 +1289,7 @@ const ClassDetail = () => {
                                   { v: "grade", label: t('admin.academics.classDetail.sortGrade') },
                                 ].map(o => (
                                   <button key={o.v || "default"} onClick={() => { setFilterSortBy(o.v); setFilterOpen(false); }}
-                                    className={`text-left text-sm font-medium rounded-xl px-3 py-2 border transition-colors ${filterSortBy === o.v ? "bg-[#9810fa] text-white border-[#9810fa]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+                                    className={`text-start text-sm font-medium rounded-xl px-3 py-2 border transition-colors ${filterSortBy === o.v ? "bg-[#9810fa] text-white border-[#9810fa]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
                                     {o.label}
                                   </button>
                                 ))}
@@ -1323,7 +1323,7 @@ const ClassDetail = () => {
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-start border-collapse">
                           <thead>
                             <tr className="bg-slate-50/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                               <th className="px-4 py-4 w-10">
@@ -1368,7 +1368,7 @@ const ClassDetail = () => {
                                         </AvatarFallback>
                                       </Avatar>
                                       <button
-                                        className="text-sm font-bold text-slate-700 hover:text-[#9810fa] hover:underline text-left"
+                                        className="text-sm font-bold text-slate-700 hover:text-[#9810fa] hover:underline text-start"
                                         onClick={() => { setProfileStudent(student as any); setIsProfileOpen(true); }}
                                       >{student.name}</button>
                                     </div>
@@ -2228,17 +2228,17 @@ const ClassDetail = () => {
               return (
                 <div key={i} className="grid grid-cols-2 md:grid-cols-[1.4fr_1.1fr_0.9fr_0.9fr_1.4fr_1fr_auto] gap-2 items-center rounded-xl border border-slate-100 p-2 md:p-1 md:border-0">
                   <Select value={slot.subject} onValueChange={v => update({ subject: v })}>
-                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder="Subject" /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder={t('admin.academics.classDetail.subjectPlaceholder')} /></SelectTrigger>
                     <SelectContent className="rounded-xl max-h-56">
                       {(currentClass?.subjects || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      {(currentClass?.subjects || []).length === 0 && <SelectItem value="none" disabled>No subjects added</SelectItem>}
+                      {(currentClass?.subjects || []).length === 0 && <SelectItem value="none" disabled>{t('admin.academics.classDetail.noSubjectsAdded')}</SelectItem>}
                     </SelectContent>
                   </Select>
                   <Input type="date" className="rounded-xl border-slate-200 h-10" value={slot.date} onChange={e => update({ date: e.target.value })} />
                   <Input type="time" className="rounded-xl border-slate-200 h-10" value={slot.start} onChange={e => update({ start: e.target.value })} />
                   <Input type="time" className="rounded-xl border-slate-200 h-10" value={slot.end} onChange={e => update({ end: e.target.value })} />
                   <Select value={slot.invigilator} onValueChange={v => update({ invigilator: v })}>
-                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder="Invigilator" /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder={t('admin.academics.classDetail.invigilatorPlaceholder')} /></SelectTrigger>
                     <SelectContent className="rounded-xl max-h-56">
                       {(staff && staff.length > 0
                         ? staff.map((m: any) => m.name)
@@ -2247,7 +2247,7 @@ const ClassDetail = () => {
                     </SelectContent>
                   </Select>
                   <Select value={slot.room} onValueChange={v => update({ room: v })}>
-                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder="Hall" /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-slate-200 h-10"><SelectValue placeholder={t('admin.academics.classDetail.hallPlaceholder')} /></SelectTrigger>
                     <SelectContent className="rounded-xl max-h-56">
                       {EXAM_HALLS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                     </SelectContent>
@@ -2261,15 +2261,15 @@ const ClassDetail = () => {
             })}
             <Button variant="outline" className="rounded-xl border-dashed border-slate-300 w-full gap-2 font-semibold text-slate-600"
               onClick={() => setExamSlots(prev => [...prev, { ...blankExamSlot }])}>
-              <Plus className="h-4 w-4" /> Add Subject to Datesheet
+              <Plus className="h-4 w-4" /> {t('admin.academics.classDetail.addSubjectToDatesheet')}
             </Button>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="rounded-xl" onClick={() => setScheduleExamOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setScheduleExamOpen(false)}>{t('admin.academics.classDetail.cancel')}</Button>
             <Button className="rounded-xl gradient-primary text-white font-bold" onClick={() => {
-              if (!examName.trim()) { toast.error("Enter an exam title"); return; }
+              if (!examName.trim()) { toast.error(t('admin.academics.classDetail.enterExamTitleError')); return; }
               const valid = examSlots.filter(s => s.subject && s.date && s.start);
-              if (valid.length === 0) { toast.error("Add at least one subject with a date and start time"); return; }
+              if (valid.length === 0) { toast.error(t('admin.academics.classDetail.addSubjectDateStartError')); return; }
               const missingInvig = valid.filter(s => !s.invigilator).length;
               // Write to the shared store — this also surfaces on the central /exams page.
               const sum = summarizeSlots(valid);
@@ -2280,7 +2280,9 @@ const ClassDetail = () => {
                 appeared: 0, total: classStudents.length || 0,
                 status: "Scheduled", slots: valid, published: false,
               });
-              toast.success(`"${examName.trim()}" datesheet created — ${valid.length} subject${valid.length !== 1 ? "s" : ""} scheduled${missingInvig ? `, ${missingInvig} without invigilator` : ""}`);
+              const subjectClause = valid.length === 1 ? t('admin.academics.classDetail.datesheetSubjectsSingular', { count: valid.length }) : t('admin.academics.classDetail.datesheetSubjectsPlural', { count: valid.length });
+              const missingClause = missingInvig ? t('admin.academics.classDetail.datesheetMissingInvigilatorClause', { count: missingInvig }) : "";
+              toast.success(t('admin.academics.classDetail.datesheetCreatedToast', { name: examName.trim(), subjectClause, missingClause }));
               setScheduleExamOpen(false);
               setExamName("");
               setExamSlots([{ ...blankExamSlot }]);

@@ -347,7 +347,7 @@ function EmptyState({ icon: Icon, title, hint, cta, onCta }: { icon: typeof File
       <p className="text-xs mt-1 max-w-xs">{hint}</p>
       {cta && onCta && (
         <Button size="sm" variant="outline" className="mt-3 border-gray-200 gap-1.5" onClick={onCta}>
-          <ArrowRight className="w-3.5 h-3.5" /> {cta}
+          <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" /> {cta}
         </Button>
       )}
     </div>
@@ -475,7 +475,7 @@ const Exams = () => {
   function saveExamSettings() {
     try { localStorage.setItem(EXAM_SETTINGS_LS_KEY, JSON.stringify(examSettings)); } catch { /* ignore */ }
     void smartDb.create("ExamSettings", examSettings as unknown as Record<string, unknown>, "global").catch(() => {});
-    toast.success("Settings saved");
+    toast.success(t("admin.academics.exams.toast.settingsSaved"));
   }
 
   // ── Reports tab: exam-scoped, marks-backed report generation ────────────────
@@ -509,16 +509,16 @@ const Exams = () => {
   // so a report can never silently "succeed" with no exam picked or no marks
   // entered yet — it tells the admin exactly what to do instead.
   function reportsReady(): boolean {
-    if (!reportExamId) { toast.error("Select an exam first."); return false; }
-    if (reportsLoading) { toast.info("Loading exam data — try again in a moment."); return false; }
+    if (!reportExamId) { toast.error(t("admin.academics.exams.reports.selectExamFirst")); return false; }
+    if (reportsLoading) { toast.info(t("admin.academics.exams.reports.loadingExamData")); return false; }
     if (!hasAnyMarks(reportExamMarks, reportExamId)) {
-      toast.error(`No marks entered for "${reportExam?.name}" yet.`, {
-        description: "Go to Mark Entry first, then come back to generate this report.",
+      toast.error(t("admin.academics.exams.reports.noMarksEntered", { name: reportExam?.name }), {
+        description: t("admin.academics.exams.reports.noMarksEnteredDesc"),
       });
       return false;
     }
     if (reportStudents.length === 0) {
-      toast.error("No enrolled students found for this exam's grade(s)/section(s).");
+      toast.error(t("admin.academics.exams.reports.noEnrolledStudents"));
       return false;
     }
     return true;
@@ -528,18 +528,24 @@ const Exams = () => {
     if (!reportsReady()) return;
     const exam = reportExam!;
 
+    const RESULT_SUMMARY_HEADERS = [t("admin.academics.exams.reports.colRollNo"), t("admin.academics.exams.reports.colName"), t("admin.academics.exams.reports.colGrade"), t("admin.academics.exams.reports.colSection"), t("admin.academics.exams.reports.colTotalPercent"), t("admin.academics.exams.reports.colLetterGrade"), t("admin.academics.exams.reports.colResult")];
+    const SUBJECT_ANALYSIS_HEADERS = [t("admin.academics.exams.reports.colSubject"), t("admin.academics.exams.reports.colEntries"), t("admin.academics.exams.reports.colHighest"), t("admin.academics.exams.reports.colLowest"), t("admin.academics.exams.reports.colAverage"), t("admin.academics.exams.reports.colPass"), t("admin.academics.exams.reports.colFail"), t("admin.academics.exams.reports.colPassRate")];
+    const PASS_FAIL_HEADERS = [t("admin.academics.exams.reports.colGrade"), t("admin.academics.exams.reports.colSection"), t("admin.academics.exams.reports.colTotalStudents"), t("admin.academics.exams.reports.colPassed"), t("admin.academics.exams.reports.colFailed"), t("admin.academics.exams.reports.colIncomplete"), t("admin.academics.exams.reports.colPassRate")];
+    const TEACHER_PERF_HEADERS = [t("admin.academics.exams.reports.colTeacher"), t("admin.academics.exams.reports.colSubject"), t("admin.academics.exams.reports.colGrade"), t("admin.academics.exams.reports.colSection"), t("admin.academics.exams.reports.colEntries"), t("admin.academics.exams.reports.colAverage"), t("admin.academics.exams.reports.colPassRate")];
+    const TOPPER_HEADERS = [t("admin.academics.exams.reports.colRank"), t("admin.academics.exams.reports.colName"), t("admin.academics.exams.reports.colGrade"), t("admin.academics.exams.reports.colSection"), t("admin.academics.exams.reports.colRollNo"), t("admin.academics.exams.reports.colPercentage"), t("admin.academics.exams.reports.colLetterGrade")];
+
     if (key === "result-summary") {
       const rows = computeResultSummary(exam, reportStudents, reportExamMarks);
       const subjectList = Array.from(new Set(rows.flatMap(r => r.subjects.map(s => s.subject))));
       if (action === "download") downloadResultSummaryPDF(exam.name, rows, subjectList);
       else if (action === "print") {
-        printReportTable(exam.name, "Result Summary Report", `${rows.length} students`,
-          ["Roll No", "Name", "Grade", "Section", "Total %", "Letter Grade", "Result"],
+        printReportTable(exam.name, t("admin.academics.exams.reports.resultSummaryTitle"), t("admin.academics.exams.reports.studentsCount", { count: rows.length }),
+          RESULT_SUMMARY_HEADERS,
           rows.map(r => [r.rollNo, r.name, r.grade, r.section, r.maxTotal ? `${r.percentage.toFixed(1)}%` : "—", r.letter, r.result]));
       } else {
         setReportPreview({
-          title: "Result Summary Report", subtitle: `${rows.length} students`,
-          headers: ["Roll No", "Name", "Grade", "Section", "Total %", "Letter Grade", "Result"],
+          title: t("admin.academics.exams.reports.resultSummaryTitle"), subtitle: t("admin.academics.exams.reports.studentsCount", { count: rows.length }),
+          headers: RESULT_SUMMARY_HEADERS,
           rows: rows.map(r => [r.rollNo, r.name, r.grade, r.section, r.maxTotal ? `${r.percentage.toFixed(1)}%` : "—", r.letter, r.result]),
         });
       }
@@ -548,16 +554,16 @@ const Exams = () => {
 
     if (key === "subject-analysis") {
       const rows = computeSubjectAnalysis(exam, reportStudents, reportExamMarks);
-      if (rows.length === 0) { toast.error("No graded subjects found for this exam yet."); return; }
+      if (rows.length === 0) { toast.error(t("admin.academics.exams.reports.noGradedSubjects")); return; }
       if (action === "download") downloadSubjectAnalysisPDF(exam.name, rows);
       else if (action === "print") {
-        printReportTable(exam.name, "Subject Analysis", `${rows.length} subjects`,
-          ["Subject", "Entries", "Highest", "Lowest", "Average", "Pass", "Fail", "Pass Rate"],
+        printReportTable(exam.name, t("admin.academics.exams.reports.subjectAnalysisTitle"), t("admin.academics.exams.reports.subjectsCount", { count: rows.length }),
+          SUBJECT_ANALYSIS_HEADERS,
           rows.map(r => [r.subject, String(r.entries), String(r.highest), String(r.lowest), r.average.toFixed(1), String(r.passCount), String(r.failCount), `${r.passRate.toFixed(1)}%`]));
       } else {
         setReportPreview({
-          title: "Subject Analysis", subtitle: `${rows.length} subjects`,
-          headers: ["Subject", "Entries", "Highest", "Lowest", "Average", "Pass", "Fail", "Pass Rate"],
+          title: t("admin.academics.exams.reports.subjectAnalysisTitle"), subtitle: t("admin.academics.exams.reports.subjectsCount", { count: rows.length }),
+          headers: SUBJECT_ANALYSIS_HEADERS,
           rows: rows.map(r => [r.subject, String(r.entries), String(r.highest), String(r.lowest), r.average.toFixed(1), String(r.passCount), String(r.failCount), `${r.passRate.toFixed(1)}%`]),
         });
       }
@@ -570,8 +576,8 @@ const Exams = () => {
       else if (action === "print") printBulkReportCards(exam.name, rows);
       else {
         setReportPreview({
-          title: "Report Cards (Bulk)", subtitle: `${rows.length} students will get a report card`,
-          headers: ["Roll No", "Name", "Grade", "Section", "Total %", "Result"],
+          title: t("admin.academics.exams.reports.reportCardsTitle"), subtitle: t("admin.academics.exams.reports.reportCardsSubtitle", { count: rows.length }),
+          headers: [t("admin.academics.exams.reports.colRollNo"), t("admin.academics.exams.reports.colName"), t("admin.academics.exams.reports.colGrade"), t("admin.academics.exams.reports.colSection"), t("admin.academics.exams.reports.colTotalPercent"), t("admin.academics.exams.reports.colResult")],
           rows: rows.map(r => [r.rollNo, r.name, r.grade, r.section, r.maxTotal ? `${r.percentage.toFixed(1)}%` : "—", r.result]),
         });
       }
@@ -582,13 +588,13 @@ const Exams = () => {
       const rows = computePassFail(exam, reportStudents, reportExamMarks);
       if (action === "download") downloadPassFailPDF(exam.name, rows);
       else if (action === "print") {
-        printReportTable(exam.name, "Pass / Fail Report", `${rows.length} groups`,
-          ["Grade", "Section", "Total Students", "Passed", "Failed", "Incomplete", "Pass Rate"],
+        printReportTable(exam.name, t("admin.academics.exams.reports.passFailTitle"), t("admin.academics.exams.reports.groupsCount", { count: rows.length }),
+          PASS_FAIL_HEADERS,
           rows.map(r => [r.grade, r.section, String(r.totalStudents), String(r.passed), String(r.failed), String(r.incomplete), `${r.passRate.toFixed(1)}%`]));
       } else {
         setReportPreview({
-          title: "Pass / Fail Report", subtitle: `${rows.length} groups`,
-          headers: ["Grade", "Section", "Total Students", "Passed", "Failed", "Incomplete", "Pass Rate"],
+          title: t("admin.academics.exams.reports.passFailTitle"), subtitle: t("admin.academics.exams.reports.groupsCount", { count: rows.length }),
+          headers: PASS_FAIL_HEADERS,
           rows: rows.map(r => [r.grade, r.section, String(r.totalStudents), String(r.passed), String(r.failed), String(r.incomplete), `${r.passRate.toFixed(1)}%`]),
         });
       }
@@ -597,16 +603,16 @@ const Exams = () => {
 
     if (key === "teacher-performance") {
       const rows = computeTeacherPerformance(exam, reportStudents, reportExamMarks, allSubjectAssignments);
-      if (rows.length === 0) { toast.error("No graded subjects found for this exam yet."); return; }
+      if (rows.length === 0) { toast.error(t("admin.academics.exams.reports.noGradedSubjects")); return; }
       if (action === "download") downloadTeacherPerformancePDF(exam.name, rows);
       else if (action === "print") {
-        printReportTable(exam.name, "Teacher Performance", `${rows.length} subject sittings`,
-          ["Teacher", "Subject", "Grade", "Section", "Entries", "Average", "Pass Rate"],
+        printReportTable(exam.name, t("admin.academics.exams.reports.teacherPerformanceTitle"), t("admin.academics.exams.reports.subjectSittingsCount", { count: rows.length }),
+          TEACHER_PERF_HEADERS,
           rows.map(r => [r.teacherName, r.subject, r.grade, r.section, String(r.entries), r.average.toFixed(1), `${r.passRate.toFixed(1)}%`]));
       } else {
         setReportPreview({
-          title: "Teacher Performance", subtitle: `${rows.length} subject sittings`,
-          headers: ["Teacher", "Subject", "Grade", "Section", "Entries", "Average", "Pass Rate"],
+          title: t("admin.academics.exams.reports.teacherPerformanceTitle"), subtitle: t("admin.academics.exams.reports.subjectSittingsCount", { count: rows.length }),
+          headers: TEACHER_PERF_HEADERS,
           rows: rows.map(r => [r.teacherName, r.subject, r.grade, r.section, String(r.entries), r.average.toFixed(1), `${r.passRate.toFixed(1)}%`]),
         });
       }
@@ -615,16 +621,16 @@ const Exams = () => {
 
     if (key === "topper-list") {
       const rows = computeTopperList(exam, reportStudents, reportExamMarks, 10);
-      if (rows.length === 0) { toast.error("No students have complete marks yet — toppers need every subject graded."); return; }
+      if (rows.length === 0) { toast.error(t("admin.academics.exams.reports.noCompleteMarks")); return; }
       if (action === "download") downloadTopperListPDF(exam.name, rows);
       else if (action === "print") {
-        printReportTable(exam.name, "Topper List", `Top ${rows.length}`,
-          ["Rank", "Name", "Grade", "Section", "Roll No", "Percentage", "Letter Grade"],
+        printReportTable(exam.name, t("admin.academics.exams.reports.topperListTitle"), t("admin.academics.exams.reports.topCount", { count: rows.length }),
+          TOPPER_HEADERS,
           rows.map(r => [String(r.rank), r.name, r.grade, r.section, r.rollNo, `${r.percentage.toFixed(1)}%`, r.letter]));
       } else {
         setReportPreview({
-          title: "Topper List", subtitle: `Top ${rows.length}`,
-          headers: ["Rank", "Name", "Grade", "Section", "Roll No", "Percentage", "Letter Grade"],
+          title: t("admin.academics.exams.reports.topperListTitle"), subtitle: t("admin.academics.exams.reports.topCount", { count: rows.length }),
+          headers: TOPPER_HEADERS,
           rows: rows.map(r => [String(r.rank), r.name, r.grade, r.section, r.rollNo, `${r.percentage.toFixed(1)}%`, r.letter]),
         });
       }
@@ -791,12 +797,12 @@ const Exams = () => {
 
   const handleSave = () => {
     // ── Basic Info ────────────────────────────────────────────────────────
-    if (!form.name.trim()) { toast.error("Exam name is required"); return; }
-    if (form.mode !== "Online" && !form.venue.trim()) { toast.error("Exam venue is required for Offline/Hybrid exams"); return; }
-    if (!form.maxMarks || form.maxMarks <= 0) { toast.error("Maximum marks must be greater than 0"); return; }
-    if (form.passingMarks == null || form.passingMarks < 0) { toast.error("Passing marks cannot be negative"); return; }
-    if (form.passingMarks > form.maxMarks) { toast.error("Passing marks cannot exceed maximum marks"); return; }
-    if (selectedGrades.length === 0) { toast.error("Select at least one grade"); return; }
+    if (!form.name.trim()) { toast.error(t("admin.academics.exams.validation.nameRequired")); return; }
+    if (form.mode !== "Online" && !form.venue.trim()) { toast.error(t("admin.academics.exams.validation.venueRequired")); return; }
+    if (!form.maxMarks || form.maxMarks <= 0) { toast.error(t("admin.academics.exams.validation.maxMarksPositive")); return; }
+    if (form.passingMarks == null || form.passingMarks < 0) { toast.error(t("admin.academics.exams.validation.passingMarksNegative")); return; }
+    if (form.passingMarks > form.maxMarks) { toast.error(t("admin.academics.exams.validation.passingExceedsMax")); return; }
+    if (selectedGrades.length === 0) { toast.error(t("admin.academics.exams.validation.selectAtLeastOneGrade")); return; }
 
     // Status is meant to move strictly forward (Scheduled → Ongoing →
     // Completed → Published). Reverting or skipping backward is sometimes a
@@ -806,8 +812,7 @@ const Exams = () => {
       const original = exams.find(e => e.id === editingId);
       if (original && !isForwardStatusTransition(original.status, form.status)) {
         const ok = window.confirm(
-          `You're changing "${form.name.trim() || "this exam"}" from "${original.status}" back to "${form.status}". ` +
-          `This can hide already-published results/marks-entry access from teachers and students. Continue?`
+          t("admin.academics.exams.validation.statusRevertConfirm", { name: form.name.trim() || t("admin.academics.exams.validation.thisExam"), from: original.status, to: form.status })
         );
         if (!ok) return;
       }
@@ -823,13 +828,13 @@ const Exams = () => {
       // that would otherwise be saved silently and confuse everyone downstream.
       const incomplete = allRows.find(s => (s.subject || s.date || s.start) && (!s.subject || !s.date || !s.start));
       if (incomplete) {
-        toast.error(`${g}: complete or remove the "${incomplete.subject || "untitled"}" row — subject, date and start time are all required.`);
+        toast.error(t("admin.academics.exams.validation.incompleteRow", { grade: g, subject: incomplete.subject || t("admin.academics.exams.validation.untitled") }));
         return;
       }
 
       const rows = allRows.filter(s => s.subject && s.date && s.start && s.end);
       if (rows.length === 0) {
-        toast.error(`${g}: add at least one subject exam slot with a date and start time.`);
+        toast.error(t("admin.academics.exams.validation.addAtLeastOneSlot", { grade: g }));
         return;
       }
 
@@ -840,7 +845,7 @@ const Exams = () => {
       rows.forEach(s => subjectCounts.set(s.subject.toLowerCase(), (subjectCounts.get(s.subject.toLowerCase()) || 0) + 1));
       const dupe = [...subjectCounts.entries()].find(([, count]) => count > 1);
       if (dupe) {
-        toast.error(`${g}: "${rows.find(s => s.subject.toLowerCase() === dupe[0])?.subject}" is scheduled twice — each subject may only appear once per grade.`);
+        toast.error(t("admin.academics.exams.validation.subjectScheduledTwice", { subject: rows.find(s => s.subject.toLowerCase() === dupe[0])?.subject }));
         return;
       }
 
@@ -852,8 +857,8 @@ const Exams = () => {
       const unassigned = rows.find(s => !allowedSubjects.has((s.subject || "").toLowerCase()));
       if (unassigned) {
         const scopeLabel = gd.sections.length === 0 ? g : `${g} · Section ${gd.sections.join("/")}`;
-        toast.error(`${g}: "${unassigned.subject}" has no teacher assigned for ${scopeLabel} in Subject Allocation.`, {
-          description: "Assign a teacher to this subject for the selected section(s) first, or remove this exam slot.",
+        toast.error(t("admin.academics.exams.validation.noTeacherAssigned", { grade: g, subject: unassigned.subject, scope: scopeLabel }), {
+          description: t("admin.academics.exams.validation.noTeacherAssignedDesc"),
         });
         return;
       }
@@ -861,7 +866,7 @@ const Exams = () => {
       // Date sanity — no exam slot may be scheduled in the past.
       const pastDated = rows.find(s => s.date < todayStr);
       if (pastDated) {
-        toast.error(`${g}: "${pastDated.subject}" is dated ${pastDated.date}, which is in the past. Pick a future date.`);
+        toast.error(t("admin.academics.exams.validation.pastDated", { grade: g, subject: pastDated.subject, date: pastDated.date }));
         return;
       }
 
@@ -872,7 +877,7 @@ const Exams = () => {
           if (rows[a].date !== rows[b].date) continue;
           const overlap = rows[a].start < rows[b].end && rows[b].start < rows[a].end;
           if (overlap) {
-            toast.error(`Timetable conflict in ${g}: "${rows[a].subject || "Subject"}" and "${rows[b].subject || "Subject"}" overlap on ${rows[a].date}.`);
+            toast.error(t("admin.academics.exams.validation.timetableConflict", { grade: g, subjectA: rows[a].subject || t("admin.academics.exams.validation.subjectFallback"), subjectB: rows[b].subject || t("admin.academics.exams.validation.subjectFallback"), date: rows[a].date }));
             return;
           }
         }
@@ -906,12 +911,12 @@ const Exams = () => {
     };
     if (editingId) {
       updateExam(editingId, { ...clean, id: editingId });
-      toast.success(`"${clean.name}" updated`);
+      toast.success(t("admin.academics.exams.toast.examUpdated", { name: clean.name }));
     } else {
       const id = nextExamId();
       addExam({ ...clean, id });
-      const gradeLabel = gradePlans.length > 1 ? `${gradePlans.length} grades (${gradePlans.map(p => p.grade).join(", ")})` : `${primary.grade} · ${primary.section}`;
-      toast.success(`"${clean.name}" created for ${gradeLabel}`);
+      const gradeLabel = gradePlans.length > 1 ? t("admin.academics.exams.toast.gradesLabel", { count: gradePlans.length, list: gradePlans.map(p => p.grade).join(", ") }) : `${primary.grade} · ${primary.section}`;
+      toast.success(t("admin.academics.exams.toast.examCreatedFor", { name: clean.name, gradeLabel }));
     }
     setFormOpen(false);
   };
@@ -919,7 +924,7 @@ const Exams = () => {
   const confirmDelete = () => {
     if (!deleteTarget) return;
     deleteExam(deleteTarget.id);
-    toast.success(`"${deleteTarget.name}" deleted`);
+    toast.success(t("admin.academics.exams.toast.examDeleted", { name: deleteTarget.name }));
     setDeleteTarget(null);
   };
 
@@ -1313,7 +1318,7 @@ const Exams = () => {
             </div>
 
             <DialogFooter className="pt-3 border-t border-gray-100 shrink-0">
-              <div className="flex gap-2 mr-auto">
+              <div className="flex gap-2 me-auto">
                 <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => printExamTimetable(viewTarget!)}><Printer className="w-4 h-4" /> {t("admin.academics.exams.view.print")}</Button>
                 <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { downloadTimetablePDF(viewTarget!); toast.success(t("admin.academics.exams.toast.timetablePdfDownloaded")); }}><Download className="w-4 h-4" /> {t("admin.academics.exams.view.downloadPdfPlain")}</Button>
                 <Button variant="outline" className="border-gray-200 gap-1.5" onClick={() => { exportExamCSV(viewTarget!); toast.success(t("admin.academics.exams.toast.scheduleDownloaded")); }}><Download className="w-4 h-4" /> {t("admin.academics.exams.view.exportCsv")}</Button>
@@ -1467,7 +1472,7 @@ const Exams = () => {
                         {/* Sections + roll counts for this grade */}
                         <div className="grid grid-cols-2 gap-3 mb-4">
                           <div>
-                            <Label className="text-xs font-semibold text-gray-600 mb-1 block">Sections — {g}</Label>
+                            <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.sectionsLabel")} — {g}</Label>
                             <div className="flex flex-wrap gap-2 mt-1">
                               {SECTION_OPTIONS.map(sec => {
                                 const isAll = sec === "All Sections";
@@ -1484,20 +1489,20 @@ const Exams = () => {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <Label className="text-xs font-semibold text-gray-600 mb-1 block">Total Students</Label>
+                              <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.totalStudents")}</Label>
                               <Input type="number" min={0} value={gd.total || ""} onChange={e => updateGradeCount(g, "total", Number(e.target.value))} placeholder="0" className="border-gray-200" />
                             </div>
                             <div>
-                              <Label className="text-xs font-semibold text-gray-600 mb-1 block">Appeared</Label>
+                              <Label className="text-xs font-semibold text-gray-600 mb-1 block">{t("admin.academics.exams.dialog.appeared")}</Label>
                               <Input type="number" min={0} value={gd.appeared || ""} onChange={e => updateGradeCount(g, "appeared", Number(e.target.value))} placeholder="0" className="border-gray-200" />
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Subject-wise Exam Schedule — {g}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">{t("admin.academics.exams.dialog.subjectwiseScheduleFor")} — {g}</p>
                           <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs border-blue-200 text-purple-600 hover:bg-blue-50" onClick={() => addSlotRow(g)}>
-                            <PlusCircle className="w-3.5 h-3.5" /> Add Subject
+                            <PlusCircle className="w-3.5 h-3.5" /> {t("admin.academics.exams.dialog.addSubject")}
                           </Button>
                         </div>
 
@@ -1505,17 +1510,17 @@ const Exams = () => {
                           <button onClick={() => addSlotRow(g)}
                             className="w-full border-2 border-dashed border-gray-200 rounded-xl py-5 flex flex-col items-center gap-2 text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50/30 transition-all">
                             <PlusCircle className="w-7 h-7" />
-                            <span className="text-sm font-semibold">Add subject exam slots for {g}</span>
-                            <span className="text-xs">Define date, time, duration, invigilator and room per subject</span>
+                            <span className="text-sm font-semibold">{t("admin.academics.exams.dialog.addSlotsFor", { grade: g })}</span>
+                            <span className="text-xs">{t("admin.academics.exams.dialog.defineDateTimeHint")}</span>
                           </button>
                         ) : (
                           <div className="space-y-3">
                             <div className="grid grid-cols-12 gap-2 px-1">
-                              <span className="col-span-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Subject</span>
-                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Date</span>
-                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Start</span>
-                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Duration</span>
-                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Ends</span>
+                              <span className="col-span-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t("admin.academics.exams.view.colSubject")}</span>
+                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t("admin.academics.exams.scheduleTab.colDate")}</span>
+                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t("admin.academics.exams.view.colStart")}</span>
+                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t("admin.academics.exams.view.colDuration")}</span>
+                              <span className="col-span-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t("admin.academics.exams.dialog.colEnds")}</span>
                               <span className="col-span-1" />
                             </div>
                             {gd.slotRows.map((slot, i) => (
@@ -1547,7 +1552,7 @@ const Exams = () => {
                                           }));
                                         }}>
                                           <SelectTrigger className="h-9 text-xs border-gray-200 bg-white">
-                                            <SelectValue placeholder="Select Subject">
+                                            <SelectValue placeholder={t("admin.academics.exams.dialog.selectSubject")}>
                                               {slot.subject
                                                 ? slot.subjectCode
                                                   ? <span className="flex items-center gap-1.5">
@@ -1571,7 +1576,7 @@ const Exams = () => {
                                                   </SelectItem>
                                                 ))
                                               : <div className="px-3 py-2 text-xs text-gray-400 max-w-[220px]">
-                                                  {gradeSubjects.length === 0 ? `No subjects assigned to ${scopeLabel} yet. Assign subjects & teachers in Subject Allocation first.` : `All subjects assigned to ${scopeLabel} are already scheduled.`}
+                                                  {gradeSubjects.length === 0 ? t("admin.academics.exams.dialog.noSubjectsAssigned", { scope: scopeLabel }) : t("admin.academics.exams.dialog.allSubjectsScheduled", { scope: scopeLabel })}
                                                 </div>}
                                           </SelectContent>
                                         </Select>
@@ -1582,7 +1587,7 @@ const Exams = () => {
                                     <button
                                       type="button"
                                       tabIndex={-1}
-                                      aria-label="Open calendar"
+                                      aria-label={t("admin.academics.exams.dialog.openCalendar")}
                                       onClick={(e) => {
                                         const input = e.currentTarget.parentElement?.querySelector('input[type="date"]') as (HTMLInputElement & { showPicker?: () => void }) | null;
                                         if (!input) return;
@@ -1592,7 +1597,7 @@ const Exams = () => {
                                           input.focus();
                                         }
                                       }}
-                                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-blue-500 cursor-pointer transition-colors"
+                                      className="absolute start-2 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-blue-500 cursor-pointer transition-colors"
                                     >
                                       <CalendarDays className="h-3.5 w-3.5" />
                                     </button>
@@ -1608,7 +1613,7 @@ const Exams = () => {
                                       }}
                                       onChange={e => updateSlotRow(g, i, "date", e.target.value)}
                                       className={cn(
-                                        "h-9 text-xs border-gray-200 bg-white pl-7 pr-2 w-full cursor-pointer",
+                                        "h-9 text-xs border-gray-200 bg-white ps-7 pe-2 w-full cursor-pointer",
                                         "[&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer",
                                         !slot.date && slot.subject ? "border-rose-300 focus-visible:ring-rose-300" : ""
                                       )}
@@ -1635,7 +1640,7 @@ const Exams = () => {
                               </div>
                             ))}
                             <button onClick={() => addSlotRow(g)} className="w-full border border-dashed border-blue-200 rounded-xl py-2 flex items-center justify-center gap-2 text-xs text-blue-500 font-semibold hover:bg-blue-50 transition-colors">
-                              <PlusCircle className="w-3.5 h-3.5" /> Add Another Subject
+                              <PlusCircle className="w-3.5 h-3.5" /> {t("admin.academics.exams.dialog.addAnotherSubject")}
                             </button>
                           </div>
                         )}
@@ -1648,9 +1653,9 @@ const Exams = () => {
           </div>
 
           <DialogFooter className="pt-3 border-t border-gray-100 shrink-0">
-            <Button variant="outline" className="border-gray-200" onClick={() => setFormOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="border-gray-200" onClick={() => setFormOpen(false)}>{t("admin.academics.exams.dialog.cancel")}</Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-md shadow-blue-200" onClick={handleSave}>
-              <CheckCircle2 className="w-4 h-4" /> {editingId ? "Save Changes" : "Create Exam"}
+              <CheckCircle2 className="w-4 h-4" /> {editingId ? t("admin.academics.exams.dialog.saveChanges") : t("admin.academics.exams.createExam")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1661,24 +1666,24 @@ const Exams = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-              <span className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center"><Trash2 className="w-4 h-4 text-rose-600" /></span> Delete Exam
+              <span className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center"><Trash2 className="w-4 h-4 text-rose-600" /></span> {t("admin.academics.exams.deleteDialog.title")}
             </DialogTitle>
-            <DialogDescription>This permanently removes <strong>{deleteTarget?.name}</strong> ({deleteTarget?.grade} · {deleteTarget?.section}) from all views. This cannot be undone.</DialogDescription>
+            <DialogDescription>{t("admin.academics.exams.deleteDialog.description", { name: deleteTarget?.name, grade: deleteTarget?.grade, section: deleteTarget?.section })}</DialogDescription>
           </DialogHeader>
           {deleteImpact && (deleteImpact.markedStudents > 0 || deleteImpact.seatingRooms > 0) && (
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>
-                This exam also has real data that will be deleted with it:
-                {deleteImpact.markedStudents > 0 && <> <strong>{deleteImpact.markedStudents} students'</strong> entered marks</>}
-                {deleteImpact.markedStudents > 0 && deleteImpact.seatingRooms > 0 && " and"}
-                {deleteImpact.seatingRooms > 0 && <> <strong>{deleteImpact.seatingRooms} allocated room{deleteImpact.seatingRooms === 1 ? "" : "s"}</strong>' seating</>}.
+                {t("admin.academics.exams.deleteDialog.hasRealData")}
+                {deleteImpact.markedStudents > 0 && <> <strong>{t("admin.academics.exams.deleteDialog.studentsMarks", { count: deleteImpact.markedStudents })}</strong></>}
+                {deleteImpact.markedStudents > 0 && deleteImpact.seatingRooms > 0 && ` ${t("admin.academics.exams.deleteDialog.and")}`}
+                {deleteImpact.seatingRooms > 0 && <> <strong>{deleteImpact.seatingRooms === 1 ? t("admin.academics.exams.deleteDialog.roomsSeatingSingular", { count: deleteImpact.seatingRooms }) : t("admin.academics.exams.deleteDialog.roomsSeatingPlural", { count: deleteImpact.seatingRooms })}</strong></>}.
               </span>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" className="border-gray-200" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5" onClick={confirmDelete}><Trash2 className="w-4 h-4" /> Delete</Button>
+            <Button variant="outline" className="border-gray-200" onClick={() => setDeleteTarget(null)}>{t("admin.academics.exams.dialog.cancel")}</Button>
+            <Button className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5" onClick={confirmDelete}><Trash2 className="w-4 h-4" /> {t("admin.academics.exams.deleteDialog.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -38,6 +38,7 @@ import {
 } from "@/lib/ptm";
 import { TeacherAvailability, getAllTeacherAvailability } from "@/lib/teacherAvailability";
 import { useIntegrationConnected } from "@/hooks/useIntegrationStatus";
+import { useTranslation } from "react-i18next";
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const timeSlots = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM"];
@@ -80,7 +81,34 @@ const emptyForm = () => ({
   duration: "30 min",
 });
 
+const DAY_LABEL_KEYS: Record<string, string> = {
+  Monday: "admin.hr.ptmBooking.dayMonday",
+  Tuesday: "admin.hr.ptmBooking.dayTuesday",
+  Wednesday: "admin.hr.ptmBooking.dayWednesday",
+  Thursday: "admin.hr.ptmBooking.dayThursday",
+  Friday: "admin.hr.ptmBooking.dayFriday",
+};
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Pending: "admin.hr.ptmBooking.statusPending",
+  Scheduled: "admin.hr.ptmBooking.statusScheduled",
+  "Checked In": "admin.hr.ptmBooking.statusCheckedIn",
+  "In Progress": "admin.hr.ptmBooking.statusInProgress",
+  Completed: "admin.hr.ptmBooking.statusCompleted",
+  Cancelled: "admin.hr.ptmBooking.statusCancelled",
+  Rescheduled: "admin.hr.ptmBooking.statusRescheduled",
+  "No Show": "admin.hr.ptmBooking.statusNoShow",
+};
+
+const MODE_LABEL_KEYS: Record<string, string> = {
+  Offline: "admin.hr.ptmBooking.modeOffline",
+  Online: "admin.hr.ptmBooking.modeOnline",
+  Hybrid: "admin.hr.ptmBooking.modeHybrid",
+  "Awaiting Choice": "admin.hr.ptmBooking.modeAwaitingChoice",
+};
+
 export default function PTMBooking() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { connected: whatsappConnected } = useIntegrationConnected("whatsapp-business");
   const { connected: zoomConnected } = useIntegrationConnected("zoom");

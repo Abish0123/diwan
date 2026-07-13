@@ -36,6 +36,7 @@ import {
 } from "recharts";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 const COLORS = ["#9810fa", "#d12386", "#F59E0B", "#10B981", "#3B82F6"];
 
@@ -57,6 +58,11 @@ interface LeaveRequest {
   createdAt?: string;
 }
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Approved: "admin.hr.dashboard.statusApproved",
+  Pending: "admin.hr.dashboard.statusPending",
+};
+
 function formatDate(d?: string): string {
   if (!d) return "";
   const dt = new Date(d);
@@ -66,6 +72,7 @@ function formatDate(d?: string): string {
 const HRDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [staff, setStaff] = useState<Record<string, unknown>[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [payroll, setPayroll] = useState<Record<string, unknown>[]>([]);
@@ -166,12 +173,12 @@ const HRDashboard = () => {
               <LayoutDashboard className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">HR & Payroll Dashboard</h1>
-              <p className="text-sm text-slate-400">Overview of staff metrics, payroll, and leave management.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.hr.dashboard.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.hr.dashboard.pageSubtitle')}</p>
             </div>
           </div>
           <Button onClick={() => navigate("/hr/settings")} variant="outline" className="gap-2 shrink-0">
-            <Settings className="h-4 w-4" /> HR Settings & Policies
+            <Settings className="h-4 w-4" /> {t('admin.hr.dashboard.hrSettingsButton')}
           </Button>
         </motion.div>
 
@@ -180,10 +187,10 @@ const HRDashboard = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {[
-            { label: "Total Staff", value: String(totalStaff), icon: Users, color: "blue", sub: `${totalStaff} active records` },
-            { label: "Present Today", value: String(presentToday), icon: UserCheck, color: "green", sub: `${attendancePct}% attendance` },
-            { label: "On Leave", value: String(onLeaveCount), icon: Calendar, color: "orange", sub: `${pendingLeave} pending requests` },
-            { label: "Monthly Payroll", value: `$${payrollTotal.toLocaleString()}`, icon: DollarSign, color: "purple", sub: "Processed" },
+            { label: t('admin.hr.dashboard.statTotalStaff'), value: String(totalStaff), icon: Users, color: "blue", sub: t('admin.hr.dashboard.statTotalStaffSub', { count: totalStaff }) },
+            { label: t('admin.hr.dashboard.statPresentToday'), value: String(presentToday), icon: UserCheck, color: "green", sub: t('admin.hr.dashboard.statPresentTodaySub', { pct: attendancePct }) },
+            { label: t('admin.hr.dashboard.statOnLeave'), value: String(onLeaveCount), icon: Calendar, color: "orange", sub: t('admin.hr.dashboard.statOnLeaveSub', { count: pendingLeave }) },
+            { label: t('admin.hr.dashboard.statMonthlyPayroll'), value: `$${payrollTotal.toLocaleString()}`, icon: DollarSign, color: "purple", sub: t('admin.hr.dashboard.statProcessed') },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -208,8 +215,8 @@ const HRDashboard = () => {
         >
           <Card className="premium-card border-none shadow-xl overflow-hidden">
             <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-              <CardTitle className="text-lg font-bold">Payroll Trends</CardTitle>
-              <CardDescription>Monthly payroll expenditure vs staff count</CardDescription>
+              <CardTitle className="text-lg font-bold">{t('admin.hr.dashboard.payrollTrendsTitle')}</CardTitle>
+              <CardDescription>{t('admin.hr.dashboard.payrollTrendsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="h-[300px] w-full">
@@ -230,8 +237,8 @@ const HRDashboard = () => {
 
           <Card className="premium-card border-none shadow-xl overflow-hidden">
             <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-              <CardTitle className="text-lg font-bold">Staff Distribution</CardTitle>
-              <CardDescription>By Department</CardDescription>
+              <CardTitle className="text-lg font-bold">{t('admin.hr.dashboard.staffDistributionTitle')}</CardTitle>
+              <CardDescription>{t('admin.hr.dashboard.byDepartment')}</CardDescription>
             </CardHeader>
             <CardContent className="p-6 flex items-center justify-center">
               <div className="h-[300px] w-full">
@@ -256,7 +263,7 @@ const HRDashboard = () => {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex flex-col gap-2 ml-4">
+              <div className="flex flex-col gap-2 ms-4">
                 {departmentData.map((dept, i) => (
                   <div key={dept.name} className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
@@ -275,21 +282,22 @@ const HRDashboard = () => {
           <Card className="premium-card border-none shadow-xl lg:col-span-2 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-br from-primary/5 to-transparent">
               <div>
-                <CardTitle className="text-lg font-bold">Recent Leave Requests</CardTitle>
-                <CardDescription>Awaiting approval</CardDescription>
+                <CardTitle className="text-lg font-bold">{t('admin.hr.dashboard.recentLeaveRequestsTitle')}</CardTitle>
+                <CardDescription>{t('admin.hr.dashboard.awaitingApproval')}</CardDescription>
               </div>
               <Briefcase className="h-5 w-5 text-muted-foreground/50" />
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
                 {recentLeave.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No leave requests found.</p>
+                  <p className="text-sm text-muted-foreground text-center py-6">{t('admin.hr.dashboard.noLeaveRequestsFound')}</p>
                 ) : (
                   recentLeave.map((leave, i) => {
-                    const name = leave.name || leave.employeeName || leave.staffName || "Unknown";
-                    const type = leave.type || leave.leaveType || "Leave";
-                    const duration = leave.duration || (leave.days ? `${leave.days} day${leave.days === 1 ? "" : "s"}` : "—");
+                    const name = leave.name || leave.employeeName || leave.staffName || t('admin.hr.dashboard.unknownName');
+                    const type = leave.type || leave.leaveType || t('admin.hr.dashboard.leaveTypeDefault');
+                    const duration = leave.duration || (leave.days ? (leave.days === 1 ? t('admin.hr.dashboard.oneDay') : t('admin.hr.dashboard.multipleDays', { count: leave.days })) : "—");
                     const status = leave.status || "Pending";
+                    const statusLabel = STATUS_LABEL_KEYS[status] ? t(STATUS_LABEL_KEYS[status]) : status;
                     const date = leave.date || [formatDate(leave.startDate), formatDate(leave.endDate)].filter(Boolean).join(" – ") || "—";
                     return (
                   <motion.div
@@ -306,12 +314,12 @@ const HRDashboard = () => {
                         <p className="text-[10px] text-muted-foreground">{type} • {duration}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-[10px] font-medium mb-1">{date}</p>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         status === "Approved" ? "bg-green-100 text-green-600" : "bg-orange-100 text-orange-600"
                       }`}>
-                        {status}
+                        {statusLabel}
                       </span>
                     </div>
                   </motion.div>
@@ -324,8 +332,8 @@ const HRDashboard = () => {
 
           <Card className="premium-card border-none shadow-xl overflow-hidden">
             <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-              <CardTitle className="text-lg font-bold">HR Alerts</CardTitle>
-              <CardDescription>Important notifications</CardDescription>
+              <CardTitle className="text-lg font-bold">{t('admin.hr.dashboard.hrAlertsTitle')}</CardTitle>
+              <CardDescription>{t('admin.hr.dashboard.importantNotifications')}</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-4">
@@ -335,11 +343,11 @@ const HRDashboard = () => {
                 >
                   <AlertCircle className="h-5 w-5 text-orange-600 shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-orange-900">Confirmation Due</p>
+                    <p className="text-xs font-bold text-orange-900">{t('admin.hr.dashboard.confirmationDue')}</p>
                     <p className="text-[10px] text-orange-700">
                       {pendingConfirmation.length === 0
-                        ? "No staff pending probation confirmation."
-                        : `${pendingConfirmation.length} staff past 90 days without a confirmation date.`}
+                        ? t('admin.hr.dashboard.noStaffPendingConfirmation')
+                        : t('admin.hr.dashboard.staffPastConfirmationDeadline', { count: pendingConfirmation.length })}
                     </p>
                   </div>
                 </motion.div>
@@ -349,9 +357,13 @@ const HRDashboard = () => {
                 >
                   <Clock className="h-5 w-5 text-purple-600 shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-blue-900">Leave Approvals</p>
+                    <p className="text-xs font-bold text-blue-900">{t('admin.hr.dashboard.leaveApprovals')}</p>
                     <p className="text-[10px] text-blue-700">
-                      {pendingLeave === 0 ? "No leave requests awaiting approval." : `${pendingLeave} leave request${pendingLeave === 1 ? "" : "s"} awaiting approval.`}
+                      {pendingLeave === 0
+                        ? t('admin.hr.dashboard.noLeaveAwaitingApproval')
+                        : pendingLeave === 1
+                        ? t('admin.hr.dashboard.oneLeaveAwaitingApproval')
+                        : t('admin.hr.dashboard.multipleLeaveAwaitingApproval', { count: pendingLeave })}
                     </p>
                   </div>
                 </motion.div>
@@ -361,11 +373,11 @@ const HRDashboard = () => {
                 >
                   <TrendingUp className="h-5 w-5 text-green-600 shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-green-900">New Hires</p>
+                    <p className="text-xs font-bold text-green-900">{t('admin.hr.dashboard.newHires')}</p>
                     <p className="text-[10px] text-green-700">
                       {newHires.length === 0
-                        ? "No staff joined in the last 2 weeks."
-                        : `Welcome ${newHires.length} staff who joined in the last 2 weeks.`}
+                        ? t('admin.hr.dashboard.noNewHiresRecently')
+                        : t('admin.hr.dashboard.welcomeNewHires', { count: newHires.length })}
                     </p>
                   </div>
                 </motion.div>

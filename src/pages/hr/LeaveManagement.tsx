@@ -25,6 +25,7 @@ import {
   CalendarDays
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -82,6 +83,7 @@ type SortField = 'staffName' | 'type' | 'days' | 'status' | 'startDate';
 type SortOrder = 'asc' | 'desc';
 
 const LeaveManagement = () => {
+  const { t } = useTranslation();
   const { staff } = useStaff();
   const { leaves, loading, canSeeAllLeaves, applyForLeave, approveLeaveStep, rejectLeave, deleteLeaveRequest } = useLeave();
   const { role } = useAuth();
@@ -190,11 +192,11 @@ const LeaveManagement = () => {
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
     const selectedStaff = staff.find(s => s.id === formData.staffId);
-    if (!selectedStaff) { toast.error("Please select a staff member"); return; }
+    if (!selectedStaff) { toast.error(t('admin.hr.leaveManagement.selectStaffError')); return; }
 
     const start = new Date(formData.startDate);
     const end = new Date(formData.endDate);
-    if (end < start) { toast.error("End date cannot be before start date"); return; }
+    if (end < start) { toast.error(t('admin.hr.leaveManagement.endDateError')); return; }
 
     const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -239,10 +241,10 @@ const LeaveManagement = () => {
   const itemVariants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } };
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortConfig.field !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    if (sortConfig.field !== field) return <ArrowUpDown className="h-3 w-3 ms-1 opacity-50" />;
     return sortConfig.order === 'asc'
-      ? <ArrowUp className="h-3 w-3 ml-1 text-primary" />
-      : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+      ? <ArrowUp className="h-3 w-3 ms-1 text-primary" />
+      : <ArrowDown className="h-3 w-3 ms-1 text-primary" />;
   };
 
   // Label for the current pending approver in a request's chain.
@@ -271,24 +273,24 @@ const LeaveManagement = () => {
               <CalendarDays className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Leave Management</h1>
-              <p className="text-sm text-slate-400">Track and manage staff leave requests and approvals.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.hr.leaveManagement.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.hr.leaveManagement.pageSubtitle')}</p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button onClick={() => setIsApplyOpen(true)} className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20">
-              <Plus className="h-4 w-4 mr-2" />
-              Apply for Leave
+              <Plus className="h-4 w-4 me-2" />
+              {t('admin.hr.leaveManagement.applyForLeave')}
             </Button>
           </motion.div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total Requests", value: stats.total, icon: FileText, color: "text-purple-600", bg: "bg-blue-50", sub: "All records" },
-            { label: "Pending", value: stats.pending, icon: Clock, color: "text-orange-600", bg: "bg-orange-50", sub: "Awaiting action" },
-            { label: "Approved", value: stats.approved, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", sub: "Processed" },
-            { label: "Rejected", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50", sub: "Denied" },
+            { label: t('admin.hr.leaveManagement.statTotalRequests'), value: stats.total, icon: FileText, color: "text-purple-600", bg: "bg-blue-50", sub: t('admin.hr.leaveManagement.statAllRecords') },
+            { label: t('admin.hr.leaveManagement.statPending'), value: stats.pending, icon: Clock, color: "text-orange-600", bg: "bg-orange-50", sub: t('admin.hr.leaveManagement.statAwaitingAction') },
+            { label: t('admin.hr.leaveManagement.statApproved'), value: stats.approved, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", sub: t('admin.hr.leaveManagement.statProcessed') },
+            { label: t('admin.hr.leaveManagement.statRejected'), value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50", sub: t('admin.hr.leaveManagement.statDenied') },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -309,14 +311,14 @@ const LeaveManagement = () => {
 
         {/* HR Settings policy strip */}
         <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border bg-indigo-50 border-indigo-100 text-sm">
-          <span className="font-semibold text-indigo-800">Policy (from HR Settings):</span>
-          <span className="text-indigo-700">Approval: <b>{hrSettings.approvalLevelsLabel}</b></span>
+          <span className="font-semibold text-indigo-800">{t('admin.hr.leaveManagement.policyLabel')}</span>
+          <span className="text-indigo-700">{t('admin.hr.leaveManagement.approvalLabel')} <b>{hrSettings.approvalLevelsLabel}</b></span>
           <span className="text-indigo-400">·</span>
-          <span className="text-indigo-700">Leave types: <b>{hrSettings.leaveTypes.map(lt => lt.name).join(', ')}</b></span>
+          <span className="text-indigo-700">{t('admin.hr.leaveManagement.leaveTypesLabel')} <b>{hrSettings.leaveTypes.map(lt => lt.name).join(', ')}</b></span>
           {hrSettings.autoReject && (
             <>
               <span className="text-indigo-400">·</span>
-              <span className="text-indigo-700">Auto-reject if unapproved after <b>5 days</b></span>
+              <span className="text-indigo-700">{t('admin.hr.leaveManagement.autoRejectNotice')}</span>
             </>
           )}
         </motion.div>
@@ -324,18 +326,18 @@ const LeaveManagement = () => {
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 items-center justify-between">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
             <TabsList className="bg-transparent p-0 h-auto gap-1 justify-start flex-wrap">
-              <TabsTrigger value="all" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">All</TabsTrigger>
-              <TabsTrigger value="pending" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Pending</TabsTrigger>
-              <TabsTrigger value="approved" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Approved</TabsTrigger>
-              <TabsTrigger value="rejected" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Rejected</TabsTrigger>
+              <TabsTrigger value="all" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t('admin.hr.leaveManagement.tabAll')}</TabsTrigger>
+              <TabsTrigger value="pending" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t('admin.hr.leaveManagement.tabPending')}</TabsTrigger>
+              <TabsTrigger value="approved" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t('admin.hr.leaveManagement.tabApproved')}</TabsTrigger>
+              <TabsTrigger value="rejected" className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t('admin.hr.leaveManagement.tabRejected')}</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="relative flex-1 max-w-md w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
-              className="pl-10 h-11 rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all"
-              placeholder="Search by staff name or ID..."
+              className="ps-10 h-11 rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all"
+              placeholder={t('admin.hr.leaveManagement.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

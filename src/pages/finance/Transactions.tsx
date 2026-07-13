@@ -583,7 +583,7 @@ const Transactions = () => {
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{txn.category}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p className={`text-sm font-black ${txn.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
                       {txn.type === 'Income' ? '+' : '-'}{financialSettings.currency} {txn.amount.toLocaleString()}
                     </p>
@@ -761,13 +761,13 @@ const Transactions = () => {
               <Table>
                 <TableHeader className="bg-secondary/20">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Date</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Entity</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Category</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Amount</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderDate')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderEntity')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderCategory')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderType')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderAmount')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t('admin.finance.transactions.tableHeaderStatus')}</TableHead>
+                    <TableHead className="py-4 font-bold text-xs uppercase tracking-wider text-end">{t('admin.finance.transactions.tableHeaderActions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -802,7 +802,7 @@ const Transactions = () => {
                           <Badge variant="outline" className={`rounded-lg px-2 py-0.5 text-[10px] font-bold border-none shadow-sm ${
                             txn.type === 'Income' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'
                           }`}>
-                            {txn.type}
+                            {t(TYPE_LABEL_KEYS[txn.type] || txn.type)}
                           </Badge>
                         </TableCell>
                         <TableCell className="py-4">
@@ -812,10 +812,10 @@ const Transactions = () => {
                         </TableCell>
                         <TableCell className="py-4">
                           <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-tighter border-none shadow-sm bg-blue-500/10 text-purple-600">
-                            {txn.status}
+                            {t(STATUS_LABEL_KEYS[txn.status] || txn.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-4 text-right">
+                        <TableCell className="py-4 text-end">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -828,13 +828,13 @@ const Transactions = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl">
                               <DropdownMenuItem onClick={() => openEditDialog(txn)}>
-                                Edit Transaction
+                                {t('admin.finance.transactions.editTransactionMenuItem')}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-rose-600"
                                 onClick={() => handleDeleteTransaction(txn.id, txn.sourceCollection)}
                               >
-                                Delete Transaction
+                                {t('admin.finance.transactions.deleteTransactionMenuItem')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -865,14 +865,14 @@ const Transactions = () => {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Confirm Deletion</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t('admin.finance.transactions.deleteDialogTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this transaction? This action cannot be undone.
+              {t('admin.finance.transactions.deleteDialogDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete} className="rounded-xl">Delete</Button>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-xl">{t('admin.finance.transactions.cancelButton')}</Button>
+            <Button variant="destructive" onClick={confirmDelete} className="rounded-xl">{t('admin.finance.transactions.deleteButton')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -881,53 +881,53 @@ const Transactions = () => {
       <Dialog open={!!editingTransaction} onOpenChange={(open) => { if (!open) setEditingTransaction(null); }}>
         <DialogContent className="sm:max-w-[480px] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Edit Transaction</DialogTitle>
-            <DialogDescription>Update the details for this transaction.</DialogDescription>
+            <DialogTitle className="text-xl font-bold">{t('admin.finance.transactions.editDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('admin.finance.transactions.editDialogDescription')}</DialogDescription>
           </DialogHeader>
           {editingTransaction && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Transaction ID</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldTransactionId')}</Label>
                   <Input value={editingTransaction.id} readOnly className="bg-secondary/30 text-xs font-mono" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldAmount')}</Label>
                   <Input value={`${financialSettings.currency}${editingTransaction.amount.toLocaleString()}`} readOnly className="bg-secondary/30 font-bold" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldDate')}</Label>
                 <Input value={editingTransaction.date} readOnly className="bg-secondary/30" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldDescription')}</Label>
                 <Input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Enter a description..."
+                  placeholder={t('admin.finance.transactions.descriptionPlaceholder')}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldStatus')}</Label>
                 <Select value={editStatus} onValueChange={setEditStatus}>
                   <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder={t('admin.finance.transactions.statusSelectPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    <SelectItem value="Refunded">Refunded</SelectItem>
+                    <SelectItem value="Pending">{t(STATUS_LABEL_KEYS.Pending)}</SelectItem>
+                    <SelectItem value="Completed">{t(STATUS_LABEL_KEYS.Completed)}</SelectItem>
+                    <SelectItem value="Cancelled">{t(STATUS_LABEL_KEYS.Cancelled)}</SelectItem>
+                    <SelectItem value="Refunded">{t(STATUS_LABEL_KEYS.Refunded)}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Notes</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.finance.transactions.fieldNotes')}</Label>
                 <Textarea
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Add any additional notes..."
+                  placeholder={t('admin.finance.transactions.notesPlaceholder')}
                   className="rounded-xl resize-none"
                   rows={3}
                 />
@@ -935,8 +935,8 @@ const Transactions = () => {
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setEditingTransaction(null)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleSaveEdit} className="rounded-xl gradient-primary">Save Changes</Button>
+            <Button variant="outline" onClick={() => setEditingTransaction(null)} className="rounded-xl">{t('admin.finance.transactions.cancelButton')}</Button>
+            <Button onClick={handleSaveEdit} className="rounded-xl gradient-primary">{t('admin.finance.transactions.saveChangesButton')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

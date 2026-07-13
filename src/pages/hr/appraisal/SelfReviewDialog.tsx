@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +25,18 @@ function categoriesFor(card: AnalyticsScorecard): string[] {
   return ["Teaching Quality", "Punctuality", "Student Feedback", "Admin Tasks"];
 }
 
+// Display-only translation lookup for the legacy fixed category names.
+// Dynamic per-cycle KPI names (from card.kpiScores) are real data and are
+// rendered as-is since they have no fixed translation.
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  "Teaching Quality": "admin.hr.appraisal.selfReviewDialog.categoryTeachingQuality",
+  "Punctuality": "admin.hr.appraisal.selfReviewDialog.categoryPunctuality",
+  "Student Feedback": "admin.hr.appraisal.selfReviewDialog.categoryStudentFeedback",
+  "Admin Tasks": "admin.hr.appraisal.selfReviewDialog.categoryAdminTasks",
+};
+
 export function SelfReviewDialog({ open, onOpenChange, scorecard, onSubmitted }: Props) {
+  const { t } = useTranslation();
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [achievements, setAchievements] = useState("");
@@ -40,7 +52,7 @@ export function SelfReviewDialog({ open, onOpenChange, scorecard, onSubmitted }:
   async function handleSubmit() {
     if (!scorecard) return;
     if (!allRated) {
-      toast.error("Please rate every category before submitting.");
+      toast.error(t("admin.hr.appraisal.selfReviewDialog.errorRateAll"));
       return;
     }
     setSubmitting(true);
@@ -76,11 +88,11 @@ export function SelfReviewDialog({ open, onOpenChange, scorecard, onSubmitted }:
         patch.admin = kpiScores["Admin Tasks"];
       }
       await smartDb.update("Appraisal", scorecard.id, patch);
-      toast.success("Self-review submitted — it now goes to your reviewer.");
+      toast.success(t("admin.hr.appraisal.selfReviewDialog.successSubmitted"));
       onOpenChange(false);
       onSubmitted();
     } catch {
-      toast.error("Failed to submit self-review — please try again.");
+      toast.error(t("admin.hr.appraisal.selfReviewDialog.errorSubmitFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -90,40 +102,43 @@ export function SelfReviewDialog({ open, onOpenChange, scorecard, onSubmitted }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Self Review</DialogTitle>
+          <DialogTitle>{t("admin.hr.appraisal.selfReviewDialog.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-5 py-2">
-          {categories.map((cat) => (
-            <div key={cat} className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>{cat}</Label>
-                <StarRatingInput value={ratings[cat] || 0} onChange={(v) => setRatings((r) => ({ ...r, [cat]: v }))} label={cat} />
+          {categories.map((cat) => {
+            const catLabel = CATEGORY_LABEL_KEYS[cat] ? t(CATEGORY_LABEL_KEYS[cat]) : cat;
+            return (
+              <div key={cat} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>{catLabel}</Label>
+                  <StarRatingInput value={ratings[cat] || 0} onChange={(v) => setRatings((r) => ({ ...r, [cat]: v }))} label={catLabel} />
+                </div>
+                <Textarea
+                  placeholder={t("admin.hr.appraisal.selfReviewDialog.commentPlaceholder")}
+                  value={comments[cat] || ""}
+                  onChange={(e) => setComments((c) => ({ ...c, [cat]: e.target.value }))}
+                  rows={2}
+                  className="text-sm"
+                />
               </div>
-              <Textarea
-                placeholder="Comment (optional)"
-                value={comments[cat] || ""}
-                onChange={(e) => setComments((c) => ({ ...c, [cat]: e.target.value }))}
-                rows={2}
-                className="text-sm"
-              />
-            </div>
-          ))}
+            );
+          })}
 
           <div className="space-y-1.5">
-            <Label>Achievements</Label>
-            <Textarea value={achievements} onChange={(e) => setAchievements(e.target.value)} rows={2} placeholder="What are you most proud of this cycle?" />
+            <Label>{t("admin.hr.appraisal.selfReviewDialog.achievementsLabel")}</Label>
+            <Textarea value={achievements} onChange={(e) => setAchievements(e.target.value)} rows={2} placeholder={t("admin.hr.appraisal.selfReviewDialog.achievementsPlaceholder")} />
           </div>
           <div className="space-y-1.5">
-            <Label>Challenges</Label>
-            <Textarea value={challenges} onChange={(e) => setChallenges(e.target.value)} rows={2} placeholder="What got in the way?" />
+            <Label>{t("admin.hr.appraisal.selfReviewDialog.challengesLabel")}</Label>
+            <Textarea value={challenges} onChange={(e) => setChallenges(e.target.value)} rows={2} placeholder={t("admin.hr.appraisal.selfReviewDialog.challengesPlaceholder")} />
           </div>
           <div className="space-y-1.5">
-            <Label>Goals Next Year</Label>
-            <Textarea value={goals} onChange={(e) => setGoals(e.target.value)} rows={2} placeholder="What do you want to focus on next?" />
+            <Label>{t("admin.hr.appraisal.selfReviewDialog.goalsLabel")}</Label>
+            <Textarea value={goals} onChange={(e) => setGoals(e.target.value)} rows={2} placeholder={t("admin.hr.appraisal.selfReviewDialog.goalsPlaceholder")} />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Upload Evidence</Label>
+            <Label>{t("admin.hr.appraisal.selfReviewDialog.uploadEvidenceLabel")}</Label>
             <label className="flex items-center gap-2.5 border-2 border-dashed rounded-xl p-3 cursor-pointer transition border-slate-200 bg-slate-50 hover:border-violet-300 hover:bg-violet-50">
               <input
                 type="file"
@@ -139,16 +154,16 @@ export function SelfReviewDialog({ open, onOpenChange, scorecard, onSubmitted }:
               ) : (
                 <>
                   <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs text-slate-500">Choose Files</span>
+                  <span className="text-xs text-slate-500">{t("admin.hr.appraisal.selfReviewDialog.chooseFiles")}</span>
                 </>
               )}
             </label>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("admin.hr.appraisal.selfReviewDialog.cancel")}</Button>
           <Button onClick={handleSubmit} disabled={submitting} className="bg-purple-600 hover:bg-purple-700">
-            {submitting ? "Submitting…" : "Submit"}
+            {submitting ? t("admin.hr.appraisal.selfReviewDialog.submitting") : t("admin.hr.appraisal.selfReviewDialog.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

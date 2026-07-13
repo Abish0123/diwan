@@ -641,7 +641,7 @@ const FinanceOverview = () => {
                           </div>
                         </td>
                         <td className={cn(
-                          "px-6 py-4 text-right font-black",
+                          "px-6 py-4 text-end font-black",
                           tx.source === "expenses" ? "text-rose-600" : "text-emerald-600"
                         )}>
                           {tx.source === "expenses" ? "-" : "+"}{financialSettings.currency} {tx.amount?.toLocaleString()}
@@ -655,8 +655,8 @@ const FinanceOverview = () => {
                           <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center">
                             <Info className="h-6 w-6 text-slate-300" />
                           </div>
-                          <p className="text-sm font-bold text-slate-400">No transactions found</p>
-                          <p className="text-xs text-muted-foreground">Start by recording your first transaction</p>
+                          <p className="text-sm font-bold text-slate-400">{t('admin.finance.overview.noTransactionsFound')}</p>
+                          <p className="text-xs text-muted-foreground">{t('admin.finance.overview.noTransactionsHint')}</p>
                         </div>
                       </td>
                     </tr>

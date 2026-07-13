@@ -25,6 +25,7 @@ import jsPDF from "jspdf";
 import { getSchoolName } from "@/lib/transportSettings";
 import { createDefaultFeeCalculator } from "@/services/fee/FeeCalculator";
 import { Student, Staff } from "@/types";
+import { useTranslation } from "react-i18next";
 
 interface Scholarship {
   id: string;
@@ -99,7 +100,25 @@ function oneYearOut(): string {
   return d.toISOString().slice(0, 10);
 }
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  Active: "admin.finance.scholarships.statusActive",
+  Pending: "admin.finance.scholarships.statusPending",
+  Expired: "admin.finance.scholarships.statusExpired",
+};
+
+const METHOD_LABEL_KEYS: Record<string, string> = {
+  "Fee Waiver": "admin.finance.scholarships.methodFeeWaiver",
+  "Direct Payment": "admin.finance.scholarships.methodDirectPayment",
+  "Bank Transfer": "admin.finance.scholarships.methodBankTransfer",
+};
+
+const DISBURSEMENT_STATUS_LABEL_KEYS: Record<string, string> = {
+  Completed: "admin.finance.scholarships.statusCompleted",
+  Scheduled: "admin.finance.scholarships.statusScheduled",
+};
+
 export default function Scholarships() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { settings, updateSettings } = useFinancialSettings();
   const [capDraft, setCapDraft] = useState<string>("");
@@ -245,10 +264,10 @@ export default function Scholarships() {
         await smartDb.update("ScholarshipApplication", a.id, { ...a, status: "Approved" });
         setScholarships((prev) => [...prev, newSch]);
         setApplications((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: "Approved" } : x)));
-        toast.success(`Scholarship approved for ${a.name} — invoice will be adjusted automatically.`);
+        toast.success(t("admin.finance.scholarships.toastApproved", { name: a.name }));
       } catch (e) {
         console.error(e);
-        toast.error("Failed to approve application");
+        toast.error(t("admin.finance.scholarships.toastApproveFailed"));
       }
     },
     [uid]
@@ -258,10 +277,10 @@ export default function Scholarships() {
     try {
       await smartDb.update("ScholarshipApplication", a.id, { ...a, status: "Rejected" });
       setApplications((prev) => prev.map((x) => (x.id === a.id ? { ...x, status: "Rejected" } : x)));
-      toast.error(`Application rejected for ${a.name}`);
+      toast.error(t("admin.finance.scholarships.toastRejected", { name: a.name }));
     } catch (e) {
       console.error(e);
-      toast.error("Failed to reject application");
+      toast.error(t("admin.finance.scholarships.toastRejectFailed"));
     }
   }, []);
 
@@ -269,16 +288,16 @@ export default function Scholarships() {
     try {
       await smartDb.update("ScholarshipApplication", a.id, { ...a, infoRequested: true });
       setApplications((prev) => prev.map((x) => (x.id === a.id ? { ...x, infoRequested: true } : x)));
-      toast.info(`Requested more info from ${a.name}`);
+      toast.info(t("admin.finance.scholarships.toastInfoRequested", { name: a.name }));
     } catch (e) {
       console.error(e);
-      toast.error("Failed to request info");
+      toast.error(t("admin.finance.scholarships.toastRequestInfoFailed"));
     }
   }, []);
 
   const createScholarship = useCallback(async () => {
     if (!newForm.name.trim()) {
-      toast.error("Student name is required");
+      toast.error(t("admin.finance.scholarships.toastNameRequired"));
       return;
     }
     try {
@@ -300,10 +319,10 @@ export default function Scholarships() {
       setScholarships((prev) => [...prev, newSch]);
       setNewOpen(false);
       setNewForm({ studentId: "", name: "", grade: "", type: "Merit", discount: "", annual: "" });
-      toast.success(`Scholarship created for ${newSch.name}`);
+      toast.success(t("admin.finance.scholarships.toastCreated", { name: newSch.name }));
     } catch (e) {
       console.error(e);
-      toast.error("Failed to create scholarship");
+      toast.error(t("admin.finance.scholarships.toastCreateFailed"));
     }
   }, [newForm, uid]);
 
@@ -324,10 +343,10 @@ export default function Scholarships() {
       await smartDb.update("Scholarship", editTarget.id, { ...updated });
       setScholarships((prev) => prev.map((x) => (x.id === editTarget.id ? updated : x)));
       setEditTarget(null);
-      toast.success(`Scholarship updated for ${updated.name}`);
+      toast.success(t("admin.finance.scholarships.toastUpdated", { name: updated.name }));
     } catch (e) {
       console.error(e);
-      toast.error("Failed to update scholarship");
+      toast.error(t("admin.finance.scholarships.toastUpdateFailed"));
     }
   }, [editTarget, editForm]);
 
@@ -358,10 +377,10 @@ export default function Scholarships() {
         await smartDb.create("ScholarshipRenewal", { ...renewalRecord }, renewalId);
         setRenewalHistory((prev) => [renewalRecord, ...prev]);
 
-        toast.success(`Scholarship renewed for ${s.name} — new expiry ${newValidUntil}`);
+        toast.success(t("admin.finance.scholarships.toastRenewed", { name: s.name, date: newValidUntil }));
       } catch (e) {
         console.error(e);
-        toast.error("Failed to renew scholarship");
+        toast.error(t("admin.finance.scholarships.toastRenewFailed"));
       }
     },
     [uid]
@@ -388,7 +407,7 @@ export default function Scholarships() {
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text("Certificate of Scholarship Award", pageWidth / 2, 44, { align: "center" });
+      doc.text(t("admin.finance.scholarships.certSubtitle"), pageWidth / 2, 44, { align: "center" });
 
       doc.setDrawColor(150, 150, 150);
       doc.line(40, 50, pageWidth - 40, 50);
@@ -396,12 +415,12 @@ export default function Scholarships() {
       // Title
       doc.setFont("helvetica", "bold");
       doc.setFontSize(26);
-      doc.text("SCHOLARSHIP CERTIFICATE", pageWidth / 2, 68, { align: "center" });
+      doc.text(t("admin.finance.scholarships.certTitle"), pageWidth / 2, 68, { align: "center" });
 
       // Body
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      doc.text("This certificate is proudly presented to", pageWidth / 2, 85, { align: "center" });
+      doc.text(t("admin.finance.scholarships.certPresentedTo"), pageWidth / 2, 85, { align: "center" });
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
@@ -409,7 +428,12 @@ export default function Scholarships() {
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
-      const bodyText = `in recognition of being awarded the ${s.type} Scholarship, granting a ${s.discount}% fee discount valued at ${settings.currency} ${s.annual.toLocaleString()} annually.`;
+      const bodyText = t("admin.finance.scholarships.certBody", {
+        type: s.type,
+        discount: s.discount,
+        currency: settings.currency,
+        amount: s.annual.toLocaleString(),
+      });
       const splitBody = doc.splitTextToSize(bodyText, pageWidth - 60);
       doc.text(splitBody, pageWidth / 2, 112, { align: "center" });
 
@@ -423,25 +447,30 @@ export default function Scholarships() {
         doc.text(value, 110, y);
         y += 8;
       };
-      detailRow("Student Name", s.name);
-      detailRow("Scholarship Type", s.type);
-      detailRow("Discount", `${s.discount}%`);
-      detailRow("Annual Value", `${settings.currency} ${s.annual.toLocaleString()}`);
-      detailRow("Valid Until", s.validUntil);
-      detailRow("Issued On", new Date().toISOString().slice(0, 10));
+      detailRow(t("admin.finance.scholarships.certLabelStudentName"), s.name);
+      detailRow(t("admin.finance.scholarships.certLabelScholarshipType"), s.type);
+      detailRow(t("admin.finance.scholarships.certLabelDiscount"), `${s.discount}%`);
+      detailRow(t("admin.finance.scholarships.certLabelAnnualValue"), `${settings.currency} ${s.annual.toLocaleString()}`);
+      detailRow(t("admin.finance.scholarships.certLabelValidUntil"), s.validUntil);
+      detailRow(t("admin.finance.scholarships.certLabelIssuedOn"), new Date().toISOString().slice(0, 10));
 
       // Footer
       doc.setDrawColor(0, 0, 0);
       doc.line(40, pageHeight - 35, 90, pageHeight - 35);
       doc.setFontSize(9);
-      doc.text("Authorized Signature", 65, pageHeight - 30, { align: "center" });
+      doc.text(t("admin.finance.scholarships.certAuthorizedSignature"), 65, pageHeight - 30, { align: "center" });
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "italic");
-      doc.text(`${schoolName} | Generated on ${new Date().toISOString().slice(0, 10)}`, pageWidth / 2, pageHeight - 18, { align: "center" });
+      doc.text(
+        t("admin.finance.scholarships.certGeneratedOn", { school: schoolName, date: new Date().toISOString().slice(0, 10) }),
+        pageWidth / 2,
+        pageHeight - 18,
+        { align: "center" }
+      );
 
       doc.save(`Scholarship-Certificate-${s.name.replace(/\s+/g, "_")}.pdf`);
-      toast.success(`Certificate downloaded for ${s.name}`);
+      toast.success(t("admin.finance.scholarships.toastCertificateDownloaded", { name: s.name }));
     },
     [settings.currency]
   );
@@ -449,12 +478,12 @@ export default function Scholarships() {
   const recordDisbursement = useCallback(async () => {
     const selected = scholarships.find((s) => s.id === disbursementForm.scholarshipId);
     if (!selected) {
-      toast.error("Please select a scholarship");
+      toast.error(t("admin.finance.scholarships.toastSelectScholarship"));
       return;
     }
     const amount = Number(disbursementForm.amount);
     if (!amount || amount <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error(t("admin.finance.scholarships.toastInvalidAmount"));
       return;
     }
     try {
@@ -476,10 +505,10 @@ export default function Scholarships() {
       setDisbursements((prev) => [newDisbursement, ...prev]);
       setDisbursementOpen(false);
       setDisbursementForm({ scholarshipId: "", amount: "", term: "", method: "Fee Waiver", notes: "" });
-      toast.success(`Disbursement recorded for ${selected.name}`);
+      toast.success(t("admin.finance.scholarships.toastDisbursementRecorded", { name: selected.name }));
     } catch (e) {
       console.error(e);
-      toast.error("Failed to record disbursement");
+      toast.error(t("admin.finance.scholarships.toastDisbursementFailed"));
     }
   }, [disbursementForm, scholarships, uid]);
 
@@ -492,17 +521,17 @@ export default function Scholarships() {
               <Award className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Scholarships & Bursaries</h1>
-              <p className="text-sm text-slate-400">Manage scholarship programs, applications, and disbursements</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.scholarships.pageTitle")}</h1>
+              <p className="text-sm text-slate-400">{t("admin.finance.scholarships.pageSubtitle")}</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setBulkReviewOpen(true)}>
-              Bulk Review
+              {t("admin.finance.scholarships.bulkReview")}
             </Button>
             <Button className="gradient-primary" onClick={() => setNewOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Scholarship
+              <Plus className="w-4 h-4 me-2" />
+              {t("admin.finance.scholarships.newScholarship")}
             </Button>
           </div>
         </div>
@@ -512,7 +541,7 @@ export default function Scholarships() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active Scholarships</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.kpiActiveScholarships")}</p>
                   <p className="text-3xl font-bold mt-1">{activeCount}</p>
                 </div>
                 <Award className="w-8 h-8 text-blue-500 opacity-80" />
@@ -523,7 +552,7 @@ export default function Scholarships() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Value</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.kpiTotalValue")}</p>
                   <p className="text-3xl font-bold mt-1">{settings.currency} {totalValue.toLocaleString()}</p>
                 </div>
                 <DollarSign className="w-8 h-8 text-green-500 opacity-80" />
@@ -534,7 +563,7 @@ export default function Scholarships() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Applications Pending</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.kpiApplicationsPending")}</p>
                   <p className="text-3xl font-bold mt-1">{pendingApplications.length}</p>
                 </div>
                 <Users className="w-8 h-8 text-yellow-500 opacity-80" />
@@ -545,7 +574,7 @@ export default function Scholarships() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Renewal Due</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.kpiRenewalDue")}</p>
                   <p className="text-3xl font-bold mt-1">{renewalDue}</p>
                 </div>
                 <Clock className="w-8 h-8 text-red-500 opacity-80" />
@@ -556,35 +585,35 @@ export default function Scholarships() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-transparent p-0 h-auto gap-1 justify-start flex-wrap">
-            <TabsTrigger value="active" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Active Scholarships</TabsTrigger>
-            <TabsTrigger value="programs" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Scholarship Programs</TabsTrigger>
-            <TabsTrigger value="applications" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Applications</TabsTrigger>
-            <TabsTrigger value="renewals" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Renewals</TabsTrigger>
-            <TabsTrigger value="disbursements" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">Disbursements</TabsTrigger>
+            <TabsTrigger value="active" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t("admin.finance.scholarships.tabActive")}</TabsTrigger>
+            <TabsTrigger value="programs" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t("admin.finance.scholarships.tabPrograms")}</TabsTrigger>
+            <TabsTrigger value="applications" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t("admin.finance.scholarships.tabApplications")}</TabsTrigger>
+            <TabsTrigger value="renewals" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t("admin.finance.scholarships.tabRenewals")}</TabsTrigger>
+            <TabsTrigger value="disbursements" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none">{t("admin.finance.scholarships.tabDisbursements")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="active" className="space-y-4 mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Current Recipients</CardTitle>
+                <CardTitle className="text-base">{t("admin.finance.scholarships.currentRecipients")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {scholarships.filter(s => s.status !== "Expired").length === 0 ? (
                   <div className="text-center py-10 text-sm text-muted-foreground">
-                    No scholarships awarded yet.
+                    {t("admin.finance.scholarships.emptyScholarships")}
                   </div>
                 ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Scholarship Type</TableHead>
-                      <TableHead>% Discount</TableHead>
-                      <TableHead>Annual Value ({settings.currency})</TableHead>
-                      <TableHead>Valid Until</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colStudentName")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colGrade")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colScholarshipType")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colDiscountPct")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colAnnualValue", { currency: settings.currency })}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colValidUntil")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colStatus")}</TableHead>
+                      <TableHead>{t("admin.finance.scholarships.colActions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -598,7 +627,7 @@ export default function Scholarships() {
                         <TableCell>{s.validUntil}</TableCell>
                         <TableCell>
                           <span className={cn("text-xs font-medium px-2 py-1 rounded-full", statusColor[s.status])}>
-                            {s.status}
+                            {t(STATUS_LABEL_KEYS[s.status] || s.status)}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -610,19 +639,19 @@ export default function Scholarships() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl">
                               <DropdownMenuItem onClick={() => setViewTarget(s)}>
-                                View Details
+                                {t("admin.finance.scholarships.viewDetails")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openEdit(s)}>
-                                Edit
+                                {t("admin.finance.scholarships.edit")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => generateCertificate(s)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Generate Certificate
+                                <FileText className="me-2 h-4 w-4" />
+                                {t("admin.finance.scholarships.generateCertificate")}
                               </DropdownMenuItem>
                               {s.status === "Active" && (
                                 <DropdownMenuItem onClick={() => renewScholarship(s)}>
-                                  <RefreshCw className="mr-2 h-4 w-4" />
-                                  Renew (+1 Year)
+                                  <RefreshCw className="me-2 h-4 w-4" />
+                                  {t("admin.finance.scholarships.renewOneYear")}
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -642,9 +671,9 @@ export default function Scholarships() {
                   <div className="flex gap-3">
                     <CheckCircle2 className="w-5 h-5 text-purple-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold text-blue-900">Auto-Deduction Active</p>
+                      <p className="font-semibold text-blue-900">{t("admin.finance.scholarships.autoDeductionActive")}</p>
                       <p className="text-sm text-blue-700 mt-0.5">
-                        When a scholarship is active, the discount is automatically applied to the next fee invoice. No manual adjustment needed.
+                        {t("admin.finance.scholarships.autoDeductionDesc")}
                       </p>
                     </div>
                   </div>
@@ -656,7 +685,7 @@ export default function Scholarships() {
                     onClick={async () => {
                       const sample = scholarships.find((s) => s.status === "Active");
                       if (!sample) {
-                        toast.info("No active scholarships yet — create one to test auto-deduction.");
+                        toast.info(t("admin.finance.scholarships.toastNoActiveScholarships"));
                         return;
                       }
                       // Real preview using FeeCalculator (Strategy pattern) against actual
@@ -675,13 +704,17 @@ export default function Scholarships() {
                           sample.studentId ? s.id === sample.studentId : (s.name === sample.name && s.grade === sample.grade),
                         );
                         if (!matchedStudent) {
-                          toast.info(`No enrolled student record matches "${sample.name}" (${sample.grade}) — cannot compute a real preview. ${sample.studentId ? "The linked student record may have been removed." : "This scholarship predates the student picker; edit it to link a real student, or verify the name/grade match an enrolled record."}`);
+                          toast.info(
+                            sample.studentId
+                              ? t("admin.finance.scholarships.toastNoMatchLinkedRemoved", { name: sample.name, grade: sample.grade })
+                              : t("admin.finance.scholarships.toastNoMatchLegacy", { name: sample.name, grade: sample.grade })
+                          );
                           return;
                         }
                         const structure = (feeStructures as { className: string; totalAmount: number; status: string }[])
                           .find((f) => f.className === sample.grade && f.status === "Active");
                         if (!structure) {
-                          toast.info(`No active fee structure found for ${sample.grade} — cannot compute a base fee to discount.`);
+                          toast.info(t("admin.finance.scholarships.toastNoFeeStructure", { grade: sample.grade }));
                           return;
                         }
                         const calculator = createDefaultFeeCalculator(settings.maxCombinedDiscountPct);
@@ -694,15 +727,23 @@ export default function Scholarships() {
                         });
                         const ruleLabels = result.appliedRules.map((r) => r.label).join(", ");
                         toast.success(
-                          `${sample.name}: ${settings.currency} ${structure.totalAmount.toLocaleString()} base fee → ${settings.currency} ${result.totalDiscount.toLocaleString()} discount (${ruleLabels}) → ${settings.currency} ${result.finalAmount.toLocaleString()} final${result.wasCapped ? " (capped at max combined discount)" : ""}`,
+                          t("admin.finance.scholarships.toastPreviewResult", {
+                            name: sample.name,
+                            currency: settings.currency,
+                            base: structure.totalAmount.toLocaleString(),
+                            discount: result.totalDiscount.toLocaleString(),
+                            rules: ruleLabels,
+                            final: result.finalAmount.toLocaleString(),
+                            capped: result.wasCapped ? t("admin.finance.scholarships.previewCappedSuffix") : "",
+                          }),
                         );
                       } catch (error) {
                         console.error("Fee calculation preview failed:", error);
-                        toast.error("Could not compute a real preview — see console for details.");
+                        toast.error(t("admin.finance.scholarships.toastPreviewFailed"));
                       }
                     }}
                   >
-                    Test Auto-Deduction
+                    {t("admin.finance.scholarships.testAutoDeduction")}
                   </Button>
                 </div>
               </CardContent>
@@ -712,11 +753,9 @@ export default function Scholarships() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold">Combined Discount Policy</p>
+                    <p className="font-semibold">{t("admin.finance.scholarships.combinedDiscountPolicy")}</p>
                     <p className="text-sm text-muted-foreground mt-0.5 max-w-xl">
-                      If a student qualifies for more than one discount at once (e.g. a scholarship AND a sibling
-                      discount), the total is capped at this percentage of the base fee. Set this to your school's actual
-                      policy — 100% means no cap (discounts stack freely).
+                      {t("admin.finance.scholarships.combinedDiscountPolicyDesc")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -743,7 +782,7 @@ export default function Scholarships() {
                         }
                       }}
                     >
-                      Save
+                      {t("admin.finance.scholarships.save")}
                     </Button>
                   </div>
                 </div>
@@ -755,7 +794,7 @@ export default function Scholarships() {
             {programs.length === 0 ? (
               <Card className="border-dashed border-2">
                 <CardContent className="pt-6 pb-6 text-center text-muted-foreground text-sm">
-                  No scholarship programs yet — create your first scholarship to see it grouped here.
+                  {t("admin.finance.scholarships.emptyPrograms")}
                 </CardContent>
               </Card>
             ) : (
@@ -772,15 +811,15 @@ export default function Scholarships() {
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Total Scholarships</span>
+                          <span className="text-muted-foreground">{t("admin.finance.scholarships.totalScholarships")}</span>
                           <span className="font-medium">{p.totalRecipients}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Active Recipients</span>
+                          <span className="text-muted-foreground">{t("admin.finance.scholarships.activeRecipients")}</span>
                           <span className="font-medium">{p.recipients}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Value Distributed</span>
+                          <span className="text-muted-foreground">{t("admin.finance.scholarships.valueDistributed")}</span>
                           <Badge variant="secondary">
                             {settings.currency} {p.valueDistributed.toLocaleString()}
                           </Badge>
@@ -797,7 +836,7 @@ export default function Scholarships() {
             {pendingApplications.length === 0 ? (
               <Card className="border-dashed border-2">
                 <CardContent className="pt-6 pb-6 text-center text-muted-foreground text-sm">
-                  No pending applications.
+                  {t("admin.finance.scholarships.emptyApplications")}
                 </CardContent>
               </Card>
             ) : (
@@ -810,10 +849,10 @@ export default function Scholarships() {
                         <p className="font-semibold">{a.name}</p>
                         <Badge variant="outline">{a.grade}</Badge>
                         <Badge variant="secondary">{a.type}</Badge>
-                        {a.infoRequested && <Badge variant="outline" className="text-purple-600 border-blue-200">Info Requested</Badge>}
+                        {a.infoRequested && <Badge variant="outline" className="text-purple-600 border-blue-200">{t("admin.finance.scholarships.infoRequestedBadge")}</Badge>}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Submitted {a.submitted}
+                        {t("admin.finance.scholarships.submittedOn", { date: a.submitted })}
                       </p>
                       <div className="flex items-center gap-1.5 mt-1">
                         {a.docs === "uploaded" ? (
@@ -827,7 +866,9 @@ export default function Scholarships() {
                             a.docs === "uploaded" ? "text-green-600" : "text-red-600"
                           )}
                         >
-                          Supporting docs {a.docs === "uploaded" ? "uploaded" : "missing"}
+                          {a.docs === "uploaded"
+                            ? t("admin.finance.scholarships.supportingDocsUploaded")
+                            : t("admin.finance.scholarships.supportingDocsMissing")}
                         </span>
                       </div>
                     </div>
@@ -838,7 +879,7 @@ export default function Scholarships() {
                         className="text-purple-600 border-blue-200 hover:bg-blue-50"
                         onClick={() => requestInfo(a)}
                       >
-                        Request Info
+                        {t("admin.finance.scholarships.requestInfo")}
                       </Button>
                       <Button
                         size="sm"
@@ -846,16 +887,16 @@ export default function Scholarships() {
                         className="text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => rejectApplication(a)}
                       >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
+                        <XCircle className="w-4 h-4 me-1" />
+                        {t("admin.finance.scholarships.reject")}
                       </Button>
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => approveApplication(a)}
                       >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Approve
+                        <CheckCircle2 className="w-4 h-4 me-1" />
+                        {t("admin.finance.scholarships.approve")}
                       </Button>
                     </div>
                   </div>
@@ -868,25 +909,25 @@ export default function Scholarships() {
             {renewalCandidates.length === 0 ? (
               <Card className="border-dashed border-2">
                 <CardContent className="pt-6 pb-6 text-center text-muted-foreground text-sm">
-                  No scholarships due for renewal in the next 60 days.
+                  {t("admin.finance.scholarships.emptyRenewalsDue")}
                 </CardContent>
               </Card>
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Scholarships Due for Renewal</CardTitle>
+                  <CardTitle className="text-base">{t("admin.finance.scholarships.scholarshipsDueForRenewal")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Student Name</TableHead>
-                        <TableHead>Grade</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Current Discount %</TableHead>
-                        <TableHead>Expires On</TableHead>
-                        <TableHead>Days Remaining</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colStudentName")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colGrade")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colType")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colCurrentDiscountPct")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colExpiresOn")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colDaysRemaining")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colAction")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -903,12 +944,14 @@ export default function Scholarships() {
                             <TableCell>{s.validUntil}</TableCell>
                             <TableCell>
                               <span className={cn("font-medium", daysRemaining < 0 ? "text-red-600" : "text-yellow-700")}>
-                                {daysRemaining < 0 ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days`}
+                                {daysRemaining < 0
+                                  ? t("admin.finance.scholarships.daysOverdue", { count: Math.abs(daysRemaining) })
+                                  : t("admin.finance.scholarships.daysRemaining", { count: daysRemaining })}
                               </span>
                             </TableCell>
                             <TableCell>
                               <Button size="sm" onClick={() => renewScholarship(s)}>
-                                Renew (+1 Year)
+                                {t("admin.finance.scholarships.renewOneYear")}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -922,19 +965,19 @@ export default function Scholarships() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Renewal History</CardTitle>
+                <CardTitle className="text-base">{t("admin.finance.scholarships.renewalHistory")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {renewalHistory.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No renewals recorded yet.</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.emptyRenewalHistory")}</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Previous Expiry</TableHead>
-                        <TableHead>New Expiry</TableHead>
-                        <TableHead>Renewed On</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colStudent")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colPreviousExpiry")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colNewExpiry")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colRenewedOn")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -961,40 +1004,40 @@ export default function Scholarships() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex gap-3 flex-wrap">
                 <div className="rounded-lg border bg-muted/30 px-4 py-2">
-                  <p className="text-xs text-muted-foreground">Disbursed This Year</p>
+                  <p className="text-xs text-muted-foreground">{t("admin.finance.scholarships.disbursedThisYear")}</p>
                   <p className="text-lg font-bold">
                     {settings.currency} {disbursementStats.totalAmount.toLocaleString()}
                   </p>
                 </div>
                 <div className="rounded-lg border bg-muted/30 px-4 py-2">
-                  <p className="text-xs text-muted-foreground">Disbursements This Year</p>
+                  <p className="text-xs text-muted-foreground">{t("admin.finance.scholarships.disbursementsThisYear")}</p>
                   <p className="text-lg font-bold">{disbursementStats.count}</p>
                 </div>
               </div>
               <Button onClick={() => setDisbursementOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Record Disbursement
+                <Plus className="w-4 h-4 me-2" />
+                {t("admin.finance.scholarships.recordDisbursement")}
               </Button>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Disbursement Records</CardTitle>
+                <CardTitle className="text-base">{t("admin.finance.scholarships.disbursementRecords")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {disbursements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No disbursements recorded yet.</p>
+                  <p className="text-sm text-muted-foreground">{t("admin.finance.scholarships.emptyDisbursements")}</p>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Term</TableHead>
-                        <TableHead>Amount ({settings.currency})</TableHead>
-                        <TableHead>Method</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Notes</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colStudent")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colTerm")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colAmount", { currency: settings.currency })}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colMethod")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colDate")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colStatus")}</TableHead>
+                        <TableHead>{t("admin.finance.scholarships.colNotes")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1007,7 +1050,7 @@ export default function Scholarships() {
                             <TableCell>{d.term}</TableCell>
                             <TableCell>{d.amount.toLocaleString()}</TableCell>
                             <TableCell>
-                              <Badge variant="secondary">{d.method}</Badge>
+                              <Badge variant="secondary">{t(METHOD_LABEL_KEYS[d.method] || d.method)}</Badge>
                             </TableCell>
                             <TableCell>{d.disbursedDate}</TableCell>
                             <TableCell>
@@ -1016,7 +1059,7 @@ export default function Scholarships() {
                                   d.status === "Completed" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
                                 )}
                               >
-                                {d.status}
+                                {t(DISBURSEMENT_STATUS_LABEL_KEYS[d.status] || d.status)}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">{d.notes || "—"}</TableCell>
@@ -1034,17 +1077,17 @@ export default function Scholarships() {
       <Dialog open={bulkReviewOpen} onOpenChange={setBulkReviewOpen}>
         <DialogContent className="sm:max-w-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Bulk Application Review</DialogTitle>
+            <DialogTitle>{t("admin.finance.scholarships.bulkApplicationReview")}</DialogTitle>
           </DialogHeader>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Docs</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t("admin.finance.scholarships.colName")}</TableHead>
+                  <TableHead>{t("admin.finance.scholarships.colGrade")}</TableHead>
+                  <TableHead>{t("admin.finance.scholarships.colType")}</TableHead>
+                  <TableHead>{t("admin.finance.scholarships.colDocs")}</TableHead>
+                  <TableHead>{t("admin.finance.scholarships.colActions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1058,7 +1101,7 @@ export default function Scholarships() {
                     <TableCell>
                       <span className={cn("text-xs font-medium flex items-center gap-1", a.docs === "uploaded" ? "text-green-600" : "text-red-600")}>
                         {a.docs === "uploaded" ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {a.docs === "uploaded" ? "Uploaded" : "Missing"}
+                        {a.docs === "uploaded" ? t("admin.finance.scholarships.uploaded") : t("admin.finance.scholarships.missing")}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -1068,7 +1111,7 @@ export default function Scholarships() {
                           className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs px-2"
                           onClick={() => approveApplication(a)}
                         >
-                          Approve
+                          {t("admin.finance.scholarships.approve")}
                         </Button>
                         <Button
                           size="sm"
@@ -1076,7 +1119,7 @@ export default function Scholarships() {
                           className="text-red-600 border-red-200 hover:bg-red-50 h-7 text-xs px-2"
                           onClick={() => rejectApplication(a)}
                         >
-                          Reject
+                          {t("admin.finance.scholarships.reject")}
                         </Button>
                       </div>
                     </TableCell>
@@ -1091,11 +1134,11 @@ export default function Scholarships() {
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>New Scholarship</DialogTitle>
+            <DialogTitle>{t("admin.finance.scholarships.newScholarship")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="sch-student">Student</Label>
+              <Label htmlFor="sch-student">{t("admin.finance.scholarships.student")}</Label>
               <Select
                 value={newForm.studentId}
                 onValueChange={(value) => {
@@ -1109,45 +1152,44 @@ export default function Scholarships() {
                 }}
               >
                 <SelectTrigger id="sch-student">
-                  <SelectValue placeholder="Search for an enrolled student…" />
+                  <SelectValue placeholder={t("admin.finance.scholarships.searchEnrolledStudent")} />
                 </SelectTrigger>
                 <SelectContent>
                   {allStudentsForPicker.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name} — {s.grade || "No grade"}</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>{s.name} — {s.grade || t("admin.finance.scholarships.noGrade")}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Selecting a real student links this scholarship for accurate fee-discount calculation. If the student isn't
-                enrolled yet, enter their name manually below — the link can be added later by editing this record.
+                {t("admin.finance.scholarships.studentPickerHelp")}
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sch-name">Student Name {newForm.studentId && "(from selection above)"}</Label>
-              <Input id="sch-name" value={newForm.name} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} placeholder="Full name" />
+              <Label htmlFor="sch-name">{t("admin.finance.scholarships.studentName")} {newForm.studentId && t("admin.finance.scholarships.fromSelectionAbove")}</Label>
+              <Input id="sch-name" value={newForm.name} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, name: e.target.value })} placeholder={t("admin.finance.scholarships.fullNamePlaceholder")} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sch-grade">Grade {newForm.studentId && "(from selection above)"}</Label>
-              <Input id="sch-grade" value={newForm.grade} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })} placeholder="e.g. Grade 9" />
+              <Label htmlFor="sch-grade">{t("admin.finance.scholarships.colGrade")} {newForm.studentId && t("admin.finance.scholarships.fromSelectionAbove")}</Label>
+              <Input id="sch-grade" value={newForm.grade} disabled={!!newForm.studentId} onChange={(e) => setNewForm({ ...newForm, grade: e.target.value })} placeholder={t("admin.finance.scholarships.gradePlaceholder")} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sch-type">Type</Label>
-              <Input id="sch-type" value={newForm.type} onChange={(e) => setNewForm({ ...newForm, type: e.target.value })} placeholder="e.g. Merit" />
+              <Label htmlFor="sch-type">{t("admin.finance.scholarships.colType")}</Label>
+              <Input id="sch-type" value={newForm.type} onChange={(e) => setNewForm({ ...newForm, type: e.target.value })} placeholder={t("admin.finance.scholarships.typePlaceholder")} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="sch-discount">% Discount</Label>
+                <Label htmlFor="sch-discount">{t("admin.finance.scholarships.colDiscountPct")}</Label>
                 <Input id="sch-discount" type="number" value={newForm.discount} onChange={(e) => setNewForm({ ...newForm, discount: e.target.value })} placeholder="50" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sch-annual">Annual Value ({settings.currency})</Label>
+                <Label htmlFor="sch-annual">{t("admin.finance.scholarships.colAnnualValue", { currency: settings.currency })}</Label>
                 <Input id="sch-annual" type="number" value={newForm.annual} onChange={(e) => setNewForm({ ...newForm, annual: e.target.value })} placeholder="12000" />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button onClick={createScholarship}>Create Scholarship</Button>
+            <Button variant="outline" onClick={() => setNewOpen(false)}>{t("admin.finance.scholarships.cancel")}</Button>
+            <Button onClick={createScholarship}>{t("admin.finance.scholarships.createScholarship")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1155,11 +1197,11 @@ export default function Scholarships() {
       <Dialog open={disbursementOpen} onOpenChange={setDisbursementOpen}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Record Disbursement</DialogTitle>
+            <DialogTitle>{t("admin.finance.scholarships.recordDisbursement")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="dis-scholarship">Scholarship</Label>
+              <Label htmlFor="dis-scholarship">{t("admin.finance.scholarships.scholarship")}</Label>
               <Select
                 value={disbursementForm.scholarshipId}
                 onValueChange={(value) => {
@@ -1172,7 +1214,7 @@ export default function Scholarships() {
                 }}
               >
                 <SelectTrigger id="dis-scholarship">
-                  <SelectValue placeholder="Select a scholarship" />
+                  <SelectValue placeholder={t("admin.finance.scholarships.selectScholarshipPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {scholarships
@@ -1187,7 +1229,7 @@ export default function Scholarships() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="dis-amount">Amount ({settings.currency})</Label>
+                <Label htmlFor="dis-amount">{t("admin.finance.scholarships.amountLabel", { currency: settings.currency })}</Label>
                 <Input
                   id="dis-amount"
                   type="number"
@@ -1197,17 +1239,17 @@ export default function Scholarships() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="dis-term">Term</Label>
+                <Label htmlFor="dis-term">{t("admin.finance.scholarships.colTerm")}</Label>
                 <Input
                   id="dis-term"
                   value={disbursementForm.term}
                   onChange={(e) => setDisbursementForm({ ...disbursementForm, term: e.target.value })}
-                  placeholder="e.g. Term 1 2026"
+                  placeholder={t("admin.finance.scholarships.termPlaceholder")}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="dis-method">Method</Label>
+              <Label htmlFor="dis-method">{t("admin.finance.scholarships.colMethod")}</Label>
               <Select
                 value={disbursementForm.method}
                 onValueChange={(value) =>
@@ -1218,25 +1260,25 @@ export default function Scholarships() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Fee Waiver">Fee Waiver</SelectItem>
-                  <SelectItem value="Direct Payment">Direct Payment</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Fee Waiver">{t("admin.finance.scholarships.methodFeeWaiver")}</SelectItem>
+                  <SelectItem value="Direct Payment">{t("admin.finance.scholarships.methodDirectPayment")}</SelectItem>
+                  <SelectItem value="Bank Transfer">{t("admin.finance.scholarships.methodBankTransfer")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="dis-notes">Notes (optional)</Label>
+              <Label htmlFor="dis-notes">{t("admin.finance.scholarships.notesOptional")}</Label>
               <Input
                 id="dis-notes"
                 value={disbursementForm.notes}
                 onChange={(e) => setDisbursementForm({ ...disbursementForm, notes: e.target.value })}
-                placeholder="Optional notes"
+                placeholder={t("admin.finance.scholarships.optionalNotesPlaceholder")}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDisbursementOpen(false)}>Cancel</Button>
-            <Button onClick={recordDisbursement}>Record Disbursement</Button>
+            <Button variant="outline" onClick={() => setDisbursementOpen(false)}>{t("admin.finance.scholarships.cancel")}</Button>
+            <Button onClick={recordDisbursement}>{t("admin.finance.scholarships.recordDisbursement")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1244,34 +1286,34 @@ export default function Scholarships() {
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Scholarship{editTarget ? ` — ${editTarget.name}` : ""}</DialogTitle>
+            <DialogTitle>{editTarget ? t("admin.finance.scholarships.editScholarshipWithName", { name: editTarget.name }) : t("admin.finance.scholarships.editScholarship")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="edit-discount">% Discount</Label>
+              <Label htmlFor="edit-discount">{t("admin.finance.scholarships.colDiscountPct")}</Label>
               <Input id="edit-discount" type="number" value={editForm.discount} onChange={(e) => setEditForm({ ...editForm, discount: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-valid">Valid Until</Label>
+              <Label htmlFor="edit-valid">{t("admin.finance.scholarships.colValidUntil")}</Label>
               <Input id="edit-valid" type="date" value={editForm.validUntil} onChange={(e) => setEditForm({ ...editForm, validUntil: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-status">Status</Label>
+              <Label htmlFor="edit-status">{t("admin.finance.scholarships.colStatus")}</Label>
               <select
                 id="edit-status"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={editForm.status}
                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
               >
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Expired">Expired</option>
+                <option value="Active">{t("admin.finance.scholarships.statusActive")}</option>
+                <option value="Pending">{t("admin.finance.scholarships.statusPending")}</option>
+                <option value="Expired">{t("admin.finance.scholarships.statusExpired")}</option>
               </select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
-            <Button onClick={saveEdit}>Save Changes</Button>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>{t("admin.finance.scholarships.cancel")}</Button>
+            <Button onClick={saveEdit}>{t("admin.finance.scholarships.saveChanges")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1279,21 +1321,21 @@ export default function Scholarships() {
       <Dialog open={!!viewTarget} onOpenChange={(o) => !o && setViewTarget(null)}>
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Scholarship Details</DialogTitle>
+            <DialogTitle>{t("admin.finance.scholarships.scholarshipDetails")}</DialogTitle>
           </DialogHeader>
           {viewTarget && (
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Student</span><span className="font-medium">{viewTarget.name}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Grade</span><span className="font-medium">{viewTarget.grade}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium">{viewTarget.type}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-medium">{viewTarget.discount}%</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Annual Value</span><span className="font-medium">{settings.currency} {viewTarget.annual.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Valid Until</span><span className="font-medium">{viewTarget.validUntil}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className="font-medium">{viewTarget.status}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.student")}</span><span className="font-medium">{viewTarget.name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.colGrade")}</span><span className="font-medium">{viewTarget.grade}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.colType")}</span><span className="font-medium">{viewTarget.type}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.discount")}</span><span className="font-medium">{viewTarget.discount}%</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.annualValue")}</span><span className="font-medium">{settings.currency} {viewTarget.annual.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.colValidUntil")}</span><span className="font-medium">{viewTarget.validUntil}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">{t("admin.finance.scholarships.colStatus")}</span><span className="font-medium">{t(STATUS_LABEL_KEYS[viewTarget.status] || viewTarget.status)}</span></div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewTarget(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewTarget(null)}>{t("admin.finance.scholarships.close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -18,6 +18,7 @@ import { provisionUserAccount, ProvisionedCredentials } from "@/lib/staffAccount
 import { checkClassTeacherAssignment } from "@/lib/roleAssignmentGuard";
 import { ROLES } from "@/lib/roles";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,12 +67,26 @@ interface EmploymentPayroll {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const STEP_LABEL_KEYS = [
+  "admin.hr.staffOnboarding.step1Label",
+  "admin.hr.staffOnboarding.step2Label",
+  "admin.hr.staffOnboarding.step3Label",
+  "admin.hr.staffOnboarding.step4Label",
+  "admin.hr.staffOnboarding.step5Label",
+];
+const STEP_DESC_KEYS = [
+  "admin.hr.staffOnboarding.step1Desc",
+  "admin.hr.staffOnboarding.step2Desc",
+  "admin.hr.staffOnboarding.step3Desc",
+  "admin.hr.staffOnboarding.step4Desc",
+  "admin.hr.staffOnboarding.step5Desc",
+];
 const STEPS = [
-  { id:1, label:"Personal Information",   icon: User,        desc:"Step 1 of 5" },
-  { id:2, label:"Professional Details",   icon: Briefcase,   desc:"Step 2 of 5" },
-  { id:3, label:"Documents",              icon: FileText,    desc:"Step 3 of 5" },
-  { id:4, label:"Employment & Payroll",   icon: DollarSign,  desc:"Step 4 of 5" },
-  { id:5, label:"Review & Submit",        icon: CheckSquare, desc:"Step 5 of 5" },
+  { id:1, labelKey: STEP_LABEL_KEYS[0], icon: User,        descKey: STEP_DESC_KEYS[0] },
+  { id:2, labelKey: STEP_LABEL_KEYS[1], icon: Briefcase,   descKey: STEP_DESC_KEYS[1] },
+  { id:3, labelKey: STEP_LABEL_KEYS[2], icon: FileText,    descKey: STEP_DESC_KEYS[2] },
+  { id:4, labelKey: STEP_LABEL_KEYS[3], icon: DollarSign,  descKey: STEP_DESC_KEYS[3] },
+  { id:5, labelKey: STEP_LABEL_KEYS[4], icon: CheckSquare, descKey: STEP_DESC_KEYS[4] },
 ];
 
 const DEPARTMENTS = ["Sciences","Mathematics","Languages","Social Studies","Arts","Physical Education","Islamic Studies","ICT","Vocational","Administration","HR","Finance"];
@@ -151,6 +166,7 @@ function FileUploadBox({ label, required, value, onChange }: {
   label: string; required?: boolean; value?: string; onChange: (v: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-600 mb-1">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
@@ -175,8 +191,8 @@ function FileUploadBox({ label, required, value, onChange }: {
         ) : (
           <>
             <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-500">Click to upload or drag & drop</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">PDF, JPG, PNG up to 5MB</p>
+            <p className="text-xs text-slate-500">{t('admin.hr.staffOnboarding.clickToUploadOrDrag')}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{t('admin.hr.staffOnboarding.fileFormatHint')}</p>
           </>
         )}
       </div>
@@ -188,22 +204,32 @@ function FileUploadBox({ label, required, value, onChange }: {
 
 function Step1({ data, onChange }: { data: PersonalInfo; onChange: (d: PersonalInfo) => void }) {
   const set = (k: keyof PersonalInfo, v: any) => onChange({ ...data, [k]: v });
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (data.sameAddress) set("permanentAddress", data.currentAddress);
   }, [data.currentAddress, data.sameAddress]);
 
+  const NAME_FIELDS: [string, keyof PersonalInfo][] = [
+    [t('admin.hr.staffOnboarding.firstName'), "firstName"],
+    [t('admin.hr.staffOnboarding.middleName'), "middleName"],
+    [t('admin.hr.staffOnboarding.lastName'), "lastName"],
+  ];
+  const GENDER_OPTIONS = [t('admin.hr.staffOnboarding.genderMale'), t('admin.hr.staffOnboarding.genderFemale'), t('admin.hr.staffOnboarding.genderOther'), t('admin.hr.staffOnboarding.genderPreferNotToSay')];
+  const MARITAL_OPTIONS = [t('admin.hr.staffOnboarding.maritalSingle'), t('admin.hr.staffOnboarding.maritalMarried'), t('admin.hr.staffOnboarding.maritalDivorced'), t('admin.hr.staffOnboarding.maritalWidowed')];
+  const RELATION_OPTIONS = [t('admin.hr.staffOnboarding.relationParent'), t('admin.hr.staffOnboarding.relationSpouse'), t('admin.hr.staffOnboarding.relationHusband'), t('admin.hr.staffOnboarding.relationWife'), t('admin.hr.staffOnboarding.relationSibling'), t('admin.hr.staffOnboarding.relationFriend'), t('admin.hr.staffOnboarding.relationOther')];
+
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-base font-bold text-slate-900 mb-0.5">Personal Information</h3>
-        <p className="text-xs text-slate-500">Enter basic personal details of the staff member</p>
+        <h3 className="text-base font-bold text-slate-900 mb-0.5">{t('admin.hr.staffOnboarding.personalInformation')}</h3>
+        <p className="text-xs text-slate-500">{t('admin.hr.staffOnboarding.personalInfoDesc')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {([["First Name","firstName"],["Middle Name","middleName"],["Last Name","lastName"]] as [string,keyof PersonalInfo][]).map(([lbl,key]) => (
+        {NAME_FIELDS.map(([lbl,key]) => (
           <div key={key}>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">{lbl}{key!=="middleName"&&<span className="text-rose-500 ml-0.5">*</span>}</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">{lbl}{key!=="middleName"&&<span className="text-rose-500 ms-0.5">*</span>}</label>
             <input value={data[key] as string} onChange={e=>set(key,e.target.value)}
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
@@ -212,41 +238,41 @@ function Step1({ data, onChange }: { data: PersonalInfo; onChange: (d: PersonalI
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Date of Birth <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.dateOfBirth')} <span className="text-rose-500">*</span></label>
           <input type="date" value={data.dob} onChange={e=>set("dob",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Gender <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.gender')} <span className="text-rose-500">*</span></label>
           <select value={data.gender} onChange={e=>set("gender",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
-            {["Male","Female","Other","Prefer not to say"].map(o=><option key={o}>{o}</option>)}
+            {GENDER_OPTIONS.map(o=><option key={o}>{o}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Marital Status</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.maritalStatus')}</label>
           <select value={data.maritalStatus} onChange={e=>set("maritalStatus",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
-            {["Single","Married","Divorced","Widowed"].map(o=><option key={o}>{o}</option>)}
+            {MARITAL_OPTIONS.map(o=><option key={o}>{o}</option>)}
           </select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Blood Group</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.bloodGroup')}</label>
           <select value={data.bloodGroup} onChange={e=>set("bloodGroup",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
             {["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(o=><option key={o}>{o}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Nationality</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.nationality')}</label>
           <input value={data.nationality} onChange={e=>set("nationality",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Religion</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.religion')}</label>
           <input value={data.religion} onChange={e=>set("religion",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
@@ -254,59 +280,59 @@ function Step1({ data, onChange }: { data: PersonalInfo; onChange: (d: PersonalI
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Email Address <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.emailAddress')} <span className="text-rose-500">*</span></label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input type="email" value={data.email} onChange={e=>set("email",e.target.value)}
-              className="w-full pl-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              className="w-full ps-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Mobile Number <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.mobileNumber')} <span className="text-rose-500">*</span></label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input value={data.phone} onChange={e=>set("phone",e.target.value)}
-              className="w-full pl-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              className="w-full ps-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Emergency Contact Name <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.emergencyContactName')} <span className="text-rose-500">*</span></label>
           <input value={data.emergencyName} onChange={e=>set("emergencyName",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Emergency Contact Number <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.emergencyContactNumber')} <span className="text-rose-500">*</span></label>
           <input value={data.emergencyPhone} onChange={e=>set("emergencyPhone",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Relationship <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.relationship')} <span className="text-rose-500">*</span></label>
           <select value={data.emergencyRelation} onChange={e=>set("emergencyRelation",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
-            {["Parent","Spouse","Husband","Wife","Sibling","Friend","Other"].map(o=><option key={o}>{o}</option>)}
+            {RELATION_OPTIONS.map(o=><option key={o}>{o}</option>)}
           </select>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-600 mb-1">Current Address <span className="text-rose-500">*</span></label>
+        <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.currentAddress')} <span className="text-rose-500">*</span></label>
         <div className="relative">
-          <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+          <MapPin className="absolute start-3 top-3 w-4 h-4 text-slate-400" />
           <textarea rows={2} value={data.currentAddress} onChange={e=>set("currentAddress",e.target.value)}
-            className="w-full pl-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none" />
+            className="w-full ps-9 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none" />
         </div>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="block text-xs font-semibold text-slate-600">Permanent Address <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600">{t('admin.hr.staffOnboarding.permanentAddress')} <span className="text-rose-500">*</span></label>
           <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
             <input type="checkbox" checked={data.sameAddress} onChange={e=>set("sameAddress",e.target.checked)}
               className="accent-purple-600" />
-            Same as current address
+            {t('admin.hr.staffOnboarding.sameAsCurrentAddress')}
           </label>
         </div>
         <textarea rows={2} value={data.sameAddress ? data.currentAddress : data.permanentAddress}
@@ -316,8 +342,8 @@ function Step1({ data, onChange }: { data: PersonalInfo; onChange: (d: PersonalI
       </div>
 
       <div>
-        <label className="block text-xs font-semibold text-slate-600 mb-1">Profile Photo</label>
-        <FileUploadBox label="Profile Photo (JPG/PNG up to 2MB)" value={data.photoFile}
+        <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.profilePhoto')}</label>
+        <FileUploadBox label={t('admin.hr.staffOnboarding.profilePhotoHint')} value={data.photoFile}
           onChange={v => set("photoFile",v)} />
       </div>
     </div>
@@ -328,6 +354,7 @@ function Step1({ data, onChange }: { data: PersonalInfo; onChange: (d: PersonalI
 
 function Step2({ data, onChange, grades }: { data: ProfessionalInfo; onChange: (d: ProfessionalInfo) => void; grades: string[] }) {
   const set = (k: keyof ProfessionalInfo, v: any) => onChange({ ...data, [k]: v });
+  const { t } = useTranslation();
 
   const toggleSubject = (s: string) => {
     const cur = data.subjects || [];
@@ -338,28 +365,28 @@ function Step2({ data, onChange, grades }: { data: ProfessionalInfo; onChange: (
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-base font-bold text-slate-900 mb-0.5">Professional Details</h3>
-        <p className="text-xs text-slate-500">Capture academic qualifications and role assignment</p>
+        <h3 className="text-base font-bold text-slate-900 mb-0.5">{t('admin.hr.staffOnboarding.professionalDetails')}</h3>
+        <p className="text-xs text-slate-500">{t('admin.hr.staffOnboarding.professionalDetailsDesc')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Employee ID</label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.employeeId')}</label>
           <div className="relative">
             <input value={data.employeeId} readOnly
               className="w-full border border-violet-200 bg-violet-50 rounded-xl px-3 py-2.5 text-sm text-violet-700 font-mono font-bold" />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold">AUTO</span>
+            <span className="absolute end-2 top-1/2 -translate-y-1/2 text-[10px] bg-violet-100 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold">{t('admin.hr.staffOnboarding.auto')}</span>
           </div>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Department <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.department')} <span className="text-rose-500">*</span></label>
           <select value={data.department} onChange={e=>set("department",e.target.value)}
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white">
             {DEPARTMENTS.map(d=><option key={d}>{d}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Designation <span className="text-rose-500">*</span></label>
+          <label className="block text-xs font-semibold text-slate-600 mb-1">{t('admin.hr.staffOnboarding.designation')} <span className="text-rose-500">*</span></label>
           <select value={data.designation} onChange={e => {
               const designation = e.target.value;
               // Suggest a matching access role, but only if the admin hasn't
@@ -1225,6 +1252,7 @@ export default function StaffOnboarding() {
   const grades = useGrades();
   const { refetchStaff } = useStaff();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -1286,7 +1314,7 @@ export default function StaffOnboarding() {
     setPayroll(EMPTY_PAYROLL);
     setStep(1);
     setResumedDraft(false);
-    toast.success("Draft discarded — starting a fresh form");
+    toast.success(t('admin.hr.staffOnboarding.draftDiscardedToast'));
   }, []);
 
   // Auto-save
@@ -1299,15 +1327,15 @@ export default function StaffOnboarding() {
 
   const handleNext = async () => {
     if (step === 1 && (!personal.firstName || !personal.lastName || !personal.email)) {
-      toast.error("Please fill in required fields (First Name, Last Name, Email)");
+      toast.error(t('admin.hr.staffOnboarding.errorRequiredPersonalFields'));
       return;
     }
     if (step === 2 && (!professional.department || !professional.joiningDate)) {
-      toast.error("Please select a department and joining date");
+      toast.error(t('admin.hr.staffOnboarding.errorDeptAndJoiningDate'));
       return;
     }
     if (step === 2 && !professional.accessRole) {
-      toast.error("Please select the System Access role for this account");
+      toast.error(t('admin.hr.staffOnboarding.errorSelectAccessRole'));
       return;
     }
     // Assigned Grade/Section are optional here — a teacher can be onboarded
@@ -1333,7 +1361,7 @@ export default function StaffOnboarding() {
     // this check, leaving it blank here silently meant that employee never
     // got a payroll record at all, with no other way to create one.
     if (step === 4 && (!payroll.basicSalary || Number(payroll.basicSalary) <= 0)) {
-      toast.error("Please enter a Basic Salary — this is what creates the employee's payroll record.");
+      toast.error(t('admin.hr.staffOnboarding.errorBasicSalaryRequired'));
       return;
     }
     if (step === STEPS.length) {
@@ -1408,7 +1436,7 @@ export default function StaffOnboarding() {
           await smartDb.create("payroll", { id: payrollId, ...payrollFields, status: "Pending", createdAt: new Date().toISOString() }, payrollId);
         }
       } catch {
-        toast.error("Staff profile saved, but the payroll record could not be created — add it from Payroll Processing.");
+        toast.error(t('admin.hr.staffOnboarding.errorPayrollRecordFailed'));
       }
     }
 
@@ -1441,12 +1469,12 @@ export default function StaffOnboarding() {
             ...(professional.accessRole ? { role: professional.accessRole } : {}),
           });
         } catch {}
-        toast.info(`A login account for ${personal.email} already exists — access role and class assignment updated`);
+        toast.info(t('admin.hr.staffOnboarding.infoAccountExistsUpdated', { email: personal.email }));
       } else {
         setCredentials(result.credentials);
       }
     } catch {
-      toast.error("Staff profile saved, but the login account could not be created");
+      toast.error(t('admin.hr.staffOnboarding.errorLoginAccountFailed'));
     }
 
     // Mirror the assignment onto the actual Class record too. The teacher
@@ -1467,7 +1495,9 @@ export default function StaffOnboarding() {
       } catch { /* non-fatal — class-side display just won't reflect it until a manual edit */ }
     }
 
-    toast.success(`Staff profile ${editId ? 'updated' : 'created'} for ${personal.firstName} ${personal.lastName}`);
+    toast.success(editId
+      ? t('admin.hr.staffOnboarding.successProfileUpdated', { name: `${personal.firstName} ${personal.lastName}` })
+      : t('admin.hr.staffOnboarding.successProfileCreated', { name: `${personal.firstName} ${personal.lastName}` }));
     setSubmitted(true);
   };
 
@@ -1493,10 +1523,10 @@ export default function StaffOnboarding() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              {editId ? "Edit Staff Profile" : "Staff Onboarding"}
+              {editId ? t('admin.hr.staffOnboarding.editStaffProfile') : t('admin.hr.staffOnboarding.staffOnboarding')}
             </h1>
             <p className="text-sm text-slate-400">
-              {editId ? "Update employee information and records" : "Register a new employee into the HR system"}
+              {editId ? t('admin.hr.staffOnboarding.updateEmployeeInfo') : t('admin.hr.staffOnboarding.registerNewEmployee')}
             </p>
           </div>
         </div>
@@ -1505,11 +1535,13 @@ export default function StaffOnboarding() {
           <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
             <RefreshCw className="w-4 h-4 text-amber-600 flex-shrink-0" />
             <p className="text-xs text-amber-800 flex-1">
-              Resumed an in-progress draft{personal.firstName ? ` for ${personal.firstName} ${personal.lastName}`.trimEnd() : ""} left over from a previous session.
+              {personal.firstName
+                ? t('admin.hr.staffOnboarding.resumedDraftForName', { name: `${personal.firstName} ${personal.lastName}`.trimEnd() })
+                : t('admin.hr.staffOnboarding.resumedDraftGeneric')}
             </p>
             <button onClick={discardDraft}
               className="flex-shrink-0 text-xs font-semibold text-amber-700 hover:text-amber-900 underline">
-              Discard &amp; Start Fresh
+              {t('admin.hr.staffOnboarding.discardAndStartFresh')}
             </button>
           </div>
         )}
@@ -1538,9 +1570,9 @@ export default function StaffOnboarding() {
                     <div className="text-center hidden sm:block">
                       <p className={cn("text-[10px] font-semibold leading-tight",
                         step === s.id ? "text-violet-700" : step > s.id ? "text-emerald-600" : "text-slate-400")}>
-                        {s.label}
+                        {t(s.labelKey)}
                       </p>
-                      <p className="text-[9px] text-slate-400">{s.desc}</p>
+                      <p className="text-[9px] text-slate-400">{t(s.descKey)}</p>
                     </div>
                   </button>
                   {i < STEPS.length - 1 && (
@@ -1570,18 +1602,18 @@ export default function StaffOnboarding() {
             <div className="flex items-center justify-between">
               <button onClick={() => step > 1 ? setStep(s => s - 1) : navigate("/hr/staff")}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition">
-                <ChevronLeft className="w-4 h-4" /> {step > 1 ? "Previous" : "Cancel"}
+                <ChevronLeft className="w-4 h-4 rtl:rotate-180" /> {step > 1 ? t('admin.hr.staffOnboarding.previous') : t('admin.hr.staffOnboarding.cancel')}
               </button>
               <div className="flex items-center gap-3">
-                <button onClick={() => { saveDraft(); toast.success("Draft saved"); }} className="text-xs text-slate-400 hover:text-purple-600 font-semibold flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" /> Save Draft
+                <button onClick={() => { saveDraft(); toast.success(t('admin.hr.staffOnboarding.draftSavedToast')); }} className="text-xs text-slate-400 hover:text-purple-600 font-semibold flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" /> {t('admin.hr.staffOnboarding.saveDraft')}
                 </button>
                 <button onClick={handleNext}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-purple-600 text-white text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-violet-200">
                   {step === STEPS.length ? (
-                    <><Check className="w-4 h-4" /> Submit</>
+                    <><Check className="w-4 h-4" /> {t('admin.hr.staffOnboarding.submit')}</>
                   ) : (
-                    <>Save & Next <ChevronRight className="w-4 h-4" /></>
+                    <>{t('admin.hr.staffOnboarding.saveAndNext')} <ChevronRight className="w-4 h-4 rtl:rotate-180" /></>
                   )}
                 </button>
               </div>
@@ -1592,7 +1624,7 @@ export default function StaffOnboarding() {
           <div className="hidden lg:block w-64 flex-shrink-0 space-y-4 sticky top-6">
             {/* Progress */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <h4 className="font-bold text-slate-900 text-sm mb-3">Onboarding Progress</h4>
+              <h4 className="font-bold text-slate-900 text-sm mb-3">{t('admin.hr.staffOnboarding.onboardingProgress')}</h4>
               <div className="relative w-24 h-24 mx-auto mb-3">
                 <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
                   <circle cx="48" cy="48" r="40" fill="none" stroke="#f1f5f9" strokeWidth="8" />
@@ -1609,14 +1641,14 @@ export default function StaffOnboarding() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-xl font-black text-slate-900">{Math.round(((step-1)/(STEPS.length-1))*100)}%</span>
-                  <span className="text-[9px] text-slate-400 font-semibold">Completed</span>
+                  <span className="text-[9px] text-slate-400 font-semibold">{t('admin.hr.staffOnboarding.completed')}</span>
                 </div>
               </div>
-              <p className="text-xs text-purple-600 font-semibold text-center">Step {step} of {STEPS.length}</p>
-              <p className="text-xs text-slate-500 text-center">{STEPS[step-1].label}</p>
+              <p className="text-xs text-purple-600 font-semibold text-center">{t('admin.hr.staffOnboarding.stepOfTotal', { current: step, total: STEPS.length })}</p>
+              <p className="text-xs text-slate-500 text-center">{t(STEPS[step-1].labelKey)}</p>
 
               <div className="mt-4 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Steps Overview</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{t('admin.hr.staffOnboarding.stepsOverview')}</p>
                 {STEPS.map(s => (
                   <div key={s.id} className="flex items-center gap-2">
                     <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0",
@@ -1626,9 +1658,9 @@ export default function StaffOnboarding() {
                     </div>
                     <div>
                       <p className={cn("text-[11px] font-semibold leading-none",
-                        step === s.id ? "text-violet-700" : step > s.id ? "text-slate-700" : "text-slate-400")}>{s.label}</p>
+                        step === s.id ? "text-violet-700" : step > s.id ? "text-slate-700" : "text-slate-400")}>{t(s.labelKey)}</p>
                       <p className="text-[9px] text-slate-400 mt-0.5">
-                        {step > s.id ? "Complete" : step === s.id ? "In Progress" : "Pending"}
+                        {step > s.id ? t('admin.hr.staffOnboarding.statusComplete') : step === s.id ? t('admin.hr.staffOnboarding.statusInProgress') : t('admin.hr.staffOnboarding.statusPending')}
                       </p>
                     </div>
                   </div>
@@ -1642,14 +1674,14 @@ export default function StaffOnboarding() {
                 <div className="w-7 h-7 rounded-xl bg-violet-100 flex items-center justify-center">
                   <AlertCircle className="w-4 h-4 text-purple-600" />
                 </div>
-                <span className="text-xs font-bold text-violet-800">Onboarding Tips</span>
+                <span className="text-xs font-bold text-violet-800">{t('admin.hr.staffOnboarding.onboardingTips')}</span>
               </div>
               <p className="text-xs text-violet-700">
-                {step === 1 && "Please provide accurate personal information. Email must be unique in the system."}
-                {step === 2 && "Employee ID is auto-generated. Subjects assigned here will sync with the timetable module."}
-                {step === 3 && "All documents should be clear and in the correct format. Supported: PDF, JPG, PNG up to 5MB."}
-                {step === 4 && "Salary is in AED. Bank details are required for payroll processing."}
-                {step === 5 && "Review all information carefully. Once submitted, changes require admin approval."}
+                {step === 1 && t('admin.hr.staffOnboarding.tipStep1')}
+                {step === 2 && t('admin.hr.staffOnboarding.tipStep2')}
+                {step === 3 && t('admin.hr.staffOnboarding.tipStep3')}
+                {step === 4 && t('admin.hr.staffOnboarding.tipStep4')}
+                {step === 5 && t('admin.hr.staffOnboarding.tipStep5')}
               </p>
             </div>
 
@@ -1658,12 +1690,12 @@ export default function StaffOnboarding() {
                 <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center">
                   <Phone className="w-4 h-4 text-slate-500" />
                 </div>
-                <span className="text-xs font-bold text-slate-700">Need Help?</span>
+                <span className="text-xs font-bold text-slate-700">{t('admin.hr.staffOnboarding.needHelp')}</span>
               </div>
-              <p className="text-xs text-slate-500 mb-2">Contact HR Department for assistance</p>
-              <button onClick={() => toast.info("Contacting HR Department…")}
+              <p className="text-xs text-slate-500 mb-2">{t('admin.hr.staffOnboarding.contactHrForAssistance')}</p>
+              <button onClick={() => toast.info(t('admin.hr.staffOnboarding.contactingHrToast'))}
                 className="w-full py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
-                Contact HR
+                {t('admin.hr.staffOnboarding.contactHr')}
               </button>
             </div>
           </div>

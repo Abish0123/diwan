@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,37 +18,38 @@ interface Props {
 const BAND_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
 
 export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: Props) {
+  const { t } = useTranslation();
   const a = useMemo(() => computeCycleAnalytics(cards, allStaff), [cards, allStaff]);
 
   if (cards.length === 0) {
     return (
       <Card>
         <CardContent className="py-16 text-center text-sm text-muted-foreground">
-          No active appraisal cycle to analyze yet. Start one with "New Appraisal Cycle" above.
+          {t("admin.hr.appraisal.analyticsTab.noCycle")}
         </CardContent>
       </Card>
     );
   }
 
   const kpis = [
-    { label: "Employees", value: a.totalCount, icon: Users, color: "text-purple-600 bg-purple-50" },
-    { label: "Completed", value: a.gradedCount, icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50" },
-    { label: "Pending", value: a.pendingCount, icon: Clock, color: "text-amber-600 bg-amber-50" },
-    { label: "Overdue", value: a.hasDeadlineData ? a.overdueCount : "—", icon: AlertTriangle, color: "text-rose-600 bg-rose-50" },
-    { label: "Avg. Score", value: a.gradedCount ? `${a.avgScore}%` : "—", icon: TrendingUp, color: "text-indigo-600 bg-indigo-50" },
-    { label: "Reminders Sent", value: a.remindersSent, icon: Bell, color: "text-sky-600 bg-sky-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.employees"), value: a.totalCount, icon: Users, color: "text-purple-600 bg-purple-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.completed"), value: a.gradedCount, icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.pending"), value: a.pendingCount, icon: Clock, color: "text-amber-600 bg-amber-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.overdue"), value: a.hasDeadlineData ? a.overdueCount : "—", icon: AlertTriangle, color: "text-rose-600 bg-rose-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.avgScore"), value: a.gradedCount ? `${a.avgScore}%` : "—", icon: TrendingUp, color: "text-indigo-600 bg-indigo-50" },
+    { label: t("admin.hr.appraisal.analyticsTab.remindersSent"), value: a.remindersSent, icon: Bell, color: "text-sky-600 bg-sky-50" },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-900">{cycleName || "Current Cycle"} — Analytics</h3>
-          <p className="text-xs text-slate-400">Real-time figures from this cycle's actual scorecards.</p>
+          <h3 className="text-base font-bold text-slate-900">{t("admin.hr.appraisal.analyticsTab.cycleAnalyticsTitle", { cycleName: cycleName || t("admin.hr.appraisal.analyticsTab.currentCycle") })}</h3>
+          <p className="text-xs text-slate-400">{t("admin.hr.appraisal.analyticsTab.realTimeFigures")}</p>
         </div>
         {onExport && (
           <Button size="sm" variant="outline" onClick={onExport} className="gap-1.5">
-            <Download className="h-3.5 w-3.5" /> Export Report
+            <Download className="h-3.5 w-3.5" /> {t("admin.hr.appraisal.analyticsTab.exportReport")}
           </Button>
         )}
       </div>
@@ -69,7 +71,7 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Completion Rate */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Completion Rate</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t("admin.hr.appraisal.analyticsTab.completionRate")}</CardTitle></CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="h-24 w-24 shrink-0">
@@ -88,7 +90,7 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
               </div>
               <div>
                 <p className="text-2xl font-black text-slate-900">{a.completionPct}%</p>
-                <p className="text-xs text-slate-500">{a.gradedCount} of {a.totalCount} scorecards completed</p>
+                <p className="text-xs text-slate-500">{t("admin.hr.appraisal.analyticsTab.scorecardsCompleted", { graded: a.gradedCount, total: a.totalCount })}</p>
               </div>
             </div>
           </CardContent>
@@ -96,10 +98,10 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
 
         {/* Score Distribution */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Score Distribution</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t("admin.hr.appraisal.analyticsTab.scoreDistribution")}</CardTitle></CardHeader>
           <CardContent>
             {a.gradedCount === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">No graded scorecards yet.</p>
+              <p className="text-xs text-muted-foreground text-center py-8">{t("admin.hr.appraisal.analyticsTab.noGradedScorecards")}</p>
             ) : (
               <div className="h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -119,10 +121,10 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
 
         {/* Department Comparison */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Department Comparison</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t("admin.hr.appraisal.analyticsTab.departmentComparison")}</CardTitle></CardHeader>
           <CardContent>
             {a.departmentStats.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8">No department data available.</p>
+              <p className="text-xs text-muted-foreground text-center py-8">{t("admin.hr.appraisal.analyticsTab.noDepartmentData")}</p>
             ) : (
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +132,7 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                     <XAxis dataKey="department" fontSize={9} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={50} />
                     <YAxis fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip cursor={{ fill: "rgba(152,16,250,0.06)" }} formatter={(v: number) => [`${v}%`, "Avg Score"]} />
+                    <Tooltip cursor={{ fill: "rgba(152,16,250,0.06)" }} formatter={(v: number) => [`${v}%`, t("admin.hr.appraisal.analyticsTab.avgScoreTooltip")]} />
                     <Bar dataKey="avgScore" radius={[6, 6, 0, 0]} fill="#9810fa" animationDuration={600} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -141,11 +143,11 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
 
         {/* Reviewer Workload */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Reviewer Workload</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t("admin.hr.appraisal.analyticsTab.reviewerWorkload")}</CardTitle></CardHeader>
           <CardContent>
             {!a.hasReviewerData ? (
               <p className="text-xs text-muted-foreground text-center py-8">
-                No reviewer assignments for this cycle — reviewer resolution is only available for cycles created via the New Appraisal Cycle wizard.
+                {t("admin.hr.appraisal.analyticsTab.noReviewerAssignments")}
               </p>
             ) : (
               <div className="h-[180px]">
@@ -153,7 +155,7 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
                   <BarChart data={a.reviewerWorkload} layout="vertical" margin={{ left: 8 }}>
                     <XAxis type="number" hide allowDecimals={false} />
                     <YAxis type="category" dataKey="reviewer" width={140} fontSize={10} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: "rgba(152,16,250,0.06)" }} formatter={(v: number) => [v, "Assigned"]} />
+                    <Tooltip cursor={{ fill: "rgba(152,16,250,0.06)" }} formatter={(v: number) => [v, t("admin.hr.appraisal.analyticsTab.assignedTooltip")]} />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#4f46e5" animationDuration={600} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -166,10 +168,10 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top Performers */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><Award className="h-3.5 w-3.5 text-amber-500" /> Top Performers</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><Award className="h-3.5 w-3.5 text-amber-500" /> {t("admin.hr.appraisal.analyticsTab.topPerformers")}</CardTitle></CardHeader>
           <CardContent>
             {a.topPerformers.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">No graded scorecards yet.</p>
+              <p className="text-xs text-muted-foreground text-center py-6">{t("admin.hr.appraisal.analyticsTab.noGradedScorecards")}</p>
             ) : (
               <ul className="space-y-2">
                 {a.topPerformers.map((p, i) => (
@@ -188,10 +190,10 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
 
         {/* Improvement Areas */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><TrendingDown className="h-3.5 w-3.5 text-rose-500" /> Improvement Areas</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><TrendingDown className="h-3.5 w-3.5 text-rose-500" /> {t("admin.hr.appraisal.analyticsTab.improvementAreas")}</CardTitle></CardHeader>
           <CardContent>
             {a.improvementAreas.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">No graded scorecards yet.</p>
+              <p className="text-xs text-muted-foreground text-center py-6">{t("admin.hr.appraisal.analyticsTab.noGradedScorecards")}</p>
             ) : (
               <ul className="space-y-2">
                 {a.improvementAreas.slice(0, 5).map((k) => (
@@ -207,11 +209,11 @@ export function AppraisalAnalyticsTab({ cards, allStaff, cycleName, onExport }: 
 
         {/* Needs Attention (Principal-focused) */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> Needs Attention</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 text-rose-500" /> {t("admin.hr.appraisal.analyticsTab.needsAttention")}</CardTitle></CardHeader>
           <CardContent>
             {a.atRiskStaff.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">
-                {a.gradedCount === 0 ? "No graded scorecards yet." : "No staff currently below 60%."}
+                {a.gradedCount === 0 ? t("admin.hr.appraisal.analyticsTab.noGradedScorecards") : t("admin.hr.appraisal.analyticsTab.noStaffBelow60")}
               </p>
             ) : (
               <ul className="space-y-2">

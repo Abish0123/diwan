@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getLineItems, type PurchaseOrder } from "@/pages/inventory/PurchaseOrders";
 import { type Purchase } from "@/pages/inventory/Purchases";
 import { notifyFinanceRoles, notifyBookRequester } from "@/lib/procurementNotify";
+import { useTranslation } from "react-i18next";
 
 interface FinancialCategory { id: string; name: string; budget: number; type: string; }
 interface Expense { category: string; amount: number; status: string; }
@@ -37,6 +38,7 @@ interface LibraryRequest {
 const APPROVER_ROLES = ["accountant", "admin", "super_admin", "school_owner"];
 
 const PurchaseApprovals = () => {
+  const { t } = useTranslation();
   const { user, role } = useAuth();
   const canApprove = APPROVER_ROLES.includes(role || "");
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -70,7 +72,7 @@ const PurchaseApprovals = () => {
       setPurchases(purData as Purchase[]);
     } catch (error) {
       console.error("Error fetching purchase approvals data:", error);
-      toast.error("Failed to load purchase approvals");
+      toast.error(t("admin.finance.purchaseApprovals.toastLoadFailed"));
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,11 @@ const PurchaseApprovals = () => {
     const projected = spentSoFar + committedInOtherPOs + amount;
     if (projected > category.budget) {
       return confirm(
-        `Warning: Approving this will bring "${department}" spending to ${projected.toLocaleString()}, over its budget of ${category.budget.toLocaleString()}.\n\nApprove anyway?`
+        t("admin.finance.purchaseApprovals.budgetWarning", {
+          department,
+          projected: projected.toLocaleString(),
+          budget: category.budget.toLocaleString(),
+        })
       );
     }
     return true;
@@ -143,25 +149,25 @@ const PurchaseApprovals = () => {
     setBusyId(order.id);
     try {
       await smartDb.update("PurchaseOrder", order.id, { status: "Approved" });
-      toast.success(`${order.poNumber} approved — ready to send to ${order.vendorName}`);
+      toast.success(t("admin.finance.purchaseApprovals.toastOrderApproved", { poNumber: order.poNumber, vendorName: order.vendorName }));
       void notifyFinanceRoles(["admin", "super_admin", "school_owner"], {
         type: "po_approved",
-        title: "Purchase Order approved",
-        message: `${order.poNumber} (${order.department}) was approved by Finance and is ready to send to ${order.vendorName}.`,
+        title: t("admin.finance.purchaseApprovals.notifyOrderApprovedTitle"),
+        message: t("admin.finance.purchaseApprovals.notifyOrderApprovedMessage", { poNumber: order.poNumber, department: order.department, vendorName: order.vendorName }),
       });
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to approve the order");
+      toast.error(t("admin.finance.purchaseApprovals.toastApproveOrderFailed"));
     } finally {
       setBusyId(null);
     }
   };
 
   const declineOrder = async (order: PurchaseOrder) => {
-    const reason = window.prompt(`Reason for sending ${order.poNumber} back to Procurement?`, "");
+    const reason = window.prompt(t("admin.finance.purchaseApprovals.promptDeclineOrderReason", { poNumber: order.poNumber }), "");
     if (reason === null) return;
-    if (!reason.trim()) { toast.error("A reason is required so Procurement knows what to fix"); return; }
+    if (!reason.trim()) { toast.error(t("admin.finance.purchaseApprovals.toastReasonRequiredProcurement")); return; }
     setBusyId(order.id);
     try {
       await smartDb.update("PurchaseOrder", order.id, {
@@ -170,16 +176,16 @@ const PurchaseApprovals = () => {
         declinedBy: user?.name || user?.email || "Finance",
         declinedAt: new Date().toISOString(),
       });
-      toast.success(`${order.poNumber} sent back to Procurement`);
+      toast.success(t("admin.finance.purchaseApprovals.toastOrderSentBack", { poNumber: order.poNumber }));
       void notifyFinanceRoles(["admin", "super_admin", "school_owner"], {
         type: "po_declined",
-        title: "Purchase Order sent back",
-        message: `${order.poNumber} (${order.department}) was sent back to Draft by Finance. Reason: ${reason.trim()}`,
+        title: t("admin.finance.purchaseApprovals.notifyOrderSentBackTitle"),
+        message: t("admin.finance.purchaseApprovals.notifyOrderSentBackMessage", { poNumber: order.poNumber, department: order.department, reason: reason.trim() }),
       });
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to send the order back");
+      toast.error(t("admin.finance.purchaseApprovals.toastSendBackFailed"));
     } finally {
       setBusyId(null);
     }
@@ -193,14 +199,14 @@ const PurchaseApprovals = () => {
       await smartDb.update("Quotation", q.id, { status: "Accepted" });
       if (req) {
         await smartDb.update("library_requests", req.id, { status: "finance_approved", financeDecidedAt: new Date().toISOString() });
-        void notifyBookRequester(req, "finance_approved", `Purchase approved — ${req.title}`,
-          `Finance approved the purchase of "${req.title}" (${q.amount.toLocaleString()}) from ${q.entity}. Procurement will now create the Purchase Order.`);
+        void notifyBookRequester(req, "finance_approved", t("admin.finance.purchaseApprovals.notifyPurchaseApprovedTitle", { title: req.title }),
+          t("admin.finance.purchaseApprovals.notifyPurchaseApprovedMessage", { title: req.title, amount: q.amount.toLocaleString(), entity: q.entity }));
       }
-      toast.success(`${q.quotationId} approved — Procurement can now create the Purchase Order`);
+      toast.success(t("admin.finance.purchaseApprovals.toastQuotationApproved", { quotationId: q.quotationId }));
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to approve the quotation");
+      toast.error(t("admin.finance.purchaseApprovals.toastApproveQuotationFailed"));
     } finally {
       setBusyId(null);
     }
@@ -208,9 +214,9 @@ const PurchaseApprovals = () => {
 
   const declineQuotation = async (q: Quotation) => {
     const req = requestByQuotation(q);
-    const reason = window.prompt(`Reason for declining ${q.quotationId}?`, "");
+    const reason = window.prompt(t("admin.finance.purchaseApprovals.promptDeclineQuotationReason", { quotationId: q.quotationId }), "");
     if (reason === null) return;
-    if (!reason.trim()) { toast.error("A reason is required"); return; }
+    if (!reason.trim()) { toast.error(t("admin.finance.purchaseApprovals.toastReasonRequired")); return; }
     setBusyId(q.id);
     try {
       await smartDb.update("Quotation", q.id, { status: "Rejected" });
@@ -218,14 +224,14 @@ const PurchaseApprovals = () => {
         await smartDb.update("library_requests", req.id, {
           status: "rejected", rejectedStage: "finance", rejectionReason: reason.trim(), decidedAt: new Date().toISOString(),
         });
-        void notifyBookRequester(req, "rejected", `Book request declined — ${req.title}`,
-          `Your request for "${req.title}" was declined by Finance. Reason: ${reason.trim()}`);
+        void notifyBookRequester(req, "rejected", t("admin.finance.purchaseApprovals.notifyBookDeclinedTitle", { title: req.title }),
+          t("admin.finance.purchaseApprovals.notifyBookDeclinedMessage", { title: req.title, reason: reason.trim() }));
       }
-      toast.info(`${q.quotationId} declined`);
+      toast.info(t("admin.finance.purchaseApprovals.toastQuotationDeclined", { quotationId: q.quotationId }));
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to decline the quotation");
+      toast.error(t("admin.finance.purchaseApprovals.toastDeclineQuotationFailed"));
     } finally {
       setBusyId(null);
     }
@@ -233,7 +239,7 @@ const PurchaseApprovals = () => {
 
   const releasePayment = async (p: Purchase) => {
     const invoiceNumber = (invoiceInputs[p.id] || "").trim();
-    if (!invoiceNumber) { toast.error("Enter the vendor's invoice number before releasing payment"); return; }
+    if (!invoiceNumber) { toast.error(t("admin.finance.purchaseApprovals.toastInvoiceNumberRequired")); return; }
     setBusyId(p.id);
     try {
       await smartDb.update("Purchase", p.id, {
@@ -246,14 +252,14 @@ const PurchaseApprovals = () => {
       const req = requestByPurchase(p);
       if (req) {
         await smartDb.update("library_requests", req.id, { status: "paid", paidAt: new Date().toISOString() });
-        void notifyBookRequester(req, "paid", `Payment released — ${req.title}`,
-          `Invoice ${invoiceNumber} matched against ${p.poNumber} and payment of ${p.amount.toLocaleString()} was released to ${p.vendorName}.`);
+        void notifyBookRequester(req, "paid", t("admin.finance.purchaseApprovals.notifyPaymentReleasedTitle", { title: req.title }),
+          t("admin.finance.purchaseApprovals.notifyPaymentReleasedMessage", { invoiceNumber, poNumber: p.poNumber, amount: p.amount.toLocaleString(), vendorName: p.vendorName }));
       }
-      toast.success(`Payment released to ${p.vendorName} for ${p.poNumber}`);
+      toast.success(t("admin.finance.purchaseApprovals.toastPaymentReleased", { vendorName: p.vendorName, poNumber: p.poNumber }));
       fetchData();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to release payment");
+      toast.error(t("admin.finance.purchaseApprovals.toastReleasePaymentFailed"));
     } finally {
       setBusyId(null);
     }
@@ -264,9 +270,9 @@ const PurchaseApprovals = () => {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
           <ShieldAlert className="h-10 w-10 text-muted-foreground opacity-40" />
-          <h1 className="text-lg font-bold">Finance access only</h1>
+          <h1 className="text-lg font-bold">{t("admin.finance.purchaseApprovals.accessOnlyTitle")}</h1>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Approving funding, purchase orders, and releasing payment are Finance decisions — this page is only available to Finance and Admin accounts.
+            {t("admin.finance.purchaseApprovals.accessOnlyDescription")}
           </p>
         </div>
       </DashboardLayout>
@@ -281,24 +287,24 @@ const PurchaseApprovals = () => {
             <ClipboardCheck className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Purchase Approvals</h1>
+            <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.purchaseApprovals.pageTitle")}</h1>
             <p className="text-sm text-slate-400">
-              Funding requests, purchase orders, and vendor payments waiting on Finance — in that order.
+              {t("admin.finance.purchaseApprovals.pageSubtitle")}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="premium-card">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Awaiting Funding Approval</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.finance.purchaseApprovals.statAwaitingFunding")}</CardTitle></CardHeader>
             <CardContent><div className="text-2xl font-bold text-violet-500">{pendingQuotations.length}</div></CardContent>
           </Card>
           <Card className="premium-card">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Awaiting PO Approval</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.finance.purchaseApprovals.statAwaitingPO")}</CardTitle></CardHeader>
             <CardContent><div className="text-2xl font-bold text-amber-500">{pendingOrders.length}</div></CardContent>
           </Card>
           <Card className="premium-card">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Awaiting Payment</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{t("admin.finance.purchaseApprovals.statAwaitingPayment")}</CardTitle></CardHeader>
             <CardContent><div className="text-2xl font-bold text-emerald-500">{unpaidPurchases.length}</div></CardContent>
           </Card>
         </div>
@@ -306,7 +312,7 @@ const PurchaseApprovals = () => {
         {/* ── Step 1: Funding approval, before any PO exists ── */}
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Wallet className="h-4 w-4 text-purple-600" /> Funding Approvals</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Wallet className="h-4 w-4 text-purple-600" /> {t("admin.finance.purchaseApprovals.fundingApprovalsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -314,18 +320,18 @@ const PurchaseApprovals = () => {
             ) : pendingQuotations.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
                 <Wallet className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                No vendor quotations awaiting a funding decision.
+                {t("admin.finance.purchaseApprovals.emptyFunding")}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Quotation</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Requested By</TableHead>
-                    <TableHead className="text-right">Decision</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colQuotation")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colVendor")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colItems")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colAmount")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colRequestedBy")}</TableHead>
+                    <TableHead className="text-end">{t("admin.finance.purchaseApprovals.colDecision")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -340,14 +346,14 @@ const PurchaseApprovals = () => {
                         <TableCell className="text-xs text-muted-foreground">
                           <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {req?.requestedBy || "—"}</div>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button size="sm" className="h-8 text-xs" disabled={busyId === q.id} onClick={() => approveQuotation(q)}>
-                              {busyId === q.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-                              Approve Funding
+                              {busyId === q.id ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="me-1.5 h-3.5 w-3.5" />}
+                              {t("admin.finance.purchaseApprovals.btnApproveFunding")}
                             </Button>
                             <Button size="sm" variant="outline" className="h-8 text-xs text-destructive" disabled={busyId === q.id} onClick={() => declineQuotation(q)}>
-                              <XCircle className="mr-1.5 h-3.5 w-3.5" /> Decline
+                              <XCircle className="me-1.5 h-3.5 w-3.5" /> {t("admin.finance.purchaseApprovals.btnDecline")}
                             </Button>
                           </div>
                         </TableCell>
@@ -365,24 +371,24 @@ const PurchaseApprovals = () => {
             which skips straight to "Sent to Vendor" once approved above) ── */}
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-primary" /> Purchase Order Approvals</CardTitle>
+            <CardTitle className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-primary" /> {t("admin.finance.purchaseApprovals.poApprovalsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {pendingOrders.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
                 <ClipboardCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                No purchase orders awaiting approval.
+                {t("admin.finance.purchaseApprovals.emptyPO")}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>PO Number</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead className="text-right">Decision</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colPONumber")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colDepartment")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colVendor")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colItems")}</TableHead>
+                    <TableHead>{t("admin.finance.purchaseApprovals.colAmount")}</TableHead>
+                    <TableHead className="text-end">{t("admin.finance.purchaseApprovals.colDecision")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -393,16 +399,16 @@ const PurchaseApprovals = () => {
                         <TableCell className="font-medium">{po.poNumber}</TableCell>
                         <TableCell><Badge variant="secondary" className="text-[10px] font-medium">{po.department}</Badge></TableCell>
                         <TableCell>{po.vendorName}</TableCell>
-                        <TableCell>{items.length === 1 ? items[0].name : `${items.length} items`}</TableCell>
+                        <TableCell>{items.length === 1 ? items[0].name : t("admin.finance.purchaseApprovals.itemsCount", { count: items.length })}</TableCell>
                         <TableCell className="font-bold">{(po.amount || 0).toLocaleString()}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button size="sm" className="h-8 text-xs" disabled={busyId === po.id} onClick={() => approveOrder(po)}>
-                              {busyId === po.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-                              Approve
+                              {busyId === po.id ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="me-1.5 h-3.5 w-3.5" />}
+                              {t("admin.finance.purchaseApprovals.btnApprove")}
                             </Button>
                             <Button size="sm" variant="outline" className="h-8 text-xs text-destructive" disabled={busyId === po.id} onClick={() => declineOrder(po)}>
-                              <XCircle className="mr-1.5 h-3.5 w-3.5" /> Send Back
+                              <XCircle className="me-1.5 h-3.5 w-3.5" /> {t("admin.finance.purchaseApprovals.btnSendBack")}
                             </Button>
                           </div>
                         </TableCell>
@@ -418,13 +424,13 @@ const PurchaseApprovals = () => {
         {/* ── Step 3: Payment, only after Library has confirmed receipt ── */}
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-emerald-600" /> Invoice Matching &amp; Payment</CardTitle>
+            <CardTitle className="flex items-center gap-2"><ReceiptText className="h-4 w-4 text-emerald-600" /> {t("admin.finance.purchaseApprovals.invoiceMatchingTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {unpaidPurchases.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
                 <ReceiptText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                Nothing received and awaiting payment right now.
+                {t("admin.finance.purchaseApprovals.emptyPayments")}
               </div>
             ) : (
               <div className="space-y-2">
@@ -433,15 +439,15 @@ const PurchaseApprovals = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{p.items?.[0]?.name || p.poNumber}</p>
                       <p className="text-xs text-muted-foreground">
-                        {p.vendorName} · PO {p.poNumber} · Received, awaiting invoice — {(p.amount || 0).toLocaleString()}
+                        {t("admin.finance.purchaseApprovals.purchaseSummaryLine", { vendorName: p.vendorName, poNumber: p.poNumber, amount: (p.amount || 0).toLocaleString() })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Input placeholder="Vendor invoice #" className="h-8 text-xs w-36"
+                      <Input placeholder={t("admin.finance.purchaseApprovals.placeholderVendorInvoice")} className="h-8 text-xs w-36"
                         value={invoiceInputs[p.id] || ""} onChange={e => setInvoiceInputs(prev => ({ ...prev, [p.id]: e.target.value }))} />
                       <Button size="sm" className="h-8 text-xs" disabled={busyId === p.id} onClick={() => releasePayment(p)}>
-                        {busyId === p.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wallet className="mr-1.5 h-3.5 w-3.5" />}
-                        Release Payment
+                        {busyId === p.id ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Wallet className="me-1.5 h-3.5 w-3.5" />}
+                        {t("admin.finance.purchaseApprovals.btnReleasePayment")}
                       </Button>
                     </div>
                   </div>
@@ -453,11 +459,11 @@ const PurchaseApprovals = () => {
 
         <Card className="premium-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm"><History className="h-4 w-4 text-muted-foreground" /> Recent PO Decisions</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm"><History className="h-4 w-4 text-muted-foreground" /> {t("admin.finance.purchaseApprovals.recentDecisionsTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {recentDecisions.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No decisions recorded yet.</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">{t("admin.finance.purchaseApprovals.emptyDecisions")}</p>
             ) : (
               <div className="space-y-2">
                 {recentDecisions.map(po => (
@@ -468,7 +474,7 @@ const PurchaseApprovals = () => {
                     </div>
                     <Badge variant="secondary" className={cn("text-[10px] border-none",
                       po.status === "Approved" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                      {po.status === "Approved" ? "Approved" : "Sent Back"}
+                      {po.status === "Approved" ? t("admin.finance.purchaseApprovals.statusApproved") : t("admin.finance.purchaseApprovals.statusSentBack")}
                     </Badge>
                   </div>
                 ))}

@@ -112,7 +112,7 @@ function gradeBadge(g: string) {
 function subjectShort(s: string) { return s.length > 6 ? s.slice(0, 6) + "…" : s; }
 
 // ─── Donut Chart ─────────────────────────────────────────────────────────────
-function DonutChart({ data, total }: { data: { label: string; value: number; color: string }[]; total: number }) {
+function DonutChart({ data, total, label = "Students" }: { data: { label: string; value: number; color: string }[]; total: number; label?: string }) {
   let offset = 0;
   const r = 40, circ = 2 * Math.PI * r;
   const slices = data.map(d => {
@@ -132,7 +132,7 @@ function DonutChart({ data, total }: { data: { label: string; value: number; col
           transform="rotate(-90 50 50)" strokeLinecap="butt" />
       ))}
       <text x="50" y="46" textAnchor="middle" fontSize="18" fontWeight="800" fill="#0f172a">{total}</text>
-      <text x="50" y="60" textAnchor="middle" fontSize="7.5" fill="#94a3b8">Students</text>
+      <text x="50" y="60" textAnchor="middle" fontSize="7.5" fill="#94a3b8">{label}</text>
     </svg>
   );
 }
@@ -797,7 +797,7 @@ export default function Gradebook() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">Overall % is the average of every subject with real marks — subjects still pending marks show as "—" and aren't counted.</p>
+            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">{t('admin.academics.gradebook.resultsFooter')}</p>
           </div>
         )}
 
@@ -805,19 +805,19 @@ export default function Gradebook() {
         {tab === "analytics" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <KPI icon={TrendingUp} label="Overall Class Average" value={`${overallClassAvg}%`} sub={`Across ${gradedCount} graded student${gradedCount === 1 ? "" : "s"}`} bg="bg-violet-50" ic="text-violet-500" />
-              <KPI icon={CheckCircle2} label="Pass Rate" value={`${overallPassRate}%`} sub="≥ 50% overall" bg="bg-emerald-50" ic="text-emerald-500" />
-              <KPI icon={Trophy} label="Strongest Subject" value={subjectAverages[0]?.subject ?? "—"} sub={subjectAverages[0] ? `${subjectAverages[0].avg}% class avg` : "No data yet"} bg="bg-blue-50" ic="text-blue-500" />
-              <KPI icon={AlertTriangle} label="Weakest Subject" value={subjectAverages[subjectAverages.length - 1]?.subject ?? "—"} sub={subjectAverages.length ? `${subjectAverages[subjectAverages.length - 1].avg}% class avg` : "No data yet"} bg="bg-rose-50" ic="text-rose-500" />
+              <KPI icon={TrendingUp} label={t('admin.academics.gradebook.kpiOverallClassAverage')} value={`${overallClassAvg}%`} sub={gradedCount === 1 ? t('admin.academics.gradebook.acrossGradedStudentsSingular', { count: gradedCount }) : t('admin.academics.gradebook.acrossGradedStudentsPlural', { count: gradedCount })} bg="bg-violet-50" ic="text-violet-500" />
+              <KPI icon={CheckCircle2} label={t('admin.academics.gradebook.kpiPassRate')} value={`${overallPassRate}%`} sub={t('admin.academics.gradebook.passRateSub')} bg="bg-emerald-50" ic="text-emerald-500" />
+              <KPI icon={Trophy} label={t('admin.academics.gradebook.kpiStrongestSubject')} value={subjectAverages[0]?.subject ?? "—"} sub={subjectAverages[0] ? t('admin.academics.gradebook.classAvgSub', { pct: subjectAverages[0].avg }) : t('admin.academics.gradebook.noDataYet')} bg="bg-blue-50" ic="text-blue-500" />
+              <KPI icon={AlertTriangle} label={t('admin.academics.gradebook.kpiWeakestSubject')} value={subjectAverages[subjectAverages.length - 1]?.subject ?? "—"} sub={subjectAverages.length ? t('admin.academics.gradebook.classAvgSub', { pct: subjectAverages[subjectAverages.length - 1].avg }) : t('admin.academics.gradebook.noDataYet')} bg="bg-rose-50" ic="text-rose-500" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
               {/* Subject-wise class average bars */}
               <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-5">
-                <h3 className="font-bold text-slate-900 text-sm mb-1">Subject-wise Class Average</h3>
+                <h3 className="font-bold text-slate-900 text-sm mb-1">{t('admin.academics.gradebook.subjectWiseClassAverage')}</h3>
                 <p className="text-[11px] text-slate-400 mb-4">{grade} · {displaySectionLabel} · {term}</p>
                 {subjectAverages.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-10">No graded marks yet for any subject.</p>
+                  <p className="text-sm text-slate-400 text-center py-10">{t('admin.academics.gradebook.noGradedMarksYet')}</p>
                 ) : (
                   <div className="space-y-3">
                     {subjectAverages.map(sa => (
@@ -837,14 +837,14 @@ export default function Gradebook() {
 
               {/* Overall grade distribution */}
               <div className="bg-white border border-slate-100 rounded-xl shadow-sm p-5">
-                <h3 className="font-bold text-slate-900 text-sm mb-1">Overall Grade Distribution</h3>
-                <p className="text-[11px] text-slate-400 mb-3">All subjects combined</p>
+                <h3 className="font-bold text-slate-900 text-sm mb-1">{t('admin.academics.gradebook.overallGradeDistribution')}</h3>
+                <p className="text-[11px] text-slate-400 mb-3">{t('admin.academics.gradebook.allSubjectsCombined')}</p>
                 <div className="w-full aspect-square max-w-[150px] mx-auto">
-                  <DonutChart data={overallGradeDist} total={gradedCount} />
+                  <DonutChart data={overallGradeDist} total={gradedCount} label={t('admin.academics.gradebook.donutStudentsLabel')} />
                 </div>
                 <div className="space-y-1.5 mt-4">
                   {overallGradeDist.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-2">No graded data yet</p>
+                    <p className="text-xs text-slate-400 text-center py-2">{t('admin.academics.gradebook.noGradedDataYet')}</p>
                   ) : overallGradeDist.map(d => (
                     <div key={d.label} className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
@@ -862,26 +862,26 @@ export default function Gradebook() {
         {tab === "rankings" && (
           <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/70">
-              <span className="font-semibold text-slate-800 text-sm">Class Ranking — {grade} · {displaySectionLabel} · {term}</span>
-              <span className="text-xs text-slate-400">{filteredRanked.length} student{filteredRanked.length !== 1 ? "s" : ""}</span>
+              <span className="font-semibold text-slate-800 text-sm">{t('admin.academics.gradebook.classRankingHeading')} — {grade} · {displaySectionLabel} · {term}</span>
+              <span className="text-xs text-slate-400">{filteredRanked.length === 1 ? t('admin.academics.gradebook.studentCountSingular', { count: filteredRanked.length }) : t('admin.academics.gradebook.studentCountPlural', { count: filteredRanked.length })}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 w-16">Rank</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 min-w-[150px]">Student</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500">Roll No</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Subjects Graded</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Overall %</th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">Grade</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 w-16">{t('admin.academics.gradebook.colRank')}</th>
+                    <th className="px-4 py-3 text-start text-xs font-semibold text-slate-500 min-w-[150px]">{t('admin.academics.gradebook.colStudent')}</th>
+                    <th className="px-3 py-3 text-start text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colRollNo')}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colSubjectsGraded')}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colOverallPct')}</th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500">{t('admin.academics.gradebook.colGrade')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredRanked.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-14 text-center text-sm text-slate-400">
-                        {search ? `No results for "${search}"` : `No students in ${grade} · ${displaySectionLabel}`}
+                        {search ? t('admin.academics.gradebook.noResultsFor', { search }) : t('admin.academics.gradebook.noStudentsIn', { grade, section: displaySectionLabel })}
                       </td>
                     </tr>
                   )}
@@ -908,7 +908,7 @@ export default function Gradebook() {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">Ranked by overall percentage across every subject with real marks.</p>
+            <p className="text-xs text-slate-400 px-4 py-2.5 border-t border-slate-100">{t('admin.academics.gradebook.rankingsFooter')}</p>
           </div>
         )}
       </div>
@@ -917,51 +917,50 @@ export default function Gradebook() {
       <Dialog open={structureOpen} onOpenChange={setStructureOpen}>
         <DialogContent className="sm:max-w-lg bg-white">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> Configure Gradebook Structure</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Settings2 className="w-4 h-4" /> {t('admin.academics.gradebook.dialogStructureTitle')}</DialogTitle>
             <DialogDescription>
-              {curriculumBand?.label ?? grade} · {curriculum.shortName} curriculum. Editing this school's assessment
-              categories and weightings — the curriculum stays the default template, this is your override.
+              {t('admin.academics.gradebook.dialogStructureDescription', { band: curriculumBand?.label ?? grade, curriculum: curriculum.shortName })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">{isCustomized ? "Custom structure" : "Curriculum default"}</span>
+              <span className="text-slate-500">{isCustomized ? t('admin.academics.gradebook.customStructure') : t('admin.academics.gradebook.curriculumDefault')}</span>
               <span className={cn("font-semibold", draftTotal === 100 ? "text-emerald-600" : "text-amber-600")}>
-                Total: {draftTotal} / 100
+                {t('admin.academics.gradebook.totalOutOf100', { total: draftTotal })}
               </span>
             </div>
 
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-72 overflow-y-auto pe-1">
               {draftCategories.map((c, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Input value={c.name} onChange={e => updateDraftCategory(i, { name: e.target.value })}
-                    className="h-9 text-sm flex-1" placeholder="Category name" />
+                    className="h-9 text-sm flex-1" placeholder={t('admin.academics.gradebook.categoryNamePlaceholder')} />
                   <Input type="number" min={0} max={100} value={c.marks}
                     onChange={e => updateDraftCategory(i, { marks: Math.max(0, Number(e.target.value) || 0) })}
-                    className="h-9 text-sm w-20" placeholder="Marks" />
+                    className="h-9 text-sm w-20" placeholder={t('admin.academics.gradebook.marksPlaceholder')} />
                   <button onClick={() => removeDraftCategory(i)} className="p-1.5 rounded text-slate-400 hover:text-rose-500">
                     <XIcon className="w-4 h-4" />
                   </button>
                 </div>
               ))}
               {draftCategories.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-6">No categories yet — add one below.</p>
+                <p className="text-sm text-slate-400 text-center py-6">{t('admin.academics.gradebook.noCategoriesYet')}</p>
               )}
             </div>
 
             <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={addDraftCategory}>
-              <Plus className="w-3.5 h-3.5" /> Add Category
+              <Plus className="w-3.5 h-3.5" /> {t('admin.academics.gradebook.addCategory')}
             </Button>
 
             {draftTotal !== 100 && (
-              <p className="text-xs text-amber-600">Category marks should add up to 100.</p>
+              <p className="text-xs text-amber-600">{t('admin.academics.gradebook.categoryMarksShouldAddUp')}</p>
             )}
           </div>
           <DialogFooter className="flex items-center justify-between sm:justify-between">
             <Button variant="ghost" size="sm" disabled={!isCustomized} onClick={() => setResetConfirmOpen(true)}>
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Reset to Default
+              <RotateCcw className="w-3.5 h-3.5 me-1.5" /> {t('admin.academics.gradebook.resetToDefault')}
             </Button>
-            <Button size="sm" onClick={handleSaveStructure}>Save Structure</Button>
+            <Button size="sm" onClick={handleSaveStructure}>{t('admin.academics.gradebook.saveStructure')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -970,16 +969,15 @@ export default function Gradebook() {
       <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset to curriculum default?</AlertDialogTitle>
+            <AlertDialogTitle>{t('admin.academics.gradebook.resetConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes {curriculumBand?.label ?? grade}'s custom gradebook structure and reverts to the {curriculum.shortName} curriculum's
-              default categories and weightings. Student marks themselves are not affected — only the assessment category structure resets.
+              {t('admin.academics.gradebook.resetConfirmDescription', { band: curriculumBand?.label ?? grade, curriculum: curriculum.shortName })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('admin.academics.gradebook.cancel')}</AlertDialogCancel>
             <AlertDialogAction className="bg-rose-600 hover:bg-rose-700" onClick={handleResetStructure}>
-              Reset Structure
+              {t('admin.academics.gradebook.resetStructure')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

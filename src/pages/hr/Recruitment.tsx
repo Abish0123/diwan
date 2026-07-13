@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
+import { useTranslation } from "react-i18next";
 import { useRecruitment } from "@/contexts/RecruitmentContext";
 import { useHRSettings } from "@/contexts/HRSettingsContext";
 import { JobOpeningDialog } from "@/components/hr/JobOpeningDialog";
@@ -43,7 +44,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const JOB_STATUS_LABEL_KEYS: Record<string, string> = {
+  Open: 'admin.hr.recruitment.jobStatusOpen',
+  Closed: 'admin.hr.recruitment.jobStatusClosed',
+};
+
+const STATUS_FILTER_LABEL_KEYS: Record<string, string> = {
+  All: 'admin.hr.recruitment.statusFilterAll',
+  Open: 'admin.hr.recruitment.statusFilterOpen',
+  Closed: 'admin.hr.recruitment.statusFilterClosed',
+};
+
 const Recruitment = () => {
+  const { t } = useTranslation();
   const { jobs, applications, loading } = useRecruitment();
   const hrSettings = useHRSettings();
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,12 +93,12 @@ const Recruitment = () => {
     const interviews = applications.filter(a => a.status === "Interview").length;
 
     return [
-      { label: "Active Openings", value: active.toString(), icon: Briefcase, color: "blue", sub: "Currently hiring" },
-      { label: "Total Applicants", value: totalApps.toString(), icon: Users, color: "purple", sub: "Across all roles" },
-      { label: "Interviews Today", value: interviews.toString(), icon: Calendar, color: "orange", sub: "Scheduled" },
-      { label: "Hired this Month", value: hired.toString(), icon: CheckCircle2, color: "green", sub: "Onboarding" },
+      { label: t('admin.hr.recruitment.statActiveOpenings'), value: active.toString(), icon: Briefcase, color: "blue", sub: t('admin.hr.recruitment.statCurrentlyHiring') },
+      { label: t('admin.hr.recruitment.statTotalApplicants'), value: totalApps.toString(), icon: Users, color: "purple", sub: t('admin.hr.recruitment.statAcrossAllRoles') },
+      { label: t('admin.hr.recruitment.statInterviewsToday'), value: interviews.toString(), icon: Calendar, color: "orange", sub: t('admin.hr.recruitment.statScheduled') },
+      { label: t('admin.hr.recruitment.statHiredThisMonth'), value: hired.toString(), icon: CheckCircle2, color: "green", sub: t('admin.hr.recruitment.statOnboarding') },
     ];
-  }, [jobs, applications]);
+  }, [jobs, applications, t]);
 
   const handleViewDetails = (job: JobOpening) => {
     setSelectedJob(job);
@@ -99,11 +112,11 @@ const Recruitment = () => {
 
   const handleShare = (job: JobOpening, platform?: string) => {
     const shareUrl = window.location.href; // In real app, this would be a public link
-    const text = `Join our team at Bluewood School! We are looking for a ${job.title} in the ${job.department} department. Apply now: ${shareUrl}`;
-    
+    const text = t('admin.hr.recruitment.shareMessage', { title: job.title, department: job.department, url: shareUrl });
+
     if (!platform) {
       navigator.clipboard.writeText(shareUrl);
-      toast.success("Job link copied to clipboard!");
+      toast.success(t('admin.hr.recruitment.linkCopiedToast'));
       return;
     }
 
@@ -164,28 +177,28 @@ const Recruitment = () => {
               <Briefcase className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Recruitment</h1>
-              <p className="text-sm text-slate-400">Manage job openings, applications, and hiring processes.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('admin.hr.recruitment.pageTitle')}</h1>
+              <p className="text-sm text-slate-400">{t('admin.hr.recruitment.pageSubtitle')}</p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button onClick={() => setIsJobDialogOpen(true)} className="rounded-xl h-10 gradient-primary shadow-lg shadow-primary/20">
-              <Plus className="h-4 w-4 mr-2" />
-              Post New Job
+              <Plus className="h-4 w-4 me-2" />
+              {t('admin.hr.recruitment.postNewJob')}
             </Button>
           </motion.div>
         </motion.div>
 
         {/* HR Settings recruitment policy strip */}
         <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border bg-amber-50 border-amber-100 text-sm">
-          <span className="font-semibold text-amber-800">Recruitment Config (from HR Settings):</span>
-          <span className="text-amber-700">Offer Expiry: <b>{hrSettings.offerExpiry} days</b></span>
+          <span className="font-semibold text-amber-800">{t('admin.hr.recruitment.configStripTitle')}</span>
+          <span className="text-amber-700">{t('admin.hr.recruitment.offerExpiryLabel')} <b>{t('admin.hr.recruitment.daysValue', { count: hrSettings.offerExpiry })}</b></span>
           <span className="text-amber-400">·</span>
-          <span className="text-amber-700">Probation: <b>{hrSettings.probation} months</b></span>
+          <span className="text-amber-700">{t('admin.hr.recruitment.probationLabel')} <b>{t('admin.hr.recruitment.monthsValue', { count: hrSettings.probation })}</b></span>
           <span className="text-amber-400">·</span>
-          <span className="text-amber-700">Mandatory Demo: <b>{hrSettings.mandatoryDemo ? 'Yes' : 'No'}</b></span>
+          <span className="text-amber-700">{t('admin.hr.recruitment.mandatoryDemoLabel')} <b>{hrSettings.mandatoryDemo ? t('admin.hr.recruitment.yes') : t('admin.hr.recruitment.no')}</b></span>
           <span className="text-amber-400">·</span>
-          <span className="text-amber-700">Auto-Publish Jobs: <b>{hrSettings.autoPublish ? 'On' : 'Off'}</b></span>
+          <span className="text-amber-700">{t('admin.hr.recruitment.autoPublishLabel')} <b>{hrSettings.autoPublish ? t('admin.hr.recruitment.on') : t('admin.hr.recruitment.off')}</b></span>
         </motion.div>
 
         <motion.div
@@ -215,10 +228,10 @@ const Recruitment = () => {
           className="flex flex-col sm:flex-row gap-4 items-center"
         >
           <div className="relative flex-1 w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input 
-              className="pl-10 h-11 rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all" 
-              placeholder="Search by job title or department..." 
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Input
+              className="ps-10 h-11 rounded-xl border-border bg-card focus-visible:ring-primary/20 transition-all"
+              placeholder={t('admin.hr.recruitment.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -235,7 +248,7 @@ const Recruitment = () => {
                   statusFilter === status ? "gradient-primary border-none" : "hover:bg-primary/5"
                 )}
               >
-                {status}
+                {t(STATUS_FILTER_LABEL_KEYS[status] || status)}
               </Button>
             ))}
           </div>
@@ -274,7 +287,7 @@ const Recruitment = () => {
                           job.status === "Open" ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-600"
                         )}
                       >
-                        {job.status}
+                        {t(JOB_STATUS_LABEL_KEYS[job.status] || job.status)}
                       </Badge>
                     </div>
 
@@ -311,7 +324,7 @@ const Recruitment = () => {
                           </div>
                         )}
                         {jobApps.length === 0 && (
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No applicants yet</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{t('admin.hr.recruitment.noApplicantsYet')}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -328,19 +341,19 @@ const Recruitment = () => {
                           <DropdownMenuContent align="end" className="rounded-2xl p-2 border-slate-100 shadow-xl min-w-[180px]">
                             <DropdownMenuItem onClick={() => handleShare(job)} className="rounded-xl p-3 cursor-pointer gap-2">
                               <Copy className="h-4 w-4 text-slate-500" />
-                              <span className="font-bold text-xs uppercase tracking-widest">Copy Link</span>
+                              <span className="font-bold text-xs uppercase tracking-widest">{t('admin.hr.recruitment.copyLink')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleShare(job, 'linkedin')} className="rounded-xl p-3 cursor-pointer gap-2">
                               <Linkedin className="h-4 w-4 text-purple-600" />
-                              <span className="font-bold text-xs uppercase tracking-widest">LinkedIn</span>
+                              <span className="font-bold text-xs uppercase tracking-widest">{t('admin.hr.recruitment.linkedin')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleShare(job, 'twitter')} className="rounded-xl p-3 cursor-pointer gap-2">
                               <Twitter className="h-4 w-4 text-sky-500" />
-                              <span className="font-bold text-xs uppercase tracking-widest">Twitter (X)</span>
+                              <span className="font-bold text-xs uppercase tracking-widest">{t('admin.hr.recruitment.twitter')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleShare(job, 'facebook')} className="rounded-xl p-3 cursor-pointer gap-2">
                               <Facebook className="h-4 w-4 text-blue-700" />
-                              <span className="font-bold text-xs uppercase tracking-widest">Facebook</span>
+                              <span className="font-bold text-xs uppercase tracking-widest">{t('admin.hr.recruitment.facebook')}</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -352,29 +365,29 @@ const Recruitment = () => {
                             className="rounded-xl h-9 text-xs font-bold"
                             onClick={() => handleViewDetails(job)}
                           >
-                            View Details
+                            {t('admin.hr.recruitment.viewDetails')}
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button 
+                          <Button
                             variant="outline"
-                            size="sm" 
+                            size="sm"
                             className="rounded-xl h-9 text-xs font-bold border-slate-200"
                             onClick={() => {
                               setSelectedJob(job);
                               setIsApplyDialogOpen(true);
                             }}
                           >
-                            Apply
+                            {t('admin.hr.recruitment.apply')}
                           </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="rounded-xl h-9 text-xs font-bold gradient-primary shadow-lg shadow-primary/20"
                             onClick={() => handleManageApplicants(job)}
                           >
-                            Manage Applicants
+                            {t('admin.hr.recruitment.manageApplicants')}
                           </Button>
                         </motion.div>
                       </div>
@@ -388,8 +401,8 @@ const Recruitment = () => {
                   <Briefcase className="h-10 w-10 opacity-20" />
                 </div>
                 <div className="text-center">
-                  <p className="font-bold tracking-widest uppercase text-xs">No job openings found</p>
-                  <p className="text-sm">Try adjusting your search or post a new job opening.</p>
+                  <p className="font-bold tracking-widest uppercase text-xs">{t('admin.hr.recruitment.noJobOpeningsFound')}</p>
+                  <p className="text-sm">{t('admin.hr.recruitment.noJobOpeningsHint')}</p>
                 </div>
               </div>
             )}

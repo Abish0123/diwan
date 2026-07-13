@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Award, ClipboardCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { smartDb } from "@/lib/localDb";
 import { useAuth } from "@/hooks/useAuth";
 import { AnalyticsScorecard } from "./appraisalAnalytics";
@@ -21,7 +22,17 @@ const STATUS_PROGRESS: Record<string, number> = {
   "Completed": 100,
 };
 
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  "Not Started": "admin.hr.appraisal.myAppraisalWidget.statusNotStarted",
+  "Self Review Submitted": "admin.hr.appraisal.myAppraisalWidget.statusSelfReviewSubmitted",
+  "HOD Review": "admin.hr.appraisal.myAppraisalWidget.statusHodReview",
+  "Principal Approval": "admin.hr.appraisal.myAppraisalWidget.statusPrincipalApproval",
+  "HR Verification": "admin.hr.appraisal.myAppraisalWidget.statusHrVerification",
+  "Completed": "admin.hr.appraisal.myAppraisalWidget.statusCompleted",
+};
+
 export function MyAppraisalWidget() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [card, setCard] = useState<AnalyticsScorecard | null>(null);
   const [cycleTitle, setCycleTitle] = useState<string>("");
@@ -42,7 +53,7 @@ export function MyAppraisalWidget() {
       if (!latestCycle) { setCard(null); setLoaded(true); return; }
       const mine = appraisalData.find((d) => d.cycleId === latestCycle.id && d.name === me.name);
       setCard(mine || null);
-      setCycleTitle(latestCycle.title || "Performance Review");
+      setCycleTitle(latestCycle.title || t("admin.hr.appraisal.myAppraisalWidget.defaultCycleTitle"));
     } catch {
       setCard(null);
     } finally {
@@ -72,7 +83,7 @@ export function MyAppraisalWidget() {
         <div className="flex items-center gap-2 mb-3">
           <span className={`h-2 w-2 rounded-full ${isUnderReview ? "bg-indigo-400" : alreadySubmitted ? "bg-emerald-500" : "bg-amber-500"}`} />
           <span className="text-xs font-semibold text-slate-600">
-            {isUnderReview ? "Your result isn't published yet — check back soon" : card.status}
+            {isUnderReview ? t("admin.hr.appraisal.myAppraisalWidget.resultNotPublished") : t(STATUS_LABEL_KEYS[card.status] || card.status)}
           </span>
         </div>
         <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
@@ -80,12 +91,12 @@ export function MyAppraisalWidget() {
         </div>
         <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Due</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{t("admin.hr.appraisal.myAppraisalWidget.due")}</p>
             <p className="font-semibold text-slate-700">{card.deadlines?.selfReview || "—"}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Reviewer</p>
-            <p className="font-semibold text-slate-700 truncate">{card.reviewers?.hod && card.reviewers.hod !== "Unassigned" ? card.reviewers.hod : (card.reviewers?.principal || "Not assigned")}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{t("admin.hr.appraisal.myAppraisalWidget.reviewer")}</p>
+            <p className="font-semibold text-slate-700 truncate">{card.reviewers?.hod && card.reviewers.hod !== "Unassigned" ? card.reviewers.hod : (card.reviewers?.principal || t("admin.hr.appraisal.myAppraisalWidget.notAssigned"))}</p>
           </div>
         </div>
         <button
@@ -95,7 +106,7 @@ export function MyAppraisalWidget() {
           className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:bg-slate-100 disabled:text-slate-400 text-white text-sm font-bold transition flex items-center justify-center gap-1.5"
         >
           <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
-          {alreadySubmitted ? "Self Review Submitted" : "Start Review"}
+          {alreadySubmitted ? t("admin.hr.appraisal.myAppraisalWidget.statusSelfReviewSubmitted") : t("admin.hr.appraisal.myAppraisalWidget.startReview")}
         </button>
       </motion.div>
 

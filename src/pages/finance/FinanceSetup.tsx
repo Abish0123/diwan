@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { 
   Plus, 
@@ -179,11 +180,12 @@ const ReceiptTemplatePreview = ({
   schoolName,
   currency,
 }: ReceiptTemplatePreviewProps) => {
+  const { t } = useTranslation();
   const sampleRows = [
-    { label: "Invoice #", value: "INV-2026-00417" },
-    { label: "Student Name", value: "Fatima Al-Sayed" },
-    { label: "Class", value: "Grade 8 - Section B" },
-    { label: "Date", value: "01 Jul 2026" },
+    { label: t("admin.finance.setup.previewInvoiceNo"), value: "INV-2026-00417" },
+    { label: t("admin.finance.setup.previewStudentName"), value: "Fatima Al-Sayed" },
+    { label: t("admin.finance.setup.previewClass"), value: "Grade 8 - Section B" },
+    { label: t("admin.finance.setup.previewDate"), value: "01 Jul 2026" },
   ];
 
   if (templateStyle === "Classic") {
@@ -194,7 +196,7 @@ const ReceiptTemplatePreview = ({
             {schoolName}
           </h3>
           {headerText && <p className="text-xs text-slate-600 mt-1">{headerText}</p>}
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] mt-3">Payment Receipt</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] mt-3">{t("admin.finance.setup.paymentReceipt")}</p>
         </div>
         <div className="space-y-1.5 text-sm">
           {sampleRows.map((row) => (
@@ -207,18 +209,18 @@ const ReceiptTemplatePreview = ({
         <div className="border-t border-dashed border-slate-300 my-4" />
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-600">Tuition Fee - Term 1</span>
+            <span className="text-slate-600">{t("admin.finance.setup.tuitionFeeTerm1")}</span>
             <span className="font-medium">{currency} 8,500</span>
           </div>
         </div>
         <div className="border-t-2 border-slate-300 my-4" />
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between font-bold">
-            <span>Amount Paid</span>
+            <span>{t("admin.finance.setup.amountPaid")}</span>
             <span style={{ color: accentColor }}>{currency} 8,500</span>
           </div>
           <div className="flex justify-between text-slate-500">
-            <span>Balance Due</span>
+            <span>{t("admin.finance.setup.balanceDue")}</span>
             <span>{currency} 0</span>
           </div>
         </div>
@@ -239,7 +241,7 @@ const ReceiptTemplatePreview = ({
             {schoolName}
           </h3>
           {headerText && <p className="text-xs text-muted-foreground mt-0.5">{headerText}</p>}
-          <p className="text-xs uppercase tracking-widest text-muted-foreground mt-4">Payment Receipt</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mt-4">{t("admin.finance.setup.paymentReceipt")}</p>
         </div>
         <div className="space-y-2.5 text-sm">
           {sampleRows.map((row) => (
@@ -251,17 +253,17 @@ const ReceiptTemplatePreview = ({
         </div>
         <div className="h-px bg-border my-5" />
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Tuition Fee - Term 1</span>
+          <span className="text-muted-foreground">{t("admin.finance.setup.tuitionFeeTerm1")}</span>
           <span>{currency} 8,500</span>
         </div>
         <div className="h-px bg-border my-5" />
         <div className="space-y-2.5 text-sm">
           <div className="flex justify-between">
-            <span>Amount Paid</span>
+            <span>{t("admin.finance.setup.amountPaid")}</span>
             <span style={{ color: accentColor }}>{currency} 8,500</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Balance Due</span>
+            <span>{t("admin.finance.setup.balanceDue")}</span>
             <span>{currency} 0</span>
           </div>
         </div>
@@ -286,7 +288,7 @@ const ReceiptTemplatePreview = ({
       </div>
       <div className="p-5">
         <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: accentColor }}>
-          Payment Receipt
+          {t("admin.finance.setup.paymentReceipt")}
         </p>
         <div className="space-y-2 text-sm">
           {sampleRows.map((row) => (
@@ -298,17 +300,17 @@ const ReceiptTemplatePreview = ({
         </div>
         <div className="rounded-xl bg-secondary/40 p-3 mt-4">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Tuition Fee - Term 1</span>
+            <span className="text-muted-foreground">{t("admin.finance.setup.tuitionFeeTerm1")}</span>
             <span className="font-medium">{currency} 8,500</span>
           </div>
         </div>
         <div className="mt-4 space-y-1.5">
           <div className="flex justify-between text-sm font-bold">
-            <span>Amount Paid</span>
+            <span>{t("admin.finance.setup.amountPaid")}</span>
             <span style={{ color: accentColor }}>{currency} 8,500</span>
           </div>
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Balance Due</span>
+            <span>{t("admin.finance.setup.balanceDue")}</span>
             <span>{currency} 0</span>
           </div>
         </div>
@@ -329,7 +331,26 @@ const ADMIN_TIER_ROLE_IDS = ["super_admin", "school_owner", "admin"];
 
 const VALID_TABS = ["categories", "inventory", "settings", "payment-gateway", "tax-settings", "late-fee-policy", "receipt-templates", "permissions"];
 
+// Lookup maps: underlying values stay as English identifiers for logic/comparisons,
+// these only translate the rendered label.
+const CATEGORY_TYPE_LABEL_KEYS: Record<string, string> = {
+  Revenue: "admin.finance.setup.typeRevenueLabel",
+  Expense: "admin.finance.setup.typeExpenseLabel",
+  Asset: "admin.finance.setup.typeAssetLabel",
+};
+
+const INVENTORY_STATUS_LABEL_KEYS: Record<string, string> = {
+  "In Stock": "admin.finance.setup.statusInStock",
+  "Low Stock": "admin.finance.setup.statusLowStock",
+  "Out of Stock": "admin.finance.setup.statusOutOfStock",
+};
+
+const CATEGORY_STATUS_LABEL_KEYS: Record<string, string> = {
+  Active: "admin.finance.setup.statusActive",
+};
+
 const FinanceSetup = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
@@ -491,7 +512,7 @@ const FinanceSetup = () => {
 
   const handleSaveSettings = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -502,10 +523,10 @@ const FinanceSetup = () => {
         ...settings,
         uid: user.uid,
       }, user.uid);
-      toast.success("Financial settings saved successfully!");
+      toast.success(t("admin.finance.setup.toastSettingsSaved"));
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast.error("Failed to save settings");
+      toast.error(t("admin.finance.setup.toastSettingsSaveFailed"));
     } finally {
       setIsSavingSettings(false);
     }
@@ -513,7 +534,7 @@ const FinanceSetup = () => {
 
   const handleSaveGatewaySettings = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -527,10 +548,10 @@ const FinanceSetup = () => {
         uid: user.uid,
       }, GATEWAY_CONFIG_ID);
       setGatewayMethodsConfigCache(gatewayConfig);
-      toast.success("Payment gateway settings saved successfully!");
+      toast.success(t("admin.finance.setup.toastGatewaySaved"));
     } catch (error) {
       console.error("Error saving gateway settings:", error);
-      toast.error("Failed to save gateway settings");
+      toast.error(t("admin.finance.setup.toastGatewaySaveFailed"));
     } finally {
       setIsSavingGateway(false);
     }
@@ -547,7 +568,7 @@ const FinanceSetup = () => {
 
   const handleSaveTaxSettings = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -557,10 +578,10 @@ const FinanceSetup = () => {
         ...taxSettings,
         uid: user.uid,
       }, user.uid);
-      toast.success("Tax settings saved successfully!");
+      toast.success(t("admin.finance.setup.toastTaxSaved"));
     } catch (error) {
       console.error("Error saving tax settings:", error);
-      toast.error("Failed to save tax settings");
+      toast.error(t("admin.finance.setup.toastTaxSaveFailed"));
     } finally {
       setIsSavingTax(false);
     }
@@ -568,7 +589,7 @@ const FinanceSetup = () => {
 
   const handleSaveReceiptTemplate = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -582,10 +603,10 @@ const FinanceSetup = () => {
         uid: user.uid,
       }, RECEIPT_TEMPLATE_ID);
       setReceiptTemplateCache(receiptTemplate);
-      toast.success("Receipt template saved successfully!");
+      toast.success(t("admin.finance.setup.toastReceiptSaved"));
     } catch (error) {
       console.error("Error saving receipt template:", error);
-      toast.error("Failed to save receipt template");
+      toast.error(t("admin.finance.setup.toastReceiptSaveFailed"));
     } finally {
       setIsSavingReceipt(false);
     }
@@ -593,7 +614,7 @@ const FinanceSetup = () => {
 
   const handleSaveLateFeePolicy = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -603,10 +624,10 @@ const FinanceSetup = () => {
         ...lateFeePolicy,
         uid: user.uid,
       }, user.uid);
-      toast.success("Late fee policy saved successfully!");
+      toast.success(t("admin.finance.setup.toastLateFeeSaved"));
     } catch (error) {
       console.error("Error saving late fee policy:", error);
-      toast.error("Failed to save late fee policy");
+      toast.error(t("admin.finance.setup.toastLateFeeSaveFailed"));
     } finally {
       setIsSavingLateFeePolicy(false);
     }
@@ -627,7 +648,9 @@ const FinanceSetup = () => {
   };
 
   const tierLabel = (tier: LateFeeTier) =>
-    tier.maxDays === null ? `More than ${tier.minDays - 1} Days Late` : `${tier.minDays}–${tier.maxDays} Days Late`;
+    tier.maxDays === null
+      ? t("admin.finance.setup.tierMoreThanDays", { days: tier.minDays - 1 })
+      : t("admin.finance.setup.tierRangeDays", { min: tier.minDays, max: tier.maxDays });
 
   const togglePermission = (roleId: string, field: keyof Omit<FinancePermissionRow, "roleId">) => {
     setPermissionRows(prev => prev.map(row =>
@@ -637,7 +660,7 @@ const FinanceSetup = () => {
 
   const handleSavePermissions = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -649,10 +672,10 @@ const FinanceSetup = () => {
           updatedAt: new Date().toISOString(),
         }, row.roleId);
       }
-      toast.success("Finance permissions saved successfully!");
+      toast.success(t("admin.finance.setup.toastPermissionsSaved"));
     } catch (error) {
       console.error("Error saving finance permissions:", error);
-      toast.error("Failed to save permissions");
+      toast.error(t("admin.finance.setup.toastPermissionsSaveFailed"));
     } finally {
       setIsSavingPermissions(false);
     }
@@ -660,7 +683,7 @@ const FinanceSetup = () => {
 
   const handleSave = async () => {
     if (!user) {
-      toast.error("You must be logged in");
+      toast.error(t("admin.finance.setup.mustBeLoggedIn"));
       return;
     }
 
@@ -668,7 +691,7 @@ const FinanceSetup = () => {
     try {
       if (activeTab === 'categories') {
         if (!newCategory.name) {
-          toast.error("Please enter a category name");
+          toast.error(t("admin.finance.setup.toastEnterCategoryName"));
           return;
         }
 
@@ -681,11 +704,11 @@ const FinanceSetup = () => {
           uid: user.uid,
         });
 
-        toast.success(`Category "${newCategory.name}" added successfully!`);
+        toast.success(t("admin.finance.setup.toastCategoryAdded", { name: newCategory.name }));
         setNewCategory({ name: "", type: "Revenue", budget: 0 });
       } else {
         if (!newInventoryItem.name || !newInventoryItem.category) {
-          toast.error("Please fill in all required fields");
+          toast.error(t("admin.finance.setup.toastFillRequiredFields"));
           return;
         }
 
@@ -702,7 +725,7 @@ const FinanceSetup = () => {
           uid: user.uid,
         });
 
-        toast.success(`Item "${newInventoryItem.name}" added successfully!`);
+        toast.success(t("admin.finance.setup.toastItemAdded", { name: newInventoryItem.name }));
         setNewInventoryItem({ name: "", category: "", assetCategory: "", stock: 0, price: 0 });
       }
       
@@ -710,7 +733,7 @@ const FinanceSetup = () => {
       fetchData();
     } catch (error) {
       console.error("Error saving data:", error);
-      toast.error("Failed to save data");
+      toast.error(t("admin.finance.setup.toastSaveDataFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -719,22 +742,22 @@ const FinanceSetup = () => {
   const handleDeleteCategory = async (id: string) => {
     try {
       await smartDb.delete("financial_categories", id);
-      toast.success("Category deleted");
+      toast.success(t("admin.finance.setup.toastCategoryDeleted"));
       fetchData();
     } catch (error) {
       console.error("Error deleting category:", error);
-      toast.error("Failed to delete category");
+      toast.error(t("admin.finance.setup.toastCategoryDeleteFailed"));
     }
   };
 
   const handleDeleteInventory = async (id: string) => {
     try {
       await smartDb.delete("inventory", id);
-      toast.success("Inventory item deleted");
+      toast.success(t("admin.finance.setup.toastItemDeleted"));
       fetchData();
     } catch (error) {
       console.error("Error deleting item:", error);
-      toast.error("Failed to delete item");
+      toast.error(t("admin.finance.setup.toastItemDeleteFailed"));
     }
   };
 
@@ -778,9 +801,9 @@ const FinanceSetup = () => {
                 <Settings className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Finance Setup</h1>
+                <h1 className="text-2xl font-bold text-slate-900">{t("admin.finance.setup.pageTitle")}</h1>
                 <p className="text-sm text-slate-400 flex items-center gap-2">
-                  Configure your school's financial structure and inventory.
+                  {t("admin.finance.setup.pageSubtitle")}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -788,7 +811,7 @@ const FinanceSetup = () => {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs p-3 rounded-xl">
                         <p className="text-xs leading-relaxed">
-                          Use this section to define how you track money coming in (Revenue), money going out (Expenses), and things you own (Assets/Inventory).
+                          {t("admin.finance.setup.tooltipHelp")}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -805,59 +828,59 @@ const FinanceSetup = () => {
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl h-11 px-6 gradient-primary shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New {activeTab === 'categories' ? 'Category' : 'Item'}
+                  <Plus className="h-4 w-4 me-2" />
+                  {activeTab === 'categories' ? t("admin.finance.setup.addNewCategory") : t("admin.finance.setup.addNewItem")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[450px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
                 <div className="bg-gradient-to-br from-primary/10 via-background to-background p-6">
                   <DialogHeader className="mb-4">
                     <DialogTitle className="text-2xl font-bold">
-                      {activeTab === 'categories' ? 'New Category' : 'New Inventory Item'}
+                      {activeTab === 'categories' ? t("admin.finance.setup.newCategoryTitle") : t("admin.finance.setup.newInventoryItemTitle")}
                     </DialogTitle>
                     <DialogDescription className="text-sm">
-                      {activeTab === 'categories' 
-                        ? 'Define a new financial bucket for your school ledger.' 
-                        : 'Add a new physical asset or supply to your school inventory.'}
+                      {activeTab === 'categories'
+                        ? t("admin.finance.setup.newCategoryDesc")
+                        : t("admin.finance.setup.newItemDesc")}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-5 py-2">
                     {activeTab === 'categories' ? (
                       <>
                         <div className="grid gap-2">
-                          <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Category Name</Label>
-                          <Input 
-                            id="name" 
-                            placeholder="e.g., Tuition Fees" 
+                          <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.categoryNameLabel")}</Label>
+                          <Input
+                            id="name"
+                            placeholder={t("admin.finance.setup.categoryNamePlaceholder")}
                             className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                             value={newCategory.name}
                             onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                           />
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="type" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Type</Label>
-                          <Select 
-                            value={newCategory.type} 
+                          <Label htmlFor="type" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.typeLabel")}</Label>
+                          <Select
+                            value={newCategory.type}
                             onValueChange={(value) => setNewCategory({ ...newCategory, type: value })}
                           >
                             <SelectTrigger className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm">
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder={t("admin.finance.setup.selectTypePlaceholder")} />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-none shadow-xl">
-                              <SelectItem value="Revenue" className="rounded-lg">Revenue (Income)</SelectItem>
-                              <SelectItem value="Expense" className="rounded-lg">Expense (Outflow)</SelectItem>
-                              <SelectItem value="Asset" className="rounded-lg">Asset (Property)</SelectItem>
+                              <SelectItem value="Revenue" className="rounded-lg">{t("admin.finance.setup.typeRevenueOption")}</SelectItem>
+                              <SelectItem value="Expense" className="rounded-lg">{t("admin.finance.setup.typeExpenseOption")}</SelectItem>
+                              <SelectItem value="Asset" className="rounded-lg">{t("admin.finance.setup.typeAssetOption")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="grid gap-2">
-                          <Label htmlFor="budget" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
-                            {newCategory.type === 'Revenue' ? `Target Amount (${settings.currency})` : `Budget (${settings.currency})`}
+                          <Label htmlFor="budget" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">
+                            {newCategory.type === 'Revenue' ? t("admin.finance.setup.targetAmountLabel", { currency: settings.currency }) : t("admin.finance.setup.budgetLabel", { currency: settings.currency })}
                           </Label>
-                          <Input 
-                            id="budget" 
+                          <Input
+                            id="budget"
                             type="number"
-                            placeholder="0.00" 
+                            placeholder="0.00"
                             className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                             value={newCategory.budget}
                             onChange={(e) => setNewCategory({ ...newCategory, budget: Number(e.target.value) })}
@@ -867,10 +890,10 @@ const FinanceSetup = () => {
                     ) : (
                       <>
                         <div className="grid gap-2">
-                          <Label htmlFor="item-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Item Name</Label>
-                          <Input 
-                            id="item-name" 
-                            placeholder="e.g., Mathematics Grade 10" 
+                          <Label htmlFor="item-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.itemNameLabel")}</Label>
+                          <Input
+                            id="item-name"
+                            placeholder={t("admin.finance.setup.itemNamePlaceholder")}
                             className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                             value={newInventoryItem.name}
                             onChange={(e) => setNewInventoryItem({ ...newInventoryItem, name: e.target.value })}
@@ -878,30 +901,30 @@ const FinanceSetup = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="item-category" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Category</Label>
-                            <Input 
-                              id="item-category" 
-                              placeholder="e.g., Books" 
+                            <Label htmlFor="item-category" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.categoryLabel")}</Label>
+                            <Input
+                              id="item-category"
+                              placeholder={t("admin.finance.setup.itemCategoryPlaceholder")}
                               className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                               value={newInventoryItem.category}
                               onChange={(e) => setNewInventoryItem({ ...newInventoryItem, category: e.target.value })}
                             />
                           </div>
                           <div className="grid gap-2">
-                            <Label htmlFor="asset-link" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Asset Link</Label>
-                            <Select 
-                              value={newInventoryItem.assetCategory} 
+                            <Label htmlFor="asset-link" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.assetLinkLabel")}</Label>
+                            <Select
+                              value={newInventoryItem.assetCategory}
                               onValueChange={(value) => setNewInventoryItem({ ...newInventoryItem, assetCategory: value })}
                             >
                               <SelectTrigger className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm">
-                                <SelectValue placeholder="Select asset" />
+                                <SelectValue placeholder={t("admin.finance.setup.selectAssetPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent className="rounded-xl border-none shadow-xl">
                                 {categories.filter(c => c.type === 'Asset').map(c => (
                                   <SelectItem key={c.id} value={c.name} className="rounded-lg">{c.name}</SelectItem>
                                 ))}
                                 {categories.filter(c => c.type === 'Asset').length === 0 && (
-                                  <SelectItem value="General Asset" className="rounded-lg">General Asset</SelectItem>
+                                  <SelectItem value="General Asset" className="rounded-lg">{t("admin.finance.setup.generalAssetOption")}</SelectItem>
                                 )}
                               </SelectContent>
                             </Select>
@@ -909,22 +932,22 @@ const FinanceSetup = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="grid gap-2">
-                            <Label htmlFor="stock" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Initial Stock</Label>
-                            <Input 
-                              id="stock" 
-                              type="number" 
-                              placeholder="0" 
+                            <Label htmlFor="stock" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.initialStockLabel")}</Label>
+                            <Input
+                              id="stock"
+                              type="number"
+                              placeholder="0"
                               className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                               value={newInventoryItem.stock}
                               onChange={(e) => setNewInventoryItem({ ...newInventoryItem, stock: Number(e.target.value) })}
                             />
                           </div>
                           <div className="grid gap-2">
-                            <Label htmlFor="price" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Unit Price ({settings.currency})</Label>
-                            <Input 
-                              id="price" 
-                              type="number" 
-                              placeholder="0.00" 
+                            <Label htmlFor="price" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ms-1">{t("admin.finance.setup.unitPriceLabel", { currency: settings.currency })}</Label>
+                            <Input
+                              id="price"
+                              type="number"
+                              placeholder="0.00"
                               className="rounded-xl h-11 border-primary/10 focus:border-primary/30 bg-white/50 backdrop-blur-sm"
                               value={newInventoryItem.price}
                               onChange={(e) => setNewInventoryItem({ ...newInventoryItem, price: Number(e.target.value) })}
@@ -935,15 +958,15 @@ const FinanceSetup = () => {
                     )}
                   </div>
                   <DialogFooter className="mt-6 gap-2">
-                    <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl h-11">Cancel</Button>
+                    <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl h-11">{t("admin.finance.setup.cancelButton")}</Button>
                     <Button onClick={handleSave} disabled={isSubmitting} className="rounded-xl h-11 px-8 gradient-primary shadow-lg shadow-primary/20">
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
+                          <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                          {t("admin.finance.setup.creatingButton")}
                         </>
                       ) : (
-                        `Create ${activeTab === 'categories' ? 'Category' : 'Item'}`
+                        activeTab === 'categories' ? t("admin.finance.setup.createCategoryButton") : t("admin.finance.setup.createItemButton")
                       )}
                     </Button>
                   </DialogFooter>
@@ -958,10 +981,10 @@ const FinanceSetup = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
             {[
-              { label: 'Opening Balance', value: settings.openingBalance, icon: DollarSign, color: 'blue' },
-              { label: 'Initial Capital', value: settings.initialCapital, icon: Building2, color: 'purple' },
-              { label: 'Bank Loans', value: settings.bankLoan, icon: ArrowUpRight, color: 'orange' },
-              { label: 'Retained Earnings', value: settings.retainedEarnings, icon: History, color: 'green' }
+              { label: t("admin.finance.setup.statOpeningBalance"), value: settings.openingBalance, icon: DollarSign, color: 'blue' },
+              { label: t("admin.finance.setup.statInitialCapital"), value: settings.initialCapital, icon: Building2, color: 'purple' },
+              { label: t("admin.finance.setup.statBankLoans"), value: settings.bankLoan, icon: ArrowUpRight, color: 'orange' },
+              { label: t("admin.finance.setup.statRetainedEarnings"), value: settings.retainedEarnings, icon: History, color: 'green' }
             ].map((stat) => (
               <motion.div 
                 key={stat.label}
@@ -982,36 +1005,36 @@ const FinanceSetup = () => {
           <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
             <TabsList className="bg-transparent p-0 h-auto mb-8 w-full flex-nowrap overflow-x-auto justify-start gap-1">
               <TabsTrigger value="categories" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <Layers className="h-4 w-4 mr-2" />
-                Financial Structure
+                <Layers className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabFinancialStructure")}
               </TabsTrigger>
               <TabsTrigger value="inventory" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <Package className="h-4 w-4 mr-2" />
-                School Inventory
+                <Package className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabSchoolInventory")}
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <Settings className="h-4 w-4 mr-2" />
-                Financial Settings
+                <Settings className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabFinancialSettings")}
               </TabsTrigger>
               <TabsTrigger value="payment-gateway" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Payment Gateway
+                <CreditCard className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabPaymentGateway")}
               </TabsTrigger>
               <TabsTrigger value="tax-settings" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <Percent className="h-4 w-4 mr-2" />
-                Tax Settings
+                <Percent className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabTaxSettings")}
               </TabsTrigger>
               <TabsTrigger value="late-fee-policy" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Late Fee Policy
+                <AlertTriangle className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabLateFeePolicy")}
               </TabsTrigger>
               <TabsTrigger value="receipt-templates" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <FileText className="h-4 w-4 mr-2" />
-                Receipt Templates
+                <FileText className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabReceiptTemplates")}
               </TabsTrigger>
               <TabsTrigger value="permissions" className="flex items-center rounded-lg px-4 h-10 text-sm font-medium text-slate-600 hover:bg-slate-100 data-[state=active]:bg-[#9810fa] data-[state=active]:text-white data-[state=active]:shadow-none transition-all">
-                <Lock className="h-4 w-4 mr-2" />
-                Permissions
+                <Lock className="h-4 w-4 me-2" />
+                {t("admin.finance.setup.tabPermissions")}
               </TabsTrigger>
             </TabsList>
 
@@ -1023,9 +1046,9 @@ const FinanceSetup = () => {
                 className="grid grid-cols-1 md:grid-cols-3 gap-6"
               >
                 {[
-                  { label: 'Revenue Categories', count: revenueCount, icon: TrendingUp, color: 'green' },
-                  { label: 'Expense Categories', count: expenseCount, icon: TrendingDown, color: 'red' },
-                  { label: 'Asset Categories', count: assetCount, icon: Box, color: 'blue' }
+                  { label: t("admin.finance.setup.revenueCategoriesLabel"), count: revenueCount, icon: TrendingUp, color: 'green' },
+                  { label: t("admin.finance.setup.expenseCategoriesLabel"), count: expenseCount, icon: TrendingDown, color: 'red' },
+                  { label: t("admin.finance.setup.assetCategoriesLabel"), count: assetCount, icon: Box, color: 'blue' }
                 ].map((stat) => (
                   <motion.div 
                     key={stat.label}
@@ -1040,7 +1063,7 @@ const FinanceSetup = () => {
                       <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
                       <div className="flex items-baseline gap-2">
                         <p className="text-3xl font-black">{stat.count}</p>
-                        <p className="text-[10px] font-medium text-muted-foreground">Active Buckets</p>
+                        <p className="text-[10px] font-medium text-muted-foreground">{t("admin.finance.setup.activeBucketsLabel")}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -1051,49 +1074,49 @@ const FinanceSetup = () => {
               {loading ? (
                 <div className="p-24 flex flex-col items-center justify-center text-muted-foreground">
                   <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
-                  <p className="text-sm font-medium animate-pulse">Synchronizing your ledger...</p>
+                  <p className="text-sm font-medium animate-pulse">{t("admin.finance.setup.loadingLedger")}</p>
                 </div>
               ) : (
                 <>
                   <div className="p-6 border-b border-border/50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-secondary/10">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold">Ledger Categories</h3>
+                      <h3 className="text-lg font-bold">{t("admin.finance.setup.ledgerCategoriesTitle")}</h3>
                       <Badge variant="secondary" className="rounded-full px-3">{categories.length}</Badge>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                       <div className="relative flex-1 sm:w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                        <Input className="pl-10 h-10 text-sm rounded-xl border-none bg-white shadow-sm" placeholder="Find a category..." />
+                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                        <Input className="ps-10 h-10 text-sm rounded-xl border-none bg-white shadow-sm" placeholder={t("admin.finance.setup.findCategoryPlaceholder")} />
                       </div>
                       <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-white border-none shadow-sm">
                         <Filter className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  
+
                   {categories.length === 0 ? (
                     <div className="p-20 text-center space-y-4">
                       <div className="h-20 w-20 bg-secondary/30 rounded-full flex items-center justify-center mx-auto">
                         <Layers className="h-10 w-10 text-muted-foreground/40" />
                       </div>
                       <div className="max-w-xs mx-auto">
-                        <h4 className="font-bold text-lg">No categories found</h4>
-                        <p className="text-sm text-muted-foreground">Start by defining your first financial category to track your school's money flow.</p>
+                        <h4 className="font-bold text-lg">{t("admin.finance.setup.noCategoriesTitle")}</h4>
+                        <p className="text-sm text-muted-foreground">{t("admin.finance.setup.noCategoriesDesc")}</p>
                       </div>
                       <Button onClick={() => setIsAddDialogOpen(true)} variant="outline" className="rounded-xl">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add First Category
+                        <Plus className="h-4 w-4 me-2" />
+                        {t("admin.finance.setup.addFirstCategoryButton")}
                       </Button>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader className="bg-secondary/20">
                         <TableRow className="hover:bg-transparent border-none">
-                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Category Name</TableHead>
-                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Type</TableHead>
-                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Linked Items</TableHead>
-                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">Status</TableHead>
-                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider text-right">Actions</TableHead>
+                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t("admin.finance.setup.tableCategoryName")}</TableHead>
+                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t("admin.finance.setup.tableType")}</TableHead>
+                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t("admin.finance.setup.tableLinkedItems")}</TableHead>
+                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider">{t("admin.finance.setup.tableStatus")}</TableHead>
+                          <TableHead className="py-4 font-bold text-xs uppercase tracking-wider text-end">{t("admin.finance.setup.tableActions")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1121,19 +1144,19 @@ const FinanceSetup = () => {
                                   cat.type === 'Expense' ? 'bg-red-500/10 text-red-600' : 
                                   'bg-blue-500/10 text-purple-600'
                                 }`}>
-                                  {cat.type}
+                                  {t(CATEGORY_TYPE_LABEL_KEYS[cat.type] || cat.type)}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-4">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-medium">{cat.subcategories}</span>
-                                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Items</span>
+                                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t("admin.finance.setup.itemsSuffix")}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="py-4">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-                                  <span className="text-xs font-bold text-green-600">{cat.status}</span>
+                                  <span className="text-xs font-bold text-green-600">{t(CATEGORY_STATUS_LABEL_KEYS[cat.status] || cat.status)}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="py-4 text-right">
@@ -1279,7 +1302,7 @@ const FinanceSetup = () => {
                                   item.status === 'Low Stock' ? 'bg-orange-500/10 text-orange-600' : 
                                   'bg-red-500/10 text-red-600'
                                 }`}>
-                                  {item.status}
+                                  {t(INVENTORY_STATUS_LABEL_KEYS[item.status] || item.status)}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-4 text-right">
