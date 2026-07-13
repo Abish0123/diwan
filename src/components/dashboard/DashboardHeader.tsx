@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { roleLabel, getRole } from "@/lib/roles";
 import { RoleSwitcher } from "@/components/dashboard/RoleSwitcher";
 import { isFirestoreWorking } from "@/lib/firebase";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useNotificationsContext } from "@/contexts/NotificationsContext";
 import { resolveNotificationRoute } from "@/lib/notificationRouting";
@@ -33,6 +34,7 @@ import {
 
 export function DashboardHeader() {
   const { user, role, login, logout } = useAuth();
+  const { t } = useTranslation();
   const { settings, updateCurrency } = useFinancialSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,7 +112,7 @@ export function DashboardHeader() {
         <div className="hidden lg:flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">
           <Link to="/" className="hover:text-primary transition-colors flex items-center gap-1">
             <Home className="h-3 w-3" />
-            <span>Home</span>
+            <span>{t('header.home')}</span>
           </Link>
           {pathnames.length > 0 && <ChevronRight className="h-3 w-3" />}
           {pathnames.map((name, index) => {
@@ -172,11 +174,11 @@ export function DashboardHeader() {
               className="gradient-primary text-primary-foreground hover:opacity-90 gap-2 h-9 text-xs font-bold rounded-xl px-4 shadow-lg shadow-primary/20 border-none"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Quick Action</span>
+              <span className="hidden sm:inline">{t('header.quickAction')}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 rounded-xl">
-            <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('header.quickActions')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => handleQuickAction('student')} className="rounded-lg cursor-pointer">
               <UserPlus className="mr-2 h-4 w-4" />
