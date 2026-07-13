@@ -4077,6 +4077,10 @@
           "teachersLabel": "Teachers",
           "visibleToStudentsTooltip": "Visible to students",
           "studentsLabel": "Students"
+        },
+        "tabs": {
+          "overview": "Overview",
+          "schedule": "Schedule"
         }
       },
       "flashCards": {

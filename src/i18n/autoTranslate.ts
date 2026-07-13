@@ -142,7 +142,6 @@ const MANUAL: Record<string, string> = {
   'Search by student name, ID, parent contact': 'البحث باسم الطالب أو الرقم أو بيانات ولي الأمر',
   'Search students': 'البحث عن الطلاب',
   'Risk ≥ 75 or attendance < 75%': 'خطر ≥ 75 أو حضور < 75%',
-  'No invoices generated yet': 'لم يتم إنشاء فواتير بعد',
   'Manage, monitor and automate student records with AI insights.': 'إدارة ومراقبة وأتمتة سجلات الطلاب برؤى الذكاء الاصطناعي.',
   'No records found': 'لم يتم العثور على سجلات', 'No students found': 'لم يتم العثور على طلاب',
   'Add Student': 'إضافة طالب', 'Add Staff': 'إضافة موظف', 'Add New': 'إضافة جديد',
@@ -153,7 +152,70 @@ const MANUAL: Record<string, string> = {
   'Performance': 'الأداء', 'Progress': 'التقدم', 'Actions Required': 'الإجراءات المطلوبة',
   'Recent Activity': 'النشاط الأخير', 'Quick Links': 'روابط سريعة',
   'Academic': 'أكاديمي', 'Financial': 'مالي', 'General': 'عام',
+  // Sidebar nav items (actual titles from navGroups.ts)
+  'Conduct & Discipline': 'السلوك والانضباط', 'Alumni Network': 'شبكة الخريجين',
+  'Withdrawal': 'الانسحاب', 'Room Management': 'إدارة الغرف',
+  'Parent-Teacher Meetings': 'اجتماعات أولياء الأمور والمعلمين',
+  'Exam Operations': 'عمليات الامتحانات', 'Coding Lab': 'مختبر البرمجة',
+  'Plagiarism Checker': 'فاحص الانتحال', 'HR Dashboard': 'لوحة الموارد البشرية',
+  'Staff Profiles': 'ملفات الموظفين', 'Staff Attendance': 'حضور الموظفين',
+  'Appraisals': 'التقييمات الوظيفية', 'Staff Settings': 'إعدادات الموظفين',
+  'Scholarships': 'المنح الدراسية', 'Automation': 'الأتمتة',
+  'Fleet': 'الأسطول', 'Allocations': 'التخصيصات', 'Live Tracking': 'التتبع المباشر',
+  'Operations': 'العمليات', 'Room Allocation': 'تخصيص الغرف',
+  'Hostel Attendance': 'حضور السكن الداخلي', 'Visitor Log': 'سجل الزوار',
+  'Mess & Menu': 'الكافيتيريا والقائمة', 'Incidents': 'الحوادث',
+  'Purchase Orders': 'أوامر الشراء', 'Product Analytics': 'تحليلات المنتج',
+  'Predictive Analytics': 'التحليلات التنبؤية', 'AI Tutor': 'المعلم الذكي',
+  'Executive View': 'العرض التنفيذي', 'Compliance': 'الامتثال',
+  'Users & Roles': 'المستخدمون والأدوار', 'Academic Config': 'الإعدادات الأكاديمية',
+  'Finance Config': 'إعدادات المالية', 'System Settings': 'إعدادات النظام',
+  'Toggle Sidebar': 'تبديل الشريط الجانبي',
+  // Dashboard widgets
+  'Application Pipeline (Admissions)': 'مسار الطلبات (القبول)',
+  'View admission pipeline': 'عرض مسار القبول',
+  'Inquiries': 'الاستفسارات', 'New Leads': 'عملاء جدد', 'Offers': 'العروض',
+  'Top Performing Classes': 'الفصول الأفضل أداءً', 'View all classes': 'عرض جميع الفصول',
+  'No exam marks recorded yet.': 'لم تُسجَّل درجات امتحانات بعد.',
+  'Teacher Workload Overview': 'نظرة عامة على عبء عمل المعلمين',
+  'View workload report': 'عرض تقرير عبء العمل',
+  'No subject assignments recorded yet.': 'لم تُسجَّل مواد للمعلمين بعد.',
+  'No recent activity recorded yet.': 'لا يوجد نشاط حديث بعد.',
+  'View Calendar': 'عرض التقويم',
+  'No upcoming events scheduled.': 'لا توجد فعاليات قادمة مجدولة.',
+  'Approvals Overview': 'نظرة عامة على الموافقات',
+  'Pending Leave': 'إجازات معلقة', 'Pending Purchase Orders': 'أوامر شراء معلقة',
+  'Admission Reviews': 'مراجعات القبول', 'Approved Leave (30d)': 'إجازات معتمدة (30 يومًا)',
+  'No active appraisal cycle yet.': 'لا توجد دورة تقييم نشطة بعد.',
+  'Quick Access': 'وصول سريع', 'Fee Collection (BHD)': 'تحصيل الرسوم (دينار بحريني)',
+  'BHD (Bahraini Dinar)': 'دينار بحريني',
+  // Exams page
+  'Create exam + subjects': 'إنشاء امتحان + مواد', 'Halls + seating plan': 'القاعات + خطة الجلوس',
+  'Hall Tickets': 'بطاقات الدخول', 'Print admit cards': 'طباعة بطاقات الدخول',
+  'Invigilators': 'المراقبون', 'Duty roster': 'جدول المناوبات',
+  'Mark present/absent': 'تسجيل حاضر/غائب', 'Exam Type': 'نوع الامتحان',
+  'Exam Dates': 'تواريخ الامتحان', 'Appeared': 'حضر', 'Continue to': 'المتابعة إلى',
+  'setup': 'الإعداد',
+  // HR page
+  'Manage comprehensive staff profiles, contracts, and documents': 'إدارة ملفات الموظفين والعقود والمستندات بشكل شامل',
+  'Add Staff Member': 'إضافة موظف', 'All Departments': 'جميع الأقسام',
+  'Vice Principal': 'نائب المدير',
+  'Staff Member': 'الموظف', 'Role & Dept': 'الدور والقسم',
+  'Search by name, ID, or department': 'البحث بالاسم أو الرقم أو القسم',
+  'Export CSV': 'تصدير CSV', 'Departments': 'الأقسام',
+  // Misc
+  'Page Not Found': 'الصفحة غير موجودة',
+  "The page you are looking for doesn't exist or has been moved": 'الصفحة التي تبحث عنها غير موجودة أو تم نقلها',
+  'Back to Dashboard': 'العودة إلى لوحة التحكم',
 };
+
+// Grade 1..12 / Grade-1..12 patterns
+for (let g = 1; g <= 12; g++) {
+  addPair(`Grade ${g}`, `الصف ${g}`);
+  addPair(`Grade-${g}`, `الصف ${g}`);
+  addPair(`Grade ${g} - A`, `الصف ${g} - أ`);
+  addPair(`Grade ${g} - B`, `الصف ${g} - ب`);
+}
 for (const [e, a] of Object.entries(MANUAL)) addPair(e, a);
 
 // ---------- Translation helpers ----------
