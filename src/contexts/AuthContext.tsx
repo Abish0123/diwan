@@ -269,17 +269,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setLoginInProgress = (window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress;
     setLoginInProgress?.(true);
     try {
-      const res = await fetch('/api/session/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, checkOnly: true })
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'User not found. Please register first.');
-      }
-
       const loginRes = await fetch('/api/session/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
