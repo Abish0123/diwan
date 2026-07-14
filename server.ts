@@ -734,6 +734,23 @@ async function dbInsertIgnore(tableName: string, id: string, data: string, uid: 
 }
 
 async function initDB() {
+  // Parse DATABASE_URL connection string into individual vars when the
+  // granular DB_HOST/DB_DATABASE/DB_USERNAME vars aren't set directly.
+  // Supports both mysql:// and mysql2:// schemes from cPanel / hosting panels.
+  if (!process.env.DB_HOST && process.env.DATABASE_URL) {
+    try {
+      const url = new URL(process.env.DATABASE_URL.replace(/^mysql2:\/\//, "mysql://"));
+      process.env.DB_HOST     = url.hostname;
+      process.env.DB_PORT     = url.port || "3306";
+      process.env.DB_USERNAME = decodeURIComponent(url.username);
+      process.env.DB_PASSWORD = decodeURIComponent(url.password);
+      process.env.DB_DATABASE = url.pathname.replace(/^\//, "");
+      console.log(`[DB] Parsed DATABASE_URL → ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}`);
+    } catch (e: any) {
+      console.error("[DB] Failed to parse DATABASE_URL:", e.message);
+    }
+  }
+
   // Try MySQL first, fall back to SQLite
   if (process.env.DB_HOST && process.env.DB_DATABASE && process.env.DB_USERNAME) {
     try {
