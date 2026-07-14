@@ -285,6 +285,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!loginRes.ok) {
+        // Guard against the server returning HTML (e.g. Vite dev page) instead
+        // of JSON — parse safely and surface a clear message either way.
+        const contentType = loginRes.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error(`Server error (${loginRes.status}). Make sure the API server is running.`);
+        }
         const error = await loginRes.json();
         throw new Error(error.error || 'Failed to login');
       }

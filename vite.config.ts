@@ -8,9 +8,24 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 3000,
+    port: 8080,
     hmr: {
       overlay: false,
+    },
+    proxy: {
+      // Forward all /api and /socket.io requests to Express (port 3000).
+      // Without this, Vite intercepts /api calls and returns HTML — causing
+      // "Unexpected token 'A'" JSON parse errors in the frontend.
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   plugins: [
