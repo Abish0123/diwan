@@ -107,9 +107,13 @@ describe("GET /api/ai/status", () => {
     expect(res.headers["content-type"]).toMatch(/application\/json/);
   });
 
-  it("contains configured and provider fields", async () => {
+  it("returns provider-keyed status objects (openrouter and gemini)", async () => {
+    // Actual shape: { openrouter: { configured, verified, label }, gemini: { configured } }
     const res = await s.request.get("/api/ai/status");
-    expect(res.body).toHaveProperty("configured");
+    expect(res.body).toHaveProperty("openrouter");
+    expect(res.body).toHaveProperty("gemini");
+    expect(typeof res.body.openrouter.configured).toBe("boolean");
+    expect(typeof res.body.gemini.configured).toBe("boolean");
   });
 });
 
