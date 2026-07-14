@@ -842,10 +842,24 @@ async function initDB() {
     try {
       sqlite = new Database(dbPath);
       console.log(`✅ SQLite database at: ${dbPath}`);
-    } catch (err) {
+    } catch (err: any) {
+      // If better-sqlite3 native bindings fail to load, fall back to a mock
+      // to allow the server to start in preview/sandbox mode where native
+      // modules may not be available. This allows the Vite dev server frontend
+      // to load even though DB queries will fail (appropriate for sandbox preview).
+      if (err.message?.includes("Could not locate the bindings file")) {
+        console.warn("⚠️  better-sqlite3 bindings not available — DB queries will fail");
+        console.warn("⚠️  (This is expected in sandboxes without native module support.)");
+        // Continue without sqlite — API requests will error gracefully
+        return;
+      }
       console.error("SQLite init failed:", err);
-      sqlite = new Database(":memory:");
-      console.log("⚠️  Using in-memory SQLite");
+      try {
+        sqlite = new Database(":memory:");
+        console.log("⚠️  Using in-memory SQLite");
+      } catch (innerErr) {
+        console.error("SQLite in-memory fallback also failed, continuing without DB");
+      }
     }
   }
 
