@@ -161,9 +161,17 @@ describe("ClassAssignmentsTab", () => {
 
   it("shows computed active/completion/pending-grading KPI cards", () => {
     render(<ClassAssignmentsTab classId="class-1" className="Grade 5 - A" />);
-    expect(screen.getByText("Active Assignments")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument(); // 1 Active/Pending assignment in class-1
+
+    // Locate each card by its heading, then assert the numeric value within it.
+    // This avoids the ambiguous getByText("1") failure when multiple elements
+    // share the same text (e.g. active count = 1, pending grading = 1).
+    const activeCard = screen.getByText("Active Assignments").closest(".rounded-2xl")!;
+    expect(within(activeCard).getByText("1")).toBeInTheDocument(); // 1 Active assignment in class-1
+
     expect(screen.getByText("Completion Rate")).toBeInTheDocument();
-    expect(screen.getByText("Pending Grading")).toBeInTheDocument();
+    expect(screen.getByText("88%")).toBeInTheDocument();
+
+    const pendingCard = screen.getByText("Pending Grading").closest(".rounded-2xl")!;
+    expect(within(pendingCard).getByText("1")).toBeInTheDocument(); // 1 Completed assignment in class-1
   });
 });
