@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail -n \"vite,api\" -c \"cyan,yellow\" \"vite --port 3000\" \"cross-env PORT=3001 tsx server.ts\"",
+    "dev": "cross-env PORT=3001 tsx server.ts",
     "dev:alt": "cross-env PORT=3100 tsx server.ts",
     "build": "vite build && npm run build:server",
     "vercel-build": "vite build",
