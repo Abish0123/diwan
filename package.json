@@ -127,6 +127,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/supertest": "^7.2.0",
     "@vitejs/plugin-react-swc": "^3.11.0",
+    "autocannon": "^8.0.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
