@@ -38,11 +38,14 @@ describe("GET /api/health", () => {
     expect(["mysql", "sqlite"]).toContain(res.body.dbMode);
   });
 
-  it("returns 200 when SQLite is the active dbMode (test env uses SQLite)", async () => {
+  it("returns 503/degraded when SQLite is the active dbMode (test env uses SQLite)", async () => {
+    // The server returns status: "degraded" + HTTP 503 when running in SQLite
+    // fallback mode (DB_HOST and DATABASE_URL are unset). This is intentional:
+    // SQLite is only a preview mode — production always requires MySQL.
     const res = await s.request.get("/api/health");
     if (res.body.dbMode === "sqlite") {
-      expect(res.status).toBe(200);
-      expect(res.body.status).toBe("ok");
+      expect(res.status).toBe(503);
+      expect(res.body.status).toBe("degraded");
     }
   });
 

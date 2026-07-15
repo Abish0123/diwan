@@ -36,7 +36,9 @@ vi.mock("firebase/auth", () => ({
     return vi.fn();
   }),
   signInWithPopup: vi.fn(),
-  signOut: vi.fn(),
+  // signOut must return a Promise — AuthContext calls signOut(auth).catch(()=>{})
+  // and if signOut returns undefined that .catch() call throws TypeError.
+  signOut: vi.fn(() => Promise.resolve()),
   GoogleAuthProvider: vi.fn(),
 }));
 
