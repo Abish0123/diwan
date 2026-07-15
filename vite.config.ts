@@ -50,6 +50,27 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split vendor libraries and heavy export modules into separate chunks
+        // to enable better caching and parallel loading. Only include packages
+        // that are actually imported to avoid rollup errors.
+        manualChunks: {
+          // PDF export libraries — lazy loaded on demand
+          pdfExport: ["jspdf", "html2canvas"],
+          // Excel import/export library — lazy loaded
+          excelExport: ["xlsx"],
+          // Mapping library — lazy loaded
+          maps: ["leaflet"],
+        },
+      },
+    },
+    // Set a higher limit to avoid warnings for necessary large chunks
+    chunkSizeWarningLimit: 600,
+    // Target modern browsers for smaller output
+    target: "es2020",
+  },
   optimizeDeps: {
     entries: ["index.html"],
     include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "leaflet"],
