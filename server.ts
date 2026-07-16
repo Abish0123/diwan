@@ -3582,7 +3582,18 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    // Block dotfiles (.env, .session-secret, .htpasswd, etc.) before the static
+    // handler can serve them. express.static's dotfiles:"deny" option only covers
+    // files directly inside the served directory root; an explicit middleware guard
+    // is more reliable when process.cwd() equals the project root.
+    app.use((req, res, next) => {
+      const segments = req.path.split("/");
+      if (segments.some((seg) => seg.startsWith("."))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      next();
+    });
+    app.use(express.static(distPath, { dotfiles: "deny" }));
     app.get("*all", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
