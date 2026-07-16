@@ -152,7 +152,11 @@ describe("AssignmentWizard", () => {
     await user.click(screen.getByText("Publish Now"));
 
     await waitFor(() => expect(screen.getByText("Assignment Published!")).toBeInTheDocument());
-    await user.click(screen.getByText("Close"));
+    // Multiple elements may have the accessible name "Close" (Radix DialogClose +
+    // the explicit Close button). Use getAllByText and pick the last one which is
+    // the visible action button inside the success panel.
+    const closeBtns = screen.getAllByText("Close");
+    await user.click(closeBtns[closeBtns.length - 1]);
 
     expect(onClose).toHaveBeenCalled();
   });

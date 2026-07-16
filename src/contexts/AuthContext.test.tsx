@@ -345,16 +345,17 @@ describe("AuthContext", () => {
 
   describe("loginWithEmail()", () => {
     it("logs in successfully, persists session + token, and tracks the event", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) }) // checkOnly
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              user: { uid: "e-1", email: "a@b.com", displayName: "Alice", role: "librarian" },
-              token: "tok-123",
-            }),
-        });
+      // The implementation makes a single POST /api/session/login — no separate
+      // checkOnly preflight. The mock returns a combined user + token response.
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => "application/json" },
+        json: () =>
+          Promise.resolve({
+            user: { uid: "e-1", email: "a@b.com", displayName: "Alice", role: "librarian" },
+            token: "tok-123",
+          }),
+      });
       renderProvider();
       screen.getByText("login-email").click();
       await waitFor(() => expect(screen.getByTestId("role").textContent).toBe("librarian"));
@@ -366,13 +367,12 @@ describe("AuthContext", () => {
     });
 
     it("generates a dicebear placeholder photo when the account has no photoURL", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({ user: { uid: "e-2", email: "b@b.com", displayName: "Bob", role: "student" } }),
-        });
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => "application/json" },
+        json: () =>
+          Promise.resolve({ user: { uid: "e-2", email: "b@b.com", displayName: "Bob", role: "student" } }),
+      });
       renderProvider();
       screen.getByText("login-email").click();
       await waitFor(() => expect(screen.getByTestId("role").textContent).toBe("student"));
@@ -381,30 +381,30 @@ describe("AuthContext", () => {
     });
 
     it("uses the real uploaded photoURL over the placeholder when the account has one", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              user: {
-                uid: "e-3",
-                email: "c@b.com",
-                displayName: "Cara",
-                role: "student",
-                photoURL: "https://real-photo.example/pic.png",
-              },
-            }),
-        });
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => "application/json" },
+        json: () =>
+          Promise.resolve({
+            user: {
+              uid: "e-3",
+              email: "c@b.com",
+              displayName: "Cara",
+              role: "student",
+              photoURL: "https://real-photo.example/pic.png",
+            },
+          }),
+      });
       renderProvider();
       screen.getByText("login-email").click();
       await waitFor(() => expect(screen.getByTestId("role").textContent).toBe("student"));
       expect(screen.getByTestId("photoURL").textContent).toBe("https://real-photo.example/pic.png");
     });
 
-    it("throws and toasts the server error when checkOnly fails (user not registered)", async () => {
+    it("throws and toasts the server error when the login call fails (user not registered)", async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
+        headers: { get: () => "application/json" },
         json: () => Promise.resolve({ error: "No such user" }),
       });
       renderProvider();
@@ -413,10 +413,12 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("user").textContent).toBe("null");
     });
 
-    it("throws and toasts the server error when the real login call fails (wrong password)", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) })
-        .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({ error: "Wrong password" }) });
+    it("throws and toasts the server error when the login call fails (wrong password)", async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        headers: { get: () => "application/json" },
+        json: () => Promise.resolve({ error: "Wrong password" }),
+      });
       renderProvider();
       screen.getByText("login-email").click();
       await waitFor(() => expect(toastMocks.error).toHaveBeenCalledWith("Wrong password"));

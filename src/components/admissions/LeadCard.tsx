@@ -225,6 +225,7 @@ export const LeadCard = React.memo(function LeadCard({ lead, isOverlay, onOpenPr
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="View profile"
                   className="h-7 w-7 rounded-lg hover:bg-slate-100"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -237,7 +238,8 @@ export const LeadCard = React.memo(function LeadCard({ lead, isOverlay, onOpenPr
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
-                      size="icon" 
+                      size="icon"
+                      aria-label="Lead actions"
                       className="h-7 w-7 rounded-lg hover:bg-slate-100"
                       onClick={(e) => e.stopPropagation()}
                     >

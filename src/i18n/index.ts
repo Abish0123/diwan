@@ -21,15 +21,32 @@ const applyLang = (lang: string) => {
     '--font-sans',
     isAr ? "'Cairo', 'Segoe UI', sans-serif" : "'Inter', ui-sans-serif, system-ui, sans-serif"
   );
+  // Global DOM auto-translation: covers every module/page even without t() calls.
+  // Lazy import to avoid pulling the dictionary into the initial bundle for English users.
+  if (isAr) {
+    import('./autoTranslate').then((m) => m.startAutoTranslate());
+  } else {
+    import('./autoTranslate').then((m) => m.stopAutoTranslate());
+  }
 };
 
 export const setLanguage = (lang: 'en' | 'ar') => {
+  const prev = localStorage.getItem('lang') || 'en';
   localStorage.setItem('lang', lang);
   i18n.changeLanguage(lang);
   applyLang(lang);
+  // Switching AR -> EN needs a reload to restore original English text that
+  // the auto-translator replaced in the DOM.
+  if (prev === 'ar' && lang === 'en') {
+    window.location.reload();
+  }
 };
 
-// Apply on load
-applyLang(saved);
+// Apply on load (after DOM is ready so the initial pass can walk the body)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => applyLang(saved));
+} else {
+  applyLang(saved);
+}
 
 export default i18n;

@@ -57,7 +57,7 @@ export function getSchoolLng(): number {
 }
 
 export function getSchoolName(): string {
-  return cache.schoolName || (import.meta.env.VITE_SCHOOL_NAME as string) || "School";
+  return cache.schoolName || (import.meta.env.VITE_SCHOOL_NAME as string) || "Bluewood School";
 }
 
 export function getSchoolAddress(): string {

@@ -136,7 +136,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // If a local mock session is active, trust it completely and ignore Firebase.
       // A stale Firebase auth session (e.g. from a previous Google login that was never
       // properly signed out) must not be allowed to overwrite the local session role.
-      if (sessionStorage.getItem('sd_user')) {
+      const storedUser = sessionStorage.getItem('sd_user');
+      const storedRole = sessionStorage.getItem('sd_role');
+      if (storedUser && storedRole) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setRole(storedRole);
+        } catch (e) {
+          console.error('Failed to parse stored user:', e);
+        }
         setLoading(false);
         return;
       }
@@ -269,17 +278,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setLoginInProgress = (window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress;
     setLoginInProgress?.(true);
     try {
-      const res = await fetch('/api/session/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, checkOnly: true })
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'User not found. Please register first.');
-      }
-
       const loginRes = await fetch('/api/session/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,6 +285,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!loginRes.ok) {
+        // Guard against the server returning HTML (e.g. Vite dev page) instead
+        // of JSON — parse safely and surface a clear message either way.
+        const contentType = loginRes.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error(`Server error (${loginRes.status}). Make sure the API server is running.`);
+        }
         const error = await loginRes.json();
         throw new Error(error.error || 'Failed to login');
       }
@@ -312,7 +316,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.setItem('sd_role', data.user.role);
         // The signed session token every /api/data/* request now must present — see
         // src/lib/apiFetch.ts, which reads this key and attaches it as a Bearer header.
-        if (data.token) sessionStorage.setItem('sd_token', data.token);
+        if (data.token) {
+          sessionStorage.setItem('sd_token', data.token);
+          // Signal to main.tsx's session expiry handler that we just logged in
+          const win = window as Window & { __loginTime?: number };
+          win.__loginTime = Date.now();
+        }
 
         toast.success(`Logged in as ${data.user.displayName} (Local DB)`);
         trackEvent({ type: 'login', uid: data.user.uid, role: data.user.role });
@@ -322,9 +331,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.error(error instanceof Error ? error.message : 'Failed to login');
       throw error;
     } finally {
-      // Clear the login-in-progress flag after a short delay to allow the
+      // Clear the login-in-progress flag after a delay to allow the
       // dashboard's initial data fetches to complete with the fresh token.
-      setTimeout(() => setLoginInProgress?.(false), 2000);
+      setTimeout(() => setLoginInProgress?.(false), 3000);
     }
   }, []);
 

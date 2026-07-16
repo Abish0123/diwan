@@ -1,0 +1,222 @@
+
+[1mScalability Test Suite[0m  →  http://localhost:5350
+────────────────────────────────────────────────────────────
+
+[1m[36mSuite 1: Data Volume Scalability[0m
+[90mRead latency at 100 / 1k / 5k / 10k rows — seeded directly into SQLite[0m
+
+  Seeding 100 rows into scale_students... 10ms
+    read: 2491 req/s  p99=11ms  write: 6ms (HTTP 201)
+  Seeding 1,000 rows into scale_students... 9ms
+    read: 424 req/s  p99=36ms  write: 13ms (HTTP 201)
+  Seeding 5,000 rows into scale_students... 76ms
+    read: 103 req/s  p99=91ms  write: 41ms (HTTP 201)
+  Seeding 10,000 rows into scale_students... 92ms
+    read: 54 req/s  p99=266ms  write: 128ms (HTTP 201)
+
+[1m[36mSuite 2: Concurrency Ramp[0m
+[90m1 → 5 → 10 → 25 → 50 concurrent connections, 5s each[0m
+
+  1 connection... 723 req/s  p50=0ms  p99=11ms  max=20ms  errors=0
+  5 connections... 861.4 req/s  p50=4ms  p99=25ms  max=39ms  errors=0
+  10 connections... 943.4 req/s  p50=8ms  p99=33ms  max=114ms  errors=0
+  25 connections... 935.2 req/s  p50=22ms  p99=78ms  max=153ms  errors=0
+  50 connections... 920.4 req/s  p50=48ms  p99=122ms  max=237ms  errors=0
+
+[1m[36mSuite 3: Payload Size[0m
+[90mPOST bodies of 1 KB, 10 KB, 50 KB, 200 KB to /api/data/scale_payload[0m
+
+  1 KB payload (5 samples)... avg=5ms  max=11ms  ok=5/5
+  10 KB payload (5 samples)... avg=4ms  max=5ms  ok=5/5
+  50 KB payload (5 samples)... avg=4ms  max=7ms  ok=5/5
+  200 KB payload (5 samples)... avg=6ms  max=7ms  ok=5/5
+  26 MB payload (expect 413)... HTTP 413 — correctly rejected
+
+[1m[36mSuite 4: Cache Hit vs Cold Read[0m
+[90mCold vs cached GET latency at 1k, 5k, 10k rows[0m
+
+  1,000 rows — seeding... done
+    cold: 6ms  cached: 2ms  speedup: 3.02x  inval+reload: 15ms
+  5,000 rows — seeding... done
+    cold: 18ms  cached: 7ms  speedup: 2.5x  inval+reload: 29ms
+  10,000 rows — seeding... done
+    cold: 44ms  cached: 16ms  speedup: 2.78x  inval+reload: 66ms
+
+────────────────────────────────────────────────────────────
+[1mSCALABILITY SUMMARY[0m
+────────────────────────────────────────────────────────────
+  [32mPASS[0m  [1mdataVolume    [0m  [90mRead p99 11ms → 266ms (24.2x) from 100 to 10000 rows — absolute p99 within 2000ms[0m
+  [32mPASS[0m  [1mconcurrency   [0m  [90mp99 11ms → 122ms (11.1x) across 1→50 conns — within thresholds | RPS 723 → 920 (127% retaine[0m
+  [32mPASS[0m  [1mpayload       [0m  [90m200 KB POST max 7.2ms — within 2000ms threshold | 26 MB POST correctly rejected (HTTP 413 or[0m
+  [32mPASS[0m  [1mcache         [0m  [90mCache speedup at 1k rows: 3.00x (cold 6ms → cached 2ms) | Cold read at 10k rows: 44ms — with[0m
+────────────────────────────────────────────────────────────
+[32m[1m4/4 suites passed[0m
+
+{
+  "timestamp": "2026-07-16T08:58:08.876Z",
+  "baseUrl": "http://localhost:5350",
+  "passed": 4,
+  "failed": 0,
+  "total": 4,
+  "suites": [
+    {
+      "name": "dataVolume",
+      "pass": true,
+      "status": "PASS",
+      "note": "Read p99 11ms → 266ms (24.2x) from 100 to 10000 rows — absolute p99 within 2000ms",
+      "data": [
+        {
+          "rowCount": 100,
+          "seedMs": 10,
+          "readRps": 2491,
+          "readP99Ms": 11,
+          "readAvgMs": 1.4,
+          "writeMs": 5.7,
+          "writeStatus": 201
+        },
+        {
+          "rowCount": 1000,
+          "seedMs": 9,
+          "readRps": 424.3,
+          "readP99Ms": 36,
+          "readAvgMs": 11.3,
+          "writeMs": 13,
+          "writeStatus": 201
+        },
+        {
+          "rowCount": 5000,
+          "seedMs": 76,
+          "readRps": 103.3,
+          "readP99Ms": 91,
+          "readAvgMs": 47.7,
+          "writeMs": 41,
+          "writeStatus": 201
+        },
+        {
+          "rowCount": 10000,
+          "seedMs": 92,
+          "readRps": 53.7,
+          "readP99Ms": 266,
+          "readAvgMs": 89.8,
+          "writeMs": 128.3,
+          "writeStatus": 201
+        }
+      ]
+    },
+    {
+      "name": "concurrency",
+      "pass": true,
+      "status": "PASS",
+      "note": "p99 11ms → 122ms (11.1x) across 1→50 conns — within thresholds | RPS 723 → 920 (127% retained) — throughput holds",
+      "data": [
+        {
+          "concurrency": 1,
+          "rps": 723,
+          "p50": 0,
+          "p99": 11,
+          "max": 20,
+          "errors": 0
+        },
+        {
+          "concurrency": 5,
+          "rps": 861.4,
+          "p50": 4,
+          "p99": 25,
+          "max": 39,
+          "errors": 0
+        },
+        {
+          "concurrency": 10,
+          "rps": 943.4,
+          "p50": 8,
+          "p99": 33,
+          "max": 114,
+          "errors": 0
+        },
+        {
+          "concurrency": 25,
+          "rps": 935.2,
+          "p50": 22,
+          "p99": 78,
+          "max": 153,
+          "errors": 0
+        },
+        {
+          "concurrency": 50,
+          "rps": 920.4,
+          "p50": 48,
+          "p99": 122,
+          "max": 237,
+          "errors": 0
+        }
+      ]
+    },
+    {
+      "name": "payload",
+      "pass": true,
+      "status": "PASS",
+      "note": "200 KB POST max 7.2ms — within 2000ms threshold | 26 MB POST correctly rejected (HTTP 413 or connection reset)",
+      "data": [
+        {
+          "sizeKb": 1,
+          "avgMs": 4.9,
+          "maxMs": 11.2,
+          "ok": 5
+        },
+        {
+          "sizeKb": 10,
+          "avgMs": 3.5,
+          "maxMs": 5,
+          "ok": 5
+        },
+        {
+          "sizeKb": 50,
+          "avgMs": 3.8,
+          "maxMs": 6.9,
+          "ok": 5
+        },
+        {
+          "sizeKb": 200,
+          "avgMs": 5.6,
+          "maxMs": 7.2,
+          "ok": 5
+        }
+      ]
+    },
+    {
+      "name": "cache",
+      "pass": true,
+      "status": "PASS",
+      "note": "Cache speedup at 1k rows: 3.00x (cold 6ms → cached 2ms) | Cold read at 10k rows: 44ms — within 2000ms",
+      "data": [
+        {
+          "rowCount": 1000,
+          "coldMs": 5.7,
+          "cachedMs": 1.9,
+          "invalMs": 15.4,
+          "speedup": 3.02,
+          "coldOk": true,
+          "warmOk": true
+        },
+        {
+          "rowCount": 5000,
+          "coldMs": 18.1,
+          "cachedMs": 7.2,
+          "invalMs": 28.7,
+          "speedup": 2.5,
+          "coldOk": true,
+          "warmOk": true
+        },
+        {
+          "rowCount": 10000,
+          "coldMs": 44.1,
+          "cachedMs": 15.9,
+          "invalMs": 65.8,
+          "speedup": 2.78,
+          "coldOk": true,
+          "warmOk": true
+        }
+      ]
+    }
+  ]
+}

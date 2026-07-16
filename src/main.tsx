@@ -29,23 +29,47 @@ let sessionExpiryHandled = false;
 // token is being stored. Auth endpoints (/api/session/*) set this flag so
 // that a brief race between token storage and the first data fetch is ignored.
 let loginInProgress = false;
+// Track when we last successfully stored a token to avoid false session expiry
+let lastSuccessfulLoginTime = 0;
 
 // Expose a setter for AuthContext to call around loginWithEmail
+let loginProgressTimeout: NodeJS.Timeout | null = null;
 (window as Window & { __setLoginInProgress?: (v: boolean) => void }).__setLoginInProgress = (v: boolean) => {
+  if (loginProgressTimeout) clearTimeout(loginProgressTimeout);
   loginInProgress = v;
-  // Auto-clear after 5 seconds as a safety net in case AuthContext forgets
-  if (v) setTimeout(() => { loginInProgress = false; }, 5000);
+  // Auto-clear after 10 seconds as a safety net in case AuthContext forgets
+  if (v) {
+    loginProgressTimeout = setTimeout(() => {
+      loginInProgress = false;
+      loginProgressTimeout = null;
+    }, 10000);
+  }
 };
+
+// Monitor when AuthContext stores a token (via __loginTime) to update our grace period
+setInterval(() => {
+  const win = window as Window & { __loginTime?: number };
+  if (win.__loginTime && win.__loginTime > lastSuccessfulLoginTime) {
+    lastSuccessfulLoginTime = win.__loginTime;
+    sessionExpiryHandled = false; // Reset the handler so it can fire again after 8 seconds
+  }
+}, 100);
 
 function handleSessionExpired() {
   if (sessionExpiryHandled) return;
   if (loginInProgress) return; // Don't expire during an active login
+  // Don't expire for 10 seconds after successful login (grace period for initial page loads)
+  const timeSinceLogin = Date.now() - lastSuccessfulLoginTime;
+  if (timeSinceLogin < 10000) {
+    // Still in the grace period — suppress the expiry
+    return;
+  }
+  // After grace period, just clear the token but don't reload (the page components
+  // will notice the missing token and render appropriately).
+  if (sessionExpiryHandled) return;
   sessionExpiryHandled = true;
-  sessionStorage.removeItem('sd_user');
-  sessionStorage.removeItem('sd_role');
   sessionStorage.removeItem('sd_token');
-  sessionStorage.setItem('sd_session_expired_msg', 'Your session expired — please sign in again.');
-  window.location.reload();
+  // Leave sd_user and sd_role intact so components can show who was logged in before expiry
 }
 
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {

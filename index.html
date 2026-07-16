@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Prevent flash of white background before CSS loads by declaring the
+         base background colour inline. Must match --color-background in index.css. -->
+    <meta name="color-scheme" content="light dark" />
+    <style>html,body{background:#F8F7FF;}</style>
     <title>Student Diwan — AI School ERP</title>
     <meta name="description" content="AI-powered School ERP for the Middle East. Manage students, finance, staff, and compliance in one place." />
     <meta name="author" content="Student Diwan" />
@@ -15,6 +19,25 @@
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Fonts: preconnect first, then non-blocking stylesheet.
+         Moving this out of CSS @import makes it non-render-blocking —
+         the browser can fetch fonts in parallel with JS/CSS parsing
+         instead of waiting for index.css to be parsed first. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Cairo:wght@300;400;500;600;700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Cairo:wght@300;400;500;600;700;800&display=swap"
+      />
+    </noscript>
 
     <meta property="og:title" content="Student Diwan — AI School ERP" />
     <meta property="og:description" content="AI-powered School ERP for the Middle East" />
