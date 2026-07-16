@@ -263,7 +263,9 @@ const writeRateLimit = makeRateLimiter({ windowMs: 60_000, max: 120, message: "T
 // (fully anonymous access, and low-privilege roles bulk-reading payroll/user-
 // credential/financial-config tables) without risking the much larger
 // regression surface of a full per-entity ownership matrix across 50+ tables.
-const ADMIN_ONLY_ENTITIES = new Set(["payroll", "users", "financial_settings", "hr_settings", "system_settings", "audit_logs"]);
+// "salaries" was omitted from this set, allowing teacher-role tokens to read
+// individual salary records. Added here to close the RBAC gap (pen test A07).
+const ADMIN_ONLY_ENTITIES = new Set(["payroll", "salaries", "users", "financial_settings", "hr_settings", "system_settings", "audit_logs"]);
 
 // `id` is only present for the single-record GET/PUT/DELETE routes. A signed-in
 // user reading (or, for now, only reading) their own `users` row is a legitimate
@@ -3428,7 +3430,7 @@ async function startServer() {
     } catch { res.status(500).json({ error: "Failed to save attendance" }); }
   });
 
-  // ── Transport Incidents CRUD ──────────────────────────────────────────────
+  // ── Transport Incidents CRUD ───────��──────────────────────────────────────
   app.get("/api/transport/incidents", async (_req, res) => {
     try {
       if (pool) {
