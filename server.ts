@@ -1202,6 +1202,18 @@ async function startServer() {
     next();
   });
 
+  // Block any request whose path contains a dotfile segment (.env, .session-secret,
+  // .htpasswd, etc.) — applies in both dev (Vite) and production (express.static)
+  // modes so sensitive files at the project root are never served regardless of
+  // how the static layer is configured.
+  app.use((req, res, next) => {
+    const segments = req.path.split("/");
+    if (segments.some((seg) => seg.startsWith(".") && seg.length > 1)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    next();
+  });
+
   app.use((req, res, next) => {
     const start = Date.now();
     res.on("finish", () => {
