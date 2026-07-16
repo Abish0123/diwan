@@ -44,3 +44,18 @@ if (typeof window !== "undefined") {
 if (typeof HTMLCanvasElement !== "undefined") {
   HTMLCanvasElement.prototype.getContext = () => null;
 }
+
+// Radix Select (and other pointer-capture components) call hasPointerCapture /
+// setPointerCapture on elements. jsdom does not implement the Pointer Events API,
+// so we stub the three methods on Element.prototype to prevent TypeError crashes.
+if (typeof Element !== "undefined") {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {};
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {};
+  }
+}
