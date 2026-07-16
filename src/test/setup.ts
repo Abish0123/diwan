@@ -3,6 +3,11 @@
 // safely rely on jest-dom matchers, and any component test would have
 // silently run without them).
 import "@testing-library/jest-dom/vitest";
+// vitest-axe: the distributed extend-expect.js is empty in this version, so we
+// register toHaveNoViolations manually via expect.extend().
+import { expect } from "vitest";
+import { toHaveNoViolations } from "vitest-axe/matchers";
+expect.extend({ toHaveNoViolations });
 
 // Radix UI primitives (DropdownMenu, Dialog, Popover, etc.) use ResizeObserver
 // internally. jsdom doesn't ship it, so we provide a no-op polyfill.
@@ -32,4 +37,10 @@ if (typeof window !== "undefined" && !window.matchMedia) {
 // Default to true so tests that click "Advance" don't hang waiting for a dialog.
 if (typeof window !== "undefined") {
   window.confirm = () => true;
+}
+
+// axe-core uses HTMLCanvasElement.getContext to detect icon ligatures.
+// jsdom does not implement canvas, so we stub getContext to avoid noise in stderr.
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = () => null;
 }
